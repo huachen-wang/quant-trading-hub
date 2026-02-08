@@ -1,17 +1,10 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, index } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, index, boolean } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -27,87 +20,50 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// 策略表
+// EA策略表 - 简化版
 export const strategies = mysqlTable("strategies", {
   id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   platform: mysqlEnum("platform", ["MT4", "MT5"]).notNull(),
-  pairs: text("pairs").notNull(), // JSON array of trading pairs
+  pairs: text("pairs").notNull(), // 交易对,逗号分隔
   timeframe: varchar("timeframe", { length: 50 }),
   coverImage: text("coverImage"),
+  
+  // 实盘数据
   totalReturn: decimal("totalReturn", { precision: 10, scale: 2 }).default("0.00"),
   maxDrawdown: decimal("maxDrawdown", { precision: 10, scale: 2 }).default("0.00"),
   sharpeRatio: decimal("sharpeRatio", { precision: 10, scale: 2 }).default("0.00"),
   winRate: decimal("winRate", { precision: 5, scale: 2 }).default("0.00"),
-  followCount: int("followCount").default(0).notNull(),
-  favoriteCount: int("favoriteCount").default(0).notNull(),
+  
+  // 下载和付费
+  downloadUrl: text("downloadUrl"), // 下载链接
+  price: decimal("price", { precision: 10, scale: 2 }).default("0.00"), // 价格,0为免费
+  isFree: boolean("isFree").default(true).notNull(), // 是否免费
+  downloadCount: int("downloadCount").default(0).notNull(),
+  
+  // 联系方式
+  telegramGroup: varchar("telegramGroup", { length: 255 }), // Telegram群组
+  qqGroup: varchar("qqGroup", { length: 255 }), // QQ群号
+  
+  // 统计
   viewCount: int("viewCount").default(0).notNull(),
-  avgRating: decimal("avgRating", { precision: 3, scale: 2 }).default("0.00"),
-  ratingCount: int("ratingCount").default(0).notNull(),
+  
+  // 状态
   status: mysqlEnum("status", ["draft", "published", "archived"]).default("published").notNull(),
+  
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
-  userIdIdx: index("userId_idx").on(table.userId),
   platformIdx: index("platform_idx").on(table.platform),
   statusIdx: index("status_idx").on(table.status),
-  avgRatingIdx: index("avgRating_idx").on(table.avgRating),
   totalReturnIdx: index("totalReturn_idx").on(table.totalReturn),
 }));
 
-// 评分表
-export const ratings = mysqlTable("ratings", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  strategyId: int("strategyId").notNull(),
-  score: int("score").notNull(), // 1-5 stars
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => ({
-  userStrategyIdx: index("user_strategy_idx").on(table.userId, table.strategyId),
-  strategyIdIdx: index("strategyId_idx").on(table.strategyId),
-}));
+export type Strategy = typeof strategies.$inferSelect;
+export type InsertStrategy = typeof strategies.$inferInsert;
 
-// 评论表
-export const comments = mysqlTable("comments", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  strategyId: int("strategyId").notNull(),
-  content: text("content").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => ({
-  strategyIdIdx: index("strategyId_idx").on(table.strategyId),
-  userIdIdx: index("userId_idx").on(table.userId),
-}));
-
-// 关注表
-export const follows = mysqlTable("follows", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  strategyId: int("strategyId").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  userStrategyIdx: index("user_strategy_idx").on(table.userId, table.strategyId),
-  userIdIdx: index("userId_idx").on(table.userId),
-  strategyIdIdx: index("strategyId_idx").on(table.strategyId),
-}));
-
-// 收藏表
-export const favorites = mysqlTable("favorites", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  strategyId: int("strategyId").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-}, (table) => ({
-  userStrategyIdx: index("user_strategy_idx").on(table.userId, table.strategyId),
-  userIdIdx: index("userId_idx").on(table.userId),
-  strategyIdIdx: index("strategyId_idx").on(table.strategyId),
-}));
-
-// 交易记录表
+// 交易记录表(实盘数据)
 export const trades = mysqlTable("trades", {
   id: int("id").autoincrement().primaryKey(),
   strategyId: int("strategyId").notNull(),
@@ -127,20 +83,51 @@ export const trades = mysqlTable("trades", {
   openTimeIdx: index("openTime_idx").on(table.openTime),
 }));
 
-export type Strategy = typeof strategies.$inferSelect;
-export type InsertStrategy = typeof strategies.$inferInsert;
+export type Trade = typeof trades.$inferSelect;
+export type InsertTrade = typeof trades.$inferInsert;
 
-export type Rating = typeof ratings.$inferSelect;
-export type InsertRating = typeof ratings.$inferInsert;
+// 用户购买记录表
+export const purchases = mysqlTable("purchases", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  strategyId: int("strategyId").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  purchasedAt: timestamp("purchasedAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  strategyIdIdx: index("strategyId_idx").on(table.strategyId),
+  userStrategyIdx: index("user_strategy_idx").on(table.userId, table.strategyId),
+}));
+
+export type Purchase = typeof purchases.$inferSelect;
+export type InsertPurchase = typeof purchases.$inferInsert;
+
+// 下载记录表
+export const downloads = mysqlTable("downloads", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  strategyId: int("strategyId").notNull(),
+  downloadedAt: timestamp("downloadedAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  strategyIdIdx: index("strategyId_idx").on(table.strategyId),
+}));
+
+export type Download = typeof downloads.$inferSelect;
+export type InsertDownload = typeof downloads.$inferInsert;
+
+// 评论表(策略备注)
+export const comments = mysqlTable("comments", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  strategyId: int("strategyId").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  strategyIdIdx: index("strategyId_idx").on(table.strategyId),
+}));
 
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = typeof comments.$inferInsert;
-
-export type Follow = typeof follows.$inferSelect;
-export type InsertFollow = typeof follows.$inferInsert;
-
-export type Favorite = typeof favorites.$inferSelect;
-export type InsertFavorite = typeof favorites.$inferInsert;
-
-export type Trade = typeof trades.$inferSelect;
-export type InsertTrade = typeof trades.$inferInsert;

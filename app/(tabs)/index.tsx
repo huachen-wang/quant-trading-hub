@@ -125,10 +125,9 @@ export default function HomeScreen() {
             title={item.title}
             platform={item.platform}
             totalReturn={item.totalReturn || "0.00"}
-            avgRating={item.avgRating || "0.00"}
-            followCount={item.followCount}
-            ratingCount={item.ratingCount}
-            author={item.author}
+            winRate={item.winRate || "0.00"}
+            downloadCount={item.downloadCount}
+            viewCount={item.viewCount}
             coverImage={item.coverImage}
             onPress={() => handleStrategyPress(item.id)}
           />

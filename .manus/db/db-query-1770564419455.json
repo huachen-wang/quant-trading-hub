@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE strategies \nADD COLUMN IF NOT EXISTS downloadUrl TEXT,\nADD COLUMN IF NOT EXISTS price DECIMAL(10,2) DEFAULT 0.00,\nADD COLUMN IF NOT EXISTS isFree BOOLEAN DEFAULT TRUE,\nADD COLUMN IF NOT EXISTS downloadCount INT DEFAULT 0,\nADD COLUMN IF NOT EXISTS telegramGroup VARCHAR(255),\nADD COLUMN IF NOT EXISTS qqGroup VARCHAR(255);\n\nALTER TABLE strategies\nDROP COLUMN IF EXISTS userId,\nDROP COLUMN IF EXISTS followCount,\nDROP COLUMN IF EXISTS favoriteCount,\nDROP COLUMN IF EXISTS avgRating,\nDROP COLUMN IF EXISTS ratingCount;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user j9KUtKJY9ypfPzH.root --database G7CCk846Fqcvg3hQNu5KQZ --execute ALTER TABLE strategies \nADD COLUMN IF NOT EXISTS downloadUrl TEXT,\nADD COLUMN IF NOT EXISTS price DECIMAL(10,2) DEFAULT 0.00,\nADD COLUMN IF NOT EXISTS isFree BOOLEAN DEFAULT TRUE,\nADD COLUMN IF NOT EXISTS downloadCount INT DEFAULT 0,\nADD COLUMN IF NOT EXISTS telegramGroup VARCHAR(255),\nADD COLUMN IF NOT EXISTS qqGroup VARCHAR(255);\n\nALTER TABLE strategies\nDROP COLUMN IF EXISTS userId,\nDROP COLUMN IF EXISTS followCount,\nDROP COLUMN IF EXISTS favoriteCount,\nDROP COLUMN IF EXISTS avgRating,\nDROP COLUMN IF EXISTS ratingCount;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 6044
+}

@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS purchases (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  userId INT NOT NULL,\n  strategyId INT NOT NULL,\n  price DECIMAL(10,2) NOT NULL,\n  purchasedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  INDEX userId_idx (userId),\n  INDEX strategyId_idx (strategyId),\n  INDEX user_strategy_idx (userId, strategyId)\n);\n\nCREATE TABLE IF NOT EXISTS downloads (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  userId INT NOT NULL,\n  strategyId INT NOT NULL,\n  downloadedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  INDEX userId_idx (userId),\n  INDEX strategyId_idx (strategyId)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user j9KUtKJY9ypfPzH.root --database G7CCk846Fqcvg3hQNu5KQZ --execute CREATE TABLE IF NOT EXISTS purchases (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  userId INT NOT NULL,\n  strategyId INT NOT NULL,\n  price DECIMAL(10,2) NOT NULL,\n  purchasedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  INDEX userId_idx (userId),\n  INDEX strategyId_idx (strategyId),\n  INDEX user_strategy_idx (userId, strategyId)\n);\n\nCREATE TABLE IF NOT EXISTS downloads (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  userId INT NOT NULL,\n  strategyId INT NOT NULL,\n  downloadedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  INDEX userId_idx (userId),\n  INDEX strategyId_idx (strategyId)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 2138
+}
