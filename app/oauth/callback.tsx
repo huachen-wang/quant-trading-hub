@@ -49,6 +49,8 @@ export default function OAuthCallback() {
                 openId: userData.openId,
                 name: userData.name,
                 email: userData.email,
+                avatar: userData.avatar || null,
+                bio: userData.bio || null,
                 loginMethod: userData.loginMethod,
                 lastSignedIn: new Date(userData.lastSignedIn || Date.now()),
               };
@@ -200,6 +202,8 @@ export default function OAuthCallback() {
               openId: result.user.openId,
               name: result.user.name,
               email: result.user.email,
+              avatar: result.user.avatar || null,
+              bio: result.user.bio || null,
               loginMethod: result.user.loginMethod,
               lastSignedIn: new Date(result.user.lastSignedIn || Date.now()),
             };

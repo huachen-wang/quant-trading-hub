@@ -7,6 +7,8 @@ export type User = {
   openId: string;
   name: string | null;
   email: string | null;
+  avatar: string | null;
+  bio: string | null;
   loginMethod: string | null;
   lastSignedIn: Date;
 };

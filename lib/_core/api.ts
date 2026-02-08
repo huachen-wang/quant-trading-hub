@@ -129,6 +129,8 @@ export async function getMe(): Promise<{
   openId: string;
   name: string | null;
   email: string | null;
+  avatar: string | null;
+  bio: string | null;
   loginMethod: string | null;
   lastSignedIn: string;
 } | null> {

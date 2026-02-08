@@ -28,11 +28,11 @@ const schemeFromBundleId = `manus${timestamp}`;
 
 const env = {
   // App branding - update these values directly (do not use env vars)
-  appName: "量化交易策略评分平台",
-  appSlug: "quant-trading-hub",
+  appName: "量化策略评分",
+  appSlug: "{{project_name}}",
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   // Leave empty to use the default icon from assets/images/icon.png
-  logoUrl: "",
+  logoUrl: "https://private-us-east-1.manuscdn.com/sessionFile/V69mksYiAfXPuFAsMP0jkU/sandbox/0NfsSsiJuHfUKjZqEJ3TAm-img-1_1770563016000_na1fn_cXVhbnQtdHJhZGluZy1pY29u.png?x-oss-process=image/resize,w_1920,h_1920/format,webp/quality,q_80&Expires=1798761600&Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9wcml2YXRlLXVzLWVhc3QtMS5tYW51c2Nkbi5jb20vc2Vzc2lvbkZpbGUvVjY5bWtzWWlBZlhQdUZBc01QMGprVS9zYW5kYm94LzBOZnNTc2lKdUhmVUtqWnFFSjNUQW0taW1nLTFfMTc3MDU2MzAxNjAwMF9uYTFmbl9jWFZoYm5RdGRISmhaR2x1WnkxcFkyOXUucG5nP3gtb3NzLXByb2Nlc3M9aW1hZ2UvcmVzaXplLHdfMTkyMCxoXzE5MjAvZm9ybWF0LHdlYnAvcXVhbGl0eSxxXzgwIiwiQ29uZGl0aW9uIjp7IkRhdGVMZXNzVGhhbiI6eyJBV1M6RXBvY2hUaW1lIjoxNzk4NzYxNjAwfX19XX0_&Key-Pair-Id=K2HSFNDJXOU9YS&Signature=um1FqLtabtkEGqJCPW0JsSXShXa05oU7YDEhDvdLKT~SxIAnpHGeZ75tV-VWdCjXPvCloayomjTkitbNBF4lol3uL7rNB19SYV9JBtCXbuiFnWKk7M2IPlMX0O7GRO19Daaph2c8uO6QKBii4jrrpbl3cxoQrIh9NAYe-20p66ebJpznvuS2OkHZgBkWMVgqzrtYfrlM0yFta5d0yzQC666SbWf0kK00AMxpzZIajTP9TzeUGUiKvGboF8seTwdCowgRst-I4ujF~CM2~JhUgzvlKnvySyXKr5~SsBED32Hu3jb8HgiuJNuIh3ySu5dRBUt5y75pUTqMWc7Vl3LZwg__",
   scheme: schemeFromBundleId,
   iosBundleId: bundleId,
   androidPackage: bundleId,
