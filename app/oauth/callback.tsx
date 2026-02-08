@@ -52,6 +52,7 @@ export default function OAuthCallback() {
                 avatar: userData.avatar || null,
                 bio: userData.bio || null,
                 loginMethod: userData.loginMethod,
+                role: (userData.role as "user" | "admin") || "user",
                 lastSignedIn: new Date(userData.lastSignedIn || Date.now()),
               };
               await Auth.setUserInfo(userInfo);
@@ -205,6 +206,7 @@ export default function OAuthCallback() {
               avatar: result.user.avatar || null,
               bio: result.user.bio || null,
               loginMethod: result.user.loginMethod,
+              role: (result.user.role as "user" | "admin") || "user",
               lastSignedIn: new Date(result.user.lastSignedIn || Date.now()),
             };
             await Auth.setUserInfo(userInfo);

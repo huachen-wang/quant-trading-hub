@@ -5,6 +5,14 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 
+// 管理员权限中间件
+const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  if (ctx.user.role !== "admin") {
+    throw new Error("Unauthorized: Admin access required");
+  }
+  return next();
+});
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -128,6 +136,94 @@ export const appRouter = router({
       }),
 
     list: protectedProcedure.query(({ ctx }) => db.getUserDownloads(ctx.user.id)),
+  }),
+
+  // 管理员API
+  admin: router({
+    // 策略管理
+    strategies: router({
+      create: adminProcedure
+        .input(
+          z.object({
+            title: z.string().min(1),
+            description: z.string().optional(),
+            platform: z.enum(["MT4", "MT5"]),
+            pairs: z.string(),
+            timeframe: z.string().optional(),
+            coverImage: z.string().optional(),
+            totalReturn: z.string().optional(),
+            maxDrawdown: z.string().optional(),
+            sharpeRatio: z.string().optional(),
+            winRate: z.string().optional(),
+            downloadUrl: z.string().optional(),
+            price: z.string().optional(),
+            isFree: z.boolean().optional(),
+            telegramGroup: z.string().optional(),
+            qqGroup: z.string().optional(),
+            status: z.enum(["draft", "published", "archived"]).optional(),
+          })
+        )
+        .mutation(({ input }) => db.createStrategy(input)),
+
+      update: adminProcedure
+        .input(
+          z.object({
+            id: z.number(),
+            title: z.string().min(1).optional(),
+            description: z.string().optional(),
+            platform: z.enum(["MT4", "MT5"]).optional(),
+            pairs: z.string().optional(),
+            timeframe: z.string().optional(),
+            coverImage: z.string().optional(),
+            totalReturn: z.string().optional(),
+            maxDrawdown: z.string().optional(),
+            sharpeRatio: z.string().optional(),
+            winRate: z.string().optional(),
+            downloadUrl: z.string().optional(),
+            price: z.string().optional(),
+            isFree: z.boolean().optional(),
+            telegramGroup: z.string().optional(),
+            qqGroup: z.string().optional(),
+            status: z.enum(["draft", "published", "archived"]).optional(),
+          })
+        )
+        .mutation(({ input }) => db.updateStrategy(input.id, input)),
+
+      delete: adminProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(({ input }) => db.deleteStrategy(input.id)),
+
+      list: adminProcedure
+        .input(
+          z.object({
+            status: z.enum(["draft", "published", "archived"]).optional(),
+            limit: z.number().optional(),
+            offset: z.number().optional(),
+          })
+        )
+        .query(({ input }) => db.getAllStrategies(input)),
+    }),
+
+    // 评论管理
+    comments: router({
+      list: adminProcedure
+        .input(
+          z.object({
+            limit: z.number().optional(),
+            offset: z.number().optional(),
+          })
+        )
+        .query(({ input }) => db.getAllComments(input.limit, input.offset)),
+
+      delete: adminProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(({ input }) => db.deleteCommentByAdmin(input.id)),
+    }),
+
+    // 数据统计
+    stats: router({
+      overview: adminProcedure.query(() => db.getAdminStats()),
+    }),
   }),
 });
 

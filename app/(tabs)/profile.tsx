@@ -50,6 +50,26 @@ export default function ProfileScreen() {
           {user?.email && <Text className="text-sm text-muted mt-1">{user.email}</Text>}
         </View>
 
+        {/* 管理员入口 */}
+        {user?.role === "admin" && (
+          <TouchableOpacity
+            onPress={() => router.push("/admin" as any)}
+            className="bg-primary rounded-2xl p-4 mb-6 flex-row items-center justify-between"
+            activeOpacity={0.8}
+          >
+            <View className="flex-row items-center">
+              <View className="w-10 h-10 rounded-full bg-background/20 items-center justify-center mr-3">
+                <Text className="text-background text-xl">⚙️</Text>
+              </View>
+              <View>
+                <Text className="text-background font-bold text-base">管理员后台</Text>
+                <Text className="text-background/80 text-xs">管理策略和评论</Text>
+              </View>
+            </View>
+            <Text className="text-background text-xl">→</Text>
+          </TouchableOpacity>
+        )}
+
         {/* 统计信息 */}
         <View className="flex-row justify-around mb-8 bg-surface rounded-2xl p-6">
           <View className="items-center">

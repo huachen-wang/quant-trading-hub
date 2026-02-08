@@ -10,6 +10,7 @@ export type User = {
   avatar: string | null;
   bio: string | null;
   loginMethod: string | null;
+  role: "user" | "admin";
   lastSignedIn: Date;
 };
 

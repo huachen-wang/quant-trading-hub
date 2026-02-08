@@ -132,6 +132,7 @@ export async function getMe(): Promise<{
   avatar: string | null;
   bio: string | null;
   loginMethod: string | null;
+  role: string;
   lastSignedIn: string;
 } | null> {
   try {

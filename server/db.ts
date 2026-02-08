@@ -283,3 +283,110 @@ export async function getUserDownloads(userId: number) {
     .where(eq(downloads.userId, userId))
     .orderBy(desc(downloads.downloadedAt));
 }
+
+
+// ========== 管理员功能 ==========
+
+export async function createStrategy(data: typeof strategies.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(strategies).values(data);
+  return result;
+}
+
+export async function updateStrategy(id: number, data: Partial<typeof strategies.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db.update(strategies).set(data).where(eq(strategies.id, id));
+  return getStrategyById(id);
+}
+
+export async function deleteStrategy(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db.delete(strategies).where(eq(strategies.id, id));
+  return true;
+}
+
+export async function getAllStrategies(params: {
+  status?: "draft" | "published" | "archived";
+  limit?: number;
+  offset?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const whereCondition = params.status ? eq(strategies.status, params.status) : undefined;
+
+  const query = db
+    .select()
+    .from(strategies)
+    .where(whereCondition)
+    .orderBy(desc(strategies.createdAt))
+    .limit(params.limit || 50)
+    .offset(params.offset || 0);
+
+  return query;
+}
+
+export async function getAllComments(limit?: number, offset?: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: comments.id,
+      userId: comments.userId,
+      strategyId: comments.strategyId,
+      content: comments.content,
+      createdAt: comments.createdAt,
+      user: {
+        id: users.id,
+        name: users.name,
+        avatar: users.avatar,
+      },
+      strategy: {
+        id: strategies.id,
+        title: strategies.title,
+      },
+    })
+    .from(comments)
+    .leftJoin(users, eq(comments.userId, users.id))
+    .leftJoin(strategies, eq(comments.strategyId, strategies.id))
+    .orderBy(desc(comments.createdAt))
+    .limit(limit || 50)
+    .offset(offset || 0);
+}
+
+export async function deleteCommentByAdmin(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db.delete(comments).where(eq(comments.id, id));
+  return true;
+}
+
+export async function getAdminStats() {
+  const db = await getDb();
+  if (!db) return null;
+
+  const totalStrategies = await db.select({ count: sql<number>`count(*)` }).from(strategies);
+  const publishedStrategies = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(strategies)
+    .where(eq(strategies.status, "published"));
+  const totalDownloads = await db.select({ count: sql<number>`count(*)` }).from(downloads);
+  const totalPurchases = await db.select({ count: sql<number>`count(*)` }).from(purchases);
+  const totalComments = await db.select({ count: sql<number>`count(*)` }).from(comments);
+
+  return {
+    totalStrategies: totalStrategies[0]?.count || 0,
+    publishedStrategies: publishedStrategies[0]?.count || 0,
+    totalDownloads: totalDownloads[0]?.count || 0,
+    totalPurchases: totalPurchases[0]?.count || 0,
+    totalComments: totalComments[0]?.count || 0,
+  };
+}

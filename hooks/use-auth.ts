@@ -34,6 +34,7 @@ export function useAuth(options?: UseAuthOptions) {
             avatar: apiUser.avatar || null,
             bio: apiUser.bio || null,
             loginMethod: apiUser.loginMethod,
+            role: (apiUser.role as "user" | "admin") || "user",
             lastSignedIn: new Date(apiUser.lastSignedIn),
           };
           setUser(userInfo);
