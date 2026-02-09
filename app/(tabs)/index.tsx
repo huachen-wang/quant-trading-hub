@@ -6,24 +6,43 @@ import { StrategyCard } from "@/components/strategy-card";
 import { ContactModal } from "@/components/contact-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
+import { useFavorites } from "@/hooks/use-favorites";
 import { trpc } from "@/lib/trpc";
+import * as Haptics from "expo-haptics";
+import { Platform as RNPlatform } from "react-native";
 
-type Platform = "MT4" | "MT5" | undefined;
+type PlatformFilter = "MT4" | "MT5" | undefined;
 type OrderBy = "latest" | "popular" | "return";
 
 export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
-  const [platform, setPlatform] = useState<Platform>(undefined);
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(undefined);
   const [orderBy, setOrderBy] = useState<OrderBy>("latest");
   const [showContactModal, setShowContactModal] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const { data: strategies, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
-    platform,
+    platform: platformFilter,
     orderBy,
     limit: 20,
     offset: 0,
   });
+
+  const handleFavoritePress = async (strategy: any) => {
+    if (RNPlatform.OS !== "web") {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    await toggleFavorite({
+      id: strategy.id,
+      title: strategy.title,
+      platform: strategy.platform,
+      totalReturn: strategy.totalReturn || "0.00",
+      winRate: strategy.winRate || "0.00",
+      price: strategy.price || "0.00",
+      isFree: strategy.isFree,
+    });
+  };
 
   const handleStrategyPress = (id: number) => {
     router.push(`/strategy/${id}` as any);
@@ -56,25 +75,25 @@ export default function HomeScreen() {
       {/* 平台筛选 */}
       <View className="flex-row mb-3">
         <TouchableOpacity
-          onPress={() => setPlatform(undefined)}
-          className={`px-4 py-2 rounded-full mr-2 ${!platform ? "bg-primary" : "bg-surface"}`}
+          onPress={() => setPlatformFilter(undefined)}
+          className={`px-4 py-2 rounded-full mr-2 ${!platformFilter ? "bg-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
-          <Text className={`font-semibold ${!platform ? "text-background" : "text-foreground"}`}>全部</Text>
+          <Text className={`font-semibold ${!platformFilter ? "text-background" : "text-foreground"}`}>全部</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => setPlatform("MT4")}
-          className={`px-4 py-2 rounded-full mr-2 ${platform === "MT4" ? "bg-primary" : "bg-surface"}`}
+          onPress={() => setPlatformFilter("MT4")}
+          className={`px-4 py-2 rounded-full mr-2 ${platformFilter === "MT4" ? "bg-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
-          <Text className={`font-semibold ${platform === "MT4" ? "text-background" : "text-foreground"}`}>MT4</Text>
+          <Text className={`font-semibold ${platformFilter === "MT4" ? "text-background" : "text-foreground"}`}>MT4</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => setPlatform("MT5")}
-          className={`px-4 py-2 rounded-full ${platform === "MT5" ? "bg-primary" : "bg-surface"}`}
+          onPress={() => setPlatformFilter("MT5")}
+          className={`px-4 py-2 rounded-full ${platformFilter === "MT5" ? "bg-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
-          <Text className={`font-semibold ${platform === "MT5" ? "text-background" : "text-foreground"}`}>MT5</Text>
+          <Text className={`font-semibold ${platformFilter === "MT5" ? "text-background" : "text-foreground"}`}>MT5</Text>
         </TouchableOpacity>
       </View>
 
@@ -144,6 +163,8 @@ export default function HomeScreen() {
             isFree={item.isFree}
             downloadCount={item.downloadCount}
             onPress={() => handleStrategyPress(item.id)}
+            isFavorite={isFavorite(item.id)}
+            onFavoritePress={() => handleFavoritePress(item)}
           />
         )}
         ListHeaderComponent={renderHeader}

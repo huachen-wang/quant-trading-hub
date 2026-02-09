@@ -12,6 +12,8 @@ export interface StrategyCardProps {
   isFree: boolean;
   downloadCount: number;
   onPress: () => void;
+  isFavorite?: boolean;
+  onFavoritePress?: () => void;
 }
 
 export function StrategyCard({
@@ -23,6 +25,8 @@ export function StrategyCard({
   isFree,
   downloadCount,
   onPress,
+  isFavorite = false,
+  onFavoritePress,
 }: StrategyCardProps) {
   const colors = useColors();
 
@@ -44,10 +48,11 @@ export function StrategyCard({
     >
       <View className="bg-surface rounded-2xl overflow-hidden border border-border">
         {/* 封面占位图 - 渐变色 */}
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+        <View className="relative">
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
           className="h-24 items-center justify-center"
         >
           <Text className="text-4xl">📈</Text>
@@ -56,7 +61,22 @@ export function StrategyCard({
               {platform}
             </Text>
           </View>
-        </LinearGradient>
+          </LinearGradient>
+          
+          {/* 收藏按钮 */}
+          {onFavoritePress && (
+            <TouchableOpacity
+              onPress={(e) => {
+                e.stopPropagation();
+                onFavoritePress();
+              }}
+              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 items-center justify-center"
+              activeOpacity={0.7}
+            >
+              <Text className="text-lg">{isFavorite ? "❤️" : "🤍"}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* 策略信息 */}
         <View className="p-3">
