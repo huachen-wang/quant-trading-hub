@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicat
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { StrategyCard } from "@/components/strategy-card";
+import { ContactModal } from "@/components/contact-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
@@ -15,6 +16,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const [platform, setPlatform] = useState<Platform>(undefined);
   const [orderBy, setOrderBy] = useState<OrderBy>("latest");
+  const [showContactModal, setShowContactModal] = useState(false);
 
   const { data: strategies, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
     platform,
@@ -29,16 +31,26 @@ export default function HomeScreen() {
 
   const renderHeader = () => (
     <View className="mb-4">
-      {/* 标题和搜索 */}
+      {/* 标题和操作按钮 */}
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-3xl font-bold text-foreground">策略广场</Text>
-        <TouchableOpacity
-          onPress={() => router.push("/search" as any)}
-          className="w-10 h-10 items-center justify-center rounded-full bg-surface"
-          activeOpacity={0.7}
-        >
-          <IconSymbol name="magnifyingglass" size={20} color={colors.foreground} />
-        </TouchableOpacity>
+        <View className="flex-row">
+          <TouchableOpacity
+            onPress={() => setShowContactModal(true)}
+            className="mr-2 px-4 py-2 bg-primary rounded-full flex-row items-center"
+            activeOpacity={0.8}
+          >
+            <IconSymbol name="paperplane.fill" size={16} color={colors.background} />
+            <Text className="text-background font-semibold text-sm ml-1">上架EA</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push("/search" as any)}
+            className="w-10 h-10 items-center justify-center rounded-full bg-surface"
+            activeOpacity={0.7}
+          >
+            <IconSymbol name="magnifyingglass" size={20} color={colors.foreground} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 平台筛选 */}
@@ -116,9 +128,11 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer>
+      <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
       <FlatList
         data={strategies || []}
         keyExtractor={(item) => item.id.toString()}
+        numColumns={2}
         renderItem={({ item }) => (
           <StrategyCard
             id={item.id}
@@ -126,15 +140,16 @@ export default function HomeScreen() {
             platform={item.platform}
             totalReturn={item.totalReturn || "0.00"}
             winRate={item.winRate || "0.00"}
+            price={item.price || "0.00"}
+            isFree={item.isFree}
             downloadCount={item.downloadCount}
-            viewCount={item.viewCount}
-            coverImage={item.coverImage}
             onPress={() => handleStrategyPress(item.id)}
           />
         )}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        columnWrapperStyle={{ justifyContent: "space-between" }}
+        contentContainerStyle={{ padding: 8, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
       />
     </ScreenContainer>
