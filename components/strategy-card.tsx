@@ -42,9 +42,9 @@ export function StrategyCard({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-1 m-1"
+      className="flex-1 mb-2"
       activeOpacity={0.8}
-      style={{ minWidth: "45%" }}
+      style={{ minWidth: "48%", marginHorizontal: 2 }}
     >
       <View className="bg-surface rounded-2xl overflow-hidden border border-border">
         {/* 封面占位图 - 渐变色 */}
@@ -53,7 +53,7 @@ export function StrategyCard({
             colors={gradientColors}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-          className="h-24 items-center justify-center"
+          className="h-20 items-center justify-center"
         >
           <Text className="text-4xl">📈</Text>
           <View className="absolute top-2 right-2 bg-background/90 px-2 py-0.5 rounded">

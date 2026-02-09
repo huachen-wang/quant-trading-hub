@@ -49,9 +49,9 @@ export default function HomeScreen() {
   };
 
   const renderHeader = () => (
-    <View className="mb-4">
+    <View className="mb-2">
       {/* 标题和操作按钮 */}
-      <View className="flex-row items-center justify-between mb-4">
+      <View className="flex-row items-center justify-between mb-3">
         <Text className="text-3xl font-bold text-foreground">策略广场</Text>
         <View className="flex-row">
           <TouchableOpacity
@@ -73,7 +73,7 @@ export default function HomeScreen() {
       </View>
 
       {/* 平台筛选 */}
-      <View className="flex-row mb-3">
+      <View className="flex-row mb-2">
         <TouchableOpacity
           onPress={() => setPlatformFilter(undefined)}
           className={`px-4 py-2 rounded-full mr-2 ${!platformFilter ? "bg-primary" : "bg-surface"}`}
@@ -131,9 +131,9 @@ export default function HomeScreen() {
   );
 
   const renderEmpty = () => (
-    <View className="items-center justify-center py-20">
+    <View className="items-center justify-center py-12">
       <Text className="text-muted text-base">暂无策略</Text>
-      <Text className="text-muted text-sm mt-2">成为第一个发布策略的用户</Text>
+      <Text className="text-muted text-sm mt-1">成为第一个发布策略的用户</Text>
     </View>
   );
 
@@ -170,7 +170,7 @@ export default function HomeScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         columnWrapperStyle={{ justifyContent: "space-between" }}
-        contentContainerStyle={{ padding: 8, paddingBottom: 32 }}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 20 }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
       />
     </ScreenContainer>

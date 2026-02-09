@@ -1,0 +1,13 @@
+{
+  "query": "SELECT COUNT(*) as total FROM strategies;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user j9KUtKJY9ypfPzH.root --database G7CCk846Fqcvg3hQNu5KQZ --execute SELECT COUNT(*) as total FROM strategies;",
+  "rows": [
+    {
+      "total": "11"
+    }
+  ],
+  "messages": [],
+  "stdout": "total\n11\n",
+  "stderr": "",
+  "execution_time_ms": 4490
+}
