@@ -390,3 +390,26 @@ export async function getAdminStats() {
     totalComments: totalComments[0]?.count || 0,
   };
 }
+
+// ========== 回测数据相关 ==========
+
+export async function getBacktestData(strategyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { backtestData } = schema;
+  return db
+    .select()
+    .from(backtestData)
+    .where(eq(backtestData.strategyId, strategyId))
+    .orderBy(backtestData.date);
+}
+
+export async function createBacktestData(data: typeof schema.backtestData.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { backtestData } = schema;
+  const result = await db.insert(backtestData).values(data);
+  return result;
+}

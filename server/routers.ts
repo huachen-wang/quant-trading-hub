@@ -48,6 +48,10 @@ export const appRouter = router({
         return strategy;
       }),
 
+    backtestData: publicProcedure
+      .input(z.object({ strategyId: z.number() }))
+      .query(({ input }) => db.getBacktestData(input.strategyId)),
+
     search: publicProcedure
       .input(z.object({ keyword: z.string().min(1), limit: z.number().optional() }))
       .query(({ input }) => db.searchStrategies(input.keyword, input.limit)),

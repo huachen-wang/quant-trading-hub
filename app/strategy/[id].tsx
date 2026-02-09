@@ -16,6 +16,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
+import { EquityCurveChart } from "@/components/equity-curve-chart";
 
 export default function StrategyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,6 +31,7 @@ export default function StrategyDetailScreen() {
   const { data: comments, refetch: refetchComments } = trpc.comments.list.useQuery({
     strategyId,
   });
+  const { data: backtestData } = trpc.strategies.backtestData.useQuery({ strategyId });
 
   const createCommentMutation = trpc.comments.create.useMutation({
     onSuccess: () => {
@@ -169,6 +171,13 @@ export default function StrategyDetailScreen() {
             </View>
           </View>
         </View>
+
+        {/* 回测数据 */}
+        {backtestData && backtestData.length > 0 && (
+          <View className="px-4 mb-6">
+            <EquityCurveChart data={backtestData} />
+          </View>
+        )}
 
         {/* 交易信息 */}
         <View className="px-4 mb-6">

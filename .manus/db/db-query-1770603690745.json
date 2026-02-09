@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS backtest_data (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  strategyId INT NOT NULL,\n  date DATE NOT NULL,\n  equity DECIMAL(15, 2) NOT NULL,\n  balance DECIMAL(15, 2) NOT NULL,\n  profit DECIMAL(15, 2) NOT NULL,\n  drawdown DECIMAL(10, 2) NOT NULL,\n  tradesCount INT DEFAULT 0 NOT NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  INDEX strategyId_idx (strategyId),\n  INDEX date_idx (date),\n  INDEX strategy_date_idx (strategyId, date)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user j9KUtKJY9ypfPzH.root --database G7CCk846Fqcvg3hQNu5KQZ --execute CREATE TABLE IF NOT EXISTS backtest_data (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  strategyId INT NOT NULL,\n  date DATE NOT NULL,\n  equity DECIMAL(15, 2) NOT NULL,\n  balance DECIMAL(15, 2) NOT NULL,\n  profit DECIMAL(15, 2) NOT NULL,\n  drawdown DECIMAL(10, 2) NOT NULL,\n  tradesCount INT DEFAULT 0 NOT NULL,\n  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,\n  INDEX strategyId_idx (strategyId),\n  INDEX date_idx (date),\n  INDEX strategy_date_idx (strategyId, date)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1975
+}

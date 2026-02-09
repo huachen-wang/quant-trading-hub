@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, index, boolean } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, index, boolean, date } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -85,6 +85,26 @@ export const trades = mysqlTable("trades", {
 
 export type Trade = typeof trades.$inferSelect;
 export type InsertTrade = typeof trades.$inferInsert;
+
+// 回测数据表(每日权益曲线)
+export const backtestData = mysqlTable("backtest_data", {
+  id: int("id").autoincrement().primaryKey(),
+  strategyId: int("strategyId").notNull(),
+  date: date("date").notNull(), // 交易日期
+  equity: decimal("equity", { precision: 15, scale: 2 }).notNull(), // 当日权益
+  balance: decimal("balance", { precision: 15, scale: 2 }).notNull(), // 当日余额
+  profit: decimal("profit", { precision: 15, scale: 2 }).notNull(), // 当日盈亏
+  drawdown: decimal("drawdown", { precision: 10, scale: 2 }).notNull(), // 当日回撤
+  tradesCount: int("tradesCount").default(0).notNull(), // 当日交易次数
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  strategyIdIdx: index("strategyId_idx").on(table.strategyId),
+  dateIdx: index("date_idx").on(table.date),
+  strategyDateIdx: index("strategy_date_idx").on(table.strategyId, table.date),
+}));
+
+export type BacktestData = typeof backtestData.$inferSelect;
+export type InsertBacktestData = typeof backtestData.$inferInsert;
 
 // 用户购买记录表
 export const purchases = mysqlTable("purchases", {
