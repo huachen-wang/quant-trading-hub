@@ -71,9 +71,18 @@ export default function CreateGroupBuyScreen() {
   return (
     <ScreenContainer>
       <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
+        {/* 返回按钮 */}
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="w-10 h-10 bg-surface rounded-full items-center justify-center mb-4"
+          activeOpacity={0.7}
+        >
+          <Text className="text-xl">←</Text>
+        </TouchableOpacity>
+
         {/* 标题 */}
         <View className="mb-4">
-          <Text className="text-2xl font-bold text-foreground mb-2">发起合购</Text>
+          <Text className="text-2xl font-bold text-foreground mb-2">🤝 发起合购</Text>
           <Text className="text-sm text-muted leading-relaxed">
             填写以下信息提交合购申请,我们会审核并联系您确认详情后上架。
           </Text>

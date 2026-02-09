@@ -38,7 +38,7 @@ export default function GroupBuyScreen() {
       <View className="flex-1 px-4 pt-4">
         {/* 标题和发起按钮 */}
         <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-2xl font-bold text-foreground">合购专区</Text>
+          <Text className="text-2xl font-bold text-foreground">🤝 合购专区</Text>
           <TouchableOpacity
             onPress={handleCreateGroupBuy}
             className="bg-primary px-4 py-2 rounded-full"

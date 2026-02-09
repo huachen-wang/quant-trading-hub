@@ -11,6 +11,7 @@ export interface FavoriteStrategy {
   winRate: string;
   price: string;
   isFree: boolean;
+  coverImage?: string;
   addedAt: string;
 }
 

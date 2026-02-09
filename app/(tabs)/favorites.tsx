@@ -43,7 +43,7 @@ export default function FavoritesScreen() {
     <View className="mb-4">
       <View className="flex-row items-center justify-between mb-4">
         <View>
-          <Text className="text-3xl font-bold text-foreground">我的收藏</Text>
+            <Text className="text-3xl font-bold text-foreground">❤️ 我的收藏</Text>
           <Text className="text-sm text-muted mt-1">
             {favorites.length > 0 ? `共 ${favorites.length} 个策略` : "还没有收藏任何策略"}
           </Text>
@@ -100,6 +100,7 @@ export default function FavoritesScreen() {
             price={item.price}
             isFree={item.isFree}
             downloadCount={0}
+            coverImage={item.coverImage}
             onPress={() => handleStrategyPress(item.id)}
             isFavorite={isFavorite(item.id)}
             onFavoritePress={() => handleFavoritePress(item)}

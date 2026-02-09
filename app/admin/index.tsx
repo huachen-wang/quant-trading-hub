@@ -20,18 +20,32 @@ export default function AdminDashboard() {
 
   const menuItems = [
     {
-      title: "策略管理",
+      title: "📊 策略管理",
       icon: "chart.line.uptrend.xyaxis" as const,
       route: "/admin/strategies",
       count: stats?.totalStrategies || 0,
       description: "管理所有EA策略",
     },
     {
-      title: "评论管理",
+      title: "💬 评论管理",
       icon: "ellipsis.circle" as const,
       route: "/admin/comments",
       count: stats?.totalComments || 0,
       description: "查看和管理用户评论",
+    },
+    {
+      title: "🤝 合购申请",
+      icon: "paperplane.fill" as const,
+      route: "/admin/group-buys",
+      count: 0,
+      description: "查看和审核合购申请",
+    },
+    {
+      title: "📦 上架申请",
+      icon: "tray.full" as const,
+      route: "/admin/listings",
+      count: 0,
+      description: "查看和审核EA上架申请",
     },
   ];
 
@@ -40,7 +54,7 @@ export default function AdminDashboard() {
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
         {/* 标题 */}
         <View className="mb-6">
-          <Text className="text-3xl font-bold text-foreground mb-2">管理员后台</Text>
+          <Text className="text-3xl font-bold text-foreground mb-2">🔧 管理员后台</Text>
           <Text className="text-base text-muted">管理平台内容和数据</Text>
         </View>
 

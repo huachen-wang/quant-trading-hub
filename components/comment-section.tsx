@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert } from "react-native";
 import { useColors } from "@/hooks/use-colors";
+import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
@@ -11,6 +12,7 @@ interface CommentSectionProps {
 
 export function CommentSection({ strategyId }: CommentSectionProps) {
   const colors = useColors();
+  const { user, login } = useAuth();
   const [nickname, setNickname] = useState("");
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,13 +73,45 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
     return date.toLocaleDateString("zh-CN");
   };
 
+  const handleLoginPrompt = () => {
+    Alert.alert(
+      "🔐 需要登录",
+      "登录后才能查看和发表评价，请先登录您的账号。",
+      [
+        { text: "取消", style: "cancel" },
+        {
+          text: "去登录",
+          onPress: () => login(),
+        },
+      ]
+    );
+  };
+
   return (
     <View className="mt-6">
       {/* 标题 */}
-      <Text className="text-xl font-bold text-foreground mb-4">用户评价</Text>
+      <Text className="text-xl font-bold text-foreground mb-4">💬 用户评价</Text>
 
-      {/* 发表留言 */}
-      <View className="bg-surface rounded-2xl p-4 mb-4">
+      {!user ? (
+        /* 未登录提示 */
+        <View className="bg-surface rounded-2xl p-6 items-center">
+          <Text className="text-5xl mb-3">🔒</Text>
+          <Text className="text-lg font-semibold text-foreground mb-2">需要登录</Text>
+          <Text className="text-sm text-muted text-center mb-4">
+            登录后才能查看和发表评价
+          </Text>
+          <TouchableOpacity
+            onPress={() => login()}
+            className="bg-primary px-6 py-3 rounded-full"
+            activeOpacity={0.8}
+          >
+            <Text className="text-background font-semibold">立即登录</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          {/* 发表留言 */}
+          <View className="bg-surface rounded-2xl p-4 mb-4">
         <TextInput
           className="bg-background rounded-xl px-4 py-3 text-base text-foreground mb-3"
           placeholder="昵称(可选)"
@@ -109,7 +143,7 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
         </TouchableOpacity>
       </View>
 
-      {/* 留言列表 */}
+          {/* 留言列表 */}
       {isLoading ? (
         <View className="py-8">
           <ActivityIndicator size="large" color={colors.primary} />
@@ -135,6 +169,8 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
         <View className="py-8">
           <Text className="text-center text-muted text-base">暂无评价,快来抢沙发吧~</Text>
         </View>
+      )}
+        </>
       )}
     </View>
   );

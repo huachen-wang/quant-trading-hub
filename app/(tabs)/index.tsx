@@ -41,6 +41,7 @@ export default function HomeScreen() {
       winRate: strategy.winRate || "0.00",
       price: strategy.price || "0.00",
       isFree: strategy.isFree,
+      coverImage: strategy.coverImage,
     });
   };
 
@@ -52,7 +53,7 @@ export default function HomeScreen() {
     <View className="mb-2">
       {/* 标题和操作按钮 */}
       <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-3xl font-bold text-foreground">策略广场</Text>
+        <Text className="text-3xl font-bold text-foreground">📊 策略广场</Text>
         <View className="flex-row">
           <TouchableOpacity
             onPress={() => setShowContactModal(true)}
