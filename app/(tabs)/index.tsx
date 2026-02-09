@@ -7,6 +7,7 @@ import { ContactModal } from "@/components/contact-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 import * as Haptics from "expo-haptics";
 import { Platform as RNPlatform } from "react-native";
@@ -17,6 +18,7 @@ type OrderBy = "latest" | "popular" | "return";
 export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { numColumns, isDesktop } = useResponsive();
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(undefined);
   const [orderBy, setOrderBy] = useState<OrderBy>("latest");
   const [showContactModal, setShowContactModal] = useState(false);
@@ -148,7 +150,8 @@ export default function HomeScreen() {
       <FlatList
         data={strategies || []}
         keyExtractor={(item) => item.id.toString()}
-        numColumns={2}
+        key={numColumns}
+        numColumns={numColumns}
         renderItem={({ item }) => (
           <StrategyCard
             id={item.id}
