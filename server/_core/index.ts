@@ -1,4 +1,4 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
@@ -6,6 +6,10 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+
+const nodeEnv = process.env.NODE_ENV || "development";
+dotenv.config({ path: `.env.${nodeEnv}` });
+dotenv.config();
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
