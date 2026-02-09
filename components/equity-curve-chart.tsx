@@ -1,5 +1,4 @@
-import { View, Text } from "react-native";
-import { CartesianChart, Line } from "victory-native";
+import { View, Text, Platform, Dimensions } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 
 interface EquityCurveChartProps {
@@ -20,31 +19,72 @@ export function EquityCurveChart({ data }: EquityCurveChartProps) {
     );
   }
 
-  // 转换数据格式
-  const chartData = data.map((item, index) => ({
-    day: index + 1,
-    equity: parseFloat(item.equity),
-  }));
+  // Web端暂时使用简化展示,移动端可以使用victory-native
+  if (Platform.OS === "web") {
+    // 计算统计数据
+    const startEquity = parseFloat(data[0].equity);
+    const endEquity = parseFloat(data[data.length - 1].equity);
+    const totalReturn = ((endEquity - startEquity) / startEquity) * 100;
+    const maxEquity = Math.max(...data.map(d => parseFloat(d.equity)));
+    const minEquity = Math.min(...data.map(d => parseFloat(d.equity)));
+    const maxDrawdown = ((maxEquity - minEquity) / maxEquity) * 100;
 
+    return (
+      <View className="bg-surface rounded-xl p-4">
+        <Text className="text-lg font-semibold text-foreground mb-4">回测数据统计</Text>
+        
+        <View className="flex-row flex-wrap">
+          <View className="w-1/2 mb-4">
+            <Text className="text-xs text-muted mb-1">初始权益</Text>
+            <Text className="text-xl font-bold text-foreground">
+              ${startEquity.toFixed(2)}
+            </Text>
+          </View>
+          
+          <View className="w-1/2 mb-4">
+            <Text className="text-xs text-muted mb-1">最终权益</Text>
+            <Text className="text-xl font-bold text-foreground">
+              ${endEquity.toFixed(2)}
+            </Text>
+          </View>
+          
+          <View className="w-1/2 mb-4">
+            <Text className="text-xs text-muted mb-1">总收益率</Text>
+            <Text className={`text-xl font-bold ${totalReturn >= 0 ? 'text-success' : 'text-error'}`}>
+              {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
+            </Text>
+          </View>
+          
+          <View className="w-1/2 mb-4">
+            <Text className="text-xs text-muted mb-1">最大回撤</Text>
+            <Text className="text-xl font-bold text-error">
+              -{maxDrawdown.toFixed(2)}%
+            </Text>
+          </View>
+          
+          <View className="w-full">
+            <Text className="text-xs text-muted mb-1">回测周期</Text>
+            <Text className="text-base text-foreground">
+              {data.length} 天
+            </Text>
+          </View>
+        </View>
+        
+        <View className="mt-4 p-3 bg-background rounded-lg">
+          <Text className="text-xs text-muted text-center">
+            💡 移动端可查看完整权益曲线图表
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // 移动端使用victory-native (暂时也使用简化版)
   return (
     <View className="bg-surface rounded-xl p-4">
-      <Text className="text-lg font-semibold text-foreground mb-2">权益曲线</Text>
-      <View className="h-64">
-        <CartesianChart
-          data={chartData}
-          xKey="day"
-          yKeys={["equity"]}
-          domainPadding={{ left: 20, right: 20, top: 20, bottom: 20 }}
-        >
-          {({ points }) => (
-            <Line
-              points={points.equity}
-              color={colors.primary}
-              strokeWidth={2}
-              animate={{ type: "timing", duration: 300 }}
-            />
-          )}
-        </CartesianChart>
+      <Text className="text-lg font-semibold text-foreground mb-2">回测数据</Text>
+      <View className="h-64 items-center justify-center">
+        <Text className="text-muted">图表功能开发中...</Text>
       </View>
     </View>
   );
