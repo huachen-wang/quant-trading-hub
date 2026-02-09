@@ -72,36 +72,32 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* 平台筛选 */}
-      <View className="flex-row mb-2">
+      {/* 筛选和排序 - 单行布局 */}
+      <View className="flex-row flex-wrap">
         <TouchableOpacity
           onPress={() => setPlatformFilter(undefined)}
-          className={`px-4 py-2 rounded-full mr-2 ${!platformFilter ? "bg-primary" : "bg-surface"}`}
+          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${!platformFilter ? "bg-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
-          <Text className={`font-semibold ${!platformFilter ? "text-background" : "text-foreground"}`}>全部</Text>
+          <Text className={`text-sm font-medium ${!platformFilter ? "text-background" : "text-foreground"}`}>全部</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setPlatformFilter("MT4")}
-          className={`px-4 py-2 rounded-full mr-2 ${platformFilter === "MT4" ? "bg-primary" : "bg-surface"}`}
+          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${platformFilter === "MT4" ? "bg-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
-          <Text className={`font-semibold ${platformFilter === "MT4" ? "text-background" : "text-foreground"}`}>MT4</Text>
+          <Text className={`text-sm font-medium ${platformFilter === "MT4" ? "text-background" : "text-foreground"}`}>MT4</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setPlatformFilter("MT5")}
-          className={`px-4 py-2 rounded-full ${platformFilter === "MT5" ? "bg-primary" : "bg-surface"}`}
+          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${platformFilter === "MT5" ? "bg-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
-          <Text className={`font-semibold ${platformFilter === "MT5" ? "text-background" : "text-foreground"}`}>MT5</Text>
+          <Text className={`text-sm font-medium ${platformFilter === "MT5" ? "text-background" : "text-foreground"}`}>MT5</Text>
         </TouchableOpacity>
-      </View>
-
-      {/* 排序 */}
-      <View className="flex-row">
         <TouchableOpacity
           onPress={() => setOrderBy("latest")}
-          className={`px-4 py-2 rounded-full mr-2 ${orderBy === "latest" ? "bg-surface border border-primary" : "bg-surface"}`}
+          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${orderBy === "latest" ? "bg-surface border border-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
           <Text className={`text-sm ${orderBy === "latest" ? "text-primary font-semibold" : "text-muted"}`}>
@@ -110,7 +106,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setOrderBy("popular")}
-          className={`px-4 py-2 rounded-full mr-2 ${orderBy === "popular" ? "bg-surface border border-primary" : "bg-surface"}`}
+          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${orderBy === "popular" ? "bg-surface border border-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
           <Text className={`text-sm ${orderBy === "popular" ? "text-primary font-semibold" : "text-muted"}`}>
@@ -119,7 +115,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setOrderBy("return")}
-          className={`px-4 py-2 rounded-full ${orderBy === "return" ? "bg-surface border border-primary" : "bg-surface"}`}
+          className={`px-3 py-1.5 rounded-full mb-2 ${orderBy === "return" ? "bg-surface border border-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
           <Text className={`text-sm ${orderBy === "return" ? "text-primary font-semibold" : "text-muted"}`}>

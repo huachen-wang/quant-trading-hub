@@ -1,8 +1,8 @@
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Text } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 
@@ -32,21 +32,21 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "策略",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.line.uptrend.xyaxis" color={color} />,
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>📈</Text>,
         }}
       />
       <Tabs.Screen
         name="favorites"
         options={{
           title: "收藏",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="heart" color={color} />,
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>❤️</Text>,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "我的",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>👤</Text>,
         }}
       />
     </Tabs>

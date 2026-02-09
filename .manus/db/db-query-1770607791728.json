@@ -1,0 +1,65 @@
+{
+  "query": "SELECT id, title, platform FROM strategies ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user j9KUtKJY9ypfPzH.root --database G7CCk846Fqcvg3hQNu5KQZ --execute SELECT id, title, platform FROM strategies ORDER BY id;",
+  "rows": [
+    {
+      "id": "60001",
+      "title": "一次一单策略",
+      "platform": "MT4"
+    },
+    {
+      "id": "60002",
+      "title": "超级黄金策略",
+      "platform": "MT5"
+    },
+    {
+      "id": "60003",
+      "title": "网格交易大师",
+      "platform": "MT4"
+    },
+    {
+      "id": "60004",
+      "title": "剥头皮专业版",
+      "platform": "MT5"
+    },
+    {
+      "id": "60005",
+      "title": "趋势冲浪者",
+      "platform": "MT4"
+    },
+    {
+      "id": "60006",
+      "title": "马丁格尔专家",
+      "platform": "MT4"
+    },
+    {
+      "id": "60007",
+      "title": "突破猎手",
+      "platform": "MT5"
+    },
+    {
+      "id": "60008",
+      "title": "对冲大师",
+      "platform": "MT4"
+    },
+    {
+      "id": "60009",
+      "title": "新闻交易者",
+      "platform": "MT5"
+    },
+    {
+      "id": "60010",
+      "title": "AI趋势预测",
+      "platform": "MT5"
+    },
+    {
+      "id": "60011",
+      "title": "Test EA Strategy",
+      "platform": "MT4"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tplatform\n60001\t一次一单策略\tMT4\n60002\t超级黄金策略\tMT5\n60003\t网格交易大师\tMT4\n60004\t剥头皮专业版\tMT5\n60005\t趋势冲浪者\tMT4\n60006\t马丁格尔专家\tMT4\n60007\t突破猎手\tMT5\n60008\t对冲大师\tMT4\n60009\t新闻交易者\tMT5\n60010\tAI趋势预测\tMT5\n60011\tTest EA Strategy\tMT4\n",
+  "stderr": "",
+  "execution_time_ms": 2363
+}

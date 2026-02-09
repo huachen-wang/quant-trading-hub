@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, title, status FROM strategies LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user j9KUtKJY9ypfPzH.root --database G7CCk846Fqcvg3hQNu5KQZ --execute SELECT id, title, status FROM strategies LIMIT 5;",
+  "rows": [
+    {
+      "id": "60001",
+      "title": "一次一单策略",
+      "status": "published"
+    },
+    {
+      "id": "60002",
+      "title": "超级黄金策略",
+      "status": "published"
+    },
+    {
+      "id": "60003",
+      "title": "网格交易大师",
+      "status": "published"
+    },
+    {
+      "id": "60004",
+      "title": "剥头皮专业版",
+      "status": "published"
+    },
+    {
+      "id": "60005",
+      "title": "趋势冲浪者",
+      "status": "published"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tstatus\n60001\t一次一单策略\tpublished\n60002\t超级黄金策略\tpublished\n60003\t网格交易大师\tpublished\n60004\t剥头皮专业版\tpublished\n60005\t趋势冲浪者\tpublished\n",
+  "stderr": "",
+  "execution_time_ms": 1646
+}

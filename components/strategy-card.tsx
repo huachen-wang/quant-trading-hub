@@ -80,7 +80,7 @@ export function StrategyCard({
 
         {/* 策略信息 */}
         <View className="p-3">
-          <Text className="text-sm font-bold text-foreground mb-2" numberOfLines={2}>
+          <Text className="text-base font-bold text-foreground mb-2" numberOfLines={2}>
             {title}
           </Text>
 
@@ -89,7 +89,7 @@ export function StrategyCard({
             <View className="flex-row items-center justify-between mb-1">
               <Text className="text-xs text-muted">总收益</Text>
               <Text
-                className={`text-sm font-bold ${isPositive ? "text-success" : "text-error"}`}
+                className={`text-base font-bold ${isPositive ? "text-success" : "text-error"}`}
               >
                 {isPositive ? "+" : ""}
                 {totalReturn}%
@@ -97,7 +97,7 @@ export function StrategyCard({
             </View>
             <View className="flex-row items-center justify-between">
               <Text className="text-xs text-muted">胜率</Text>
-              <Text className="text-sm font-bold text-primary">{winRate}%</Text>
+              <Text className="text-base font-bold text-primary">{winRate}%</Text>
             </View>
           </View>
 
@@ -105,9 +105,9 @@ export function StrategyCard({
           <View className="flex-row items-center justify-between pt-2 border-t border-border">
             <View>
               {isFree ? (
-                <Text className="text-sm font-bold text-success">免费</Text>
+                <Text className="text-base font-bold text-success">免费</Text>
               ) : (
-                <Text className="text-sm font-bold text-accent">¥{price}</Text>
+                <Text className="text-base font-bold text-accent">￥{price}</Text>
               )}
             </View>
             <Text className="text-xs text-muted">💾 {downloadCount}</Text>
