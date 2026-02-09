@@ -1,3 +1,11 @@
+import "./load-env";
+
+if (!process.env.JWT_SECRET) {
+  console.warn(
+    "[Auth] JWT_SECRET is missing or empty. Session signing will fail until it is set.",
+  );
+}
+
 export const ENV = {
   appId: process.env.VITE_APP_ID ?? "",
   cookieSecret: process.env.JWT_SECRET ?? "",

@@ -17,6 +17,7 @@ import type {
 // Utility function
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
+const isString = (value: unknown): value is string => typeof value === "string";
 
 export type SessionPayload = {
   openId: string;
@@ -74,6 +75,7 @@ const createOAuthHttpClient = (): AxiosInstance =>
 class SDKServer {
   private readonly client: AxiosInstance;
   private readonly oauthService: OAuthService;
+  private hasWarnedMissingSecret = false;
 
   constructor(client: AxiosInstance = createOAuthHttpClient()) {
     this.client = client;
@@ -136,8 +138,20 @@ class SDKServer {
   }
 
   private getSessionSecret() {
-    const secret = ENV.cookieSecret;
-    return new TextEncoder().encode(secret);
+    const secret = ENV.cookieSecret.trim();
+    if (secret.length > 0) {
+      return new TextEncoder().encode(secret);
+    }
+
+    // Dev safety net: avoid zero-length HMAC key crashing auth flows.
+    const fallback = "dev-jwt-secret-change-me";
+    if (!this.hasWarnedMissingSecret) {
+      console.warn(
+        "[Auth] JWT_SECRET is empty. Using insecure fallback secret. Set JWT_SECRET in env.",
+      );
+      this.hasWarnedMissingSecret = true;
+    }
+    return new TextEncoder().encode(fallback);
   }
 
   /**
@@ -193,15 +207,15 @@ class SDKServer {
       });
       const { openId, appId, name } = payload as Record<string, unknown>;
 
-      if (!isNonEmptyString(openId) || !isNonEmptyString(appId) || !isNonEmptyString(name)) {
-        console.warn("[Auth] Session payload missing required fields");
+      if (!isNonEmptyString(openId)) {
+        console.warn("[Auth] Session payload missing openId");
         return null;
       }
 
       return {
         openId,
-        appId,
-        name,
+        appId: isString(appId) ? appId : "",
+        name: isString(name) ? name : "",
       };
     } catch (error) {
       console.warn("[Auth] Session verification failed", String(error));

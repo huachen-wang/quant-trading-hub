@@ -49,12 +49,15 @@ export function getSessionCookieOptions(
 ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
   const hostname = req.hostname;
   const domain = getParentDomain(hostname);
+  const secure = isSecureRequest(req);
 
   return {
     domain,
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    // Browsers reject SameSite=None unless Secure=true.
+    // Use Lax for local/http development and None for https cross-subdomain scenarios.
+    sameSite: secure ? "none" : "lax",
+    secure,
   };
 }
