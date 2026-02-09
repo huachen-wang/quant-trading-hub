@@ -5,13 +5,15 @@ import { trpc } from "@/lib/trpc";
 import { useColors } from "@/hooks/use-colors";
 import { router } from "expo-router";
 import { useState } from "react";
-import * as WebBrowser from "expo-web-browser";
+import * as Api from "@/lib/_core/api";
+import * as Auth from "@/lib/_core/auth";
 
 export default function ProfileScreen() {
-  const { user, isAuthenticated, loading: authLoading } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, refresh } = useAuth();
   const colors = useColors();
   const [email, setEmail] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: downloads, isLoading } = trpc.downloads.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -21,32 +23,66 @@ export default function ProfileScreen() {
     enabled: isAuthenticated,
   });
 
-  const handleLogin = async () => {
-    try {
-      const result = await WebBrowser.openAuthSessionAsync(
-        `${process.env.EXPO_PUBLIC_API_URL}/api/auth/login`,
-        "exp://localhost:8081/oauth/callback"
-      );
-      if (result.type === "success") {
-        // 登录成功后刷新页面
-        router.replace("/(tabs)/profile");
-      }
-    } catch (error) {
-      Alert.alert("登录失败", "请稍后重试");
+  const handleAuthSuccess = async (payload: { app_session_id?: string; user?: any }) => {
+    if (payload.app_session_id) {
+      await Auth.setSessionToken(payload.app_session_id);
     }
+
+    if (payload.user) {
+      const userInfo: Auth.User = {
+        id: payload.user.id,
+        openId: payload.user.openId,
+        name: payload.user.name,
+        email: payload.user.email,
+        avatar: payload.user.avatar || null,
+        bio: payload.user.bio || null,
+        loginMethod: payload.user.loginMethod,
+        role: (payload.user.role as "user" | "admin") || "user",
+        lastSignedIn: new Date(payload.user.lastSignedIn || Date.now()),
+      };
+      await Auth.setUserInfo(userInfo);
+    }
+
+    await refresh();
+    setIsRegistering(false);
+    setEmail("");
+    router.replace("/(tabs)/profile");
   };
 
-  const handleQuickRegister = () => {
+  const handleQuickRegister = async () => {
     if (!email || !email.includes("@")) {
       Alert.alert("提示", "请输入有效的邮箱地址");
       return;
     }
-    
-    Alert.alert(
-      "注册提示",
-      "简化版暂不支持注册功能。您可以直接浏览所有EA策略,无需登录即可查看详情和下载链接。",
-      [{ text: "知道了" }]
-    );
+
+    try {
+      setIsSubmitting(true);
+      const result = await Api.registerWithEmail(email);
+      await handleAuthSuccess(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "注册失败，请稍后重试";
+      Alert.alert("注册失败", message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!email || !email.includes("@")) {
+      Alert.alert("提示", "请输入有效的邮箱地址");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const result = await Api.loginWithEmail(email);
+      await handleAuthSuccess(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "登录失败，请稍后重试";
+      Alert.alert("登录失败", message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (authLoading || isLoading) {
@@ -92,7 +128,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           ) : (
             <View className="bg-surface rounded-2xl p-6 mb-3">
-              <Text className="text-base font-semibold text-foreground mb-4">快速注册</Text>
+              <Text className="text-base font-semibold text-foreground mb-4">邮箱登录/注册</Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
@@ -107,13 +143,23 @@ export default function ProfileScreen() {
                   onPress={handleQuickRegister}
                   className="flex-1 bg-primary rounded-xl py-3"
                   activeOpacity={0.8}
+                  disabled={isSubmitting}
                 >
                   <Text className="text-background font-semibold text-center">注册</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleLogin}
+                  className="flex-1 bg-accent rounded-xl py-3"
+                  activeOpacity={0.8}
+                  disabled={isSubmitting}
+                >
+                  <Text className="text-background font-semibold text-center">登录</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => setIsRegistering(false)}
                   className="flex-1 bg-border rounded-xl py-3"
                   activeOpacity={0.8}
+                  disabled={isSubmitting}
                 >
                   <Text className="text-foreground font-semibold text-center">取消</Text>
                 </TouchableOpacity>

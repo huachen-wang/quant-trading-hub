@@ -7,6 +7,11 @@ type ApiResponse<T> = {
   error?: string;
 };
 
+type EmailAuthResponse = {
+  app_session_id?: string;
+  user?: any;
+};
+
 export async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -120,6 +125,23 @@ export async function exchangeOAuthCode(
 export async function logout(): Promise<void> {
   await apiCall<void>("/api/auth/logout", {
     method: "POST",
+  });
+}
+
+export async function registerWithEmail(
+  email: string,
+  name?: string,
+): Promise<EmailAuthResponse> {
+  return apiCall<EmailAuthResponse>("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ email, name }),
+  });
+}
+
+export async function loginWithEmail(email: string): Promise<EmailAuthResponse> {
+  return apiCall<EmailAuthResponse>("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email }),
   });
 }
 
