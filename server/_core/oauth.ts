@@ -1,6 +1,6 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const.js";
 import type { Express, Request, Response } from "express";
-import { getUserByOpenId, upsertUser } from "../db";
+import { createUser, getUserByEmail, getUserByOpenId, updateUser, upsertUser } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
@@ -61,7 +61,112 @@ function buildUserResponse(
   };
 }
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export function registerOAuthRoutes(app: Express) {
+  app.post("/api/auth/register", async (req: Request, res: Response) => {
+    const email = typeof req.body?.email === "string" ? normalizeEmail(req.body.email) : "";
+    const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+
+    if (!email || !isValidEmail(email)) {
+      res.status(400).json({ error: "Valid email is required" });
+      return;
+    }
+
+    try {
+      const existing = await getUserByEmail(email);
+      if (existing) {
+        res.status(409).json({ error: "Email already registered" });
+        return;
+      }
+
+      const displayName = name || email.split("@")[0];
+      const openId = `email:${email}`;
+      const lastSignedIn = new Date();
+
+      await createUser({
+        openId,
+        name: displayName,
+        email,
+        loginMethod: "email",
+        lastSignedIn,
+      });
+
+      const saved = await getUserByEmail(email);
+      const sessionToken = await sdk.createSessionToken(openId, {
+        name: displayName,
+        expiresInMs: ONE_YEAR_MS,
+      });
+
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+      res.json({
+        app_session_id: sessionToken,
+        user: buildUserResponse(
+          saved ?? {
+            openId,
+            name: displayName,
+            email,
+            loginMethod: "email",
+            lastSignedIn,
+          },
+        ),
+      });
+    } catch (error) {
+      console.error("[Auth] Register failed:", error);
+      res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
+    const email = typeof req.body?.email === "string" ? normalizeEmail(req.body.email) : "";
+
+    if (!email || !isValidEmail(email)) {
+      res.status(400).json({ error: "Valid email is required" });
+      return;
+    }
+
+    try {
+      const user = await getUserByEmail(email);
+      if (!user) {
+        res.status(404).json({ error: "Email not registered" });
+        return;
+      }
+
+      const lastSignedIn = new Date();
+      await updateUser(user.id, {
+        lastSignedIn,
+        loginMethod: user.loginMethod || "email",
+      });
+
+      const sessionToken = await sdk.createSessionToken(user.openId, {
+        name: user.name || email,
+        expiresInMs: ONE_YEAR_MS,
+      });
+
+      const cookieOptions = getSessionCookieOptions(req);
+      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+
+      res.json({
+        app_session_id: sessionToken,
+        user: buildUserResponse({
+          ...user,
+          lastSignedIn,
+        }),
+      });
+    } catch (error) {
+      console.error("[Auth] Login failed:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
   app.get("/api/oauth/callback", async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");
