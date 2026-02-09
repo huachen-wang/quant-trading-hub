@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../drizzle/schema";
 
-const { users, strategies, trades, comments, purchases, downloads } = schema;
+const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys } = schema;
 
 let connection: mysql.Connection | null = null;
 
@@ -412,4 +412,137 @@ export async function createBacktestData(data: typeof schema.backtestData.$infer
   const { backtestData } = schema;
   const result = await db.insert(backtestData).values(data);
   return result;
+}
+
+// ========== 匿名留言相关 ==========
+
+export async function getAnonymousComments(strategyId: number, limit = 50, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(anonymousComments)
+    .where(eq(anonymousComments.strategyId, strategyId))
+    .orderBy(desc(anonymousComments.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function createAnonymousComment(data: typeof anonymousComments.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(anonymousComments).values(data);
+  return result;
+}
+
+export async function deleteAnonymousComment(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db.delete(anonymousComments).where(eq(anonymousComments.id, id));
+  return { success: true };
+}
+
+// ========== 上架EA申请相关 ==========
+
+export async function createListingRequest(data: typeof listingRequests.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(listingRequests).values(data);
+  return result;
+}
+
+export async function getListingRequests(status?: "pending" | "contacted" | "rejected", limit = 50, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const whereCondition = status ? eq(listingRequests.status, status) : undefined;
+
+  const query = db
+    .select()
+    .from(listingRequests)
+    .orderBy(desc(listingRequests.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  if (whereCondition) {
+    return query.where(whereCondition);
+  }
+
+  return query;
+}
+
+export async function updateListingRequestStatus(id: number, status: "pending" | "contacted" | "rejected", notes?: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const updateData: any = { status };
+  if (notes !== undefined) {
+    updateData.notes = notes;
+  }
+
+  await db.update(listingRequests).set(updateData).where(eq(listingRequests.id, id));
+  return { success: true };
+}
+
+// ========== 合购相关 ==========
+
+export async function getGroupBuys(status?: "active" | "completed" | "cancelled", limit = 50, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const whereCondition = status ? eq(groupBuys.status, status) : undefined;
+
+  const query = db
+    .select()
+    .from(groupBuys)
+    .orderBy(desc(groupBuys.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  if (whereCondition) {
+    return query.where(whereCondition);
+  }
+
+  return query;
+}
+
+export async function getGroupBuyDetail(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(groupBuys).where(eq(groupBuys.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function createGroupBuyRequest(data: typeof listingRequests.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(listingRequests).values(data);
+  return result;
+}
+
+export async function updateGroupBuyParticipants(id: number, increment: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const groupBuy = await getGroupBuyDetail(id);
+  if (!groupBuy) return null;
+
+  const newCount = groupBuy.currentParticipants + increment;
+  const newStatus = newCount >= groupBuy.targetParticipants ? "completed" : "active";
+
+  await db
+    .update(groupBuys)
+    .set({
+      currentParticipants: newCount,
+      status: newStatus,
+    })
+    .where(eq(groupBuys.id, id));
+
+  return { success: true };
 }

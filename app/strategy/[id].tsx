@@ -17,6 +17,7 @@ import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 import { EquityCurveChart } from "@/components/equity-curve-chart";
+import { CommentSection } from "@/components/comment-section";
 
 export default function StrategyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -243,7 +244,7 @@ export default function StrategyDetailScreen() {
           </View>
         </View>
 
-        {/* 评论区 */}
+        {/* 管理员备注区 */}
         <View className="px-4 mb-6">
           <Text className="text-lg font-bold text-foreground mb-3">备注说明</Text>
 
@@ -319,6 +320,11 @@ export default function StrategyDetailScreen() {
               <Text className="text-muted">暂无备注说明</Text>
             </View>
           )}
+        </View>
+
+        {/* 用户留言区 */}
+        <View className="px-4 mb-6">
+          <CommentSection strategyId={strategyId} />
         </View>
       </ScrollView>
     </ScreenContainer>

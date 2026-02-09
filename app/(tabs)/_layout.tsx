@@ -43,6 +43,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="group-buy"
+        options={{
+          title: "合购",
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>🤝</Text>,
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "我的",

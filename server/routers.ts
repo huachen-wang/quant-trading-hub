@@ -229,6 +229,115 @@ export const appRouter = router({
       overview: adminProcedure.query(() => db.getAdminStats()),
     }),
   }),
+
+  // 匿名留言相关
+  anonymousComments: router({
+    list: publicProcedure
+      .input(
+        z.object({
+          strategyId: z.number(),
+          limit: z.number().optional(),
+          offset: z.number().optional(),
+        })
+      )
+      .query(({ input }) => db.getAnonymousComments(input.strategyId, input.limit, input.offset)),
+
+    create: publicProcedure
+      .input(
+        z.object({
+          strategyId: z.number(),
+          nickname: z.string().max(100).optional(),
+          content: z.string().min(1).max(1000),
+        })
+      )
+      .mutation(({ input }) => {
+        return db.createAnonymousComment({
+          strategyId: input.strategyId,
+          nickname: input.nickname || null,
+          content: input.content,
+        });
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => db.deleteAnonymousComment(input.id)),
+  }),
+
+  // 上架EA申请相关
+  listingRequests: router({
+    create: publicProcedure
+      .input(
+        z.object({
+          name: z.string().min(1).max(100),
+          contact: z.string().min(1).max(255),
+          eaName: z.string().min(1).max(255),
+          eaDescription: z.string().max(2000).optional(),
+        })
+      )
+      .mutation(({ input }) => {
+        return db.createListingRequest({
+          name: input.name,
+          contact: input.contact,
+          eaName: input.eaName,
+          eaDescription: input.eaDescription || null,
+        });
+      }),
+
+    list: adminProcedure
+      .input(
+        z.object({
+          status: z.enum(["pending", "contacted", "rejected"]).optional(),
+          limit: z.number().optional(),
+          offset: z.number().optional(),
+        })
+      )
+      .query(({ input }) => db.getListingRequests(input.status, input.limit, input.offset)),
+
+    updateStatus: adminProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["pending", "contacted", "rejected"]),
+          notes: z.string().optional(),
+        })
+      )
+      .mutation(({ input }) => db.updateListingRequestStatus(input.id, input.status, input.notes)),
+  }),
+
+  // 合购相关
+  groupBuys: router({
+    list: publicProcedure
+      .input(
+        z.object({
+          status: z.enum(["active", "completed", "cancelled"]).optional(),
+          limit: z.number().optional(),
+          offset: z.number().optional(),
+        })
+      )
+      .query(({ input }) => db.getGroupBuys(input.status, input.limit, input.offset)),
+
+    detail: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .query(({ input }) => db.getGroupBuyDetail(input.id)),
+
+    requestGroupBuy: publicProcedure
+      .input(
+        z.object({
+          name: z.string().min(1).max(100),
+          contact: z.string().min(1).max(255),
+          eaName: z.string().min(1).max(255),
+          eaDescription: z.string().max(2000).optional(),
+        })
+      )
+      .mutation(({ input }) => {
+        return db.createGroupBuyRequest({
+          name: input.name,
+          contact: input.contact,
+          eaName: input.eaName,
+          eaDescription: input.eaDescription || null,
+        });
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -151,3 +151,60 @@ export const comments = mysqlTable("comments", {
 
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = typeof comments.$inferInsert;
+
+// 匿名留言表(用户可匿名评论策略)
+export const anonymousComments = mysqlTable("anonymous_comments", {
+  id: int("id").autoincrement().primaryKey(),
+  strategyId: int("strategyId").notNull(),
+  nickname: varchar("nickname", { length: 100 }), // 匿名昵称(可选)
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  strategyIdIdx: index("strategyId_idx").on(table.strategyId),
+  createdAtIdx: index("createdAt_idx").on(table.createdAt),
+}));
+
+export type AnonymousComment = typeof anonymousComments.$inferSelect;
+export type InsertAnonymousComment = typeof anonymousComments.$inferInsert;
+
+// 上架EA申请表(客户主动留联系方式)
+export const listingRequests = mysqlTable("listing_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // 姓名
+  contact: varchar("contact", { length: 255 }).notNull(), // 联系方式(Telegram/QQ/微信/邮箱)
+  eaName: varchar("eaName", { length: 255 }).notNull(), // EA名称
+  eaDescription: text("eaDescription"), // EA描述
+  status: mysqlEnum("status", ["pending", "contacted", "rejected"]).default("pending").notNull(),
+  notes: text("notes"), // 管理员备注
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  statusIdx: index("status_idx").on(table.status),
+  createdAtIdx: index("createdAt_idx").on(table.createdAt),
+}));
+
+export type ListingRequest = typeof listingRequests.$inferSelect;
+export type InsertListingRequest = typeof listingRequests.$inferInsert;
+
+// 合购表(用户发起合购,平台展示进度和联系方式)
+export const groupBuys = mysqlTable("group_buys", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(), // 合购标题
+  eaName: varchar("eaName", { length: 255 }).notNull(), // EA名称
+  description: text("description"), // 合购描述
+  targetPrice: decimal("targetPrice", { precision: 10, scale: 2 }).notNull(), // 目标价格
+  currentParticipants: int("currentParticipants").default(0).notNull(), // 当前参与人数
+  targetParticipants: int("targetParticipants").notNull(), // 目标参与人数
+  pricePerPerson: decimal("pricePerPerson", { precision: 10, scale: 2 }).notNull(), // 人均价格
+  contactInfo: varchar("contactInfo", { length: 255 }).notNull(), // 联系方式(Telegram/QQ/微信)
+  status: mysqlEnum("status", ["active", "completed", "cancelled"]).default("active").notNull(),
+  expiresAt: timestamp("expiresAt"), // 过期时间
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  statusIdx: index("status_idx").on(table.status),
+  createdAtIdx: index("createdAt_idx").on(table.createdAt),
+}));
+
+export type GroupBuy = typeof groupBuys.$inferSelect;
+export type InsertGroupBuy = typeof groupBuys.$inferInsert;
