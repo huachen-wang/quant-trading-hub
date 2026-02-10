@@ -1,6 +1,7 @@
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
@@ -66,6 +67,17 @@ async function startServer() {
       createContext,
     }),
   );
+
+  // 静态文件服务 - 为Web应用提供静态文件
+  const distPath = path.join(__dirname, '../../dist');
+  app.use(express.static(distPath));
+
+  // SPA路由支持 - 所有非API请求返回index.html
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(distPath, 'index.html'));
+    }
+  });
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
