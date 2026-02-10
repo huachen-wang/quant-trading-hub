@@ -1,0 +1,10 @@
+node_modules
+.expo
+.expo-shared
+*.log
+.DS_Store
+.env.local
+.env.development
+.env.production
+server
+drizzle
