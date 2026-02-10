@@ -208,3 +208,36 @@ export const groupBuys = mysqlTable("group_buys", {
 
 export type GroupBuy = typeof groupBuys.$inferSelect;
 export type InsertGroupBuy = typeof groupBuys.$inferInsert;
+
+// 邮箱订阅表
+export const emailSubscriptions = mysqlTable("email_subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  emailIdx: index("email_idx").on(table.email),
+}));
+
+export type EmailSubscription = typeof emailSubscriptions.$inferSelect;
+export type InsertEmailSubscription = typeof emailSubscriptions.$inferInsert;
+
+// 订阅页面自定义内容（后台管理）
+export const pageContents = mysqlTable("page_contents", {
+  id: int("id").autoincrement().primaryKey(),
+  pageKey: varchar("pageKey", { length: 100 }).notNull(), // e.g. "subscribe_page", "moments_page"
+  sectionKey: varchar("sectionKey", { length: 100 }).notNull(), // e.g. "tech_support", "cooperation", "announcement"
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  icon: varchar("icon", { length: 50 }), // emoji icon
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  pageKeyIdx: index("pageKey_idx").on(table.pageKey),
+  sectionKeyIdx: index("sectionKey_idx").on(table.sectionKey),
+}));
+
+export type PageContent = typeof pageContents.$inferSelect;
+export type InsertPageContent = typeof pageContents.$inferInsert;

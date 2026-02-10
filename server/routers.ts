@@ -338,6 +338,60 @@ export const appRouter = router({
         });
       }),
   }),
+
+  // 邮箱订阅
+  subscriptions: router({
+    subscribe: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(({ input }) => db.createEmailSubscription(input.email)),
+
+    list: adminProcedure
+      .input(z.object({ limit: z.number().optional(), offset: z.number().optional() }))
+      .query(({ input }) => db.getEmailSubscriptions(input.limit, input.offset)),
+
+    count: publicProcedure.query(() => db.getEmailSubscriptionCount()),
+  }),
+
+  // 页面内容
+  pageContents: router({
+    get: publicProcedure
+      .input(z.object({ pageKey: z.string() }))
+      .query(({ input }) => db.getPageContents(input.pageKey)),
+
+    getAll: adminProcedure
+      .input(z.object({ pageKey: z.string().optional() }))
+      .query(({ input }) => db.getAllPageContents(input.pageKey)),
+
+    create: adminProcedure
+      .input(z.object({
+        pageKey: z.string(),
+        sectionKey: z.string(),
+        title: z.string(),
+        content: z.string(),
+        icon: z.string().optional(),
+        sortOrder: z.number().optional(),
+        isVisible: z.boolean().optional(),
+      }))
+      .mutation(({ input }) => db.createPageContent(input)),
+
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().optional(),
+        content: z.string().optional(),
+        icon: z.string().optional(),
+        sortOrder: z.number().optional(),
+        isVisible: z.boolean().optional(),
+      }))
+      .mutation(({ input }) => {
+        const { id, ...data } = input;
+        return db.updatePageContent(id, data);
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => db.deletePageContent(input.id)),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

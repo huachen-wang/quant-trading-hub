@@ -554,3 +554,95 @@ export async function updateGroupBuyParticipants(id: number, increment: number) 
 
   return { success: true };
 }
+
+
+// ========== 邮箱订阅相关 ==========
+
+export async function createEmailSubscription(email: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { emailSubscriptions } = schema;
+  
+  // 检查是否已存在
+  const existing = await db.select().from(emailSubscriptions).where(eq(emailSubscriptions.email, email)).limit(1);
+  if (existing.length > 0) {
+    // 如果已存在但已取消，重新激活
+    if (!existing[0].isActive) {
+      await db.update(emailSubscriptions).set({ isActive: true }).where(eq(emailSubscriptions.id, existing[0].id));
+      return { success: true, message: "已重新订阅" };
+    }
+    return { success: false, message: "该邮箱已订阅" };
+  }
+
+  await db.insert(emailSubscriptions).values({ email });
+  return { success: true, message: "订阅成功" };
+}
+
+export async function getEmailSubscriptions(limit = 100, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { emailSubscriptions } = schema;
+  return db.select().from(emailSubscriptions).orderBy(desc(emailSubscriptions.createdAt)).limit(limit).offset(offset);
+}
+
+export async function getEmailSubscriptionCount() {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const { emailSubscriptions } = schema;
+  const result = await db.select({ count: sql<number>`count(*)` }).from(emailSubscriptions).where(eq(emailSubscriptions.isActive, true));
+  return result[0]?.count || 0;
+}
+
+// ========== 页面内容相关 ==========
+
+export async function getPageContents(pageKey: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { pageContents } = schema;
+  return db.select().from(pageContents)
+    .where(and(eq(pageContents.pageKey, pageKey), eq(pageContents.isVisible, true)))
+    .orderBy(pageContents.sortOrder);
+}
+
+export async function getAllPageContents(pageKey?: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const { pageContents } = schema;
+  const query = db.select().from(pageContents).orderBy(pageContents.pageKey, pageContents.sortOrder);
+  if (pageKey) {
+    return query.where(eq(pageContents.pageKey, pageKey));
+  }
+  return query;
+}
+
+export async function createPageContent(data: typeof schema.pageContents.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { pageContents } = schema;
+  const result = await db.insert(pageContents).values(data);
+  return result;
+}
+
+export async function updatePageContent(id: number, data: Partial<typeof schema.pageContents.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { pageContents } = schema;
+  await db.update(pageContents).set(data).where(eq(pageContents.id, id));
+  return { success: true };
+}
+
+export async function deletePageContent(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { pageContents } = schema;
+  await db.delete(pageContents).where(eq(pageContents.id, id));
+  return { success: true };
+}

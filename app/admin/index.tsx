@@ -47,6 +47,20 @@ export default function AdminDashboard() {
       count: 0,
       description: "查看和审核EA上架申请",
     },
+    {
+      title: "📬 订阅页面管理",
+      icon: "paperplane.fill" as const,
+      route: "/admin/page-contents",
+      count: 0,
+      description: "管理订阅页面展示内容",
+    },
+    {
+      title: "📧 订阅用户",
+      icon: "paperplane.fill" as const,
+      route: "/admin/subscribers",
+      count: 0,
+      description: "查看邮箱订阅用户列表",
+    },
   ];
 
   return (

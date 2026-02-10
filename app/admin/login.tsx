@@ -1,9 +1,10 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { EventEmitter } from "@/lib/event-emitter";
 
 /**
  * 管理后台登录页面
@@ -31,7 +32,8 @@ export default function AdminLogin() {
       if (email === "admin@eaxau.com" && password === "admin123") {
         await AsyncStorage.setItem("admin_logged_in", "true");
         await AsyncStorage.setItem("admin_email", email);
-        router.replace("/admin" as any);
+        // 发射事件通知layout更新状态
+        EventEmitter.emit("admin_login_success");
       } else {
         setErrorMsg("邮箱或密码错误");
       }

@@ -50,17 +50,23 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="subscribe"
+        options={{
+          title: "订阅",
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>📬</Text>,
+        }}
+      />
+      {/* 隐藏不需要的Tab页面 */}
+      <Tabs.Screen
         name="favorites"
         options={{
-          title: "收藏",
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>❤️</Text>,
+          href: null,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: "我的",
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>👤</Text>,
+          href: null,
         }}
       />
     </Tabs>
