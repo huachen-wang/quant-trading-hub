@@ -407,6 +407,6 @@
 
 
 ## web-build目录缺失修复
-- [ ] 恢复web-build目录（从Git历史恢复或重新构建）
-- [ ] 推送到GitHub触发Railway重新部署
+- [x] 恢复web-build目录（从Git历史commit 8a1ec1c恢复）
+- [x] 推送到GitHub触发Railway重新部署
 - [ ] 验证eaxau.com正常显示
