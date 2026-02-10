@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Animated } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
@@ -36,9 +36,25 @@ export default function HomeScreen() {
   const { data: strategies, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
     platform: platformFilter,
     orderBy,
-    limit: 20,
+    limit: 30,
     offset: 0,
   });
+
+  const navStats = useMemo(() => {
+    const items = strategies || [];
+    const totalCount = items.length;
+    let totalReturnSum = 0;
+    for (const item of items) {
+      totalReturnSum += parseFloat(item.totalReturn || "0");
+    }
+
+    const avgReturn = totalCount > 0 ? (totalReturnSum / totalCount).toFixed(2) : "0.00";
+
+    return {
+      totalCount,
+      avgReturn,
+    };
+  }, [strategies]);
 
   const handleSubscribePress = (title: string) => {
     setSelectedStrategyTitle(title);
@@ -115,6 +131,17 @@ export default function HomeScreen() {
         >
           <Text className={`text-sm ${orderBy === "return" ? "text-primary font-semibold" : "text-muted"}`}>收益率</Text>
         </TouchableOpacity>
+      </View>
+
+      <View className="flex-row mt-1">
+        <View className="mr-2 px-3 py-2 rounded-xl bg-surface">
+          <Text className="text-xs text-muted">当前展示</Text>
+          <Text className="text-sm font-semibold text-foreground">{navStats.totalCount} / 30 条</Text>
+        </View>
+        <View className="px-3 py-2 rounded-xl bg-surface">
+          <Text className="text-xs text-muted">平均收益率</Text>
+          <Text className="text-sm font-semibold text-primary">{navStats.avgReturn}%</Text>
+        </View>
       </View>
     </Animated.View>
   );
