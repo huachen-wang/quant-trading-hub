@@ -2,10 +2,15 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import path from "path";
+import { fileURLToPath } from "url";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+
+// ES模块中获取__dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -69,7 +74,8 @@ async function startServer() {
   );
 
   // 静态文件服务 - 为Web应用提供静态文件
-  const distPath = path.join(__dirname, '../../dist');
+  const distPath = path.resolve(process.cwd(), 'dist');
+  console.log(`[static] serving files from ${distPath}`);
   app.use(express.static(distPath));
 
   // SPA路由支持 - 所有非API请求返回index.html
