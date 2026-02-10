@@ -33,7 +33,7 @@ export default function ContactSettingsScreen() {
       const settings = await getSiteSettings();
       if (settings && Array.isArray(settings)) {
         const map: Record<string, string> = {};
-        settings.forEach((s: any) => { map[s.key] = s.value; });
+        settings.forEach((s: any) => { map[s.settingKey] = s.settingValue; });
         setValues(map);
       }
     } catch (err) {

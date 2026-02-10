@@ -1,11 +1,18 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Platform, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { trpc } from "@/lib/trpc";
 import * as Haptics from "expo-haptics";
-import { Platform } from "react-native";
+
+function showAlert(title: string, message: string, onOk?: () => void) {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n${message}`);
+    onOk?.();
+  } else {
+    Alert.alert(title, message, [{ text: "确定", onPress: onOk }]);
+  }
+}
 
 export default function CreateGroupBuyScreen() {
   const router = useRouter();
@@ -15,39 +22,19 @@ export default function CreateGroupBuyScreen() {
   const [eaName, setEaName] = useState("");
   const [eaDescription, setEaDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const createRequestMutation = trpc.groupBuys.requestGroupBuy.useMutation({
-    onSuccess: () => {
-      if (Platform.OS !== "web") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      Alert.alert(
-        "提交成功",
-        "您的合购申请已提交,我们会尽快审核并上架。审核通过后会通过您留下的联系方式通知您。",
-        [
-          {
-            text: "确定",
-            onPress: () => router.back(),
-          },
-        ]
-      );
-    },
-    onError: (error) => {
-      Alert.alert("提交失败", error.message);
-    },
-  });
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      Alert.alert("提示", "请输入您的姓名");
+      showAlert("提示", "请输入您的姓名");
       return;
     }
     if (!contact.trim()) {
-      Alert.alert("提示", "请输入联系方式");
+      showAlert("提示", "请输入联系方式");
       return;
     }
     if (!eaName.trim()) {
-      Alert.alert("提示", "请输入EA名称");
+      showAlert("提示", "请输入EA名称");
       return;
     }
 
@@ -57,12 +44,33 @@ export default function CreateGroupBuyScreen() {
 
     setIsSubmitting(true);
     try {
-      await createRequestMutation.mutateAsync({
-        name: name.trim(),
-        contact: contact.trim(),
-        eaName: eaName.trim(),
-        eaDescription: eaDescription.trim() || undefined,
+      const result = await fetch(`${getApiBase()}/api/trpc/groupBuys.requestGroupBuy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          json: {
+            name: name.trim(),
+            contact: contact.trim(),
+            eaName: eaName.trim(),
+            eaDescription: eaDescription.trim() || undefined,
+          },
+        }),
       });
+      const data = await result.json();
+      if (data.result) {
+        if (Platform.OS !== "web") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        setSubmitSuccess(true);
+        showAlert("提交成功", "您的合购申请已提交，我们会尽快审核并上架。审核通过后会通过您留下的联系方式通知您。", () => {
+          router.back();
+        });
+      } else {
+        const errMsg = data.error?.json?.message || data.error?.message || "提交失败，请稍后重试";
+        showAlert("提交失败", errMsg);
+      }
+    } catch (error: any) {
+      showAlert("提交失败", error?.message || "网络错误，请稍后重试");
     } finally {
       setIsSubmitting(false);
     }
@@ -70,123 +78,111 @@ export default function CreateGroupBuyScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* 返回按钮 */}
         <TouchableOpacity
           onPress={() => router.back()}
-          className="w-10 h-10 bg-surface rounded-full items-center justify-center mb-4"
+          style={[s.backBtn, { backgroundColor: colors.surface }]}
           activeOpacity={0.7}
         >
-          <Text className="text-xl">←</Text>
+          <Text style={{ fontSize: 20, color: colors.foreground }}>←</Text>
         </TouchableOpacity>
 
         {/* 标题 */}
-        <View className="mb-4">
-          <Text className="text-2xl font-bold text-foreground mb-2">🤝 发起合购</Text>
-          <Text className="text-sm text-muted leading-relaxed">
-            填写以下信息提交合购申请,我们会审核并联系您确认详情后上架。
+        <View style={{ marginBottom: 16 }}>
+          <Text style={[s.pageTitle, { color: colors.foreground }]}>🤝 发起合购</Text>
+          <Text style={[s.pageSubtitle, { color: colors.muted }]}>
+            填写以下信息提交合购申请，我们会审核并联系您确认详情后上架。
           </Text>
         </View>
 
         {/* 平台优势说明 */}
-        <View className="bg-primary/10 rounded-2xl p-4 mb-6">
-          <Text className="text-base font-semibold text-primary mb-2">🚀 我们的优势</Text>
-          <Text className="text-sm text-foreground leading-relaxed mb-1">
-            ✓ 覆盖多个社交媒体平台(Telegram、QQ、微信等)
-          </Text>
-          <Text className="text-sm text-foreground leading-relaxed mb-1">
-            ✓ 活跃的EA交易者社群,精准触达目标用户
-          </Text>
-          <Text className="text-sm text-foreground leading-relaxed mb-1">
-            ✓ 专业的合购组织和管理经验
-          </Text>
-          <Text className="text-sm text-foreground leading-relaxed">
-            ✓ 快速审核,高效上架
-          </Text>
+        <View style={[s.advantageBox, { backgroundColor: colors.primary + "15" }]}>
+          <Text style={[s.advantageTitle, { color: colors.primary }]}>🚀 我们的优势</Text>
+          <Text style={[s.advantageItem, { color: colors.foreground }]}>✓ 覆盖多个社交媒体平台(Telegram、QQ、微信等)</Text>
+          <Text style={[s.advantageItem, { color: colors.foreground }]}>✓ 活跃的EA交易者社群，精准触达目标用户</Text>
+          <Text style={[s.advantageItem, { color: colors.foreground }]}>✓ 专业的合购组织和管理经验</Text>
+          <Text style={[s.advantageItem, { color: colors.foreground }]}>✓ 快速审核，高效上架</Text>
         </View>
 
         {/* 表单 */}
-        <View className="bg-surface rounded-2xl p-4 mb-6">
-          {/* 姓名 */}
-          <View className="mb-4">
-            <Text className="text-sm font-semibold text-foreground mb-2">您的姓名 *</Text>
+        <View style={[s.formCard, { backgroundColor: colors.surface }]}>
+          <View style={s.fieldGroup}>
+            <Text style={[s.fieldLabel, { color: colors.foreground }]}>您的姓名 *</Text>
             <TextInput
-              className="bg-background rounded-xl px-4 py-3 text-base text-foreground"
-              placeholder="请输入您的姓名或昵称"
-              placeholderTextColor={colors.muted}
               value={name}
               onChangeText={setName}
+              placeholder="请输入您的姓名或昵称"
+              placeholderTextColor={colors.muted}
               maxLength={100}
+              style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
             />
           </View>
 
-          {/* 联系方式 */}
-          <View className="mb-4">
-            <Text className="text-sm font-semibold text-foreground mb-2">联系方式 *</Text>
+          <View style={s.fieldGroup}>
+            <Text style={[s.fieldLabel, { color: colors.foreground }]}>联系方式 *</Text>
             <TextInput
-              className="bg-background rounded-xl px-4 py-3 text-base text-foreground"
-              placeholder="Telegram/QQ/微信/邮箱"
-              placeholderTextColor={colors.muted}
               value={contact}
               onChangeText={setContact}
+              placeholder="Telegram/QQ/微信/邮箱"
+              placeholderTextColor={colors.muted}
               maxLength={255}
+              style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
             />
-            <Text className="text-xs text-muted mt-1">
-              我们会通过此联系方式与您沟通合购详情
-            </Text>
+            <Text style={[s.fieldHint, { color: colors.muted }]}>我们会通过此联系方式与您沟通合购详情</Text>
           </View>
 
-          {/* EA名称 */}
-          <View className="mb-4">
-            <Text className="text-sm font-semibold text-foreground mb-2">EA名称 *</Text>
+          <View style={s.fieldGroup}>
+            <Text style={[s.fieldLabel, { color: colors.foreground }]}>EA名称 *</Text>
             <TextInput
-              className="bg-background rounded-xl px-4 py-3 text-base text-foreground"
-              placeholder="请输入要合购的EA名称"
-              placeholderTextColor={colors.muted}
               value={eaName}
               onChangeText={setEaName}
+              placeholder="请输入要合购的EA名称"
+              placeholderTextColor={colors.muted}
               maxLength={255}
+              style={[s.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
             />
           </View>
 
-          {/* EA描述 */}
-          <View className="mb-4">
-            <Text className="text-sm font-semibold text-foreground mb-2">EA描述(可选)</Text>
+          <View style={s.fieldGroup}>
+            <Text style={[s.fieldLabel, { color: colors.foreground }]}>EA描述(可选)</Text>
             <TextInput
-              className="bg-background rounded-xl px-4 py-3 text-base text-foreground"
-              placeholder="简单描述EA的功能、策略类型、预期价格等"
-              placeholderTextColor={colors.muted}
               value={eaDescription}
               onChangeText={setEaDescription}
+              placeholder="简单描述EA的功能、策略类型、预期价格等"
+              placeholderTextColor={colors.muted}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
               maxLength={2000}
+              style={[s.input, s.textArea, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
             />
           </View>
         </View>
 
+        {/* 成功提示 */}
+        {submitSuccess && (
+          <View style={[s.successBox, { backgroundColor: colors.success + "15" }]}>
+            <Text style={{ color: colors.success, fontSize: 14, fontWeight: "600" }}>✅ 提交成功！我们会尽快审核。</Text>
+          </View>
+        )}
+
         {/* 提交按钮 */}
         <TouchableOpacity
           onPress={handleSubmit}
-          disabled={isSubmitting || !name.trim() || !contact.trim() || !eaName.trim()}
-          className={`rounded-2xl py-4 items-center mb-6 ${
-            isSubmitting || !name.trim() || !contact.trim() || !eaName.trim()
-              ? "bg-muted"
-              : "bg-primary"
-          }`}
+          disabled={isSubmitting}
           activeOpacity={0.8}
+          style={[s.submitBtn, { backgroundColor: isSubmitting ? colors.muted : colors.primary }]}
         >
           {isSubmitting ? (
-            <ActivityIndicator size="small" color={colors.background} />
+            <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text className="text-background font-semibold text-lg">提交申请</Text>
+            <Text style={s.submitBtnText}>提交申请</Text>
           )}
         </TouchableOpacity>
 
-        {/* 说明文字 */}
-        <View className="mb-6">
-          <Text className="text-xs text-muted text-center leading-relaxed">
+        <View style={{ marginBottom: 24 }}>
+          <Text style={[s.footerText, { color: colors.muted }]}>
             提交后我们会在1-2个工作日内审核并联系您{"\n"}
             审核通过后会展示在合购列表中供用户参与
           </Text>
@@ -195,3 +191,36 @@ export default function CreateGroupBuyScreen() {
     </ScreenContainer>
   );
 }
+
+function getApiBase(): string {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    const { protocol, hostname } = window.location;
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return `${protocol}//${hostname}:3000`;
+    }
+    if (hostname.startsWith("8081-")) {
+      return `${protocol}//${hostname.replace(/^8081-/, "3000-")}`;
+    }
+    return `${protocol}//${hostname}`;
+  }
+  return "";
+}
+
+const s = StyleSheet.create({
+  backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", marginBottom: 16 },
+  pageTitle: { fontSize: 24, fontWeight: "800", marginBottom: 8 },
+  pageSubtitle: { fontSize: 14, lineHeight: 20 },
+  advantageBox: { borderRadius: 16, padding: 16, marginBottom: 24 },
+  advantageTitle: { fontSize: 16, fontWeight: "700", marginBottom: 8 },
+  advantageItem: { fontSize: 14, lineHeight: 22, marginBottom: 2 },
+  formCard: { borderRadius: 16, padding: 16, marginBottom: 24 },
+  fieldGroup: { marginBottom: 16 },
+  fieldLabel: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
+  fieldHint: { fontSize: 12, marginTop: 4 },
+  input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15 },
+  textArea: { minHeight: 100, paddingTop: 12 },
+  successBox: { borderRadius: 12, padding: 14, marginBottom: 16 },
+  submitBtn: { borderRadius: 16, paddingVertical: 16, alignItems: "center", marginBottom: 16 },
+  submitBtnText: { color: "#fff", fontWeight: "700", fontSize: 17 },
+  footerText: { fontSize: 12, textAlign: "center", lineHeight: 18 },
+});
