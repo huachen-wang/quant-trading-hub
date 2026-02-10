@@ -483,3 +483,14 @@
 - [x] 修复后台创建策略失败（“Load failed”）
 - [x] 修复后台数据不显示问题（策略列表等）
 - [ ] 重新构建web-build并推送部署
+
+## UI优化：滚动、导航、空状态、动画（2026-02-11）
+- [x] 修复四个主页面不滚动问题（创建+html.tsx自定义HTML模板移除overflow:hidden）
+- [x] 修复底部导航栏文字被手机浏览器遮挡（增加web端bottomPadding到24px）
+- [x] 搜索页面空状态内容居中
+- [x] 空列表添加友好提示（EmptyState组件+各页面空状态优化）
+- [x] 添加卡片入场动画（AnimatedListItem组件淡入+上滑）
+- [x] 添加按钮点击反馈动画（策略卡片按压缩放+haptic反馈）
+- [x] 添加页面过渡动画（Modal弹出缩放动画）
+- [x] 添加列表项渐入动画（moments/group-buy列表项依次渐入）
+- [ ] 重新构建web-build并推送部署

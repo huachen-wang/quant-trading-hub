@@ -1,5 +1,35 @@
-import { useState, useMemo } from "react";
-import { View, Text, FlatList, TouchableOpacity, Linking, StyleSheet, Platform, RefreshControl } from "react-native";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { View, Text, FlatList, TouchableOpacity, Linking, StyleSheet, Platform, RefreshControl, Animated } from "react-native";
+
+// 列表项入场动画组件
+function AnimatedListItem({ children, index }: { children: React.ReactNode; index: number }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    const delay = Math.min(index * 80, 400);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 350,
+        delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
+}
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
@@ -186,10 +216,11 @@ export default function MomentsScreen() {
     </View>
   );
 
-  const renderMomentCard = ({ item }: { item: MomentItem }) => {
+  const renderMomentCard = ({ item, index }: { item: MomentItem; index: number }) => {
     const config = TYPE_CONFIG[item.type] || TYPE_CONFIG.news;
 
     return (
+      <AnimatedListItem index={index}>
       <View style={[styles.momentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {/* 顶部：类型标签和时间 */}
         <View style={styles.cardHeader}>
@@ -237,13 +268,15 @@ export default function MomentsScreen() {
           </TouchableOpacity>
         )}
       </View>
+      </AnimatedListItem>
     );
   };
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyEmoji}>📭</Text>
-      <Text style={[styles.emptyText, { color: colors.muted }]}>暂无动态</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>暂无动态</Text>
+      <Text style={[styles.emptySubtitle, { color: colors.muted }]}>该分类下还没有内容，请查看其他分类</Text>
     </View>
   );
 
@@ -312,6 +345,7 @@ const styles = StyleSheet.create({
   linkBtn: { borderRadius: 10, paddingVertical: 10, alignItems: "center", marginTop: 4 },
   linkBtnText: { fontSize: 14, fontWeight: "700" },
   emptyContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 60 },
-  emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 15 },
+  emptyEmoji: { fontSize: 56, marginBottom: 16 },
+  emptyTitle: { fontSize: 17, fontWeight: "700", marginBottom: 8 },
+  emptySubtitle: { fontSize: 14 },
 });

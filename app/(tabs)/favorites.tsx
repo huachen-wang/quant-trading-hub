@@ -62,9 +62,9 @@ export default function FavoritesScreen() {
   );
 
   const renderEmpty = () => (
-    <View className="items-center justify-center py-20">
-      <Text className="text-6xl mb-4">💫</Text>
-      <Text className="text-muted text-base">还没有收藏任何策略</Text>
+    <View className="items-center justify-center py-16">
+      <Text style={{ fontSize: 56 }}>💫</Text>
+      <Text className="text-foreground text-lg font-bold mt-4">还没有收藏任何策略</Text>
       <Text className="text-muted text-sm mt-2">点击策略卡片上的❤️收藏感兴趣的EA</Text>
       <TouchableOpacity
         onPress={() => router.push("/(tabs)" as any)}

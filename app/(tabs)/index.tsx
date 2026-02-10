@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator } from "react-native";
+import { useState, useRef, useEffect } from "react";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Animated } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { StrategyCard } from "@/components/strategy-card";
@@ -23,6 +23,16 @@ export default function HomeScreen() {
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [selectedStrategyTitle, setSelectedStrategyTitle] = useState("");
 
+  // Header入场动画
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const headerSlide = useRef(new Animated.Value(-12)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerFade, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(headerSlide, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   const { data: strategies, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
     platform: platformFilter,
     orderBy,
@@ -40,7 +50,7 @@ export default function HomeScreen() {
   };
 
   const renderHeader = () => (
-    <View className="mb-2">
+    <Animated.View style={{ opacity: headerFade, transform: [{ translateY: headerSlide }] }} className="mb-2">
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-3xl font-bold text-foreground">📊 策略广场</Text>
         <View className="flex-row">
@@ -106,13 +116,21 @@ export default function HomeScreen() {
           <Text className={`text-sm ${orderBy === "return" ? "text-primary font-semibold" : "text-muted"}`}>收益率</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </Animated.View>
   );
 
   const renderEmpty = () => (
-    <View className="items-center justify-center py-12">
-      <Text className="text-muted text-base">暂无策略</Text>
-      <Text className="text-muted text-sm mt-1">成为第一个发布策略的用户</Text>
+    <View className="items-center justify-center py-16">
+      <Text style={{ fontSize: 56 }}>📊</Text>
+      <Text className="text-foreground text-lg font-bold mt-4">暂无策略</Text>
+      <Text className="text-muted text-sm mt-2">策略广场正在上架中，敬请期待</Text>
+      <TouchableOpacity
+        onPress={() => setShowContactModal(true)}
+        className="mt-6 bg-primary px-6 py-3 rounded-full"
+        activeOpacity={0.8}
+      >
+        <Text className="text-background font-semibold">上架我的EA</Text>
+      </TouchableOpacity>
     </View>
   );
 

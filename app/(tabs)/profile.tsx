@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, TextInput, Alert } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, TextInput, Alert, ScrollView } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
@@ -97,6 +97,7 @@ export default function ProfileScreen() {
   if (!isAuthenticated) {
     return (
       <ScreenContainer>
+        <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
         <View className="p-6">
           {/* 访客信息 */}
           <View className="items-center mb-8">
@@ -190,6 +191,7 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+        </ScrollView>
       </ScreenContainer>
     );
   }
@@ -197,6 +199,7 @@ export default function ProfileScreen() {
   // 已登录状态
   return (
     <ScreenContainer>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
       <View className="p-6">
         {/* 用户信息 */}
         <View className="items-center mb-8">
@@ -264,10 +267,13 @@ export default function ProfileScreen() {
           />
         ) : (
           <View className="bg-surface rounded-xl p-8 items-center">
-            <Text className="text-base text-muted">暂无下载记录</Text>
+            <Text style={{ fontSize: 40, marginBottom: 8 }}>📥</Text>
+            <Text className="text-base font-semibold text-foreground">暂无下载记录</Text>
+            <Text className="text-sm text-muted mt-1">浏览策略广场开始探索</Text>
           </View>
         )}
       </View>
+      </ScrollView>
     </ScreenContainer>
   );
 }

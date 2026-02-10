@@ -1,7 +1,9 @@
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import { useRef } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { useResponsive } from "@/hooks/use-responsive";
+import * as Haptics from "expo-haptics";
 
 export interface StrategyCardProps {
   id: number;
@@ -29,6 +31,30 @@ export function StrategyCard({
 }: StrategyCardProps) {
   const colors = useColors();
   const { numColumns } = useResponsive();
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.97,
+      duration: 80,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePress = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    onPress();
+  };
 
   const gradientColors: readonly [string, string, ...string[]] =
     platform === "MT4"
@@ -43,8 +69,10 @@ export function StrategyCard({
 
   return (
     <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.85}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={1}
       style={[
         styles.cardWrapper,
         {
@@ -54,6 +82,7 @@ export function StrategyCard({
         },
       ]}
     >
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
       <View
         style={[
           styles.card,
@@ -138,6 +167,7 @@ export function StrategyCard({
           </View>
         </View>
       </View>
+      </Animated.View>
     </TouchableOpacity>
   );
 }

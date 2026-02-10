@@ -1,4 +1,5 @@
-import { View, Text, Modal, TouchableOpacity, Linking, ActivityIndicator, StyleSheet } from "react-native";
+import { useRef, useEffect } from "react";
+import { View, Text, Modal, TouchableOpacity, Linking, ActivityIndicator, StyleSheet, Animated } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "./ui/icon-symbol";
 import { trpc } from "@/lib/trpc";
@@ -10,6 +11,19 @@ interface ContactModalProps {
 
 export function ContactModal({ visible, onClose }: ContactModalProps) {
   const colors = useColors();
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      scaleAnim.setValue(0.9);
+      opacityAnim.setValue(0);
+      Animated.parallel([
+        Animated.timing(scaleAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
   const { data: contactData, isLoading } = trpc.siteSettings.getContact.useQuery(undefined, {
     enabled: visible,
   });
@@ -61,10 +75,16 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
         onPress={onClose}
         style={styles.overlay}
       >
+        <Animated.View
+          style={[
+            styles.modalContent,
+            { backgroundColor: colors.background, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+          ]}
+        >
         <TouchableOpacity
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
-          style={[styles.modalContent, { backgroundColor: colors.background }]}
+          style={{ width: "100%" }}
         >
           {/* 标题 */}
           <View style={styles.headerSection}>
@@ -119,6 +139,7 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
             <Text style={styles.closeBtnText}>关闭</Text>
           </TouchableOpacity>
         </TouchableOpacity>
+        </Animated.View>
       </TouchableOpacity>
     </Modal>
   );

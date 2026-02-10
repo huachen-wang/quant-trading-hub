@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { View, Text, Modal, TouchableOpacity, TextInput, ActivityIndicator, StyleSheet, Alert } from "react-native";
+import { useState, useRef, useEffect } from "react";
+import { View, Text, Modal, TouchableOpacity, TextInput, ActivityIndicator, StyleSheet, Alert, Animated } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
@@ -15,6 +15,19 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
   const [contact, setContact] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      scaleAnim.setValue(0.9);
+      opacityAnim.setValue(0);
+      Animated.parallel([
+        Animated.timing(scaleAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
 
   const subscribeMutation = trpc.subscriptions.subscribe.useMutation();
 
@@ -69,10 +82,16 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
         onPress={handleClose}
         style={styles.overlay}
       >
+        <Animated.View
+          style={[
+            styles.modalContent,
+            { backgroundColor: colors.background, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+          ]}
+        >
         <TouchableOpacity
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
-          style={[styles.modalContent, { backgroundColor: colors.background }]}
+          style={{ width: "100%" }}
         >
           {success ? (
             <View style={styles.successBox}>
@@ -143,6 +162,7 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
             </>
           )}
         </TouchableOpacity>
+        </Animated.View>
       </TouchableOpacity>
     </Modal>
   );

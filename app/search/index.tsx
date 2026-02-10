@@ -33,9 +33,9 @@ export default function SearchScreen() {
 
   return (
     <ScreenContainer>
-      <View className="p-6">
+      <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 12 }}>
         {/* 搜索栏 */}
-        <View className="flex-row items-center mb-6">
+        <View className="flex-row items-center mb-4">
           <TouchableOpacity
             onPress={() => router.back()}
             className="w-10 h-10 items-center justify-center rounded-full bg-surface mr-3"
@@ -53,6 +53,7 @@ export default function SearchScreen() {
               placeholderTextColor={colors.muted}
               className="flex-1 ml-2 text-foreground"
               autoFocus
+              returnKeyType="search"
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => {
@@ -67,13 +68,13 @@ export default function SearchScreen() {
 
         {/* 搜索结果 */}
         {debouncedQuery.length === 0 ? (
-          <View className="items-center justify-center py-20">
-            <Text className="text-6xl mb-4">🔍</Text>
-            <Text className="text-muted text-base">输入关键词搜索EA策略</Text>
-            <Text className="text-muted text-sm mt-2">支持策略名称、交易对、平台等</Text>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: 80 }}>
+            <Text style={{ fontSize: 56, marginBottom: 16 }}>🔍</Text>
+            <Text className="text-foreground text-lg font-bold">搜索EA策略</Text>
+            <Text className="text-muted text-sm mt-2">支持策略名称、交易对、平台等关键词</Text>
           </View>
         ) : isLoading ? (
-          <View className="items-center justify-center py-20">
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : strategies && strategies.length > 0 ? (
@@ -95,11 +96,12 @@ export default function SearchScreen() {
               />
             )}
             contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
           />
         ) : (
-          <View className="items-center justify-center py-20">
-            <Text className="text-6xl mb-4">😔</Text>
-            <Text className="text-muted text-base">未找到相关策略</Text>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: 80 }}>
+            <Text style={{ fontSize: 56, marginBottom: 16 }}>😔</Text>
+            <Text className="text-foreground text-lg font-bold">未找到相关策略</Text>
             <Text className="text-muted text-sm mt-2">试试其他关键词</Text>
           </View>
         )}

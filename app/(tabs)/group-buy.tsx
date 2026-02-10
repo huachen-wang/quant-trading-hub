@@ -1,5 +1,35 @@
-import { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Linking, StyleSheet, Platform } from "react-native";
+import { useState, useRef, useEffect } from "react";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Linking, StyleSheet, Platform, Animated } from "react-native";
+
+// 卡片入场动画组件
+function AnimatedListItem({ children, index }: { children: React.ReactNode; index: number }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    const delay = Math.min(index * 80, 400);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 350,
+        delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 350,
+        delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
+}
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -79,6 +109,7 @@ export default function GroupBuyScreen() {
     const emoji = getEmoji(index);
 
     return (
+      <AnimatedListItem index={index}>
       <TouchableOpacity
         onPress={() => handleCardPress(item)}
         activeOpacity={0.85}
@@ -167,6 +198,7 @@ export default function GroupBuyScreen() {
           </View>
         </View>
       </TouchableOpacity>
+      </AnimatedListItem>
     );
   };
 
