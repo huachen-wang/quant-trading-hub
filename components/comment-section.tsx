@@ -12,7 +12,7 @@ interface CommentSectionProps {
 
 export function CommentSection({ strategyId }: CommentSectionProps) {
   const colors = useColors();
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   const [nickname, setNickname] = useState("");
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,7 +81,6 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
         { text: "取消", style: "cancel" },
         {
           text: "去登录",
-          onPress: () => login(),
         },
       ]
     );
@@ -101,7 +100,7 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
             登录后才能查看和发表评价
           </Text>
           <TouchableOpacity
-            onPress={() => login()}
+            onPress={() => {}}
             className="bg-primary px-6 py-3 rounded-full"
             activeOpacity={0.8}
           >
@@ -159,7 +158,7 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
                 <Text className="text-base font-semibold text-foreground">
                   {item.nickname || "匿名用户"}
                 </Text>
-                <Text className="text-sm text-muted">{formatDate(item.createdAt)}</Text>
+                <Text className="text-sm text-muted">{formatDate(String(item.createdAt))}</Text>
               </View>
               <Text className="text-base text-foreground leading-relaxed">{item.content}</Text>
             </View>

@@ -100,7 +100,6 @@ export default function FavoritesScreen() {
             price={item.price}
             isFree={item.isFree}
             downloadCount={0}
-            coverImage={item.coverImage}
             onPress={() => handleStrategyPress(item.id)}
             isFavorite={isFavorite(item.id)}
             onFavoritePress={() => handleFavoritePress(item)}

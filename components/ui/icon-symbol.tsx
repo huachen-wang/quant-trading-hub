@@ -26,6 +26,7 @@ const MAPPING = {
   "heart": "favorite-border",
   "arrow.left": "arrow-back",
   "ellipsis.circle": "more-horiz",
+  "tray.full": "inbox",
 } as IconMapping;
 
 type IconSymbolName = keyof typeof MAPPING;

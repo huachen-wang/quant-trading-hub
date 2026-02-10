@@ -36,10 +36,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="favorites"
+        name="moments"
         options={{
-          title: "收藏",
-          tabBarIcon: () => <Text style={{ fontSize: 24 }}>❤️</Text>,
+          title: "动态",
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>📣</Text>,
         }}
       />
       <Tabs.Screen
@@ -47,6 +47,13 @@ export default function TabLayout() {
         options={{
           title: "合购",
           tabBarIcon: () => <Text style={{ fontSize: 24 }}>🤝</Text>,
+        }}
+      />
+      <Tabs.Screen
+        name="favorites"
+        options={{
+          title: "收藏",
+          tabBarIcon: () => <Text style={{ fontSize: 24 }}>❤️</Text>,
         }}
       />
       <Tabs.Screen

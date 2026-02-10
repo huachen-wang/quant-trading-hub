@@ -256,7 +256,16 @@ export async function seedNewStrategies() {
   
   // 插入新策略(只插入前2个作为测试数据)
   for (const strategy of newStrategies.slice(0, 2)) {
-    const result = await db.insert(strategies).values(strategy);
+    const result = await db.insert(strategies).values({
+      ...strategy,
+      platform: strategy.platform as "MT4" | "MT5",
+      status: strategy.status as "draft" | "published" | "archived",
+      totalReturn: String(strategy.totalReturn),
+      winRate: String(strategy.winRate),
+      maxDrawdown: String(strategy.maxDrawdown),
+      sharpeRatio: String(strategy.sharpeRatio),
+      price: String(strategy.price),
+    });
     const strategyId = Number(result[0].insertId);
     console.log(`已插入策略: ${strategy.title} (ID: ${strategyId})`);
     

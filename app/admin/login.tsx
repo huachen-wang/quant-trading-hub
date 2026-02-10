@@ -1,18 +1,13 @@
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Platform, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useState } from "react";
-import { trpc } from "@/lib/trpc";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 /**
  * 管理后台登录页面
- * 
  * 访问路径: /admin/login
- * 
- * 这是一个简单的管理员登录页面,使用邮箱密码登录
- * 登录成功后会跳转到管理后台首页
  */
 export default function AdminLogin() {
   const router = useRouter();
@@ -20,34 +15,28 @@ export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleLogin = async () => {
+    setErrorMsg("");
     if (!email.trim() || !password.trim()) {
-      Alert.alert("错误", "请输入邮箱和密码");
+      setErrorMsg("请输入邮箱和密码");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // 这里使用简单的硬编码验证
-      // 生产环境应该调用API验证
+      // 简单的硬编码验证
       if (email === "admin@eaxau.com" && password === "admin123") {
-        // 保存登录状态
         await AsyncStorage.setItem("admin_logged_in", "true");
         await AsyncStorage.setItem("admin_email", email);
-        
-        Alert.alert("成功", "登录成功", [
-          {
-            text: "确定",
-            onPress: () => router.replace("/admin" as any),
-          },
-        ]);
+        router.replace("/admin" as any);
       } else {
-        Alert.alert("错误", "邮箱或密码错误");
+        setErrorMsg("邮箱或密码错误");
       }
     } catch (error) {
-      Alert.alert("错误", "登录失败,请重试");
+      setErrorMsg("登录失败,请重试");
     } finally {
       setIsLoading(false);
     }
@@ -55,20 +44,27 @@ export default function AdminLogin() {
 
   return (
     <ScreenContainer className="bg-background">
-      <View className="flex-1 items-center justify-center p-6">
+      <View style={styles.container}>
         {/* Logo和标题 */}
-        <View className="items-center mb-8">
-          <View className="w-20 h-20 rounded-full bg-primary/10 items-center justify-center mb-4">
-            <Text className="text-4xl">⚙️</Text>
+        <View style={styles.header}>
+          <View style={[styles.logoCircle, { backgroundColor: colors.primary + "15" }]}>
+            <Text style={styles.logoEmoji}>⚙️</Text>
           </View>
-          <Text className="text-2xl font-bold text-foreground mb-2">管理员登录</Text>
-          <Text className="text-sm text-muted">量化军火库 - 后台管理系统</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>管理员登录</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>量化军火库 - 后台管理系统</Text>
         </View>
 
+        {/* 错误提示 */}
+        {errorMsg ? (
+          <View style={[styles.errorBox, { backgroundColor: colors.error + "15", borderColor: colors.error + "30" }]}>
+            <Text style={[styles.errorText, { color: colors.error }]}>{errorMsg}</Text>
+          </View>
+        ) : null}
+
         {/* 登录表单 */}
-        <View className="w-full max-w-sm">
-          <View className="mb-4">
-            <Text className="text-sm font-semibold text-foreground mb-2">邮箱</Text>
+        <View style={styles.form}>
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.label, { color: colors.foreground }]}>邮箱</Text>
             <TextInput
               value={email}
               onChangeText={setEmail}
@@ -77,12 +73,13 @@ export default function AdminLogin() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground"
+              returnKeyType="next"
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
             />
           </View>
 
-          <View className="mb-6">
-            <Text className="text-sm font-semibold text-foreground mb-2">密码</Text>
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.label, { color: colors.foreground }]}>密码</Text>
             <TextInput
               value={password}
               onChangeText={setPassword}
@@ -91,26 +88,28 @@ export default function AdminLogin() {
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
-              className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground"
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
             />
           </View>
 
           <TouchableOpacity
             onPress={handleLogin}
             disabled={isLoading}
-            className="bg-primary rounded-lg py-3 items-center"
             activeOpacity={0.8}
+            style={[styles.loginBtn, { backgroundColor: colors.primary, opacity: isLoading ? 0.7 : 1 }]}
           >
             {isLoading ? (
-              <ActivityIndicator color={colors.background} />
+              <ActivityIndicator color="#fff" />
             ) : (
-              <Text className="text-background font-bold text-base">登录</Text>
+              <Text style={styles.loginBtnText}>登录</Text>
             )}
           </TouchableOpacity>
 
           {/* 默认账号提示 */}
-          <View className="mt-6 p-4 bg-surface/50 rounded-lg">
-            <Text className="text-xs text-muted text-center">
+          <View style={[styles.hintBox, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.hintText, { color: colors.muted }]}>
               默认账号: admin@eaxau.com{"\n"}
               默认密码: admin123
             </Text>
@@ -120,12 +119,102 @@ export default function AdminLogin() {
         {/* 返回首页 */}
         <TouchableOpacity
           onPress={() => router.push("/" as any)}
-          className="mt-8"
           activeOpacity={0.7}
+          style={styles.backBtn}
         >
-          <Text className="text-sm text-primary">← 返回首页</Text>
+          <Text style={[styles.backBtnText, { color: colors.primary }]}>← 返回首页</Text>
         </TouchableOpacity>
       </View>
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  header: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  logoCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  logoEmoji: {
+    fontSize: 40,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+  },
+  errorBox: {
+    width: "100%",
+    maxWidth: 360,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    textAlign: "center",
+  },
+  form: {
+    width: "100%",
+    maxWidth: 360,
+  },
+  fieldGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  loginBtn: {
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  loginBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
+  },
+  hintBox: {
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 10,
+  },
+  hintText: {
+    fontSize: 12,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  backBtn: {
+    marginTop: 32,
+  },
+  backBtnText: {
+    fontSize: 14,
+  },
+});
