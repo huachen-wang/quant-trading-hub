@@ -101,8 +101,7 @@ export default function FavoritesScreen() {
             isFree={item.isFree}
             downloadCount={0}
             onPress={() => handleStrategyPress(item.id)}
-            isFavorite={isFavorite(item.id)}
-            onFavoritePress={() => handleFavoritePress(item)}
+            onSubscribePress={() => {}}
           />
         )}
         ListHeaderComponent={renderHeader}

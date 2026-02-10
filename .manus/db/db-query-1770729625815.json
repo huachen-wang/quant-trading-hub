@@ -1,0 +1,9 @@
+{
+  "query": "\nINSERT INTO notifications (title, content, type, icon, isActive, sortOrder) VALUES\n('欢迎来到量化军火库', '专业的MT4/MT5 EA策略评测平台，为您提供最优质的量化交易策略', 'info', '🎉', TRUE, 1),\n('合购功能已上线', '多人拼团购买高价EA，人均费用大幅降低，快去合购专区看看吧', 'success', '🤝', TRUE, 2),\n('新策略上架通知', '每周更新优质EA策略，订阅邮箱第一时间获取通知', 'promo', '📢', TRUE, 3);\n\nINSERT INTO site_settings (settingKey, settingValue, description) VALUES\n('contact_telegram', '@YourTelegramChannel', 'Telegram联系方式'),\n('contact_telegram_link', 'https://t.me/YourTelegramChannel', 'Telegram链接'),\n('contact_qq', '123456789', 'QQ群号'),\n('contact_wechat', 'YourWeChatID', '微信号'),\n('contact_description', '我们提供专业的EA策略代挂服务,帮助您的策略获得更多曝光和下载。欢迎通过以上方式联系我们洽谈合作。', '联系方式说明'),\n('contact_title', '联系我们', '联系弹窗标题'),\n('contact_subtitle', '上架EA策略 | 代挂合作服务', '联系弹窗副标题');\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user j9KUtKJY9ypfPzH.root --database G7CCk846Fqcvg3hQNu5KQZ --execute \nINSERT INTO notifications (title, content, type, icon, isActive, sortOrder) VALUES\n('欢迎来到量化军火库', '专业的MT4/MT5 EA策略评测平台，为您提供最优质的量化交易策略', 'info', '🎉', TRUE, 1),\n('合购功能已上线', '多人拼团购买高价EA，人均费用大幅降低，快去合购专区看看吧', 'success', '🤝', TRUE, 2),\n('新策略上架通知', '每周更新优质EA策略，订阅邮箱第一时间获取通知', 'promo', '📢', TRUE, 3);\n\nINSERT INTO site_settings (settingKey, settingValue, description) VALUES\n('contact_telegram', '@YourTelegramChannel', 'Telegram联系方式'),\n('contact_telegram_link', 'https://t.me/YourTelegramChannel', 'Telegram链接'),\n('contact_qq', '123456789', 'QQ群号'),\n('contact_wechat', 'YourWeChatID', '微信号'),\n('contact_description', '我们提供专业的EA策略代挂服务,帮助您的策略获得更多曝光和下载。欢迎通过以上方式联系我们洽谈合作。', '联系方式说明'),\n('contact_title', '联系我们', '联系弹窗标题'),\n('contact_subtitle', '上架EA策略 | 代挂合作服务', '联系弹窗副标题');\n",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1761
+}

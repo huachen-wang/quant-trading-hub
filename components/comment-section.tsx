@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, StyleSheet } from "react-native";
 import { useColors } from "@/hooks/use-colors";
-import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
@@ -12,10 +11,10 @@ interface CommentSectionProps {
 
 export function CommentSection({ strategyId }: CommentSectionProps) {
   const colors = useColors();
-  const { user } = useAuth();
   const [nickname, setNickname] = useState("");
   const [content, setContent] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const { data: comments, isLoading, refetch } = trpc.anonymousComments.list.useQuery({
     strategyId,
@@ -26,6 +25,8 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
     onSuccess: () => {
       setNickname("");
       setContent("");
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 5000);
       refetch();
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -73,54 +74,33 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
     return date.toLocaleDateString("zh-CN");
   };
 
-  const handleLoginPrompt = () => {
-    Alert.alert(
-      "🔐 需要登录",
-      "登录后才能查看和发表评价，请先登录您的账号。",
-      [
-        { text: "取消", style: "cancel" },
-        {
-          text: "去登录",
-        },
-      ]
-    );
-  };
-
   return (
-    <View className="mt-6">
+    <View style={styles.container}>
       {/* 标题 */}
-      <Text className="text-xl font-bold text-foreground mb-4">💬 用户评价</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>💬 用户评价</Text>
 
-      {!user ? (
-        /* 未登录提示 */
-        <View className="bg-surface rounded-2xl p-6 items-center">
-          <Text className="text-5xl mb-3">🔒</Text>
-          <Text className="text-lg font-semibold text-foreground mb-2">需要登录</Text>
-          <Text className="text-sm text-muted text-center mb-4">
-            登录后才能查看和发表评价
+      {/* 审核成功提示 */}
+      {showSuccess && (
+        <View style={[styles.successBanner, { backgroundColor: colors.success + "15" }]}>
+          <Text style={[styles.successText, { color: colors.success }]}>
+            ✅ 留言已提交，审核通过后将显示在评论区
           </Text>
-          <TouchableOpacity
-            onPress={() => {}}
-            className="bg-primary px-6 py-3 rounded-full"
-            activeOpacity={0.8}
-          >
-            <Text className="text-background font-semibold">立即登录</Text>
-          </TouchableOpacity>
         </View>
-      ) : (
-        <>
-          {/* 发表留言 */}
-          <View className="bg-surface rounded-2xl p-4 mb-4">
+      )}
+
+      {/* 发表留言 - 无需登录 */}
+      <View style={[styles.inputCard, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.inputHint, { color: colors.muted }]}>匿名留言，无需登录</Text>
         <TextInput
-          className="bg-background rounded-xl px-4 py-3 text-base text-foreground mb-3"
-          placeholder="昵称(可选)"
+          style={[styles.nicknameInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+          placeholder="昵称（可选，默认匿名）"
           placeholderTextColor={colors.muted}
           value={nickname}
           onChangeText={setNickname}
           maxLength={100}
         />
         <TextInput
-          className="bg-background rounded-xl px-4 py-3 text-base text-foreground mb-3"
+          style={[styles.contentInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
           placeholder="分享你的使用体验..."
           placeholderTextColor={colors.muted}
           value={content}
@@ -133,18 +113,21 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
         <TouchableOpacity
           onPress={handleSubmit}
           disabled={isSubmitting || !content.trim()}
-          className={`py-3 rounded-xl ${isSubmitting || !content.trim() ? "bg-muted" : "bg-primary"}`}
           activeOpacity={0.8}
+          style={[
+            styles.submitBtn,
+            { backgroundColor: isSubmitting || !content.trim() ? colors.muted : colors.primary },
+          ]}
         >
-          <Text className="text-center text-background font-semibold text-base">
+          <Text style={styles.submitBtnText}>
             {isSubmitting ? "提交中..." : "发表评价"}
           </Text>
         </TouchableOpacity>
       </View>
 
-          {/* 留言列表 */}
+      {/* 留言列表 */}
       {isLoading ? (
-        <View className="py-8">
+        <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : comments && comments.length > 0 ? (
@@ -153,24 +136,62 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
           scrollEnabled={false}
           keyExtractor={(item) => item.id.toString()}
           renderItem={({ item }) => (
-            <View className="bg-surface rounded-2xl p-4 mb-3">
-              <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-base font-semibold text-foreground">
+            <View style={[styles.commentCard, { backgroundColor: colors.surface }]}>
+              <View style={styles.commentHeader}>
+                <Text style={[styles.commentNickname, { color: colors.foreground }]}>
                   {item.nickname || "匿名用户"}
                 </Text>
-                <Text className="text-sm text-muted">{formatDate(String(item.createdAt))}</Text>
+                <Text style={[styles.commentTime, { color: colors.muted }]}>
+                  {formatDate(String(item.createdAt))}
+                </Text>
               </View>
-              <Text className="text-base text-foreground leading-relaxed">{item.content}</Text>
+              <Text style={[styles.commentContent, { color: colors.foreground }]}>
+                {item.content}
+              </Text>
             </View>
           )}
         />
       ) : (
-        <View className="py-8">
-          <Text className="text-center text-muted text-base">暂无评价,快来抢沙发吧~</Text>
+        <View style={styles.emptyBox}>
+          <Text style={[styles.emptyText, { color: colors.muted }]}>暂无评价，快来抢沙发吧~</Text>
         </View>
-      )}
-        </>
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { marginTop: 24 },
+  sectionTitle: { fontSize: 20, fontWeight: "800", marginBottom: 12 },
+  successBanner: { borderRadius: 12, padding: 12, marginBottom: 12 },
+  successText: { fontSize: 14, fontWeight: "600", textAlign: "center" },
+  inputCard: { borderRadius: 16, padding: 16, marginBottom: 16 },
+  inputHint: { fontSize: 12, marginBottom: 10 },
+  nicknameInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginBottom: 10,
+  },
+  contentInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginBottom: 12,
+    minHeight: 80,
+  },
+  submitBtn: { borderRadius: 10, paddingVertical: 12, alignItems: "center" },
+  submitBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  loadingBox: { paddingVertical: 32 },
+  commentCard: { borderRadius: 14, padding: 14, marginBottom: 10 },
+  commentHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  commentNickname: { fontSize: 15, fontWeight: "600" },
+  commentTime: { fontSize: 12 },
+  commentContent: { fontSize: 15, lineHeight: 22 },
+  emptyBox: { paddingVertical: 32 },
+  emptyText: { textAlign: "center", fontSize: 15 },
+});

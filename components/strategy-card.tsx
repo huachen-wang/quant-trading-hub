@@ -13,8 +13,7 @@ export interface StrategyCardProps {
   isFree: boolean;
   downloadCount: number;
   onPress: () => void;
-  isFavorite?: boolean;
-  onFavoritePress?: () => void;
+  onSubscribePress?: () => void;
 }
 
 export function StrategyCard({
@@ -26,25 +25,20 @@ export function StrategyCard({
   isFree,
   downloadCount,
   onPress,
-  isFavorite = false,
-  onFavoritePress,
+  onSubscribePress,
 }: StrategyCardProps) {
   const colors = useColors();
   const { numColumns } = useResponsive();
 
-  // 根据平台生成不同的渐变色
   const gradientColors: readonly [string, string, ...string[]] =
     platform === "MT4"
-      ? ["#1a365d", "#2563eb", "#60a5fa"] // 蓝色渐变
-      : ["#4c1d95", "#7c3aed", "#a78bfa"]; // 紫色渐变
+      ? ["#1a365d", "#2563eb", "#60a5fa"]
+      : ["#4c1d95", "#7c3aed", "#a78bfa"];
 
   const returnValue = parseFloat(totalReturn);
   const isPositive = returnValue >= 0;
 
-  // 根据列数计算卡片宽度 - 使用固定gap
-  const horizontalPadding = 16; // FlatList的paddingHorizontal
   const gap = numColumns >= 4 ? 12 : numColumns >= 3 ? 10 : 8;
-  // 每个卡片的margin: gap/2 on each side
   const cardMargin = gap / 2;
 
   return (
@@ -67,13 +61,13 @@ export function StrategyCard({
             backgroundColor: colors.surface,
             borderColor: colors.border,
             ...(Platform.OS === "web" ? {
-              // @ts-ignore - web only shadow
+              // @ts-ignore
               boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)",
             } : {}),
           },
         ]}
       >
-        {/* 封面 - 渐变色 */}
+        {/* 封面 */}
         <View style={styles.coverContainer}>
           <LinearGradient
             colors={gradientColors}
@@ -89,17 +83,17 @@ export function StrategyCard({
             </View>
           </LinearGradient>
 
-          {/* 收藏按钮 */}
-          {onFavoritePress && (
+          {/* 订阅/技术支持按钮 - 替代原收藏按钮 */}
+          {onSubscribePress && (
             <TouchableOpacity
               onPress={(e) => {
                 e.stopPropagation();
-                onFavoritePress();
+                onSubscribePress();
               }}
-              style={[styles.favoriteBtn, { backgroundColor: `${colors.background}CC` }]}
+              style={[styles.subscribeBtn, { backgroundColor: `${colors.primary}E6` }]}
               activeOpacity={0.7}
             >
-              <Text style={styles.favoriteIcon}>{isFavorite ? "❤️" : "🤍"}</Text>
+              <Text style={styles.subscribeBtnIcon}>📬</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -113,7 +107,6 @@ export function StrategyCard({
             {title}
           </Text>
 
-          {/* 实盘数据 */}
           <View style={styles.dataSection}>
             <View style={styles.dataRow}>
               <Text style={[styles.dataLabel, { color: colors.muted }]}>总收益</Text>
@@ -133,7 +126,6 @@ export function StrategyCard({
             </View>
           </View>
 
-          {/* 价格和下载 */}
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
             <View>
               {isFree ? (
@@ -151,9 +143,7 @@ export function StrategyCard({
 }
 
 const styles = StyleSheet.create({
-  cardWrapper: {
-    // width set dynamically
-  },
+  cardWrapper: {},
   card: {
     borderRadius: 14,
     overflow: "hidden",
@@ -182,7 +172,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
-  favoriteBtn: {
+  subscribeBtn: {
     position: "absolute",
     top: 8,
     right: 8,
@@ -192,8 +182,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  favoriteIcon: {
-    fontSize: 16,
+  subscribeBtnIcon: {
+    fontSize: 14,
   },
   infoContainer: {
     padding: 12,

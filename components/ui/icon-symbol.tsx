@@ -27,6 +27,12 @@ const MAPPING = {
   "arrow.left": "arrow-back",
   "ellipsis.circle": "more-horiz",
   "tray.full": "inbox",
+  "bell.fill": "notifications",
+  "message.fill": "chat",
+  "bubble.left.fill": "chat-bubble",
+  "trash": "delete",
+  "hand.thumbsup": "thumb-up",
+  "xmark": "close",
 } as IconMapping;
 
 type IconSymbolName = keyof typeof MAPPING;

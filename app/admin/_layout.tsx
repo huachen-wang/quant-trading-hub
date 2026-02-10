@@ -111,6 +111,18 @@ export default function AdminLayout() {
         }}
       />
       <Stack.Screen
+        name="notifications"
+        options={{
+          title: "通知公告管理",
+        }}
+      />
+      <Stack.Screen
+        name="contact-settings"
+        options={{
+          title: "联系方式设置",
+        }}
+      />
+      <Stack.Screen
         name="login"
         options={{
           title: "管理员登录",

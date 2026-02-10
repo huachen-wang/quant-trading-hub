@@ -27,11 +27,11 @@ export default function AdminDashboard() {
       description: "管理所有EA策略",
     },
     {
-      title: "💬 评论管理",
+      title: "💬 评论审核",
       icon: "ellipsis.circle" as const,
       route: "/admin/comments",
       count: stats?.totalComments || 0,
-      description: "查看和管理用户评论",
+      description: "审核用户匿名留言",
     },
     {
       title: "🤝 合购申请",
@@ -48,6 +48,13 @@ export default function AdminDashboard() {
       description: "查看和审核EA上架申请",
     },
     {
+      title: "📢 通知公告",
+      icon: "bell.fill" as const,
+      route: "/admin/notifications",
+      count: 0,
+      description: "管理订阅页面通知公告",
+    },
+    {
       title: "📬 订阅页面管理",
       icon: "paperplane.fill" as const,
       route: "/admin/page-contents",
@@ -60,6 +67,13 @@ export default function AdminDashboard() {
       route: "/admin/subscribers",
       count: 0,
       description: "查看邮箱订阅用户列表",
+    },
+    {
+      title: "📞 联系方式设置",
+      icon: "message.fill" as const,
+      route: "/admin/contact-settings",
+      count: 0,
+      description: "设置上架EA弹窗的联系方式",
     },
   ];
 
@@ -111,9 +125,6 @@ export default function AdminDashboard() {
               <View className="flex-1">
                 <View className="flex-row items-center mb-1">
                   <Text className="text-lg font-semibold text-foreground mr-2">{item.title}</Text>
-                  <View className="bg-accent/20 px-2 py-0.5 rounded-full">
-                    <Text className="text-xs font-bold text-accent">{item.count}</Text>
-                  </View>
                 </View>
                 <Text className="text-sm text-muted">{item.description}</Text>
               </View>

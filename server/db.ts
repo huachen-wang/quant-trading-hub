@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../drizzle/schema";
 
-const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys } = schema;
+const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings } = schema;
 
 let connection: mysql.Connection | null = null;
 
@@ -645,4 +645,92 @@ export async function deletePageContent(id: number) {
   const { pageContents } = schema;
   await db.delete(pageContents).where(eq(pageContents.id, id));
   return { success: true };
+}
+
+// ========== 通知/公告 ==========
+
+export async function getActiveNotifications() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(notifications)
+    .where(eq(notifications.isActive, true))
+    .orderBy(notifications.sortOrder);
+}
+
+export async function getAllNotifications(limit = 100, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(notifications)
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit).offset(offset);
+}
+
+export async function createNotification(data: { title: string; content: string; type?: string; icon?: string; link?: string; sortOrder?: number }) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(notifications).values(data as any);
+  return { success: true, id: result[0].insertId };
+}
+
+export async function updateNotification(id: number, data: Partial<{ title: string; content: string; type: string; icon: string; link: string; isActive: boolean; sortOrder: number }>) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db.update(notifications).set(data).where(eq(notifications.id, id));
+  return { success: true };
+}
+
+export async function deleteNotification(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db.delete(notifications).where(eq(notifications.id, id));
+  return { success: true };
+}
+
+// ========== 站点设置 ==========
+
+export async function getSiteSettings() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.select().from(siteSettings);
+}
+
+export async function getSiteSetting(key: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.select().from(siteSettings).where(eq(siteSettings.settingKey, key)).limit(1);
+  return result[0] || null;
+}
+
+export async function upsertSiteSetting(key: string, value: string, description?: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const existing = await db.select().from(siteSettings).where(eq(siteSettings.settingKey, key)).limit(1);
+  if (existing.length > 0) {
+    await db.update(siteSettings).set({ settingValue: value }).where(eq(siteSettings.settingKey, key));
+  } else {
+    await db.insert(siteSettings).values({ settingKey: key, settingValue: value, description: description || null });
+  }
+  return { success: true };
+}
+
+export async function getContactSettings() {
+  const db = await getDb();
+  if (!db) return {};
+
+  const settings = await db.select().from(siteSettings)
+    .where(sql`${siteSettings.settingKey} LIKE 'contact_%'`);
+  
+  const result: Record<string, string> = {};
+  for (const s of settings) {
+    result[s.settingKey] = s.settingValue;
+  }
+  return result;
 }

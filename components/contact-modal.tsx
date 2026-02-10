@@ -1,6 +1,7 @@
-import { View, Text, Modal, TouchableOpacity, Linking } from "react-native";
+import { View, Text, Modal, TouchableOpacity, Linking, ActivityIndicator, StyleSheet } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "./ui/icon-symbol";
+import { trpc } from "@/lib/trpc";
 
 interface ContactModalProps {
   visible: boolean;
@@ -9,29 +10,40 @@ interface ContactModalProps {
 
 export function ContactModal({ visible, onClose }: ContactModalProps) {
   const colors = useColors();
+  const { data: contactData, isLoading } = trpc.siteSettings.getContact.useQuery(undefined, {
+    enabled: visible,
+  });
+
+  const telegram = contactData?.contact_telegram || "";
+  const telegramLink = contactData?.contact_telegram_link || "";
+  const qq = contactData?.contact_qq || "";
+  const wechat = contactData?.contact_wechat || "";
+  const description = contactData?.contact_description || "";
+  const title = contactData?.contact_title || "联系我们";
+  const subtitle = contactData?.contact_subtitle || "上架EA策略 | 代挂合作服务";
 
   const contactMethods = [
-    {
+    ...(telegram ? [{
       icon: "paperplane.fill" as const,
       label: "Telegram",
-      value: "@YourTelegramChannel",
-      link: "https://t.me/YourTelegramChannel",
-    },
-    {
+      value: telegram,
+      link: telegramLink || null,
+    }] : []),
+    ...(qq ? [{
       icon: "bubble.left.fill" as const,
       label: "QQ群",
-      value: "123456789",
+      value: qq,
       link: null,
-    },
-    {
+    }] : []),
+    ...(wechat ? [{
       icon: "message.fill" as const,
       label: "微信",
-      value: "YourWeChatID",
+      value: wechat,
       link: null,
-    },
+    }] : []),
   ];
 
-  const handlePress = (link: string | null, value: string) => {
+  const handlePress = (link: string | null) => {
     if (link) {
       Linking.openURL(link);
     }
@@ -47,61 +59,110 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
       <TouchableOpacity
         activeOpacity={1}
         onPress={onClose}
-        className="flex-1 bg-black/50 items-center justify-center p-6"
+        style={styles.overlay}
       >
         <TouchableOpacity
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
-          className="w-full max-w-sm bg-background rounded-3xl p-6"
+          style={[styles.modalContent, { backgroundColor: colors.background }]}
         >
           {/* 标题 */}
-          <View className="items-center mb-6">
-            <Text className="text-2xl font-bold text-foreground mb-2">联系我们</Text>
-            <Text className="text-sm text-muted text-center">
-              上架EA策略 | 代挂合作服务
-            </Text>
+          <View style={styles.headerSection}>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>{title}</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.muted }]}>{subtitle}</Text>
           </View>
 
-          {/* 联系方式列表 */}
-          <View className="mb-6">
-            {contactMethods.map((method, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => handlePress(method.link, method.value)}
-                className="flex-row items-center bg-surface rounded-2xl p-4 mb-3"
-                activeOpacity={0.7}
-              >
-                <View className="w-12 h-12 bg-primary/10 rounded-full items-center justify-center mr-4">
-                  <IconSymbol name={method.icon} size={24} color={colors.primary} />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-sm text-muted mb-1">{method.label}</Text>
-                  <Text className="text-base font-semibold text-foreground">{method.value}</Text>
-                </View>
-                {method.link && (
-                  <IconSymbol name="chevron.right" size={20} color={colors.muted} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </View>
+          {isLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <>
+              {/* 联系方式列表 */}
+              <View style={styles.contactList}>
+                {contactMethods.map((method, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={() => handlePress(method.link)}
+                    style={[styles.contactItem, { backgroundColor: colors.surface }]}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.contactIcon, { backgroundColor: colors.primary + "15" }]}>
+                      <IconSymbol name={method.icon} size={24} color={colors.primary} />
+                    </View>
+                    <View style={styles.contactInfo}>
+                      <Text style={[styles.contactLabel, { color: colors.muted }]}>{method.label}</Text>
+                      <Text style={[styles.contactValue, { color: colors.foreground }]}>{method.value}</Text>
+                    </View>
+                    {method.link && (
+                      <IconSymbol name="chevron.right" size={20} color={colors.muted} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-          {/* 说明 */}
-          <View className="bg-primary/5 rounded-2xl p-4 mb-6">
-            <Text className="text-sm text-foreground leading-relaxed">
-              我们提供专业的EA策略代挂服务,帮助您的策略获得更多曝光和下载。欢迎通过以上方式联系我们洽谈合作。
-            </Text>
-          </View>
+              {/* 说明 */}
+              {description ? (
+                <View style={[styles.descBox, { backgroundColor: colors.primary + "08" }]}>
+                  <Text style={[styles.descText, { color: colors.foreground }]}>{description}</Text>
+                </View>
+              ) : null}
+            </>
+          )}
 
           {/* 关闭按钮 */}
           <TouchableOpacity
             onPress={onClose}
-            className="bg-primary rounded-full py-3 items-center"
+            style={[styles.closeBtn, { backgroundColor: colors.primary }]}
             activeOpacity={0.8}
           >
-            <Text className="text-background font-semibold text-base">关闭</Text>
+            <Text style={styles.closeBtnText}>关闭</Text>
           </TouchableOpacity>
         </TouchableOpacity>
       </TouchableOpacity>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalContent: {
+    width: "100%",
+    maxWidth: 400,
+    borderRadius: 24,
+    padding: 24,
+  },
+  headerSection: { alignItems: "center", marginBottom: 20 },
+  modalTitle: { fontSize: 22, fontWeight: "800", marginBottom: 6 },
+  modalSubtitle: { fontSize: 14 },
+  loadingBox: { paddingVertical: 40 },
+  contactList: { marginBottom: 16 },
+  contactItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+  },
+  contactIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  contactInfo: { flex: 1 },
+  contactLabel: { fontSize: 12, marginBottom: 2 },
+  contactValue: { fontSize: 16, fontWeight: "700" },
+  descBox: { borderRadius: 14, padding: 14, marginBottom: 16 },
+  descText: { fontSize: 14, lineHeight: 22 },
+  closeBtn: { borderRadius: 24, paddingVertical: 14, alignItems: "center" },
+  closeBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+});

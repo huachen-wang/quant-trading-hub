@@ -392,6 +392,60 @@ export const appRouter = router({
       .input(z.object({ id: z.number() }))
       .mutation(({ input }) => db.deletePageContent(input.id)),
   }),
+
+  // 通知/公告
+  notifications: router({
+    active: publicProcedure.query(() => db.getActiveNotifications()),
+
+    list: adminProcedure
+      .input(z.object({ limit: z.number().optional(), offset: z.number().optional() }))
+      .query(({ input }) => db.getAllNotifications(input.limit, input.offset)),
+
+    create: adminProcedure
+      .input(z.object({
+        title: z.string().min(1),
+        content: z.string().min(1),
+        type: z.string().optional(),
+        icon: z.string().optional(),
+        link: z.string().optional(),
+        sortOrder: z.number().optional(),
+      }))
+      .mutation(({ input }) => db.createNotification(input)),
+
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().optional(),
+        content: z.string().optional(),
+        type: z.string().optional(),
+        icon: z.string().optional(),
+        link: z.string().optional(),
+        isActive: z.boolean().optional(),
+        sortOrder: z.number().optional(),
+      }))
+      .mutation(({ input }) => {
+        const { id, ...data } = input;
+        return db.updateNotification(id, data);
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => db.deleteNotification(input.id)),
+  }),
+
+  // 站点设置（联系方式等）
+  siteSettings: router({
+    getAll: publicProcedure.query(() => db.getSiteSettings()),
+    getContact: publicProcedure.query(() => db.getContactSettings()),
+
+    update: adminProcedure
+      .input(z.object({
+        key: z.string(),
+        value: z.string(),
+        description: z.string().optional(),
+      }))
+      .mutation(({ input }) => db.upsertSiteSetting(input.key, input.value, input.description)),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

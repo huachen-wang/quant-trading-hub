@@ -4,13 +4,11 @@ import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { StrategyCard } from "@/components/strategy-card";
 import { ContactModal } from "@/components/contact-modal";
+import { SubscribeModal } from "@/components/subscribe-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
-import { useFavorites } from "@/hooks/use-favorites";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
-import * as Haptics from "expo-haptics";
-import { Platform as RNPlatform } from "react-native";
 
 type PlatformFilter = "MT4" | "MT5" | undefined;
 type OrderBy = "latest" | "popular" | "return";
@@ -22,7 +20,8 @@ export default function HomeScreen() {
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(undefined);
   const [orderBy, setOrderBy] = useState<OrderBy>("latest");
   const [showContactModal, setShowContactModal] = useState(false);
-  const { isFavorite, toggleFavorite } = useFavorites();
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [selectedStrategyTitle, setSelectedStrategyTitle] = useState("");
 
   const { data: strategies, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
     platform: platformFilter,
@@ -31,20 +30,9 @@ export default function HomeScreen() {
     offset: 0,
   });
 
-  const handleFavoritePress = async (strategy: any) => {
-    if (RNPlatform.OS !== "web") {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    await toggleFavorite({
-      id: strategy.id,
-      title: strategy.title,
-      platform: strategy.platform,
-      totalReturn: strategy.totalReturn || "0.00",
-      winRate: strategy.winRate || "0.00",
-      price: strategy.price || "0.00",
-      isFree: strategy.isFree,
-      coverImage: strategy.coverImage,
-    });
+  const handleSubscribePress = (title: string) => {
+    setSelectedStrategyTitle(title);
+    setShowSubscribeModal(true);
   };
 
   const handleStrategyPress = (id: number) => {
@@ -53,7 +41,6 @@ export default function HomeScreen() {
 
   const renderHeader = () => (
     <View className="mb-2">
-      {/* 标题和操作按钮 */}
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-3xl font-bold text-foreground">📊 策略广场</Text>
         <View className="flex-row">
@@ -75,7 +62,6 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* 筛选和排序 - 单行布局 */}
       <View className="flex-row flex-wrap">
         <TouchableOpacity
           onPress={() => setPlatformFilter(undefined)}
@@ -103,27 +89,21 @@ export default function HomeScreen() {
           className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${orderBy === "latest" ? "bg-surface border border-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
-          <Text className={`text-sm ${orderBy === "latest" ? "text-primary font-semibold" : "text-muted"}`}>
-            最新
-          </Text>
+          <Text className={`text-sm ${orderBy === "latest" ? "text-primary font-semibold" : "text-muted"}`}>最新</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setOrderBy("popular")}
           className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${orderBy === "popular" ? "bg-surface border border-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
-          <Text className={`text-sm ${orderBy === "popular" ? "text-primary font-semibold" : "text-muted"}`}>
-            最热
-          </Text>
+          <Text className={`text-sm ${orderBy === "popular" ? "text-primary font-semibold" : "text-muted"}`}>最热</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setOrderBy("return")}
           className={`px-3 py-1.5 rounded-full mb-2 ${orderBy === "return" ? "bg-surface border border-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
-          <Text className={`text-sm ${orderBy === "return" ? "text-primary font-semibold" : "text-muted"}`}>
-            收益率
-          </Text>
+          <Text className={`text-sm ${orderBy === "return" ? "text-primary font-semibold" : "text-muted"}`}>收益率</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -147,6 +127,11 @@ export default function HomeScreen() {
   return (
     <ScreenContainer>
       <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
+      <SubscribeModal
+        visible={showSubscribeModal}
+        onClose={() => setShowSubscribeModal(false)}
+        strategyTitle={selectedStrategyTitle}
+      />
       <FlatList
         data={strategies || []}
         keyExtractor={(item) => item.id.toString()}
@@ -163,8 +148,7 @@ export default function HomeScreen() {
             isFree={item.isFree}
             downloadCount={item.downloadCount}
             onPress={() => handleStrategyPress(item.id)}
-            isFavorite={isFavorite(item.id)}
-            onFavoritePress={() => handleFavoritePress(item)}
+            onSubscribePress={() => handleSubscribePress(item.title)}
           />
         )}
         ListHeaderComponent={renderHeader}
