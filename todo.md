@@ -274,3 +274,75 @@
 - [ ] 测试移动端显示(保持原样)
 - [ ] 测试平板端显示
 - [ ] 创建最终检查点
+
+
+## Vercel部署显示源码问题修复
+
+### 问题
+- [ ] Vercel部署后显示源码而不是渲染的网页
+- [ ] 需要正确配置Expo Web构建
+
+### 解决方案
+- [ ] 创建正确的vercel.json配置
+- [ ] 配置正确的构建命令和输出目录
+- [ ] 推送到GitHub并触发重新部署
+- [ ] 验证部署成功
+
+
+## Railway部署配置
+
+### 问题
+- [ ] Railway部署失败:Metro bundler依赖错误
+- [ ] 需要创建Railway专用配置文件
+
+### 解决方案
+- [ ] 创建railway.json配置文件
+- [ ] 创建Dockerfile优化构建流程
+- [ ] 创建.dockerignore文件
+- [ ] 推送到GitHub触发重新部署
+- [ ] 验证Railway部署成功
+- [ ] 获取公开访问域名
+
+### 当前进度
+- [x] 创建railway.json配置文件
+- [x] 创建Dockerfile优化构建流程
+- [x] 创建.dockerignore文件
+- [x] 推送到GitHub触发重新部署
+- [x] Railway容器成功启动
+- [x] 修复pnpm-lock.yaml文件并重新推送
+- [x] 修复启动命令和端口配置
+- [x] 修复Expo Web构建问题
+- [x] 修复Web服务器监听地址(0.0.0.0)
+- [ ] 配置OAUTH_SERVER_URL环境变量
+- [ ] 获取公开访问域名并测试
+
+### 端口冲突问题修复
+- [x] 修复API和Web服务器端口冲突(EADDRINUSE错误)
+- [x] 合并API和Web服务器为单一服务
+- [x] 让API服务器同时提供静态文件服务
+- [x] 测试单一服务器部署
+- [x] 简化为纯API服务器部署(移除Web构建)
+- [ ] 验证API服务器部署成功
+
+
+## Web应用完整部署(方案1)
+
+### 问题诊断
+- [ ] 查看之前的Expo Web构建错误日志
+- [ ] 分析react-native-css-interop依赖问题
+- [ ] 检查NativeWind在Web端的兼容性
+
+### 构建错误修复
+- [ ] 修复模块导入错误
+- [ ] 测试本地Web构建(pnpm expo export --platform web)
+- [ ] 验证dist目录生成成功
+
+### Dockerfile更新
+- [ ] 恢复Web应用构建步骤
+- [ ] 配置静态文件服务
+- [ ] 测试Docker构建流程
+
+### 部署验证
+- [ ] 推送到GitHub触发Railway重新部署
+- [ ] 验证浏览器可以访问完整应用
+- [ ] 测试所有页面功能

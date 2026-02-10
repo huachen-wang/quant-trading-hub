@@ -16,14 +16,14 @@ RUN pnpm install --frozen-lockfile
 # 复制所有源代码
 COPY . .
 
-# 构建后端API服务器
+# 构建后端API服务器到dist目录
 RUN pnpm build
 
-# 注意:不构建Web应用,只提供API服务
-# 移动端应用通过Expo Go连接到此API
+# 构建Web应用到web-build目录
+RUN npx expo export --platform web --output-dir web-build
 
-# 暴露端口
-EXPOSE 3000 8081
+# 暴露端口(Railway会自动使用PORT环境变量)
+EXPOSE 8080
 
-# 启动命令 - 只启动API服务器
+# 启动命令 - 启动API服务器(同时提供静态文件服务)
 CMD ["node", "dist/index.js"]
