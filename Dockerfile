@@ -20,6 +20,14 @@ RUN pnpm install --no-frozen-lockfile
 # 复制所有源代码
 COPY . .
 
+# 清理所有缓存,避免构建问题
+RUN rm -rf .expo node_modules/.cache .cache
+
+# 设置环境变量
+ENV NODE_ENV=production
+ENV EXPO_NO_CACHE=1
+ENV EXPO_NO_METRO_LAZY=1
+
 # 验证关键依赖是否存在
 RUN echo "Verifying dependencies..." && \
     ls -la node_modules/react-native-css-interop/ || echo "Warning: react-native-css-interop not found" && \
@@ -28,9 +36,9 @@ RUN echo "Verifying dependencies..." && \
 # 构建后端API服务器到dist目录
 RUN echo "Building API server..." && pnpm build
 
-# 构建Web应用到web-build目录
+# 构建Web应用到web-build目录(使用--clear清理缓存)
 RUN echo "Building Web application..." && \
-    npx expo export --platform web --output-dir web-build
+    npx expo export --platform web --output-dir web-build --clear
 
 # 验证构建结果
 RUN echo "Verifying build output..." && \
