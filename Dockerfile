@@ -13,8 +13,8 @@ WORKDIR /app
 # 复制package.json和pnpm-lock.yaml
 COPY package.json pnpm-lock.yaml ./
 
-# 只安装生产依赖(用于运行API服务器)
-RUN pnpm install --prod --no-frozen-lockfile
+# 安装所有依赖(包括devDependencies,因为需要esbuild构建API服务器)
+RUN pnpm install --no-frozen-lockfile
 
 # 复制所有源代码
 COPY . .
@@ -25,7 +25,7 @@ RUN echo "Building API server..." && pnpm build
 # 检查web-build目录是否存在(应该已经在本地构建好并复制进来)
 RUN if [ ! -d "web-build" ] || [ ! -f "web-build/index.html" ]; then \
       echo "ERROR: web-build directory not found or incomplete!"; \
-      echo "Please run 'pnpm build:web' locally before building Docker image"; \
+      echo "Please ensure web-build is committed to Git"; \
       exit 1; \
     fi
 
@@ -34,6 +34,9 @@ RUN echo "Verifying build output..." && \
     ls -la dist/ && \
     ls -la web-build/ && \
     echo "Build verification complete!"
+
+# 清理devDependencies以减小镜像大小
+RUN pnpm prune --prod
 
 # 暴露端口(Railway会自动使用PORT环境变量)
 EXPOSE 8080
