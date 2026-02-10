@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
+import { useResponsive } from "@/hooks/use-responsive";
 
 export interface StrategyCardProps {
   id: number;
@@ -29,6 +30,7 @@ export function StrategyCard({
   onFavoritePress,
 }: StrategyCardProps) {
   const colors = useColors();
+  const { numColumns } = useResponsive();
 
   // 根据平台生成不同的渐变色
   const gradientColors: readonly [string, string, ...string[]] =
@@ -39,28 +41,31 @@ export function StrategyCard({
   const returnValue = parseFloat(totalReturn);
   const isPositive = returnValue >= 0;
 
+  // 根据列数计算卡片宽度百分比和间距
+  const gap = 8;
+  const cardWidthPercent = `${(100 / numColumns) - 1}%` as const;
+
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-1 mb-2"
       activeOpacity={0.8}
-      style={{ minWidth: "48%", marginHorizontal: 2 }}
+      style={[styles.cardWrapper, { width: cardWidthPercent as any, marginBottom: gap }]}
     >
-      <View className="bg-surface rounded-2xl overflow-hidden border border-border">
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {/* 封面占位图 - 渐变色 */}
-        <View className="relative">
+        <View style={styles.coverContainer}>
           <LinearGradient
             colors={gradientColors}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-          className="h-20 items-center justify-center"
-        >
-          <Text className="text-4xl">📈</Text>
-          <View className="absolute top-2 right-2 bg-background/90 px-2 py-0.5 rounded">
-            <Text className="text-xs font-bold" style={{ color: gradientColors[1] }}>
-              {platform}
-            </Text>
-          </View>
+            style={styles.gradient}
+          >
+            <Text style={styles.coverEmoji}>📈</Text>
+            <View style={[styles.platformBadge, { backgroundColor: `${colors.background}E6` }]}>
+              <Text style={[styles.platformText, { color: gradientColors[1] }]}>
+                {platform}
+              </Text>
+            </View>
           </LinearGradient>
           
           {/* 收藏按钮 */}
@@ -70,50 +75,141 @@ export function StrategyCard({
                 e.stopPropagation();
                 onFavoritePress();
               }}
-              className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 items-center justify-center"
+              style={[styles.favoriteBtn, { backgroundColor: `${colors.background}CC` }]}
               activeOpacity={0.7}
             >
-              <Text className="text-lg">{isFavorite ? "❤️" : "🤍"}</Text>
+              <Text style={styles.favoriteIcon}>{isFavorite ? "❤️" : "🤍"}</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {/* 策略信息 */}
-        <View className="p-3">
-          <Text className="text-base font-bold text-foreground mb-2" numberOfLines={2}>
+        <View style={styles.infoContainer}>
+          <Text
+            style={[styles.title, { color: colors.foreground }]}
+            numberOfLines={1}
+          >
             {title}
           </Text>
 
           {/* 实盘数据 */}
-          <View className="mb-2">
-            <View className="flex-row items-center justify-between mb-1">
-              <Text className="text-xs text-muted">总收益</Text>
+          <View style={styles.dataSection}>
+            <View style={styles.dataRow}>
+              <Text style={[styles.dataLabel, { color: colors.muted }]}>总收益</Text>
               <Text
-                className={`text-base font-bold ${isPositive ? "text-success" : "text-error"}`}
+                style={[
+                  styles.dataValue,
+                  { color: isPositive ? colors.success : colors.error },
+                ]}
               >
                 {isPositive ? "+" : ""}
                 {totalReturn}%
               </Text>
             </View>
-            <View className="flex-row items-center justify-between">
-              <Text className="text-xs text-muted">胜率</Text>
-              <Text className="text-base font-bold text-primary">{winRate}%</Text>
+            <View style={styles.dataRow}>
+              <Text style={[styles.dataLabel, { color: colors.muted }]}>胜率</Text>
+              <Text style={[styles.dataValue, { color: colors.primary }]}>{winRate}%</Text>
             </View>
           </View>
 
           {/* 价格和下载 */}
-          <View className="flex-row items-center justify-between pt-2 border-t border-border">
+          <View style={[styles.footer, { borderTopColor: colors.border }]}>
             <View>
               {isFree ? (
-                <Text className="text-base font-bold text-success">免费</Text>
+                <Text style={[styles.price, { color: colors.success }]}>免费</Text>
               ) : (
-                <Text className="text-base font-bold text-accent">￥{price}</Text>
+                <Text style={[styles.price, { color: "#F59E0B" }]}>￥{price}</Text>
               )}
             </View>
-            <Text className="text-xs text-muted">💾 {downloadCount}</Text>
+            <Text style={[styles.downloads, { color: colors.muted }]}>💾 {downloadCount}</Text>
           </View>
         </View>
       </View>
     </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  cardWrapper: {
+    paddingHorizontal: 4,
+  },
+  card: {
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+  },
+  coverContainer: {
+    position: "relative",
+  },
+  gradient: {
+    height: 80,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  coverEmoji: {
+    fontSize: 32,
+  },
+  platformBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  platformText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  favoriteBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  favoriteIcon: {
+    fontSize: 16,
+  },
+  infoContainer: {
+    padding: 12,
+  },
+  title: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  dataSection: {
+    marginBottom: 8,
+  },
+  dataRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  dataLabel: {
+    fontSize: 12,
+  },
+  dataValue: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 8,
+    borderTopWidth: 1,
+  },
+  price: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  downloads: {
+    fontSize: 12,
+  },
+});

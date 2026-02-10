@@ -169,8 +169,8 @@ export default function HomeScreen() {
         )}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
-        columnWrapperStyle={{ justifyContent: "space-between" }}
-        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 20 }}
+        columnWrapperStyle={{ justifyContent: "flex-start" }}
+        contentContainerStyle={{ paddingHorizontal: 8, paddingTop: 12, paddingBottom: 20 }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
       />
     </ScreenContainer>
