@@ -11,7 +11,7 @@ sleep 3
 
 # 启动Web服务器(前台运行,监听0.0.0.0)
 echo "Starting Web server..."
-npx serve dist -l ${PORT:-8081} --single --listen 0.0.0.0
+node serve-web.js
 
 # 清理
 kill $API_PID 2>/dev/null || true
