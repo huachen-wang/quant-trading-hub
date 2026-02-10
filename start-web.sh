@@ -9,9 +9,9 @@ API_PID=$!
 # 等待API服务器启动
 sleep 3
 
-# 启动Web服务器(前台运行)
+# 启动Web服务器(前台运行,监听0.0.0.0)
 echo "Starting Web server..."
-npx serve dist -l ${PORT:-8081} --single
+npx serve dist -l ${PORT:-8081} --single --listen 0.0.0.0
 
 # 清理
 kill $API_PID 2>/dev/null || true
