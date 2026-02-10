@@ -13,38 +13,27 @@ WORKDIR /app
 # 复制package.json和pnpm-lock.yaml
 COPY package.json pnpm-lock.yaml ./
 
-# 安装所有依赖(包括devDependencies,因为构建需要)
-# 使用--no-frozen-lockfile确保依赖完整安装
-RUN pnpm install --no-frozen-lockfile
+# 只安装生产依赖(用于运行API服务器)
+RUN pnpm install --prod --no-frozen-lockfile
 
 # 复制所有源代码
 COPY . .
 
-# 清理所有缓存,避免构建问题
-RUN rm -rf .expo node_modules/.cache .cache
-
-# 设置环境变量
-ENV NODE_ENV=production
-ENV EXPO_NO_CACHE=1
-ENV EXPO_NO_METRO_LAZY=1
-
-# 验证关键依赖是否存在
-RUN echo "Verifying dependencies..." && \
-    ls -la node_modules/react-native-css-interop/ || echo "Warning: react-native-css-interop not found" && \
-    ls -la node_modules/nativewind/ || echo "Warning: nativewind not found"
-
 # 构建后端API服务器到dist目录
 RUN echo "Building API server..." && pnpm build
 
-# 构建Web应用到web-build目录(使用--clear清理缓存)
-RUN echo "Building Web application..." && \
-    npx expo export --platform web --output-dir web-build --clear
+# 检查web-build目录是否存在(应该已经在本地构建好并复制进来)
+RUN if [ ! -d "web-build" ] || [ ! -f "web-build/index.html" ]; then \
+      echo "ERROR: web-build directory not found or incomplete!"; \
+      echo "Please run 'pnpm build:web' locally before building Docker image"; \
+      exit 1; \
+    fi
 
 # 验证构建结果
 RUN echo "Verifying build output..." && \
     ls -la dist/ && \
     ls -la web-build/ && \
-    test -f web-build/index.html || (echo "ERROR: web-build/index.html not found" && exit 1)
+    echo "Build verification complete!"
 
 # 暴露端口(Railway会自动使用PORT环境变量)
 EXPOSE 8080

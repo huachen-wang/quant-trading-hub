@@ -2,6 +2,7 @@ node_modules
 .expo
 .expo-shared
 dist
+# web-build is needed for deployment
 .git
 .gitignore
 README.md

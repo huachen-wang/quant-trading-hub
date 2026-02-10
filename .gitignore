@@ -6,7 +6,7 @@ node_modules/
 # Expo
 .expo/
 dist/
-web-build/
+# web-build/ - included for Railway deployment
 expo-env.d.ts
 
 # Native
