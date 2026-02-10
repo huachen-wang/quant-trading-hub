@@ -1,0 +1,24 @@
+{
+  "query": "SELECT id, title, platform, price, isFree FROM strategies ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user j9KUtKJY9ypfPzH.root --database G7CCk846Fqcvg3hQNu5KQZ --execute SELECT id, title, platform, price, isFree FROM strategies ORDER BY id;",
+  "rows": [
+    {
+      "id": "120001",
+      "title": "黄金趋势追踪EA",
+      "platform": "MT5",
+      "price": "299.00",
+      "isFree": "0"
+    },
+    {
+      "id": "120002",
+      "title": "欧美货币对套利EA",
+      "platform": "MT4",
+      "price": "0.00",
+      "isFree": "1"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\ttitle\tplatform\tprice\tisFree\n120001\t黄金趋势追踪EA\tMT5\t299.00\t0\n120002\t欧美货币对套利EA\tMT4\t0.00\t1\n",
+  "stderr": "",
+  "execution_time_ms": 1541
+}

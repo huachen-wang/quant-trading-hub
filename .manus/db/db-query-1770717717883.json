@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO strategies (title, description, platform, pairs, timeframe, coverImage, totalReturn, maxDrawdown, sharpeRatio, winRate, price, isFree, downloadCount, telegramGroup, qqGroup, status) VALUES \n('黄金趋势追踪EA', '专注于黄金市场的趋势追踪系统,使用移动平均线和动量指标识别强势趋势。适合中长线交易者,平均持仓3-7天。', 'MT5', 'XAUUSD', 'H4', 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3', '156.80', '12.30', '2.85', '68.50', '299.00', false, 245, '@GoldTrendEA', '123456789', 'published'),\n('欧美货币对套利EA', '利用欧美主要货币对之间的相关性进行套利交易,低风险稳健策略。每月交易10-15次,适合保守型投资者。', 'MT4', 'EURUSD,GBPUSD,USDCHF', 'H1', 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44', '89.40', '8.60', '2.12', '72.30', '0.00', true, 567, '@ForexArbitrageEA', '987654321', 'published');",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user j9KUtKJY9ypfPzH.root --database G7CCk846Fqcvg3hQNu5KQZ --execute INSERT INTO strategies (title, description, platform, pairs, timeframe, coverImage, totalReturn, maxDrawdown, sharpeRatio, winRate, price, isFree, downloadCount, telegramGroup, qqGroup, status) VALUES \n('黄金趋势追踪EA', '专注于黄金市场的趋势追踪系统,使用移动平均线和动量指标识别强势趋势。适合中长线交易者,平均持仓3-7天。', 'MT5', 'XAUUSD', 'H4', 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3', '156.80', '12.30', '2.85', '68.50', '299.00', false, 245, '@GoldTrendEA', '123456789', 'published'),\n('欧美货币对套利EA', '利用欧美主要货币对之间的相关性进行套利交易,低风险稳健策略。每月交易10-15次,适合保守型投资者。', 'MT4', 'EURUSD,GBPUSD,USDCHF', 'H1', 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44', '89.40', '8.60', '2.12', '72.30', '0.00', true, 567, '@ForexArbitrageEA', '987654321', 'published');",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1718
+}

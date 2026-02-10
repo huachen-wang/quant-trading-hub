@@ -254,8 +254,8 @@ export async function seedNewStrategies() {
   
   console.log("开始插入新策略数据...");
   
-  // 插入新策略
-  for (const strategy of newStrategies) {
+  // 插入新策略(只插入前2个作为测试数据)
+  for (const strategy of newStrategies.slice(0, 2)) {
     const result = await db.insert(strategies).values(strategy);
     const strategyId = Number(result[0].insertId);
     console.log(`已插入策略: ${strategy.title} (ID: ${strategyId})`);
@@ -270,7 +270,7 @@ export async function seedNewStrategies() {
 }
 
 // 如果直接运行此文件,执行种子数据插入
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   seedNewStrategies()
     .then(() => {
       console.log("数据库种子数据更新成功");
