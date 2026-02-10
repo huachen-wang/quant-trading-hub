@@ -73,17 +73,8 @@ async function startServer() {
     }),
   );
 
-  // 静态文件服务 - 为Web应用提供静态文件
-  const distPath = path.resolve(process.cwd(), 'dist');
-  console.log(`[static] serving files from ${distPath}`);
-  app.use(express.static(distPath));
-
-  // SPA路由支持 - 所有非API请求返回index.html
-  app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(distPath, 'index.html'));
-    }
-  });
+  // 此API服务器仅提供API服务,不提供静态文件
+  // 移动端应用通过Expo Go连接到此API
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);

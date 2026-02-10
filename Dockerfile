@@ -19,11 +19,11 @@ COPY . .
 # 构建后端API服务器
 RUN pnpm build
 
-# 构建Expo Web应用(忽略TypeScript错误)
-RUN pnpm expo export --platform web || true
+# 注意:不构建Web应用,只提供API服务
+# 移动端应用通过Expo Go连接到此API
 
 # 暴露端口
 EXPOSE 3000 8081
 
-# 启动命令:同时运行API服务器和Web服务器
-CMD ["pnpm", "start:web"]
+# 启动命令 - 只启动API服务器
+CMD ["node", "dist/index.js"]
