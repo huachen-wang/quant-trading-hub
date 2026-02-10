@@ -390,3 +390,17 @@
 - [x] 创建管理后台使用文档(ADMIN_GUIDE.md)
 - [x] 创建设置管理员脚本(scripts/set-admin.ts)
 - [ ] 测试所有管理功能
+
+
+## Railway环境变量和管理后台入口修复
+
+### Railway环境变量配置
+- [ ] 修复OAUTH_SERVER_URL配置错误
+- [ ] 在Railway控制台设置OAUTH_SERVER_URL环境变量
+- [ ] 重新部署并验证
+
+### 管理后台独立入口
+- [x] 创建/admin路由的直接访问入口
+- [x] 添加管理员登录页面(/admin/login)
+- [x] 优化管理后台访问流程(支持简单登录)
+- [ ] 测试独立入口功能
