@@ -66,6 +66,33 @@ async function startServer() {
     res.json({ ok: true, timestamp: Date.now() });
   });
 
+  // Diagnostic endpoint to check database connection
+  app.get("/api/db-diag", async (req, res) => {
+    if (req.headers["x-admin-token"] !== "admin123") {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+      const dbUrl = process.env.DATABASE_URL || "NOT SET";
+      // Mask password in URL
+      const maskedUrl = dbUrl.replace(/:[^:@]+@/, ":***@");
+      const mysql2 = await import("mysql2/promise");
+      const conn = await mysql2.default.createConnection(dbUrl);
+      const [tables] = await conn.query("SHOW TABLES");
+      const tableNames = (tables as any[]).map((r: any) => Object.values(r)[0]);
+      const [dbResult] = await conn.query("SELECT DATABASE() as db");
+      await conn.end();
+      res.json({
+        ok: true,
+        database: (dbResult as any[])[0]?.db,
+        maskedUrl: maskedUrl.substring(0, 80),
+        tables: tableNames,
+        nodeEnv: process.env.NODE_ENV,
+      });
+    } catch (e: any) {
+      res.json({ ok: false, error: e.message });
+    }
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({
