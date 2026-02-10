@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import net from "net";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
@@ -76,14 +77,30 @@ async function startServer() {
   // 静态文件服务 - 为Web应用提供静态文件
   const webBuildPath = path.resolve(process.cwd(), 'web-build');
   console.log(`[static] serving files from ${webBuildPath}`);
-  app.use(express.static(webBuildPath));
-
-  // SPA路由支持 - 所有非API请求返回index.html
-  app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(webBuildPath, 'index.html'));
-    }
-  });
+  
+  // 检查web-build目录是否存在
+  if (fs.existsSync(webBuildPath)) {
+    console.log(`[static] web-build directory exists`);
+    app.use(express.static(webBuildPath));
+    
+    // SPA路由支持 - 所有非API请求返回index.html
+    app.get('*', (req, res, next) => {
+      if (!req.path.startsWith('/api')) {
+        const indexPath = path.join(webBuildPath, 'index.html');
+        console.log(`[static] serving ${indexPath} for ${req.path}`);
+        res.sendFile(indexPath, (err) => {
+          if (err) {
+            console.error(`[static] error serving index.html:`, err);
+            next(err);
+          }
+        });
+      } else {
+        next();
+      }
+    });
+  } else {
+    console.warn(`[static] web-build directory not found at ${webBuildPath}`);
+  }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);

@@ -10,8 +10,8 @@ WORKDIR /app
 # 复制package.json和pnpm-lock.yaml
 COPY package.json pnpm-lock.yaml ./
 
-# 安装依赖
-RUN pnpm install --frozen-lockfile
+# 安装所有依赖(包括devDependencies,因为构建需要)
+RUN pnpm install --no-frozen-lockfile
 
 # 复制所有源代码
 COPY . .
@@ -21,6 +21,9 @@ RUN pnpm build
 
 # 构建Web应用到web-build目录
 RUN npx expo export --platform web --output-dir web-build
+
+# 清理devDependencies以减小镜像大小(可选)
+# RUN pnpm prune --prod
 
 # 暴露端口(Railway会自动使用PORT环境变量)
 EXPOSE 8080
