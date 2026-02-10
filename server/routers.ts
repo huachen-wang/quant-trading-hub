@@ -302,6 +302,10 @@ export const appRouter = router({
         })
       )
       .mutation(({ input }) => db.updateListingRequestStatus(input.id, input.status, input.notes)),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => db.deleteListingRequest(input.id)),
   }),
 
   // 合购相关
@@ -337,6 +341,46 @@ export const appRouter = router({
           eaDescription: input.eaDescription || null,
         });
       }),
+
+    // Admin管理
+    adminList: adminProcedure
+      .input(z.object({ limit: z.number().optional(), offset: z.number().optional() }))
+      .query(({ input }) => db.getAllGroupBuys(input.limit, input.offset)),
+
+    create: adminProcedure
+      .input(z.object({
+        title: z.string().min(1),
+        eaName: z.string().min(1),
+        description: z.string().optional(),
+        targetPrice: z.string(),
+        targetParticipants: z.number().min(1),
+        pricePerPerson: z.string(),
+        contactInfo: z.string().min(1),
+        status: z.enum(["active", "completed", "cancelled"]).optional(),
+      }))
+      .mutation(({ input }) => db.createGroupBuy(input as any)),
+
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().optional(),
+        eaName: z.string().optional(),
+        description: z.string().optional(),
+        targetPrice: z.string().optional(),
+        currentParticipants: z.number().optional(),
+        targetParticipants: z.number().optional(),
+        pricePerPerson: z.string().optional(),
+        contactInfo: z.string().optional(),
+        status: z.enum(["active", "completed", "cancelled"]).optional(),
+      }))
+      .mutation(({ input }) => {
+        const { id, ...data } = input;
+        return db.updateGroupBuy(id, data as any);
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => db.deleteGroupBuy(input.id)),
   }),
 
   // 邮箱订阅

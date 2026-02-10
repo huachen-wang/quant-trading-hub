@@ -443,8 +443,35 @@
 - [x] 重新构建web-build并推送部署
 
 ## 新需求：详情页优化+上架EA后台配置
-- [ ] 确认之前的修改（评论匿名、订阅弹窗、通知栏）已正确部署到线上
-- [ ] 策略详情页电脑端布局优化（去除臃肿感）
-- [ ] 移除夏普比率字段
-- [ ] 上架EA联系方式弹窗内容改为后台可配置（不再硬编码）
+- [x] 确认之前的修改（评论匿名、订阅弹窗、通知栏）已正确部署到线上
+- [x] 策略详情页电脑端布局优化（去除臃肿感）
+- [x] 移除夏普比率字段
+- [x] 上架EA联系方式弹窗内容改为后台可配置（不再硬编码）
+- [x] 重新构建web-build并推送部署
+
+## 紧急修复：Admin后台所有API 403错误
+- [ ] 分析admin认证架构（adminProcedure依赖protectedProcedure→OAuth session）
+- [ ] 创建独立admin认证中间件（基于密码header，不依赖OAuth）
+- [ ] 修改前端admin页面在所有API调用中发送admin认证header
+- [ ] 测试策略管理CRUD（列表、创建、编辑、删除）
+- [ ] 测试评论审核功能
+- [ ] 测试通知管理功能
+- [ ] 测试联系方式设置功能
+- [ ] 测试订阅页面管理功能
 - [ ] 重新构建web-build并推送部署
+
+## Admin后台全面修复（数据库连接+API+前端）
+- [x] 诊断数据库查询失败根本原因（.env.development中旧DATABASE_URL覆盖系统变量）
+- [x] 修复load-env.ts不再override系统环境变量
+- [x] 修复admin-api.ts的superjson数据解析（data.result.data.json）
+- [x] 修复admin-api.ts的错误消息提取（data.error.json.message）
+- [x] 添加合购管理admin CRUD路由（create/update/delete）
+- [x] 添加上架申请管理admin路由（delete）
+- [x] 创建合购管理admin页面（group-buys.tsx）
+- [x] 创建上架申请管理admin页面（listings.tsx）
+- [x] 添加合购管理和上架申请的admin-api函数
+- [x] 将.env文件从git跟踪中移除并添加到.gitignore
+- [x] 清理调试日志和测试文件
+- [x] 重新构建web-build
+- [ ] 推送到GitHub触发Railway部署
+- [ ] 验证生产环境admin后台正常工作

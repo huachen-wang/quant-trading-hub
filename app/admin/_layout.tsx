@@ -123,6 +123,18 @@ export default function AdminLayout() {
         }}
       />
       <Stack.Screen
+        name="group-buys"
+        options={{
+          title: "合购管理",
+        }}
+      />
+      <Stack.Screen
+        name="listings"
+        options={{
+          title: "上架申请",
+        }}
+      />
+      <Stack.Screen
         name="login"
         options={{
           title: "管理员登录",

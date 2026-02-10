@@ -5,16 +5,35 @@ import * as schema from "../drizzle/schema";
 
 const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings } = schema;
 
-let connection: mysql.Connection | null = null;
+let pool: mysql.Pool | null = null;
+let db: any = null;
+
+function getPool() {
+  if (!pool) {
+    pool = mysql.createPool({
+      uri: process.env.DATABASE_URL!,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000,
+    });
+  }
+  return pool;
+}
 
 async function getDb() {
   try {
-    if (!connection) {
-      connection = await mysql.createConnection(process.env.DATABASE_URL!);
+    if (!db) {
+      const p = getPool();
+      db = drizzle(p, { schema, mode: "default" });
     }
-    return drizzle(connection, { schema, mode: "default" });
+    return db;
   } catch (error) {
     console.error("[DB] Failed to get database connection:", error);
+    // Reset on error to force reconnection
+    db = null;
+    pool = null;
     return null;
   }
 }
@@ -733,4 +752,40 @@ export async function getContactSettings() {
     result[s.settingKey] = s.settingValue;
   }
   return result;
+}
+
+// ========== 合购管理（Admin） ==========
+export async function createGroupBuy(data: typeof groupBuys.$inferInsert) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(groupBuys).values(data);
+  return { success: true, id: result[0].insertId };
+}
+
+export async function updateGroupBuy(id: number, data: Partial<typeof groupBuys.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(groupBuys).set(data).where(eq(groupBuys.id, id));
+  return { success: true };
+}
+
+export async function deleteGroupBuy(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(groupBuys).where(eq(groupBuys.id, id));
+  return { success: true };
+}
+
+export async function getAllGroupBuys(limit = 100, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(groupBuys).orderBy(desc(groupBuys.createdAt)).limit(limit).offset(offset);
+}
+
+// ========== 上架申请管理（Admin） ==========
+export async function deleteListingRequest(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(listingRequests).where(eq(listingRequests.id, id));
+  return { success: true };
 }

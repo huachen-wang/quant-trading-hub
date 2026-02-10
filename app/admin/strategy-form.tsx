@@ -1,8 +1,8 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { trpc } from "@/lib/trpc";
+import { adminQuery, createAdminStrategy, updateAdminStrategy } from "@/lib/admin-api";
 import { useState, useEffect } from "react";
 
 export default function StrategyForm() {
@@ -12,6 +12,8 @@ export default function StrategyForm() {
   const isEdit = params.mode === "edit";
   const strategyId = params.id ? parseInt(params.id) : undefined;
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -31,324 +33,185 @@ export default function StrategyForm() {
     status: "published" as "draft" | "published" | "archived",
   });
 
-  const { data: strategy, isLoading: loadingStrategy } = trpc.strategies.detail.useQuery(
-    { id: strategyId! },
-    { enabled: isEdit && !!strategyId }
-  );
-
   useEffect(() => {
-    if (strategy) {
-      setFormData({
-        title: strategy.title,
-        description: strategy.description || "",
-        platform: strategy.platform,
-        pairs: strategy.pairs,
-        timeframe: strategy.timeframe || "",
-        coverImage: strategy.coverImage || "",
-        totalReturn: strategy.totalReturn || "0.00",
-        maxDrawdown: strategy.maxDrawdown || "0.00",
-        sharpeRatio: strategy.sharpeRatio || "0.00",
-        winRate: strategy.winRate || "0.00",
-        downloadUrl: strategy.downloadUrl || "",
-        price: strategy.price || "0.00",
-        isFree: strategy.isFree,
-        telegramGroup: strategy.telegramGroup || "",
-        qqGroup: strategy.qqGroup || "",
-        status: strategy.status,
-      });
+    if (isEdit && strategyId) {
+      setIsLoading(true);
+      adminQuery("strategies.detail", { id: strategyId })
+        .then((strategy: any) => {
+          if (strategy) {
+            setFormData({
+              title: strategy.title || "",
+              description: strategy.description || "",
+              platform: strategy.platform || "MT4",
+              pairs: strategy.pairs || "",
+              timeframe: strategy.timeframe || "",
+              coverImage: strategy.coverImage || "",
+              totalReturn: strategy.totalReturn || "0.00",
+              maxDrawdown: strategy.maxDrawdown || "0.00",
+              sharpeRatio: strategy.sharpeRatio || "0.00",
+              winRate: strategy.winRate || "0.00",
+              downloadUrl: strategy.downloadUrl || "",
+              price: strategy.price || "0.00",
+              isFree: strategy.isFree ?? true,
+              telegramGroup: strategy.telegramGroup || "",
+              qqGroup: strategy.qqGroup || "",
+              status: strategy.status || "published",
+            });
+          }
+        })
+        .catch((err: any) => console.error("Failed to load strategy:", err))
+        .finally(() => setIsLoading(false));
     }
-  }, [strategy]);
+  }, [isEdit, strategyId]);
 
-  const createMutation = trpc.admin.strategies.create.useMutation({
-    onSuccess: () => {
-      Alert.alert("成功", "策略已创建");
-      router.back();
-    },
-    onError: (error) => {
-      Alert.alert("错误", error.message);
-    },
-  });
-
-  const updateMutation = trpc.admin.strategies.update.useMutation({
-    onSuccess: () => {
-      Alert.alert("成功", "策略已更新");
-      router.back();
-    },
-    onError: (error) => {
-      Alert.alert("错误", error.message);
-    },
-  });
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.title.trim()) {
-      Alert.alert("错误", "请输入策略标题");
+      const msg = "请输入策略标题";
+      if (Platform.OS === "web") alert(msg); else Alert.alert("错误", msg);
       return;
     }
-
-    if (isEdit && strategyId) {
-      updateMutation.mutate({ id: strategyId, ...formData });
-    } else {
-      createMutation.mutate(formData);
+    setIsSubmitting(true);
+    try {
+      if (isEdit && strategyId) {
+        await updateAdminStrategy({ id: strategyId, ...formData });
+      } else {
+        await createAdminStrategy(formData);
+      }
+      const msg = isEdit ? "策略已更新" : "策略已创建";
+      if (Platform.OS === "web") { alert(msg); router.back(); }
+      else Alert.alert("成功", msg, [{ text: "确定", onPress: () => router.back() }]);
+    } catch (error: any) {
+      const msg = error?.message || "操作失败";
+      if (Platform.OS === "web") alert(msg); else Alert.alert("错误", msg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (loadingStrategy) {
+  if (isLoading) {
     return (
-      <ScreenContainer className="items-center justify-center">
+      <ScreenContainer style={{ alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator size="large" color={colors.primary} />
       </ScreenContainer>
     );
   }
 
+  const inputStyle = [s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }];
+
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
-        <Text className="text-2xl font-bold text-foreground mb-6">
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, maxWidth: 600, alignSelf: "center" as any, width: "100%" as any }}>
+        <Text style={[s.pageTitle, { color: colors.foreground }]}>
           {isEdit ? "编辑策略" : "添加新策略"}
         </Text>
 
         {/* 基本信息 */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">基本信息</Text>
+        <Text style={[s.sectionTitle, { color: colors.foreground }]}>基本信息</Text>
 
-          <Text className="text-sm text-foreground mb-1">策略标题 *</Text>
-          <TextInput
-            value={formData.title}
-            onChangeText={(text) => setFormData({ ...formData, title: text })}
-            placeholder="输入策略名称"
-            placeholderTextColor={colors.muted}
-            className="bg-surface text-foreground px-4 py-3 rounded-xl mb-3"
-          />
+        <Text style={[s.label, { color: colors.foreground }]}>策略标题 *</Text>
+        <TextInput value={formData.title} onChangeText={(t) => setFormData({ ...formData, title: t })} placeholder="输入策略名称" placeholderTextColor={colors.muted} style={inputStyle} />
 
-          <Text className="text-sm text-foreground mb-1">策略描述</Text>
-          <TextInput
-            value={formData.description}
-            onChangeText={(text) => setFormData({ ...formData, description: text })}
-            placeholder="详细描述策略特点和使用方法"
-            placeholderTextColor={colors.muted}
-            multiline
-            numberOfLines={4}
-            className="bg-surface text-foreground px-4 py-3 rounded-xl mb-3"
-            style={{ minHeight: 100, textAlignVertical: "top" }}
-          />
+        <Text style={[s.label, { color: colors.foreground }]}>策略描述</Text>
+        <TextInput value={formData.description} onChangeText={(t) => setFormData({ ...formData, description: t })} placeholder="详细描述策略特点" placeholderTextColor={colors.muted} multiline numberOfLines={4} style={[...inputStyle, { minHeight: 100, textAlignVertical: "top" }]} />
 
-          <Text className="text-sm text-foreground mb-1">平台</Text>
-          <View className="flex-row gap-2 mb-3">
-            {["MT4", "MT5"].map((platform) => (
-              <TouchableOpacity
-                key={platform}
-                onPress={() => setFormData({ ...formData, platform: platform as "MT4" | "MT5" })}
-                className={`flex-1 py-3 rounded-xl ${
-                  formData.platform === platform ? "bg-primary" : "bg-surface"
-                }`}
-                activeOpacity={0.7}
-              >
-                <Text
-                  className={`text-center font-semibold ${
-                    formData.platform === platform ? "text-background" : "text-foreground"
-                  }`}
-                >
-                  {platform}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text className="text-sm text-foreground mb-1">交易对 (逗号分隔)</Text>
-          <TextInput
-            value={formData.pairs}
-            onChangeText={(text) => setFormData({ ...formData, pairs: text })}
-            placeholder="例如: EURUSD, GBPUSD, XAUUSD"
-            placeholderTextColor={colors.muted}
-            className="bg-surface text-foreground px-4 py-3 rounded-xl mb-3"
-          />
-
-          <Text className="text-sm text-foreground mb-1">时间周期</Text>
-          <TextInput
-            value={formData.timeframe}
-            onChangeText={(text) => setFormData({ ...formData, timeframe: text })}
-            placeholder="例如: H1, H4, D1"
-            placeholderTextColor={colors.muted}
-            className="bg-surface text-foreground px-4 py-3 rounded-xl mb-3"
-          />
+        <Text style={[s.label, { color: colors.foreground }]}>平台</Text>
+        <View style={s.row}>
+          {(["MT4", "MT5"] as const).map((p) => (
+            <TouchableOpacity key={p} onPress={() => setFormData({ ...formData, platform: p })} style={[s.chip, { backgroundColor: formData.platform === p ? colors.primary : colors.surface }]} activeOpacity={0.7}>
+              <Text style={{ color: formData.platform === p ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{p}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
+        <Text style={[s.label, { color: colors.foreground }]}>交易对 (逗号分隔)</Text>
+        <TextInput value={formData.pairs} onChangeText={(t) => setFormData({ ...formData, pairs: t })} placeholder="EURUSD, GBPUSD" placeholderTextColor={colors.muted} style={inputStyle} />
+
+        <Text style={[s.label, { color: colors.foreground }]}>时间周期</Text>
+        <TextInput value={formData.timeframe} onChangeText={(t) => setFormData({ ...formData, timeframe: t })} placeholder="H1, H4, D1" placeholderTextColor={colors.muted} style={inputStyle} />
+
         {/* 实盘数据 */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">实盘数据</Text>
-
-          <View className="flex-row gap-3 mb-3">
-            <View className="flex-1">
-              <Text className="text-sm text-foreground mb-1">总收益率 (%)</Text>
-              <TextInput
-                value={formData.totalReturn}
-                onChangeText={(text) => setFormData({ ...formData, totalReturn: text })}
-                placeholder="0.00"
-                placeholderTextColor={colors.muted}
-                keyboardType="numeric"
-                className="bg-surface text-foreground px-4 py-3 rounded-xl"
-              />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm text-foreground mb-1">胜率 (%)</Text>
-              <TextInput
-                value={formData.winRate}
-                onChangeText={(text) => setFormData({ ...formData, winRate: text })}
-                placeholder="0.00"
-                placeholderTextColor={colors.muted}
-                keyboardType="numeric"
-                className="bg-surface text-foreground px-4 py-3 rounded-xl"
-              />
-            </View>
+        <Text style={[s.sectionTitle, { color: colors.foreground }]}>实盘数据</Text>
+        <View style={s.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.label, { color: colors.foreground }]}>总收益率 (%)</Text>
+            <TextInput value={formData.totalReturn} onChangeText={(t) => setFormData({ ...formData, totalReturn: t })} keyboardType="numeric" style={inputStyle} />
           </View>
-
-          <View className="flex-row gap-3 mb-3">
-            <View className="flex-1">
-              <Text className="text-sm text-foreground mb-1">最大回撤 (%)</Text>
-              <TextInput
-                value={formData.maxDrawdown}
-                onChangeText={(text) => setFormData({ ...formData, maxDrawdown: text })}
-                placeholder="0.00"
-                placeholderTextColor={colors.muted}
-                keyboardType="numeric"
-                className="bg-surface text-foreground px-4 py-3 rounded-xl"
-              />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sm text-foreground mb-1">夏普比率</Text>
-              <TextInput
-                value={formData.sharpeRatio}
-                onChangeText={(text) => setFormData({ ...formData, sharpeRatio: text })}
-                placeholder="0.00"
-                placeholderTextColor={colors.muted}
-                keyboardType="numeric"
-                className="bg-surface text-foreground px-4 py-3 rounded-xl"
-              />
-            </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.label, { color: colors.foreground }]}>胜率 (%)</Text>
+            <TextInput value={formData.winRate} onChangeText={(t) => setFormData({ ...formData, winRate: t })} keyboardType="numeric" style={inputStyle} />
+          </View>
+        </View>
+        <View style={s.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.label, { color: colors.foreground }]}>最大回撤 (%)</Text>
+            <TextInput value={formData.maxDrawdown} onChangeText={(t) => setFormData({ ...formData, maxDrawdown: t })} keyboardType="numeric" style={inputStyle} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.label, { color: colors.foreground }]}>夏普比率</Text>
+            <TextInput value={formData.sharpeRatio} onChangeText={(t) => setFormData({ ...formData, sharpeRatio: t })} keyboardType="numeric" style={inputStyle} />
           </View>
         </View>
 
         {/* 下载和定价 */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">下载和定价</Text>
+        <Text style={[s.sectionTitle, { color: colors.foreground }]}>下载和定价</Text>
+        <Text style={[s.label, { color: colors.foreground }]}>下载链接</Text>
+        <TextInput value={formData.downloadUrl} onChangeText={(t) => setFormData({ ...formData, downloadUrl: t })} placeholder="EA文件下载地址" placeholderTextColor={colors.muted} style={inputStyle} />
 
-          <Text className="text-sm text-foreground mb-1">下载链接</Text>
-          <TextInput
-            value={formData.downloadUrl}
-            onChangeText={(text) => setFormData({ ...formData, downloadUrl: text })}
-            placeholder="EA文件下载地址"
-            placeholderTextColor={colors.muted}
-            className="bg-surface text-foreground px-4 py-3 rounded-xl mb-3"
-          />
+        <Text style={[s.label, { color: colors.foreground }]}>封面图片URL</Text>
+        <TextInput value={formData.coverImage} onChangeText={(t) => setFormData({ ...formData, coverImage: t })} placeholder="策略封面图片地址" placeholderTextColor={colors.muted} style={inputStyle} />
 
-          <Text className="text-sm text-foreground mb-1">封面图片URL</Text>
-          <TextInput
-            value={formData.coverImage}
-            onChangeText={(text) => setFormData({ ...formData, coverImage: text })}
-            placeholder="策略封面图片地址"
-            placeholderTextColor={colors.muted}
-            className="bg-surface text-foreground px-4 py-3 rounded-xl mb-3"
-          />
-
-          <View className="flex-row items-center justify-between mb-3">
-            <Text className="text-sm text-foreground">免费策略</Text>
-            <TouchableOpacity
-              onPress={() => setFormData({ ...formData, isFree: !formData.isFree })}
-              className={`w-12 h-6 rounded-full ${formData.isFree ? "bg-success" : "bg-muted"}`}
-              activeOpacity={0.7}
-            >
-              <View
-                className={`w-5 h-5 rounded-full bg-background mt-0.5 ${
-                  formData.isFree ? "ml-6" : "ml-0.5"
-                }`}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {!formData.isFree && (
-            <>
-              <Text className="text-sm text-foreground mb-1">价格</Text>
-              <TextInput
-                value={formData.price}
-                onChangeText={(text) => setFormData({ ...formData, price: text })}
-                placeholder="0.00"
-                placeholderTextColor={colors.muted}
-                keyboardType="numeric"
-                className="bg-surface text-foreground px-4 py-3 rounded-xl mb-3"
-              />
-            </>
-          )}
+        <View style={[s.row, { alignItems: "center", justifyContent: "space-between", marginBottom: 12 }]}>
+          <Text style={[s.label, { color: colors.foreground, marginBottom: 0 }]}>免费策略</Text>
+          <TouchableOpacity onPress={() => setFormData({ ...formData, isFree: !formData.isFree })} style={[s.toggle, { backgroundColor: formData.isFree ? colors.success : colors.muted }]} activeOpacity={0.7}>
+            <View style={[s.toggleDot, { marginLeft: formData.isFree ? 22 : 2 }]} />
+          </TouchableOpacity>
         </View>
+
+        {!formData.isFree && (
+          <>
+            <Text style={[s.label, { color: colors.foreground }]}>价格</Text>
+            <TextInput value={formData.price} onChangeText={(t) => setFormData({ ...formData, price: t })} keyboardType="numeric" style={inputStyle} />
+          </>
+        )}
 
         {/* 联系方式 */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">联系方式</Text>
+        <Text style={[s.sectionTitle, { color: colors.foreground }]}>联系方式</Text>
+        <Text style={[s.label, { color: colors.foreground }]}>Telegram群组</Text>
+        <TextInput value={formData.telegramGroup} onChangeText={(t) => setFormData({ ...formData, telegramGroup: t })} placeholder="Telegram群组链接" placeholderTextColor={colors.muted} style={inputStyle} />
 
-          <Text className="text-sm text-foreground mb-1">Telegram群组</Text>
-          <TextInput
-            value={formData.telegramGroup}
-            onChangeText={(text) => setFormData({ ...formData, telegramGroup: text })}
-            placeholder="Telegram群组链接或ID"
-            placeholderTextColor={colors.muted}
-            className="bg-surface text-foreground px-4 py-3 rounded-xl mb-3"
-          />
-
-          <Text className="text-sm text-foreground mb-1">QQ群号</Text>
-          <TextInput
-            value={formData.qqGroup}
-            onChangeText={(text) => setFormData({ ...formData, qqGroup: text })}
-            placeholder="QQ群号"
-            placeholderTextColor={colors.muted}
-            keyboardType="numeric"
-            className="bg-surface text-foreground px-4 py-3 rounded-xl mb-3"
-          />
-        </View>
+        <Text style={[s.label, { color: colors.foreground }]}>QQ群号</Text>
+        <TextInput value={formData.qqGroup} onChangeText={(t) => setFormData({ ...formData, qqGroup: t })} placeholder="QQ群号" placeholderTextColor={colors.muted} keyboardType="numeric" style={inputStyle} />
 
         {/* 发布状态 */}
-        <View className="mb-6">
-          <Text className="text-lg font-semibold text-foreground mb-3">发布状态</Text>
-          <View className="flex-row gap-2">
-            {[
-              { label: "草稿", value: "draft" },
-              { label: "已发布", value: "published" },
-              { label: "已归档", value: "archived" },
-            ].map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => setFormData({ ...formData, status: option.value as any })}
-                className={`flex-1 py-3 rounded-xl ${
-                  formData.status === option.value ? "bg-primary" : "bg-surface"
-                }`}
-                activeOpacity={0.7}
-              >
-                <Text
-                  className={`text-center font-semibold ${
-                    formData.status === option.value ? "text-background" : "text-foreground"
-                  }`}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        <Text style={[s.sectionTitle, { color: colors.foreground }]}>发布状态</Text>
+        <View style={s.row}>
+          {([{ label: "草稿", value: "draft" }, { label: "已发布", value: "published" }, { label: "已归档", value: "archived" }] as const).map((opt) => (
+            <TouchableOpacity key={opt.value} onPress={() => setFormData({ ...formData, status: opt.value })} style={[s.chip, { backgroundColor: formData.status === opt.value ? colors.primary : colors.surface }]} activeOpacity={0.7}>
+              <Text style={{ color: formData.status === opt.value ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* 提交按钮 */}
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={createMutation.isPending || updateMutation.isPending}
-          className="bg-primary py-4 rounded-xl items-center"
-          activeOpacity={0.8}
-        >
-          {createMutation.isPending || updateMutation.isPending ? (
-            <ActivityIndicator color={colors.background} />
-          ) : (
-            <Text className="text-background font-bold text-base">
-              {isEdit ? "保存修改" : "创建策略"}
-            </Text>
+        <TouchableOpacity onPress={handleSubmit} disabled={isSubmitting} style={[s.submitBtn, { backgroundColor: colors.primary, opacity: isSubmitting ? 0.7 : 1 }]} activeOpacity={0.8}>
+          {isSubmitting ? <ActivityIndicator color="#fff" /> : (
+            <Text style={s.submitBtnText}>{isEdit ? "保存修改" : "创建策略"}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
     </ScreenContainer>
   );
 }
+
+const s = StyleSheet.create({
+  pageTitle: { fontSize: 22, fontWeight: "800", marginBottom: 20 },
+  sectionTitle: { fontSize: 17, fontWeight: "700", marginBottom: 12, marginTop: 20 },
+  label: { fontSize: 14, fontWeight: "500", marginBottom: 4 },
+  input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, marginBottom: 12 },
+  row: { flexDirection: "row", gap: 10, marginBottom: 8 },
+  chip: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center" },
+  toggle: { width: 44, height: 24, borderRadius: 12, justifyContent: "center" },
+  toggleDot: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff" },
+  submitBtn: { marginTop: 24, paddingVertical: 14, borderRadius: 14, alignItems: "center" },
+  submitBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+});
