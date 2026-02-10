@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { useResponsive } from "@/hooks/use-responsive";
@@ -35,24 +35,45 @@ export function StrategyCard({
   // 根据平台生成不同的渐变色
   const gradientColors: readonly [string, string, ...string[]] =
     platform === "MT4"
-      ? ["#1E3A8A", "#3B82F6"] // 蓝色渐变
-      : ["#7C3AED", "#A78BFA"]; // 紫色渐变
+      ? ["#1a365d", "#2563eb", "#60a5fa"] // 蓝色渐变
+      : ["#4c1d95", "#7c3aed", "#a78bfa"]; // 紫色渐变
 
   const returnValue = parseFloat(totalReturn);
   const isPositive = returnValue >= 0;
 
-  // 根据列数计算卡片宽度百分比和间距
-  const gap = 8;
-  const cardWidthPercent = `${(100 / numColumns) - 1}%` as const;
+  // 根据列数计算卡片宽度 - 使用固定gap
+  const horizontalPadding = 16; // FlatList的paddingHorizontal
+  const gap = numColumns >= 4 ? 12 : numColumns >= 3 ? 10 : 8;
+  // 每个卡片的margin: gap/2 on each side
+  const cardMargin = gap / 2;
 
   return (
     <TouchableOpacity
       onPress={onPress}
-      activeOpacity={0.8}
-      style={[styles.cardWrapper, { width: cardWidthPercent as any, marginBottom: gap }]}
+      activeOpacity={0.85}
+      style={[
+        styles.cardWrapper,
+        {
+          width: `${100 / numColumns}%` as any,
+          paddingHorizontal: cardMargin,
+          marginBottom: gap,
+        },
+      ]}
     >
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {/* 封面占位图 - 渐变色 */}
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            ...(Platform.OS === "web" ? {
+              // @ts-ignore - web only shadow
+              boxShadow: "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)",
+            } : {}),
+          },
+        ]}
+      >
+        {/* 封面 - 渐变色 */}
         <View style={styles.coverContainer}>
           <LinearGradient
             colors={gradientColors}
@@ -67,7 +88,7 @@ export function StrategyCard({
               </Text>
             </View>
           </LinearGradient>
-          
+
           {/* 收藏按钮 */}
           {onFavoritePress && (
             <TouchableOpacity
@@ -116,9 +137,9 @@ export function StrategyCard({
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
             <View>
               {isFree ? (
-                <Text style={[styles.price, { color: colors.success }]}>免费</Text>
+                <Text style={[styles.freePrice, { color: colors.success }]}>免费</Text>
               ) : (
-                <Text style={[styles.price, { color: "#F59E0B" }]}>￥{price}</Text>
+                <Text style={[styles.price, { color: "#F59E0B" }]}>¥{price}</Text>
               )}
             </View>
             <Text style={[styles.downloads, { color: colors.muted }]}>💾 {downloadCount}</Text>
@@ -131,30 +152,30 @@ export function StrategyCard({
 
 const styles = StyleSheet.create({
   cardWrapper: {
-    paddingHorizontal: 4,
+    // width set dynamically
   },
   card: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: "hidden",
-    borderWidth: 1,
+    borderWidth: 0.5,
   },
   coverContainer: {
     position: "relative",
   },
   gradient: {
-    height: 80,
+    height: 90,
     alignItems: "center",
     justifyContent: "center",
   },
   coverEmoji: {
-    fontSize: 32,
+    fontSize: 36,
   },
   platformBadge: {
     position: "absolute",
     top: 8,
     left: 8,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   platformText: {
@@ -178,9 +199,10 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   title: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
     marginBottom: 8,
+    lineHeight: 20,
   },
   dataSection: {
     marginBottom: 8,
@@ -193,23 +215,30 @@ const styles = StyleSheet.create({
   },
   dataLabel: {
     fontSize: 12,
+    lineHeight: 18,
   },
   dataValue: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
+    lineHeight: 20,
   },
   footer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingTop: 8,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  freePrice: {
+    fontSize: 14,
+    fontWeight: "700",
   },
   price: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
   },
   downloads: {
-    fontSize: 12,
+    fontSize: 11,
+    lineHeight: 16,
   },
 });
