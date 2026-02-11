@@ -224,7 +224,7 @@ export default function SubscribeScreen() {
           {notifications.length > 0 && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>📋 最新公告</Text>
-              {notifications.map((n) => (
+              {notifications.map((n: { id: number; icon?: string; title: string; type: string; content: string }) => (
                 <View
                   key={n.id}
                   style={[styles.notifCard, { backgroundColor: colors.surface, borderLeftColor: typeColors[n.type] || colors.primary }]}

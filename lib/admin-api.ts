@@ -3,8 +3,21 @@
  * 所有admin页面使用此客户端发送请求，自动携带X-Admin-Token header
  */
 import { getApiBaseUrl } from "@/constants/oauth";
+import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
-const ADMIN_PASSWORD = "admin123";
+/**
+ * 从存储中获取admin token
+ */
+async function getAdminToken(): Promise<string | null> {
+  if (Platform.OS === "web") {
+    // Web端使用localStorage
+    return localStorage.getItem("admin_token");
+  } else {
+    // 移动端使用SecureStore
+    return await SecureStore.getItemAsync("admin_token");
+  }
+}
 
 type FetchOptions = {
   method?: string;
@@ -19,9 +32,14 @@ async function adminFetch(path: string, options: FetchOptions = {}) {
   const baseUrl = getApiBaseUrl();
   const url = `${baseUrl}/api/trpc/${path}`;
   
+  const adminToken = await getAdminToken();
+  if (!adminToken) {
+    throw new Error("未登录，请先登录管理后台");
+  }
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-Admin-Token": ADMIN_PASSWORD,
+    "X-Admin-Token": adminToken,
   };
 
   const fetchOptions: RequestInit = {

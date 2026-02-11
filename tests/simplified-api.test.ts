@@ -22,7 +22,7 @@ describe("Simplified API Tests", () => {
     });
 
     expect(Array.isArray(mt4Strategies)).toBe(true);
-    mt4Strategies.forEach((strategy) => {
+    mt4Strategies.forEach((strategy: { platform: string }) => {
       expect(strategy.platform).toBe("MT4");
     });
   });

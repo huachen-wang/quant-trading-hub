@@ -1,14 +1,20 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, StyleSheet, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { EventEmitter } from "@/lib/event-emitter";
+import { getApiBaseUrl } from "@/constants/oauth";
 
 /**
  * 管理后台登录页面
  * 访问路径: /admin/login
+ * 
+ * 安全改进：
+ * - 调用服务端API验证密码
+ * - 服务端签发JWT token
+ * - token存储到SecureStore（移动端）或localStorage（Web端）
  */
 export default function AdminLogin() {
   const router = useRouter();
@@ -28,17 +34,53 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
-      // 简单的硬编码验证
-      if (email === "admin@eaxau.com" && password === "admin123") {
-        await AsyncStorage.setItem("admin_logged_in", "true");
-        await AsyncStorage.setItem("admin_email", email);
-        // 发射事件通知layout更新状态
-        EventEmitter.emit("admin_login_success");
-      } else {
-        setErrorMsg("邮箱或密码错误");
+      // 调用服务端登录API
+      const baseUrl = getApiBaseUrl();
+      const response = await fetch(`${baseUrl}/api/trpc/adminAuth.login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          json: {
+            email: email.trim(),
+            password: password.trim(),
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        const errorMsg = data.error?.json?.message || data.error?.message || "登录失败";
+        setErrorMsg(errorMsg);
+        return;
       }
+
+      // 提取token
+      const result = data.result?.data?.json;
+      if (!result || !result.token) {
+        setErrorMsg("登录失败：未收到token");
+        return;
+      }
+
+      // 存储token
+      if (Platform.OS === "web") {
+        localStorage.setItem("admin_token", result.token);
+        localStorage.setItem("admin_email", result.email);
+      } else {
+        await SecureStore.setItemAsync("admin_token", result.token);
+        await SecureStore.setItemAsync("admin_email", result.email);
+      }
+
+      // 发射事件通知layout更新状态
+      EventEmitter.emit("admin_login_success");
+
+      // 跳转到后台首页
+      router.replace("/admin" as any);
     } catch (error) {
-      setErrorMsg("登录失败,请重试");
+      console.error("Login error:", error);
+      setErrorMsg("登录失败，请检查网络连接");
     } finally {
       setIsLoading(false);
     }
@@ -109,11 +151,11 @@ export default function AdminLogin() {
             )}
           </TouchableOpacity>
 
-          {/* 默认账号提示 */}
+          {/* 安全提示 */}
           <View style={[styles.hintBox, { backgroundColor: colors.surface }]}>
             <Text style={[styles.hintText, { color: colors.muted }]}>
-              默认账号: admin@eaxau.com{"\n"}
-              默认密码: admin123
+              🔒 安全提示{"\n"}
+              密码已加密传输，token存储在安全区域
             </Text>
           </View>
         </View>

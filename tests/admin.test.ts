@@ -36,7 +36,7 @@ describe("Admin Functions Tests", () => {
     });
 
     expect(Array.isArray(publishedStrategies)).toBe(true);
-    publishedStrategies.forEach((strategy) => {
+    publishedStrategies.forEach((strategy: { status: string }) => {
       expect(strategy.status).toBe("published");
     });
   });

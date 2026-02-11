@@ -482,7 +482,7 @@
 - [x] 修复后台联系方式设置保存失败（“保存失败，请重试”）
 - [x] 修复后台创建策略失败（“Load failed”）
 - [x] 修复后台数据不显示问题（策略列表等）
-- [ ] 重新构建web-build并推送部署
+- [x] 重新构建web-build并推送部署
 
 ## UI优化：滚动、导航、空状态、动画（2026-02-11）
 - [x] 修复四个主页面不滚动问题（创建+html.tsx自定义HTML模板移除overflow:hidden）
@@ -493,4 +493,40 @@
 - [x] 添加按钮点击反馈动画（策略卡片按压缩放+haptic反馈）
 - [x] 添加页面过渡动画（Modal弹出缩放动画）
 - [x] 添加列表项渐入动画（moments/group-buy列表项依次渐入）
-- [ ] 重新构建web-build并推送部署
+- [x] 重新构建web-build并推送部署
+
+
+## GPT Debug报告修复（2026-02-11）
+
+### P0 安全问题
+- [x] 移除硬编码管理员密码（server/_core/context.ts中的"admin123"）
+- [x] 移除前端硬编码密码（lib/admin-api.ts）
+- [x] 实现服务端签发的管理员token认证（JWT + jose）
+- [x] 管理员密码从环境变量读取（ADMIN_EMAIL/ADMIN_PASSWORD）
+- [x] 后台登录改为服务端验证（app/admin/login.tsx）
+
+### P0 稳定性问题
+- [x] 修夏API端口漂移问题（移除findAvailablePort函数）
+- [x] 开发环境固定端口失败即退出（Fail Fast）
+- [x] 确保前后端端口一致性
+
+### P1 类型安全问题
+- [x] 修夏app/(tabs)/subscribe.tsx的implicit any
+- [x] 修夏app/strategy/[id].tsx的implicit any
+- [x] 修夏tests/admin.test.ts的implicit any
+- [x] 修夏tests/simplified-api.test.ts的implicit any
+- [x] 修夏tests/ux-improvements.test.ts的implicit any
+
+### P1 测试可靠性问题
+- [ ] 为测试环境增加数据库隔离层（sqlite/in-memory）
+- [ ] 修复测试用例ECONNREFUSED错误
+- [ ] 添加JWT_SECRET环境变量
+
+### P2 权限一致性问题
+- [x] 修复管理员删除评论权限（admin.comments.delete已使用adminProcedure）
+- [x] 统一管理员删除逻辑（调用deleteCommentByAdmin）
+
+### 部署
+- [ ] 测试所有修复
+- [ ] 重新构建web-build
+- [ ] 推送到GitHub/Railway

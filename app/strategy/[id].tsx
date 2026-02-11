@@ -282,7 +282,7 @@ export default function StrategyDetailScreen() {
             )}
 
             {comments && comments.length > 0 ? (
-              comments.map((comment) => (
+              comments.map((comment: { id: number; user?: { name?: string }; content: string; createdAt: Date }) => (
                 <View key={comment.id} style={[styles.commentCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.commentHeader}>
                     <View style={{ flex: 1 }}>

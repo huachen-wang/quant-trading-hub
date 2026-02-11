@@ -4,6 +4,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import * as db from "./db";
+import { adminAuthRouter } from "./routers/admin-auth";
 
 // 管理员权限中间件
 const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
@@ -15,6 +16,7 @@ const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 
 export const appRouter = router({
   system: systemRouter,
+  adminAuth: adminAuthRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

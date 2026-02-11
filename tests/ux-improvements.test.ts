@@ -10,7 +10,7 @@ describe("用户体验优化功能测试", () => {
     // 验证搜索结果包含关键词
     if (results.length > 0) {
       const hasKeyword = results.some(
-        (s) =>
+        (s: { title: string; description?: string | null; pairs: string }) =>
           s.title.includes("黄金") ||
           s.description?.includes("黄金") ||
           s.pairs.includes("GOLD") ||
@@ -28,8 +28,8 @@ describe("用户体验优化功能测试", () => {
     expect(mt5Strategies).toBeDefined();
     
     // 验证筛选结果正确
-    mt4Strategies.forEach((s) => expect(s.platform).toBe("MT4"));
-    mt5Strategies.forEach((s) => expect(s.platform).toBe("MT5"));
+    mt4Strategies.forEach((s: { platform: string }) => expect(s.platform).toBe("MT4"));
+    mt5Strategies.forEach((s: { platform: string }) => expect(s.platform).toBe("MT5"));
   });
 
   it("应该能够按不同方式排序策略", async () => {

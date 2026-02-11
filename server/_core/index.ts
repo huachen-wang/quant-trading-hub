@@ -23,15 +23,6 @@ function isPortAvailable(port: number): Promise<boolean> {
   });
 }
 
-async function findAvailablePort(startPort: number = 3000): Promise<number> {
-  for (let port = startPort; port < startPort + 20; port++) {
-    if (await isPortAvailable(port)) {
-      return port;
-    }
-  }
-  throw new Error(`No available port found starting from ${startPort}`);
-}
-
 async function startServer() {
   const app = express();
   const server = createServer(app);
@@ -103,15 +94,18 @@ async function startServer() {
     console.warn(`[static] web-build directory not found at ${webBuildPath}`);
   }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
-  const port = await findAvailablePort(preferredPort);
-
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  const port = parseInt(process.env.PORT || "3000");
+  
+  // 开发环境：端口被占用则直接退出（Fail Fast）
+  // 生产环境：使用环境变量PORT，不会冲突
+  const isAvailable = await isPortAvailable(port);
+  if (!isAvailable) {
+    console.error(`✗ Port ${port} is already in use. Please stop the other process or use a different port.`);
+    process.exit(1);
   }
 
   server.listen(port, () => {
-    console.log(`[api] server listening on port ${port}`);
+    console.log(`✓ [api] server listening on port ${port}`);
   });
 }
 
