@@ -12,7 +12,7 @@ import { Platform } from "react-native";
 async function getAdminToken(): Promise<string | null> {
   if (Platform.OS === "web") {
     // Web端使用localStorage
-    return localStorage.getItem("admin_token");
+    return sessionStorage.getItem("admin_token") || localStorage.getItem("admin_token");
   } else {
     // 移动端使用SecureStore
     return await SecureStore.getItemAsync("admin_token");

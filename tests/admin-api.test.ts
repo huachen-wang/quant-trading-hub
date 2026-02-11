@@ -19,6 +19,7 @@ describe("Admin API Client", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     delete (globalThis as { localStorage?: Storage }).localStorage;
+    delete (globalThis as { sessionStorage?: Storage }).sessionStorage;
   });
 
   it("adds X-Admin-Token header when token exists", async () => {
@@ -34,7 +35,7 @@ describe("Admin API Client", () => {
       }),
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
-    globalThis.localStorage = {
+    globalThis.sessionStorage = {
       getItem: vi.fn(() => "admin-token-123"),
       setItem: vi.fn(),
       removeItem: vi.fn(),

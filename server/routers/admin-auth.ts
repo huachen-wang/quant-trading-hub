@@ -97,4 +97,29 @@ export const adminAuthRouter = router({
         email: payload.email,
       };
     }),
+
+  /**
+   * 验证管理员token（POST版本）
+   * 避免在URL中暴露token
+   */
+  verifyToken: publicProcedure
+    .input(
+      z.object({
+        token: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const payload = await verifyAdminToken(input.token);
+      if (!payload) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "无效的token",
+        });
+      }
+
+      return {
+        valid: true,
+        email: payload.email,
+      };
+    }),
 });

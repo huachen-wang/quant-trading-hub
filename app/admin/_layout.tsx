@@ -17,10 +17,29 @@ export default function AdminLayout() {
   useEffect(() => {
     let isMounted = true;
 
+    const getStoredAdminToken = async () => {
+      if (Platform.OS === "web") {
+        return sessionStorage.getItem("admin_token") || localStorage.getItem("admin_token");
+      }
+      return SecureStore.getItemAsync("admin_token");
+    };
+
+    const clearStoredAdminToken = async () => {
+      if (Platform.OS === "web") {
+        sessionStorage.removeItem("admin_token");
+        sessionStorage.removeItem("admin_email");
+        localStorage.removeItem("admin_token");
+        localStorage.removeItem("admin_email");
+        return;
+      }
+
+      await SecureStore.deleteItemAsync("admin_token");
+      await SecureStore.deleteItemAsync("admin_email");
+    };
+
     const checkAdminToken = async () => {
       if (!isMounted) return;
-      const token =
-        Platform.OS === "web" ? localStorage.getItem("admin_token") : await SecureStore.getItemAsync("admin_token");
+      const token = await getStoredAdminToken();
 
       if (!isMounted) return;
 
@@ -34,19 +53,17 @@ export default function AdminLayout() {
 
       try {
         const baseUrl = getApiBaseUrl();
-        // tRPC with superjson requires input wrapped in { json: ... } for GET queries
-        const encoded = encodeURIComponent(JSON.stringify({ json: { token } }));
-        const res = await fetch(`${baseUrl}/api/trpc/adminAuth.verify?input=${encoded}`);
+        const res = await fetch(`${baseUrl}/api/trpc/adminAuth.verifyToken`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ json: { token } }),
+        });
         const data = await res.json();
 
         if (!res.ok || data.error) {
-          if (Platform.OS === "web") {
-            localStorage.removeItem("admin_token");
-            localStorage.removeItem("admin_email");
-          } else {
-            await SecureStore.deleteItemAsync("admin_token");
-            await SecureStore.deleteItemAsync("admin_email");
-          }
+          await clearStoredAdminToken();
           setAdminLoggedIn(false);
           if (!isOnLoginScreen) {
             router.replace("/admin/login" as any);
@@ -59,7 +76,7 @@ export default function AdminLayout() {
           router.replace("/admin" as any);
         }
       } catch (error) {
-        console.error("[Admin] Failed to verify admin token:", error);
+        console.error("[Admin] Failed to verify admin token");
         setAdminLoggedIn(false);
         if (!isOnLoginScreen) {
           router.replace("/admin/login" as any);
@@ -71,8 +88,7 @@ export default function AdminLayout() {
 
     const handleLoginSuccess = async () => {
       if (!isMounted) return;
-      const token =
-        Platform.OS === "web" ? localStorage.getItem("admin_token") : await SecureStore.getItemAsync("admin_token");
+      const token = await getStoredAdminToken();
       if (!isMounted || !token) return;
       await checkAdminToken();
     };
