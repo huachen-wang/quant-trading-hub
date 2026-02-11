@@ -166,6 +166,8 @@ export const appRouter = router({
             isFree: z.boolean().optional(),
             telegramGroup: z.string().optional(),
             qqGroup: z.string().optional(),
+            virtualSubscribers: z.number().optional(),
+            virtualDownloads: z.number().optional(),
             status: z.enum(["draft", "published", "archived"]).optional(),
           })
         )
@@ -190,6 +192,8 @@ export const appRouter = router({
             isFree: z.boolean().optional(),
             telegramGroup: z.string().optional(),
             qqGroup: z.string().optional(),
+            virtualSubscribers: z.number().optional(),
+            virtualDownloads: z.number().optional(),
             status: z.enum(["draft", "published", "archived"]).optional(),
           })
         )

@@ -216,7 +216,7 @@ export default function StrategyDetailScreen() {
                 </View>
                 <View style={styles.priceRight}>
                   <Text style={[styles.downloadLabel, { color: colors.muted }]}>下载量</Text>
-                  <Text style={[styles.downloadValue, { color: colors.foreground }]}>💾 {strategy.downloadCount}</Text>
+                  <Text style={[styles.downloadValue, { color: colors.foreground }]}>💾 {(strategy.downloadCount || 0) + (strategy.virtualDownloads || 0)}</Text>
                 </View>
               </View>
 

@@ -100,8 +100,8 @@ export default function GroupBuyScreen() {
     return emojis[index % emojis.length];
   };
 
-  const cardColumns = isDesktop ? 3 : numColumns >= 3 ? 2 : 1;
-  const cardGap = isDesktop ? 14 : 10;
+  const cardColumns = isDesktop ? 2 : numColumns >= 3 ? 2 : 1;
+  const cardGap = isDesktop ? 20 : 10;
 
   const renderCard = ({ item, index }: { item: GroupBuyItem; index: number }) => {
     const progress = getProgressPercentage(item.currentParticipants, item.targetParticipants);
@@ -149,10 +149,10 @@ export default function GroupBuyScreen() {
           </LinearGradient>
 
           <View style={styles.cardContent}>
-            <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={2}>
               {item.title}
             </Text>
-            <Text style={[styles.eaName, { color: colors.muted }]} numberOfLines={1}>
+            <Text style={[styles.eaName, { color: colors.muted }]} numberOfLines={2}>
               EA: {item.eaName}
             </Text>
 
@@ -402,9 +402,9 @@ const styles = StyleSheet.create({
   coverEmoji: { fontSize: 36 },
   statusBadge: { position: "absolute", top: 8, right: 8, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
   statusText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  cardContent: { padding: 12 },
-  cardTitle: { fontSize: 15, fontWeight: "700", marginBottom: 4, lineHeight: 22 },
-  eaName: { fontSize: 12, marginBottom: 10, lineHeight: 18 },
+  cardContent: { padding: 14 },
+  cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 6, lineHeight: 24 },
+  eaName: { fontSize: 13, marginBottom: 10, lineHeight: 20 },
   progressSection: { marginBottom: 10 },
   progressHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
   progressLabel: { fontSize: 12, fontWeight: "600" },

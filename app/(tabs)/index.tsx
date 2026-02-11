@@ -165,6 +165,7 @@ export default function HomeScreen() {
             price={item.price || "0.00"}
             isFree={item.isFree}
             downloadCount={item.downloadCount}
+            virtualDownloads={item.virtualDownloads || 0}
             onPress={() => handleStrategyPress(item.id)}
             onSubscribePress={() => handleSubscribePress(item.title)}
           />

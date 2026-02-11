@@ -614,7 +614,13 @@ export async function getEmailSubscriptionCount() {
 
   const { emailSubscriptions } = schema;
   const result = await db.select({ count: sql<number>`count(*)` }).from(emailSubscriptions).where(eq(emailSubscriptions.isActive, true));
-  return result[0]?.count || 0;
+  const realCount = result[0]?.count || 0;
+  
+  // 加上虚拟订阅数
+  const virtualSetting = await getSiteSetting('virtual_subscriber_count');
+  const virtualCount = virtualSetting ? parseInt(virtualSetting.settingValue) || 0 : 0;
+  
+  return realCount + virtualCount;
 }
 
 // ========== 页面内容相关 ==========

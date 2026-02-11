@@ -108,7 +108,7 @@ export default function AdminStrategies() {
                     </View>
                     <Text style={[s.desc, { color: colors.muted }]} numberOfLines={2}>{item.description || "无描述"}</Text>
                     <Text style={[s.meta, { color: colors.muted }]}>
-                      收益: {item.totalReturn}% | 胜率: {item.winRate}% | 下载: {item.downloadCount}
+                      收益: {item.totalReturn}% | 胜率: {item.winRate}% | 下载: {item.downloadCount}(+{item.virtualDownloads || 0}) | 订阅: +{item.virtualSubscribers || 0}
                     </Text>
                   </View>
                   <View style={[s.statusBadge, {

@@ -564,9 +564,18 @@
 - [ ] 添加详细的错误日志和调试信息
 
 
-## 彻底修复管理后台"Failed to fetch"（2026-02-11 第二轮）
-- [ ] 排查生产环境API是否可访问
-- [ ] 排查admin登录和token认证链路
-- [ ] 排查admin-api.ts的fetch调用
-- [ ] 确保web-build包含最新代码
-- [ ] 验证生产环境admin功能正常
+## 彻底修复管理后台“Failed to fetch”（2026-02-11 第二轮）
+- [x] 排查生产环境API是否可访问（API路由正常，返回数据）
+- [x] 排查admin登录和token认证链路（发现API地址编译为开发服务器）
+- [x] 排查admin-api.ts的fetch调用（getApiBaseUrl返回开发服务器地址）
+- [x] 确保web-build包含最新代码（使用--clear标志重新构建，apiBaseUrl已编译为https://eaxau.com）
+- [x] 推送到GitHub触发Railway部署
+- [ ] 验证生产环境admin功能正常（等待Railway部署完成）
+
+
+## Bug修复：crypto is not defined + 合购卡片布局 + 虚拟值功能（2026-02-11）
+- [ ] 修夏admin登录"crypto is not defined"错误（uuid库在旧浏览器中调用crypto）
+- [x] 修复合购页面电脑端卡片太窄，文字被截断
+- [x] 订阅数量支持自定义虚拟值（虚拟值+实际值）
+- [x] 下载量支持设置默认虚拟值
+- [ ] 重新构建web-build并推送部署

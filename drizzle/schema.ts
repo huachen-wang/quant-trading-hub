@@ -46,6 +46,10 @@ export const strategies = mysqlTable("strategies", {
   telegramGroup: varchar("telegramGroup", { length: 255 }), // Telegram群组
   qqGroup: varchar("qqGroup", { length: 255 }), // QQ群号
   
+  // 虚拟数据（前端显示 = 实际值 + 虚拟值）
+  virtualSubscribers: int("virtualSubscribers").default(0).notNull(), // 虚拟订阅数
+  virtualDownloads: int("virtualDownloads").default(0).notNull(), // 虚拟下载量
+  
   // 统计
   viewCount: int("viewCount").default(0).notNull(),
   

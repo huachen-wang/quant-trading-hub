@@ -14,6 +14,7 @@ export interface StrategyCardProps {
   price: string;
   isFree: boolean;
   downloadCount: number;
+  virtualDownloads?: number;
   onPress: () => void;
   onSubscribePress?: () => void;
 }
@@ -26,6 +27,7 @@ export function StrategyCard({
   price,
   isFree,
   downloadCount,
+  virtualDownloads = 0,
   onPress,
   onSubscribePress,
 }: StrategyCardProps) {
@@ -163,7 +165,7 @@ export function StrategyCard({
                 <Text style={[styles.price, { color: "#F59E0B" }]}>¥{price}</Text>
               )}
             </View>
-            <Text style={[styles.downloads, { color: colors.muted }]}>💾 {downloadCount}</Text>
+            <Text style={[styles.downloads, { color: colors.muted }]}>💾 {downloadCount + virtualDownloads}</Text>
           </View>
         </View>
       </View>

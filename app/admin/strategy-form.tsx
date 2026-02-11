@@ -30,6 +30,8 @@ export default function StrategyForm() {
     isFree: true,
     telegramGroup: "",
     qqGroup: "",
+    virtualSubscribers: 0,
+    virtualDownloads: 0,
     status: "published" as "draft" | "published" | "archived",
   });
 
@@ -55,6 +57,8 @@ export default function StrategyForm() {
               isFree: strategy.isFree ?? true,
               telegramGroup: strategy.telegramGroup || "",
               qqGroup: strategy.qqGroup || "",
+              virtualSubscribers: strategy.virtualSubscribers || 0,
+              virtualDownloads: strategy.virtualDownloads || 0,
               status: strategy.status || "published",
             });
           }
@@ -181,6 +185,20 @@ export default function StrategyForm() {
 
         <Text style={[s.label, { color: colors.foreground }]}>QQ群号</Text>
         <TextInput value={formData.qqGroup} onChangeText={(t) => setFormData({ ...formData, qqGroup: t })} placeholder="QQ群号" placeholderTextColor={colors.muted} keyboardType="numeric" style={inputStyle} />
+
+        {/* 虚拟数据（运营用） */}
+        <Text style={[s.sectionTitle, { color: colors.foreground }]}>虚拟数据（运营用）</Text>
+        <Text style={[{ fontSize: 12, color: colors.muted, marginBottom: 8 }]}>前端显示 = 实际值 + 虚拟值，用于运营推广</Text>
+        <View style={s.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.label, { color: colors.foreground }]}>虚拟订阅数</Text>
+            <TextInput value={String(formData.virtualSubscribers)} onChangeText={(t) => setFormData({ ...formData, virtualSubscribers: parseInt(t) || 0 })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.muted} style={inputStyle} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.label, { color: colors.foreground }]}>虚拟下载量</Text>
+            <TextInput value={String(formData.virtualDownloads)} onChangeText={(t) => setFormData({ ...formData, virtualDownloads: parseInt(t) || 0 })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.muted} style={inputStyle} />
+          </View>
+        </View>
 
         {/* 发布状态 */}
         <Text style={[s.sectionTitle, { color: colors.foreground }]}>发布状态</Text>

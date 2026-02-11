@@ -21,6 +21,10 @@ const CONTACT_FIELDS: SettingField[] = [
   { key: "contact_description", label: "说明文字", placeholder: "我们提供专业的EA策略代挂服务...", description: "弹窗底部的说明文字" },
 ];
 
+const VIRTUAL_FIELDS: SettingField[] = [
+  { key: "virtual_subscriber_count", label: "虚拟订阅数", placeholder: "0", description: "订阅页显示的订阅数 = 实际数 + 此虚拟值" },
+];
+
 export default function ContactSettingsScreen() {
   const colors = useColors();
   const [values, setValues] = useState<Record<string, string>>({});
@@ -88,6 +92,43 @@ export default function ContactSettingsScreen() {
                 onChangeText={(t) => setValues((prev) => ({ ...prev, [field.key]: t }))}
                 placeholder={field.placeholder}
                 placeholderTextColor={colors.muted}
+                style={[s.fieldInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+              />
+              <TouchableOpacity
+                onPress={() => handleSave(field.key)}
+                disabled={saving === field.key}
+                style={[s.saveBtn, { backgroundColor: colors.primary, opacity: saving === field.key ? 0.7 : 1 }]}
+                activeOpacity={0.8}
+              >
+                {saving === field.key ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={s.saveBtnText}>保存</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+
+        {/* 虚拟数据设置 */}
+        <View style={{ marginTop: 24, marginBottom: 20 }}>
+          <Text style={[s.pageTitle, { color: colors.foreground }]}>📊 虚拟数据设置</Text>
+          <Text style={[s.pageDesc, { color: colors.muted }]}>
+            设置虚拟数据用于运营推广，前端显示 = 实际值 + 虚拟值
+          </Text>
+        </View>
+
+        {VIRTUAL_FIELDS.map((field) => (
+          <View key={field.key} style={[s.fieldCard, { backgroundColor: colors.surface }]}>
+            <Text style={[s.fieldLabel, { color: colors.foreground }]}>{field.label}</Text>
+            <Text style={[s.fieldDesc, { color: colors.muted }]}>{field.description}</Text>
+            <View style={s.fieldRow}>
+              <TextInput
+                value={values[field.key] || ""}
+                onChangeText={(t) => setValues((prev) => ({ ...prev, [field.key]: t }))}
+                placeholder={field.placeholder}
+                placeholderTextColor={colors.muted}
+                keyboardType="numeric"
                 style={[s.fieldInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
               />
               <TouchableOpacity
