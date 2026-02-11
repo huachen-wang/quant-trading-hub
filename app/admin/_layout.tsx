@@ -33,6 +33,7 @@ export default function AdminLayout() {
 
       try {
         const baseUrl = getApiBaseUrl();
+        // tRPC with superjson requires input wrapped in { json: ... } for GET queries
         const encoded = encodeURIComponent(JSON.stringify({ json: { token } }));
         const res = await fetch(`${baseUrl}/api/trpc/adminAuth.verify?input=${encoded}`);
         const data = await res.json();
@@ -75,7 +76,7 @@ export default function AdminLayout() {
       isMounted = false;
       unsubscribe();
     };
-  }, [isOnLoginScreen, router]);
+  }, [isOnLoginScreen, router, segments]);
 
   if (adminLoggedIn === null) {
     return (
