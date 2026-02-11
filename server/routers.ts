@@ -208,6 +208,15 @@ export const appRouter = router({
           })
         )
         .query(({ input }) => db.getAllStrategies(input)),
+
+      detail: adminProcedure
+        .input(z.object({ id: z.number() }))
+        .query(async ({ input }) => {
+          // 管理后台专用接口，不增加浏览量
+          const strategy = await db.getStrategyById(input.id);
+          if (!strategy) throw new Error("Strategy not found");
+          return strategy;
+        }),
     }),
 
     // 评论管理

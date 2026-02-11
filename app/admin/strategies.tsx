@@ -1,5 +1,6 @@
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, Platform, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, Platform, Alert } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { getAdminStrategies, deleteAdminStrategy } from "@/lib/admin-api";
@@ -25,6 +26,13 @@ export default function AdminStrategies() {
   }, [statusFilter]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // 页面重新聚焦时自动刷新（从编辑页返回时）
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const handleDelete = (id: number, title: string) => {
     const doDelete = async () => {

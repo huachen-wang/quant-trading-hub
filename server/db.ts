@@ -319,7 +319,9 @@ export async function createStrategy(data: typeof strategies.$inferInsert) {
   if (!db) return null;
 
   const result = await db.insert(strategies).values(data);
-  return result;
+  // 返回插入的策略对象
+  const insertId = result[0].insertId;
+  return getStrategyById(insertId);
 }
 
 export async function updateStrategy(id: number, data: Partial<typeof strategies.$inferInsert>) {

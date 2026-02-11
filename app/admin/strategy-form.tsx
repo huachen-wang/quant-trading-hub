@@ -36,7 +36,7 @@ export default function StrategyForm() {
   useEffect(() => {
     if (isEdit && strategyId) {
       setIsLoading(true);
-      adminQuery("strategies.detail", { id: strategyId })
+      adminQuery("admin.strategies.detail", { id: strategyId })
         .then((strategy: any) => {
           if (strategy) {
             setFormData({
