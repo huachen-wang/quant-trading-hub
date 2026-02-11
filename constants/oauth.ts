@@ -23,7 +23,6 @@ export const APP_ID = env.appId;
 export const OWNER_OPEN_ID = env.ownerId;
 export const OWNER_NAME = env.ownerName;
 export const API_BASE_URL = env.apiBaseUrl;
-const PROD_CANONICAL_API_BASE_URL = "https://www.eaxau.com";
 
 /**
  * Get the API base URL, deriving from current hostname if not set.
@@ -31,12 +30,12 @@ const PROD_CANONICAL_API_BASE_URL = "https://www.eaxau.com";
  * URL pattern: https://PORT-sandboxid.region.domain
  */
 export function getApiBaseUrl(): string {
-  // Production safeguard: always use canonical www host for eaxau domains,
-  // even if EXPO_PUBLIC_API_BASE_URL is misconfigured.
+  // Production safeguard: for eaxau domains, always use same-origin relative API path.
+  // This avoids cross-origin preflight/redirect issues between apex and www.
   if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
     const { hostname } = window.location;
     if (hostname === "eaxau.com" || hostname === "www.eaxau.com") {
-      return PROD_CANONICAL_API_BASE_URL;
+      return "";
     }
   }
 
