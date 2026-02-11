@@ -162,6 +162,8 @@ export const anonymousComments = mysqlTable("anonymous_comments", {
   strategyId: int("strategyId").notNull(),
   nickname: varchar("nickname", { length: 100 }), // 匿名昵称(可选)
   content: text("content").notNull(),
+  isApproved: boolean("isApproved").default(false).notNull(), // 审核状态
+  rating: int("rating"), // 可选评分（1-5）
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({
   strategyIdIdx: index("strategyId_idx").on(table.strategyId),

@@ -257,6 +257,15 @@ export const appRouter = router({
       )
       .query(({ input }) => db.getAnonymousComments(input.strategyId, input.limit, input.offset)),
 
+    listAll: adminProcedure
+      .input(
+        z.object({
+          limit: z.number().optional(),
+          offset: z.number().optional(),
+        })
+      )
+      .query(({ input }) => db.getAllAnonymousComments(input.limit, input.offset)),
+
     create: publicProcedure
       .input(
         z.object({
@@ -272,6 +281,10 @@ export const appRouter = router({
           content: input.content,
         });
       }),
+
+    approve: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(({ input }) => db.approveAnonymousComment(input.id)),
 
     delete: adminProcedure
       .input(z.object({ id: z.number() }))

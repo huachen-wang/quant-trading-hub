@@ -458,12 +458,45 @@ export async function getAnonymousComments(strategyId: number, limit = 50, offse
     .offset(offset);
 }
 
+export async function getAllAnonymousComments(limit = 200, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: anonymousComments.id,
+      strategyId: anonymousComments.strategyId,
+      nickname: anonymousComments.nickname,
+      content: anonymousComments.content,
+      isApproved: anonymousComments.isApproved,
+      rating: anonymousComments.rating,
+      createdAt: anonymousComments.createdAt,
+      strategyTitle: strategies.title,
+    })
+    .from(anonymousComments)
+    .leftJoin(strategies, eq(anonymousComments.strategyId, strategies.id))
+    .orderBy(desc(anonymousComments.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
 export async function createAnonymousComment(data: typeof anonymousComments.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
 
   const result = await db.insert(anonymousComments).values(data);
   return result;
+}
+
+export async function approveAnonymousComment(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  await db
+    .update(anonymousComments)
+    .set({ isApproved: true })
+    .where(eq(anonymousComments.id, id));
+  return { success: true };
 }
 
 export async function deleteAnonymousComment(id: number) {
