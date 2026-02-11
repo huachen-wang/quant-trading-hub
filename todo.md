@@ -579,3 +579,10 @@
 - [x] 订阅数量支持自定义虚拟值（虚拟值+实际值）
 - [x] 下载量支持设置默认虚拟值
 - [x] 重新构建web-build并推送部署
+
+
+## 紧急修复：admin登录crypto错误（2026-02-11）
+- [ ] 添加crypto polyfill到app/+html.tsx
+- [ ] 重新构建web-build
+- [ ] 推送到GitHub触发Railway部署
+- [ ] 验证admin登录功能正常
