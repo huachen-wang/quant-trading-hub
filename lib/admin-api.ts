@@ -11,7 +11,7 @@ import { Platform } from "react-native";
  */
 export async function getAdminToken(): Promise<string | null> {
   if (Platform.OS === "web") {
-    // Web端使用localStorage
+    // Web端使用sessionStorage
     const sessionToken = sessionStorage.getItem("admin_token");
     if (sessionToken) {
       return sessionToken;
