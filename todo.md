@@ -582,7 +582,7 @@
 
 
 ## 紧急修复：admin登录crypto错误（2026-02-11）
-- [ ] 添加crypto polyfill到app/+html.tsx
-- [ ] 重新构建web-build
-- [ ] 推送到GitHub触发Railway部署
+- [x] 添加crypto polyfill到dist/index.html
+- [x] 重新构建web-build
+- [x] 推送到GitHub触发Railway部署
 - [ ] 验证admin登录功能正常
