@@ -527,6 +527,6 @@
 - [x] 统一管理员删除逻辑（调用deleteCommentByAdmin）
 
 ### 部署
-- [ ] 测试所有修复
-- [ ] 重新构建web-build
-- [ ] 推送到GitHub/Railway
+- [x] 测试所有修复（TypeScript检查通过）
+- [x] 重新构建web-build
+- [ ] 推送到GitHub/Railway（需用户手动推送或配置CI/CD）
