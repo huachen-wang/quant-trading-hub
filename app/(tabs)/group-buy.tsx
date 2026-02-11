@@ -372,23 +372,30 @@ export default function GroupBuyScreen() {
   return (
     <ScreenContainer>
       {renderContactModal()}
-      <FlatList
-        data={(groupBuys as GroupBuyItem[]) || []}
-        keyExtractor={(item) => item.id.toString()}
-        key={cardColumns}
-        numColumns={cardColumns}
-        renderItem={renderCard}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        columnWrapperStyle={cardColumns > 1 ? { justifyContent: "flex-start" } : undefined}
-        contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 12, paddingBottom: 20 }}
-        showsVerticalScrollIndicator={false}
-      />
+      <View style={isDesktop ? styles.desktopContainer : undefined}>
+        <FlatList
+          data={(groupBuys as GroupBuyItem[]) || []}
+          keyExtractor={(item) => item.id.toString()}
+          key={cardColumns}
+          numColumns={cardColumns}
+          renderItem={renderCard}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmpty}
+          columnWrapperStyle={cardColumns > 1 ? { justifyContent: "flex-start" } : undefined}
+          contentContainerStyle={{
+            paddingHorizontal: isDesktop ? 0 : 10,
+            paddingTop: 12,
+            paddingBottom: 20,
+          }}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  desktopContainer: { width: "100%", maxWidth: 1100, alignSelf: "center", paddingHorizontal: 24 },
   headerSection: { marginBottom: 12 },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   headerTitle: { fontSize: 26, fontWeight: "800" },

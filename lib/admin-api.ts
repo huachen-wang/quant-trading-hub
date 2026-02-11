@@ -9,14 +9,43 @@ import { Platform } from "react-native";
 /**
  * 从存储中获取admin token
  */
-async function getAdminToken(): Promise<string | null> {
+export async function getAdminToken(): Promise<string | null> {
   if (Platform.OS === "web") {
-    // Web端使用localStorage
-    return localStorage.getItem("admin_token");
+    // Web端使用sessionStorage
+    const sessionToken = sessionStorage.getItem("admin_token");
+    if (sessionToken) {
+      return sessionToken;
+    }
+
+    const legacyToken = localStorage.getItem("admin_token");
+    if (legacyToken) {
+      const legacyEmail = localStorage.getItem("admin_email");
+      sessionStorage.setItem("admin_token", legacyToken);
+      if (legacyEmail) {
+        sessionStorage.setItem("admin_email", legacyEmail);
+      }
+      localStorage.removeItem("admin_token");
+      localStorage.removeItem("admin_email");
+      return sessionStorage.getItem("admin_token");
+    }
+    return null;
   } else {
     // 移动端使用SecureStore
     return await SecureStore.getItemAsync("admin_token");
   }
+}
+
+export async function clearAdminToken(): Promise<void> {
+  if (Platform.OS === "web") {
+    sessionStorage.removeItem("admin_token");
+    sessionStorage.removeItem("admin_email");
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_email");
+    return;
+  }
+
+  await SecureStore.deleteItemAsync("admin_token");
+  await SecureStore.deleteItemAsync("admin_email");
 }
 
 type FetchOptions = {
@@ -34,10 +63,14 @@ async function adminFetch(path: string, options: FetchOptions = {}) {
   
   console.log("[admin-api] Fetching:", url);
   
-  // 简化版本：移除token验证
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+
+  const adminToken = await getAdminToken();
+  if (adminToken) {
+    headers["X-Admin-Token"] = adminToken;
+  }
 
   const fetchOptions: RequestInit = {
     method: options.method || "GET",

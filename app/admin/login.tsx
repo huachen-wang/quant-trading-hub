@@ -66,8 +66,10 @@ export default function AdminLogin() {
 
       // 存储token
       if (Platform.OS === "web") {
-        localStorage.setItem("admin_token", result.token);
-        localStorage.setItem("admin_email", result.email);
+        sessionStorage.setItem("admin_token", result.token);
+        sessionStorage.setItem("admin_email", result.email);
+        localStorage.removeItem("admin_token");
+        localStorage.removeItem("admin_email");
       } else {
         await SecureStore.setItemAsync("admin_token", result.token);
         await SecureStore.setItemAsync("admin_email", result.email);

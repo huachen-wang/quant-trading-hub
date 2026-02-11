@@ -1,20 +1,84 @@
 import { Stack, useRouter, useSegments } from "expo-router";
-import { useEffect, useState, useCallback } from "react";
-import { ActivityIndicator, View, Platform } from "react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { useColors } from "@/hooks/use-colors";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { EventEmitter } from "@/lib/event-emitter";
+import { clearAdminToken, getAdminToken } from "@/lib/admin-api";
+import { trpc } from "@/lib/trpc";
 
 export default function AdminLayout() {
   const router = useRouter();
   const colors = useColors();
   const segments = useSegments();
   const [adminLoggedIn, setAdminLoggedIn] = useState<boolean | null>(null);
+  const verifyTokenMutation = trpc.adminAuth.verifyToken.useMutation();
 
-  // 简化版本：移除登录验证，直接允许访问
+  const isOnLoginScreen = segments.includes("login");
+
   useEffect(() => {
-    setAdminLoggedIn(true);
-  }, []);
+    let isMounted = true;
+
+    const checkAdminToken = async () => {
+      if (!isMounted) return;
+      const token = await getAdminToken();
+
+      if (!isMounted) return;
+
+      if (!token) {
+        setAdminLoggedIn(false);
+        if (!isOnLoginScreen) {
+          router.replace("/admin/login" as any);
+        }
+        return;
+      }
+
+      try {
+        await verifyTokenMutation.mutateAsync({ token });
+
+        setAdminLoggedIn(true);
+        if (isOnLoginScreen) {
+          router.replace("/admin" as any);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("[Admin] Admin token verification failed:", errorMessage);
+        await clearAdminToken();
+        setAdminLoggedIn(false);
+        if (!isOnLoginScreen) {
+          router.replace("/admin/login" as any);
+        }
+      }
+    };
+
+    checkAdminToken();
+
+    const handleLoginSuccess = async () => {
+      if (!isMounted) return;
+      const token = await getAdminToken();
+      if (!isMounted || !token) return;
+      setAdminLoggedIn(true);
+      if (isOnLoginScreen) {
+        router.replace("/admin" as any);
+      }
+    };
+
+    const unsubscribe = EventEmitter.on("admin_login_success", () => {
+      void handleLoginSuccess();
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [isOnLoginScreen, router]);
+
+  if (adminLoggedIn === null) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <Stack
