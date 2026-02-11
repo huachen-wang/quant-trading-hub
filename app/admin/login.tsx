@@ -162,7 +162,7 @@ export default function AdminLogin() {
 
         {/* 返回首页 */}
         <TouchableOpacity
-          onPress={() => router.push("/" as any)}
+          onPress={() => router.replace("/" as any)}
           activeOpacity={0.7}
           style={styles.backBtn}
         >

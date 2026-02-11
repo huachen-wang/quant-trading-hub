@@ -1,19 +1,23 @@
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, TextInput, Alert, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, ScrollView, Modal, Pressable, Alert, Platform } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 import { useColors } from "@/hooks/use-colors";
 import { router } from "expo-router";
-import { useState } from "react";
-import * as Api from "@/lib/_core/api";
-import * as Auth from "@/lib/_core/auth";
+import { useEffect, useState } from "react";
+import * as SecureStore from "expo-secure-store";
+import { EventEmitter } from "@/lib/event-emitter";
 
 export default function ProfileScreen() {
-  const { user, isAuthenticated, loading: authLoading, refresh } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, logout } = useAuth();
   const colors = useColors();
-  const [email, setEmail] = useState("");
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace("/admin/login" as any);
+    }
+  }, [authLoading, isAuthenticated]);
 
   const { data: downloads, isLoading } = trpc.downloads.list.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -23,69 +27,42 @@ export default function ProfileScreen() {
     enabled: isAuthenticated,
   });
 
-  const handleAuthSuccess = async (payload: { app_session_id?: string; user?: any }) => {
-    if (payload.app_session_id) {
-      await Auth.setSessionToken(payload.app_session_id);
+  const clearAdminToken = async () => {
+    if (Platform.OS === "web") {
+      localStorage.removeItem("admin_token");
+      localStorage.removeItem("admin_email");
+      return;
     }
-
-    if (payload.user) {
-      const userInfo: Auth.User = {
-        id: payload.user.id,
-        openId: payload.user.openId,
-        name: payload.user.name,
-        email: payload.user.email,
-        avatar: payload.user.avatar || null,
-        bio: payload.user.bio || null,
-        loginMethod: payload.user.loginMethod,
-        role: (payload.user.role as "user" | "admin") || "user",
-        lastSignedIn: new Date(payload.user.lastSignedIn || Date.now()),
-      };
-      await Auth.setUserInfo(userInfo);
-    }
-
-    await refresh();
-    setIsRegistering(false);
-    setEmail("");
-    router.replace("/(tabs)/profile");
+    await SecureStore.deleteItemAsync("admin_token");
+    await SecureStore.deleteItemAsync("admin_email");
   };
 
-  const handleQuickRegister = async () => {
-    if (!email || !email.includes("@")) {
-      Alert.alert("提示", "请输入有效的邮箱地址");
+  const handleLogout = () => {
+    const performLogout = async () => {
+      try {
+        await logout();
+        await clearAdminToken();
+        EventEmitter.emit("admin_logout");
+      } finally {
+        setShowSettings(false);
+        router.replace("/admin/login" as any);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      if (confirm("确认退出登录吗？")) {
+        performLogout();
+      }
       return;
     }
 
-    try {
-      setIsSubmitting(true);
-      const result = await Api.registerWithEmail(email);
-      await handleAuthSuccess(result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "注册失败，请稍后重试";
-      Alert.alert("注册失败", message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    Alert.alert("退出登录", "确认退出当前登录账户吗？", [
+      { text: "取消", style: "cancel" },
+      { text: "退出", style: "destructive", onPress: () => void performLogout() },
+    ]);
   };
 
-  const handleLogin = async () => {
-    if (!email || !email.includes("@")) {
-      Alert.alert("提示", "请输入有效的邮箱地址");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      const result = await Api.loginWithEmail(email);
-      await handleAuthSuccess(result);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "登录失败，请稍后重试";
-      Alert.alert("登录失败", message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (authLoading || isLoading) {
+  if (authLoading || isLoading || !isAuthenticated) {
     return (
       <ScreenContainer className="items-center justify-center">
         <ActivityIndicator size="large" color={colors.primary} />
@@ -93,187 +70,124 @@ export default function ProfileScreen() {
     );
   }
 
-  // 未登录状态 - 显示简化的访客模式
-  if (!isAuthenticated) {
-    return (
-      <ScreenContainer>
-        <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        <View className="p-6">
-          {/* 访客信息 */}
-          <View className="items-center mb-8">
-            <View className="w-20 h-20 rounded-full bg-surface items-center justify-center mb-3">
-              <Text className="text-3xl">👤</Text>
-            </View>
-            <Text className="text-xl font-semibold text-foreground">访客模式</Text>
-            <Text className="text-sm text-muted mt-1">浏览所有EA策略</Text>
-          </View>
-
-          {/* 提示卡片 */}
-          <View className="bg-surface rounded-2xl p-6 mb-6">
-            <Text className="text-base text-foreground mb-2">✨ 无需登录即可使用</Text>
-            <Text className="text-sm text-muted leading-relaxed">
-              您可以自由浏览所有EA策略、查看详细信息、实盘数据和下载链接。如需保存下载记录,可选择登录。
-            </Text>
-          </View>
-
-          {/* 快速注册(可选) */}
-          {!isRegistering ? (
-            <TouchableOpacity
-              onPress={() => setIsRegistering(true)}
-              className="bg-primary rounded-2xl p-4 mb-3"
-              activeOpacity={0.8}
-            >
-              <Text className="text-background font-semibold text-center text-base">
-                登录/注册 (可选)
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <View className="bg-surface rounded-2xl p-6 mb-3">
-              <Text className="text-base font-semibold text-foreground mb-4">邮箱登录/注册</Text>
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="输入您的邮箱"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                className="bg-background rounded-xl px-4 py-3 text-foreground mb-4"
-                placeholderTextColor={colors.muted}
-              />
-              <View className="flex-row gap-3">
-                <TouchableOpacity
-                  onPress={handleQuickRegister}
-                  className="flex-1 bg-primary rounded-xl py-3"
-                  activeOpacity={0.8}
-                  disabled={isSubmitting}
-                >
-                  <Text className="text-background font-semibold text-center">注册</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleLogin}
-                  className="flex-1 bg-accent rounded-xl py-3"
-                  activeOpacity={0.8}
-                  disabled={isSubmitting}
-                >
-                  <Text className="text-background font-semibold text-center">登录</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setIsRegistering(false)}
-                  className="flex-1 bg-border rounded-xl py-3"
-                  activeOpacity={0.8}
-                  disabled={isSubmitting}
-                >
-                  <Text className="text-foreground font-semibold text-center">取消</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* 功能说明 */}
-          <View className="bg-surface rounded-2xl p-6">
-            <Text className="text-base font-semibold text-foreground mb-3">平台功能</Text>
-            <View className="gap-3">
-              <View className="flex-row items-center">
-                <Text className="text-lg mr-2">📊</Text>
-                <Text className="text-sm text-muted flex-1">查看所有EA策略和实盘数据</Text>
-              </View>
-              <View className="flex-row items-center">
-                <Text className="text-lg mr-2">💬</Text>
-                <Text className="text-sm text-muted flex-1">阅读策略说明和评论</Text>
-              </View>
-              <View className="flex-row items-center">
-                <Text className="text-lg mr-2">📥</Text>
-                <Text className="text-sm text-muted flex-1">获取下载链接和联系方式</Text>
-              </View>
-              <View className="flex-row items-center">
-                <Text className="text-lg mr-2">🔍</Text>
-                <Text className="text-sm text-muted flex-1">搜索和筛选策略</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-        </ScrollView>
-      </ScreenContainer>
-    );
-  }
-
-  // 已登录状态
   return (
     <ScreenContainer>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-      <View className="p-6">
-        {/* 用户信息 */}
-        <View className="items-center mb-8">
-          <View className="w-20 h-20 rounded-full bg-surface items-center justify-center mb-3">
-            <Text className="text-3xl text-primary font-bold">
-              {user?.name?.charAt(0).toUpperCase() || "U"}
-            </Text>
+        <View className="p-6">
+          <View className="flex-row justify-end mb-4">
+            <TouchableOpacity
+              onPress={() => setShowSettings(true)}
+              className="bg-surface rounded-xl px-4 py-2"
+              activeOpacity={0.8}
+            >
+              <Text className="text-foreground font-semibold">设置</Text>
+            </TouchableOpacity>
           </View>
-          <Text className="text-xl font-semibold text-foreground">{user?.name || "用户"}</Text>
-          {user?.email && <Text className="text-sm text-muted mt-1">{user.email}</Text>}
-        </View>
 
-        {/* 管理员入口 */}
-        {user?.role === "admin" && (
-          <TouchableOpacity
-            onPress={() => router.push("/admin" as any)}
-            className="bg-primary rounded-2xl p-4 mb-6 flex-row items-center justify-between"
-            activeOpacity={0.8}
-          >
-            <View className="flex-row items-center">
-              <View className="w-10 h-10 rounded-full bg-background/20 items-center justify-center mr-3">
-                <Text className="text-background text-xl">⚙️</Text>
-              </View>
-              <View>
-                <Text className="text-background font-bold text-base">管理员后台</Text>
-                <Text className="text-background/80 text-xs">管理策略和评论</Text>
-              </View>
+          <View className="items-center mb-8">
+            <View className="w-20 h-20 rounded-full bg-surface items-center justify-center mb-3">
+              <Text className="text-3xl text-primary font-bold">
+                {user?.name?.charAt(0).toUpperCase() || "U"}
+              </Text>
             </View>
-            <Text className="text-background text-xl">→</Text>
-          </TouchableOpacity>
-        )}
+            <Text className="text-xl font-semibold text-foreground">{user?.name || "用户"}</Text>
+            {user?.email && <Text className="text-sm text-muted mt-1">{user.email}</Text>}
+          </View>
 
-        {/* 统计信息 */}
-        <View className="flex-row justify-around mb-8 bg-surface rounded-2xl p-6">
-          <View className="items-center">
-            <Text className="text-2xl font-bold text-primary">{purchases?.length || 0}</Text>
-            <Text className="text-sm text-muted mt-1">已购买</Text>
+          {user?.role === "admin" && (
+            <TouchableOpacity
+              onPress={() => router.push("/admin" as any)}
+              className="bg-primary rounded-2xl p-4 mb-6 flex-row items-center justify-between"
+              activeOpacity={0.8}
+            >
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 rounded-full bg-background/20 items-center justify-center mr-3">
+                  <Text className="text-background text-xl">⚙️</Text>
+                </View>
+                <View>
+                  <Text className="text-background font-bold text-base">管理员后台</Text>
+                  <Text className="text-background/80 text-xs">管理策略和评论</Text>
+                </View>
+              </View>
+              <Text className="text-background text-xl">→</Text>
+            </TouchableOpacity>
+          )}
+
+          <View className="flex-row justify-around mb-8 bg-surface rounded-2xl p-6">
+            <View className="items-center">
+              <Text className="text-2xl font-bold text-primary">{purchases?.length || 0}</Text>
+              <Text className="text-sm text-muted mt-1">已购买</Text>
+            </View>
+            <View className="w-px bg-border" />
+            <View className="items-center">
+              <Text className="text-2xl font-bold text-accent">{downloads?.length || 0}</Text>
+              <Text className="text-sm text-muted mt-1">下载次数</Text>
+            </View>
           </View>
-          <View className="w-px bg-border" />
-          <View className="items-center">
-            <Text className="text-2xl font-bold text-accent">{downloads?.length || 0}</Text>
-            <Text className="text-sm text-muted mt-1">下载次数</Text>
-          </View>
+
+          <Text className="text-lg font-semibold text-foreground mb-4">我的下载</Text>
+          {downloads && downloads.length > 0 ? (
+            <FlatList
+              data={downloads}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  className="bg-surface rounded-xl p-4 mb-3"
+                  onPress={() => router.push(`/strategy/${item.strategy?.id}` as any)}
+                >
+                  <Text className="text-base font-semibold text-foreground mb-1">
+                    {item.strategy?.title}
+                  </Text>
+                  <Text className="text-sm text-muted">
+                    下载于 {new Date(item.downloadedAt).toLocaleDateString()}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          ) : (
+            <View className="bg-surface rounded-xl p-8 items-center">
+              <Text style={{ fontSize: 40, marginBottom: 8 }}>📥</Text>
+              <Text className="text-base font-semibold text-foreground">暂无下载记录</Text>
+              <Text className="text-sm text-muted mt-1">浏览策略广场开始探索</Text>
+            </View>
+          )}
         </View>
-
-        {/* 我的下载 */}
-        <Text className="text-lg font-semibold text-foreground mb-4">我的下载</Text>
-        {downloads && downloads.length > 0 ? (
-          <FlatList
-            data={downloads}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                className="bg-surface rounded-xl p-4 mb-3"
-                onPress={() => router.push(`/strategy/${item.strategy?.id}` as any)}
-              >
-                <Text className="text-base font-semibold text-foreground mb-1">
-                  {item.strategy?.title}
-                </Text>
-                <Text className="text-sm text-muted">
-                  下载于 {new Date(item.downloadedAt).toLocaleDateString()}
-                </Text>
-              </TouchableOpacity>
-            )}
-          />
-        ) : (
-          <View className="bg-surface rounded-xl p-8 items-center">
-            <Text style={{ fontSize: 40, marginBottom: 8 }}>📥</Text>
-            <Text className="text-base font-semibold text-foreground">暂无下载记录</Text>
-            <Text className="text-sm text-muted mt-1">浏览策略广场开始探索</Text>
-          </View>
-        )}
-      </View>
       </ScrollView>
+
+      <Modal
+        visible={showSettings}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSettings(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "center", padding: 24 }}
+          onPress={() => setShowSettings(false)}
+        >
+          <Pressable
+            style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16 }}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={{ color: colors.foreground, fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+              设置
+            </Text>
+            <TouchableOpacity
+              onPress={handleLogout}
+              activeOpacity={0.8}
+              style={{ backgroundColor: colors.error + "15", borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14 }}
+            >
+              <Text style={{ color: colors.error, fontWeight: "700", textAlign: "center" }}>退出登录</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowSettings(false)}
+              activeOpacity={0.8}
+              style={{ marginTop: 10, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 }}
+            >
+              <Text style={{ color: colors.muted, textAlign: "center" }}>取消</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }

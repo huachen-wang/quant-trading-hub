@@ -1,15 +1,20 @@
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Pressable, Alert, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { useState, useEffect } from "react";
 import { getAdminStats } from "@/lib/admin-api";
+import * as SecureStore from "expo-secure-store";
+import { useAuth } from "@/hooks/use-auth";
+import { EventEmitter } from "@/lib/event-emitter";
 
 export default function AdminDashboard() {
   const router = useRouter();
   const colors = useColors();
+  const { logout } = useAuth({ autoFetch: false });
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     getAdminStats()
@@ -17,6 +22,41 @@ export default function AdminDashboard() {
       .catch((err) => console.error("Failed to load stats:", err))
       .finally(() => setIsLoading(false));
   }, []);
+
+  const clearAdminToken = async () => {
+    if (Platform.OS === "web") {
+      localStorage.removeItem("admin_token");
+      localStorage.removeItem("admin_email");
+      return;
+    }
+    await SecureStore.deleteItemAsync("admin_token");
+    await SecureStore.deleteItemAsync("admin_email");
+  };
+
+  const handleLogout = () => {
+    const performLogout = async () => {
+      try {
+        await clearAdminToken();
+        await logout();
+        EventEmitter.emit("admin_logout");
+      } finally {
+        setShowSettings(false);
+        router.replace("/admin/login" as any);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      if (confirm("确认退出登录吗？")) {
+        void performLogout();
+      }
+      return;
+    }
+
+    Alert.alert("退出登录", "确认退出当前账户吗？", [
+      { text: "取消", style: "cancel" },
+      { text: "退出", style: "destructive", onPress: () => void performLogout() },
+    ]);
+  };
 
   if (isLoading) {
     return (
@@ -81,9 +121,23 @@ export default function AdminDashboard() {
     <ScreenContainer>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
         {/* 标题 */}
-        <View className="mb-6">
-          <Text className="text-3xl font-bold text-foreground mb-2">🔧 管理员后台</Text>
-          <Text className="text-base text-muted">管理平台内容和数据</Text>
+        <View className="mb-6 flex-row items-start justify-between">
+          <View>
+            <Text className="text-3xl font-bold text-foreground mb-2">🔧 管理员后台</Text>
+            <Text className="text-base text-muted">管理平台内容和数据</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setShowSettings(true)}
+            activeOpacity={0.8}
+            style={{
+              backgroundColor: colors.surface,
+              paddingHorizontal: 14,
+              paddingVertical: 8,
+              borderRadius: 10,
+            }}
+          >
+            <Text style={{ color: colors.foreground, fontWeight: "600" }}>设置</Text>
+          </TouchableOpacity>
         </View>
 
         {/* 数据统计 */}
@@ -137,6 +191,41 @@ export default function AdminDashboard() {
           ))}
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showSettings}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSettings(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "center", padding: 24 }}
+          onPress={() => setShowSettings(false)}
+        >
+          <Pressable
+            style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16 }}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={{ color: colors.foreground, fontSize: 18, fontWeight: "700", marginBottom: 12 }}>
+              设置
+            </Text>
+            <TouchableOpacity
+              onPress={handleLogout}
+              activeOpacity={0.8}
+              style={{ backgroundColor: colors.error + "15", borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14 }}
+            >
+              <Text style={{ color: colors.error, fontWeight: "700", textAlign: "center" }}>退出登录</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowSettings(false)}
+              activeOpacity={0.8}
+              style={{ marginTop: 10, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14 }}
+            >
+              <Text style={{ color: colors.muted, textAlign: "center" }}>取消</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScreenContainer>
   );
 }

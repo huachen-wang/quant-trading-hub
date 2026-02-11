@@ -126,18 +126,19 @@ export async function logout(): Promise<void> {
 
 export async function registerWithEmail(
   email: string,
+  password: string,
   name?: string,
 ): Promise<EmailAuthResponse> {
   return apiCall<EmailAuthResponse>("/api/auth/register", {
     method: "POST",
-    body: JSON.stringify({ email, name }),
+    body: JSON.stringify({ email, password, name }),
   });
 }
 
-export async function loginWithEmail(email: string): Promise<EmailAuthResponse> {
+export async function loginWithEmail(email: string, password: string): Promise<EmailAuthResponse> {
   return apiCall<EmailAuthResponse>("/api/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, password }),
   });
 }
 

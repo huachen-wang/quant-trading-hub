@@ -13,6 +13,11 @@ export const EventEmitter = {
     };
   },
 
+  off(event: string, listener: Listener): void {
+    if (!listeners[event]) return;
+    listeners[event] = listeners[event].filter((l) => l !== listener);
+  },
+
   emit(event: string): void {
     if (listeners[event]) {
       listeners[event].forEach((l) => l());

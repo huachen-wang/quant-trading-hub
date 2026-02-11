@@ -3,6 +3,7 @@ import type { Express, Request, Response } from "express";
 import { createUser, getUserByEmail, getUserByOpenId, updateUser, upsertUser } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
+import { hashPassword, verifyPassword } from "./password";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -73,9 +74,14 @@ export function registerOAuthRoutes(app: Express) {
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     const email = typeof req.body?.email === "string" ? normalizeEmail(req.body.email) : "";
     const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+    const password = typeof req.body?.password === "string" ? req.body.password : "";
 
     if (!email || !isValidEmail(email)) {
       res.status(400).json({ error: "Valid email is required" });
+      return;
+    }
+    if (!password || password.length < 6) {
+      res.status(400).json({ error: "Password must be at least 6 characters" });
       return;
     }
 
@@ -94,6 +100,7 @@ export function registerOAuthRoutes(app: Express) {
         openId,
         name: displayName,
         email,
+        passwordHash: hashPassword(password),
         loginMethod: "email",
         lastSignedIn,
       });
@@ -127,9 +134,14 @@ export function registerOAuthRoutes(app: Express) {
 
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     const email = typeof req.body?.email === "string" ? normalizeEmail(req.body.email) : "";
+    const password = typeof req.body?.password === "string" ? req.body.password : "";
 
     if (!email || !isValidEmail(email)) {
       res.status(400).json({ error: "Valid email is required" });
+      return;
+    }
+    if (!password) {
+      res.status(400).json({ error: "Password is required" });
       return;
     }
 
@@ -137,6 +149,14 @@ export function registerOAuthRoutes(app: Express) {
       const user = await getUserByEmail(email);
       if (!user) {
         res.status(404).json({ error: "Email not registered" });
+        return;
+      }
+      if (!user.passwordHash) {
+        res.status(400).json({ error: "Account has no password set yet" });
+        return;
+      }
+      if (!verifyPassword(password, user.passwordHash)) {
+        res.status(401).json({ error: "Invalid email or password" });
         return;
       }
 

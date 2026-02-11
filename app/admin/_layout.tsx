@@ -55,14 +55,19 @@ export default function AdminLayout() {
     checkAuth();
   }, [checkAuth]);
 
-  // 监听登录成功事件
+  // 监听登录/退出事件
   useEffect(() => {
-    const handler = () => {
+    const loginHandler = () => {
       setAdminLoggedIn(true);
     };
-    EventEmitter.on("admin_login_success", handler);
+    const logoutHandler = () => {
+      setAdminLoggedIn(false);
+    };
+    EventEmitter.on("admin_login_success", loginHandler);
+    EventEmitter.on("admin_logout", logoutHandler);
     return () => {
-      EventEmitter.off("admin_login_success", handler);
+      EventEmitter.off("admin_login_success", loginHandler);
+      EventEmitter.off("admin_logout", logoutHandler);
     };
   }, []);
 
