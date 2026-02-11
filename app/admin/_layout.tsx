@@ -43,6 +43,8 @@ export default function AdminLayout() {
         const data = await res.json();
 
         if (!res.ok || data.error) {
+          const errorMessage = data?.error?.json?.message || data?.error?.message || res.statusText;
+          console.error("[Admin] Admin token verification failed:", errorMessage);
           await clearAdminToken();
           setAdminLoggedIn(false);
           if (!isOnLoginScreen) {

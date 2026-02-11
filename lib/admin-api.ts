@@ -17,6 +17,10 @@ export async function getAdminToken(): Promise<string | null> {
       return sessionToken;
     }
 
+    if (sessionStorage.getItem("admin_token_migrated")) {
+      return null;
+    }
+
     const legacyToken = localStorage.getItem("admin_token");
     if (legacyToken) {
       const legacyEmail = localStorage.getItem("admin_email");
@@ -27,6 +31,8 @@ export async function getAdminToken(): Promise<string | null> {
       localStorage.removeItem("admin_token");
       localStorage.removeItem("admin_email");
     }
+
+    sessionStorage.setItem("admin_token_migrated", "true");
 
     return sessionStorage.getItem("admin_token");
   } else {
