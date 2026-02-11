@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Linking, StyleSheet, Platform, Animated } from "react-native";
 
 // 卡片入场动画组件
-function AnimatedListItem({ children, index }: { children: React.ReactNode; index: number }) {
+function AnimatedListItem({ children, index, style }: { children: React.ReactNode; index: number; style?: any }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(16)).current;
 
@@ -25,7 +25,7 @@ function AnimatedListItem({ children, index }: { children: React.ReactNode; inde
   }, []);
 
   return (
-    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY }] }}>
+    <Animated.View style={[style, { opacity: fadeAnim, transform: [{ translateY }] }]}>
       {children}
     </Animated.View>
   );
@@ -55,7 +55,7 @@ interface GroupBuyItem {
 export default function GroupBuyScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { numColumns, isDesktop } = useResponsive();
+  const { numColumns, isDesktop, isTablet } = useResponsive();
   const [selectedItem, setSelectedItem] = useState<GroupBuyItem | null>(null);
   const [showContactModal, setShowContactModal] = useState(false);
 
@@ -100,8 +100,9 @@ export default function GroupBuyScreen() {
     return emojis[index % emojis.length];
   };
 
-  const cardColumns = isDesktop ? 2 : numColumns >= 3 ? 2 : 1;
-  const cardGap = isDesktop ? 20 : 10;
+  // 桌面端3列，平板2列，手机1列
+  const cardColumns = isDesktop ? 3 : isTablet ? 2 : numColumns >= 3 ? 2 : 1;
+  const cardGap = isDesktop ? 20 : isTablet ? 16 : 10;
 
   const renderCard = ({ item, index }: { item: GroupBuyItem; index: number }) => {
     const progress = getProgressPercentage(item.currentParticipants, item.targetParticipants);
@@ -109,18 +110,17 @@ export default function GroupBuyScreen() {
     const emoji = getEmoji(index);
 
     return (
-      <AnimatedListItem index={index}>
+      <AnimatedListItem
+        index={index}
+        style={{
+          width: `${100 / cardColumns}%` as any,
+          paddingHorizontal: cardGap / 2,
+          marginBottom: cardGap,
+        }}
+      >
       <TouchableOpacity
         onPress={() => handleCardPress(item)}
         activeOpacity={0.85}
-        style={[
-          styles.cardWrapper,
-          {
-            width: `${100 / cardColumns}%` as any,
-            paddingHorizontal: cardGap / 2,
-            marginBottom: cardGap,
-          },
-        ]}
       >
         <View
           style={[

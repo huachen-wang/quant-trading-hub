@@ -2,8 +2,20 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
 import { ActivityIndicator, View, Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { EventEmitter } from "@/lib/event-emitter";
+import { getApiBaseUrl } from "@/constants/oauth";
+import * as SecureStore from "expo-secure-store";
+
+/**
+ * 获取存储的admin token
+ */
+async function getAdminToken(): Promise<string | null> {
+  if (Platform.OS === "web") {
+    return localStorage.getItem("admin_token");
+  } else {
+    return await SecureStore.getItemAsync("admin_token");
+  }
+}
 
 export default function AdminLayout() {
   const router = useRouter();
@@ -11,10 +23,70 @@ export default function AdminLayout() {
   const segments = useSegments();
   const [adminLoggedIn, setAdminLoggedIn] = useState<boolean | null>(null);
 
-  // 简化版本：移除登录验证，直接允许访问
-  useEffect(() => {
-    setAdminLoggedIn(true);
+  // 验证admin token
+  const checkAuth = useCallback(async () => {
+    try {
+      const token = await getAdminToken();
+      if (!token) {
+        setAdminLoggedIn(false);
+        return;
+      }
+
+      // 验证token是否有效
+      const baseUrl = getApiBaseUrl();
+      const encoded = encodeURIComponent(JSON.stringify({ json: { token } }));
+      const res = await fetch(`${baseUrl}/api/trpc/adminAuth.verify?input=${encoded}`, {
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const data = await res.json();
+      if (data.result?.data?.json?.valid) {
+        setAdminLoggedIn(true);
+      } else {
+        setAdminLoggedIn(false);
+      }
+    } catch (error) {
+      console.error("[AdminLayout] Auth check failed:", error);
+      setAdminLoggedIn(false);
+    }
   }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  // 监听登录成功事件
+  useEffect(() => {
+    const handler = () => {
+      setAdminLoggedIn(true);
+    };
+    EventEmitter.on("admin_login_success", handler);
+    return () => {
+      EventEmitter.off("admin_login_success", handler);
+    };
+  }, []);
+
+  // 根据登录状态重定向
+  useEffect(() => {
+    if (adminLoggedIn === null) return; // 还在检查中
+
+    const isOnLoginPage = segments[segments.length - 1] === "login";
+
+    if (!adminLoggedIn && !isOnLoginPage) {
+      router.replace("/admin/login" as any);
+    } else if (adminLoggedIn && isOnLoginPage) {
+      router.replace("/admin" as any);
+    }
+  }, [adminLoggedIn, segments]);
+
+  // 加载中状态
+  if (adminLoggedIn === null) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <Stack

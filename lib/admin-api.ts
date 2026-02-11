@@ -34,10 +34,15 @@ async function adminFetch(path: string, options: FetchOptions = {}) {
   
   console.log("[admin-api] Fetching:", url);
   
-  // 简化版本：移除token验证
+  // 获取admin token并添加到请求头
+  const token = await getAdminToken();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
+  
+  if (token) {
+    headers["X-Admin-Token"] = token;
+  }
 
   const fetchOptions: RequestInit = {
     method: options.method || "GET",
