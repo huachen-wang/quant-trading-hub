@@ -23,7 +23,6 @@ export const APP_ID = env.appId;
 export const OWNER_OPEN_ID = env.ownerId;
 export const OWNER_NAME = env.ownerName;
 export const API_BASE_URL = env.apiBaseUrl;
-const PROD_CANONICAL_API_BASE_URL = "https://www.eaxau.com";
 
 /**
  * Get the API base URL, deriving from current hostname if not set.
@@ -49,12 +48,6 @@ export function getApiBaseUrl(): string {
     if (hostname.startsWith("8081-")) {
       const apiHostname = hostname.replace(/^8081-/, "3000-");
       return `${protocol}//${apiHostname}`;
-    }
-
-    // Production canonical host: always call www domain to avoid
-    // localStorage token split between apex and www origins.
-    if (hostname === "eaxau.com" || hostname === "www.eaxau.com") {
-      return PROD_CANONICAL_API_BASE_URL;
     }
     
     // Production: use current domain (API server is on the same domain)
