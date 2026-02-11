@@ -34,17 +34,9 @@ async function adminFetch(path: string, options: FetchOptions = {}) {
   
   console.log("[admin-api] Fetching:", url);
   
-  const adminToken = await getAdminToken();
-  if (!adminToken) {
-    console.error("[admin-api] No admin token found");
-    throw new Error("未登录，请先登录管理后台");
-  }
-
-  console.log("[admin-api] Token found:", adminToken.substring(0, 20) + "...");
-
+  // 简化版本：移除token验证
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-Admin-Token": adminToken,
   };
 
   const fetchOptions: RequestInit = {

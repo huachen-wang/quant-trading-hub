@@ -586,3 +586,11 @@
 - [x] 重新构建web-build
 - [x] 推送到GitHub触发Railway部署
 - [ ] 验证admin登录功能正常
+
+
+## 紧急简化：移除admin登录验证（2026-02-11）
+- [x] 修改/admin路由直接跳转到后台首页
+- [x] 移除adminProcedure的token验证要求
+- [x] 移除admin-api.ts中的token header
+- [ ] 构建web-build并推送部署
+- [ ] 验证后台可直接访问

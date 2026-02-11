@@ -11,55 +11,10 @@ export default function AdminLayout() {
   const segments = useSegments();
   const [adminLoggedIn, setAdminLoggedIn] = useState<boolean | null>(null);
 
-  const checkAdminLogin = useCallback(async () => {
-    try {
-      const value = await AsyncStorage.getItem("admin_logged_in");
-      setAdminLoggedIn(value === "true");
-    } catch {
-      setAdminLoggedIn(false);
-    }
+  // 简化版本：移除登录验证，直接允许访问
+  useEffect(() => {
+    setAdminLoggedIn(true);
   }, []);
-
-  // 初始检查
-  useEffect(() => {
-    checkAdminLogin();
-  }, [checkAdminLogin]);
-
-  // 监听登录事件
-  useEffect(() => {
-    const unsubscribe = EventEmitter.on("admin_login_success", () => {
-      setAdminLoggedIn(true);
-    });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    if (adminLoggedIn === null) return;
-
-    const inLoginPage = segments[segments.length - 1] === "login";
-
-    if (adminLoggedIn) {
-      // 已登录，如果在登录页则跳转到管理后台
-      if (inLoginPage) {
-        router.replace("/admin" as any);
-      }
-      return;
-    }
-
-    // 未登录，跳转到登录页
-    if (!inLoginPage) {
-      router.replace("/admin/login" as any);
-    }
-  }, [adminLoggedIn, segments]);
-
-  // 加载中
-  if (adminLoggedIn === null) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.background }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
 
   return (
     <Stack
