@@ -19,8 +19,13 @@ export async function getAdminToken(): Promise<string | null> {
 
     const legacyToken = localStorage.getItem("admin_token");
     if (legacyToken) {
+      const legacyEmail = localStorage.getItem("admin_email");
       sessionStorage.setItem("admin_token", legacyToken);
+      if (legacyEmail) {
+        sessionStorage.setItem("admin_email", legacyEmail);
+      }
       localStorage.removeItem("admin_token");
+      localStorage.removeItem("admin_email");
     }
 
     return legacyToken;

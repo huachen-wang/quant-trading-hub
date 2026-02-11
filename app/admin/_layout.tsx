@@ -70,7 +70,10 @@ export default function AdminLayout() {
       if (!isMounted) return;
       const token = await getAdminToken();
       if (!isMounted || !token) return;
-      await checkAdminToken();
+      setAdminLoggedIn(true);
+      if (isOnLoginScreen) {
+        router.replace("/admin" as any);
+      }
     };
 
     const unsubscribe = EventEmitter.on("admin_login_success", () => {
