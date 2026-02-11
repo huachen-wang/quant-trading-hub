@@ -1,9 +1,10 @@
 import { Stack, useRouter, useSegments } from "expo-router";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, View, Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { EventEmitter } from "@/lib/event-emitter";
+import { getApiBaseUrl } from "@/constants/oauth";
 
 export default function AdminLayout() {
   const router = useRouter();
@@ -11,10 +12,78 @@ export default function AdminLayout() {
   const segments = useSegments();
   const [adminLoggedIn, setAdminLoggedIn] = useState<boolean | null>(null);
 
-  // 简化版本：移除登录验证，直接允许访问
+  const isOnLoginScreen = segments.includes("login");
+
   useEffect(() => {
-    setAdminLoggedIn(true);
-  }, []);
+    let isMounted = true;
+
+    const checkAdminToken = async () => {
+      const token =
+        Platform.OS === "web" ? localStorage.getItem("admin_token") : await SecureStore.getItemAsync("admin_token");
+
+      if (!isMounted) return;
+
+      if (!token) {
+        setAdminLoggedIn(false);
+        if (!isOnLoginScreen) {
+          router.replace("/admin/login" as any);
+        }
+        return;
+      }
+
+      try {
+        const baseUrl = getApiBaseUrl();
+        const encoded = encodeURIComponent(JSON.stringify({ json: { token } }));
+        const res = await fetch(`${baseUrl}/api/trpc/adminAuth.verify?input=${encoded}`);
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          if (Platform.OS === "web") {
+            localStorage.removeItem("admin_token");
+            localStorage.removeItem("admin_email");
+          } else {
+            await SecureStore.deleteItemAsync("admin_token");
+            await SecureStore.deleteItemAsync("admin_email");
+          }
+          setAdminLoggedIn(false);
+          if (!isOnLoginScreen) {
+            router.replace("/admin/login" as any);
+          }
+          return;
+        }
+
+        setAdminLoggedIn(true);
+        if (isOnLoginScreen) {
+          router.replace("/admin" as any);
+        }
+      } catch (error) {
+        setAdminLoggedIn(false);
+        if (!isOnLoginScreen) {
+          router.replace("/admin/login" as any);
+        }
+      }
+    };
+
+    checkAdminToken();
+
+    const unsubscribe = EventEmitter.on("admin_login_success", () => {
+      setAdminLoggedIn(true);
+      router.replace("/admin" as any);
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [isOnLoginScreen, router]);
+
+  if (adminLoggedIn === null) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <Stack
