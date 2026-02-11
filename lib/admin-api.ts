@@ -42,6 +42,7 @@ async function adminFetch(path: string, options: FetchOptions = {}) {
   
   if (token) {
     headers["X-Admin-Token"] = token;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const fetchOptions: RequestInit = {

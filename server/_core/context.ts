@@ -14,8 +14,14 @@ export type TrpcContext = {
 export async function createContext(opts: CreateExpressContextOptions): Promise<TrpcContext> {
   let user: User | null = null;
 
-  // 1. 先检查X-Admin-Token header（JWT token认证）
-  const adminToken = opts.req.headers["x-admin-token"] as string | undefined;
+  // 1. 优先检查管理员token（支持 X-Admin-Token 和 Authorization: Bearer）
+  const adminTokenHeader = opts.req.headers["x-admin-token"] as string | undefined;
+  const authHeader = opts.req.headers.authorization || opts.req.headers.Authorization;
+  const bearerToken =
+    typeof authHeader === "string" && authHeader.startsWith("Bearer ")
+      ? authHeader.slice("Bearer ".length).trim()
+      : undefined;
+  const adminToken = adminTokenHeader || bearerToken;
   if (adminToken) {
     const payload = await verifyAdminToken(adminToken);
     if (payload && payload.role === "admin") {
