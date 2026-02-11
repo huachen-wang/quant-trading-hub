@@ -547,3 +547,26 @@
 - [x] 修夏createStrategy返回插入的策略对象
 - [ ] 测试后台添加/编辑动态功能
 - [ ] 测试后台添加/编辑通知功能
+
+
+## 管理后台"Failed to fetch"错误修复（2026-02-11）
+
+### 问题描述
+- [ ] 后台添加策略时显示"Failed to fetch"错误
+- [ ] 后台列表页无法显示前台已有的策略数据
+- [ ] 可能原因：JWT认证失败、API地址错误、CORS问题
+
+### 修复方案
+- [ ] 检查管理员是否成功登录并获取token
+- [ ] 检查admin-api.ts的getAdminToken逻辑
+- [ ] 检查API地址配置（开发环境 vs 生产环境）
+- [ ] 检查server CORS配置是否允许admin请求
+- [ ] 添加详细的错误日志和调试信息
+
+
+## 彻底修复管理后台"Failed to fetch"（2026-02-11 第二轮）
+- [ ] 排查生产环境API是否可访问
+- [ ] 排查admin登录和token认证链路
+- [ ] 排查admin-api.ts的fetch调用
+- [ ] 确保web-build包含最新代码
+- [ ] 验证生产环境admin功能正常

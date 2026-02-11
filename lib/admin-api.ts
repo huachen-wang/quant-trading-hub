@@ -32,10 +32,15 @@ async function adminFetch(path: string, options: FetchOptions = {}) {
   const baseUrl = getApiBaseUrl();
   const url = `${baseUrl}/api/trpc/${path}`;
   
+  console.log("[admin-api] Fetching:", url);
+  
   const adminToken = await getAdminToken();
   if (!adminToken) {
+    console.error("[admin-api] No admin token found");
     throw new Error("未登录，请先登录管理后台");
   }
+
+  console.log("[admin-api] Token found:", adminToken.substring(0, 20) + "...");
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -52,18 +57,32 @@ async function adminFetch(path: string, options: FetchOptions = {}) {
     fetchOptions.body = JSON.stringify(options.body);
   }
 
-  const res = await fetch(url, fetchOptions);
-  const data = await res.json();
-  
-  if (data.error) {
-    // tRPC with superjson wraps errors in {json: {message, code, data}}
-    const errorMsg = data.error?.json?.message || data.error?.message || "API Error";
-    throw new Error(errorMsg);
+  try {
+    const res = await fetch(url, fetchOptions);
+    console.log("[admin-api] Response status:", res.status);
+    
+    if (!res.ok) {
+      console.error("[admin-api] HTTP error:", res.status, res.statusText);
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    
+    const data = await res.json();
+    console.log("[admin-api] Response data:", data);
+    
+    if (data.error) {
+      // tRPC with superjson wraps errors in {json: {message, code, data}}
+      const errorMsg = data.error?.json?.message || data.error?.message || "API Error";
+      console.error("[admin-api] API error:", errorMsg);
+      throw new Error(errorMsg);
+    }
+    
+    // tRPC with superjson wraps data in {json: ..., meta: ...}
+    const resultData = data.result?.data;
+    return resultData?.json !== undefined ? resultData.json : resultData;
+  } catch (error) {
+    console.error("[admin-api] Fetch failed:", error);
+    throw error;
   }
-  
-  // tRPC with superjson wraps data in {json: ..., meta: ...}
-  const resultData = data.result?.data;
-  return resultData?.json !== undefined ? resultData.json : resultData;
 }
 
 /**
