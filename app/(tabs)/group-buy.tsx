@@ -102,7 +102,6 @@ export default function GroupBuyScreen() {
 
   const cardColumns = isDesktop ? 2 : numColumns >= 3 ? 2 : 1;
   const cardGap = isDesktop ? 20 : 10;
-  const maxContentWidth = isDesktop ? 1100 : undefined;
 
   const renderCard = ({ item, index }: { item: GroupBuyItem; index: number }) => {
     const progress = getProgressPercentage(item.currentParticipants, item.targetParticipants);
@@ -373,7 +372,7 @@ export default function GroupBuyScreen() {
   return (
     <ScreenContainer>
       {renderContactModal()}
-      <View style={isDesktop ? [styles.desktopContainer, { maxWidth: maxContentWidth }] : undefined}>
+      <View style={isDesktop ? styles.desktopContainer : undefined}>
         <FlatList
           data={(groupBuys as GroupBuyItem[]) || []}
           keyExtractor={(item) => item.id.toString()}
@@ -396,7 +395,7 @@ export default function GroupBuyScreen() {
 }
 
 const styles = StyleSheet.create({
-  desktopContainer: { width: "100%", alignSelf: "center", paddingHorizontal: 24 },
+  desktopContainer: { width: "100%", maxWidth: 1100, alignSelf: "center", paddingHorizontal: 24 },
   headerSection: { marginBottom: 12 },
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   headerTitle: { fontSize: 26, fontWeight: "800" },
