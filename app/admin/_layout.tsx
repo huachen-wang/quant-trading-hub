@@ -1,9 +1,9 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View, Platform } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { useColors } from "@/hooks/use-colors";
-import * as SecureStore from "expo-secure-store";
 import { EventEmitter } from "@/lib/event-emitter";
+import { clearAdminToken, getAdminToken } from "@/lib/admin-api";
 import { getApiBaseUrl } from "@/constants/oauth";
 
 export default function AdminLayout() {
@@ -17,29 +17,9 @@ export default function AdminLayout() {
   useEffect(() => {
     let isMounted = true;
 
-    const getStoredAdminToken = async () => {
-      if (Platform.OS === "web") {
-        return sessionStorage.getItem("admin_token") || localStorage.getItem("admin_token");
-      }
-      return SecureStore.getItemAsync("admin_token");
-    };
-
-    const clearStoredAdminToken = async () => {
-      if (Platform.OS === "web") {
-        sessionStorage.removeItem("admin_token");
-        sessionStorage.removeItem("admin_email");
-        localStorage.removeItem("admin_token");
-        localStorage.removeItem("admin_email");
-        return;
-      }
-
-      await SecureStore.deleteItemAsync("admin_token");
-      await SecureStore.deleteItemAsync("admin_email");
-    };
-
     const checkAdminToken = async () => {
       if (!isMounted) return;
-      const token = await getStoredAdminToken();
+      const token = await getAdminToken();
 
       if (!isMounted) return;
 
@@ -63,7 +43,7 @@ export default function AdminLayout() {
         const data = await res.json();
 
         if (!res.ok || data.error) {
-          await clearStoredAdminToken();
+          await clearAdminToken();
           setAdminLoggedIn(false);
           if (!isOnLoginScreen) {
             router.replace("/admin/login" as any);
@@ -88,15 +68,13 @@ export default function AdminLayout() {
 
     const handleLoginSuccess = async () => {
       if (!isMounted) return;
-      const token = await getStoredAdminToken();
+      const token = await getAdminToken();
       if (!isMounted || !token) return;
       await checkAdminToken();
     };
 
     const unsubscribe = EventEmitter.on("admin_login_success", () => {
-      void handleLoginSuccess().catch((error) => {
-        console.error("[Admin] Failed to handle login success:", error);
-      });
+      void handleLoginSuccess();
     });
 
     return () => {

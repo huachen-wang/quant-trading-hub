@@ -9,7 +9,7 @@ import { Platform } from "react-native";
 /**
  * 从存储中获取admin token
  */
-async function getAdminToken(): Promise<string | null> {
+export async function getAdminToken(): Promise<string | null> {
   if (Platform.OS === "web") {
     // Web端使用localStorage
     const sessionToken = sessionStorage.getItem("admin_token");
@@ -28,6 +28,19 @@ async function getAdminToken(): Promise<string | null> {
     // 移动端使用SecureStore
     return await SecureStore.getItemAsync("admin_token");
   }
+}
+
+export async function clearAdminToken(): Promise<void> {
+  if (Platform.OS === "web") {
+    sessionStorage.removeItem("admin_token");
+    sessionStorage.removeItem("admin_email");
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_email");
+    return;
+  }
+
+  await SecureStore.deleteItemAsync("admin_token");
+  await SecureStore.deleteItemAsync("admin_email");
 }
 
 type FetchOptions = {
