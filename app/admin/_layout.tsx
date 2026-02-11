@@ -4,13 +4,14 @@ import { ActivityIndicator, View } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { EventEmitter } from "@/lib/event-emitter";
 import { clearAdminToken, getAdminToken } from "@/lib/admin-api";
-import { getApiBaseUrl } from "@/constants/oauth";
+import { trpc } from "@/lib/trpc";
 
 export default function AdminLayout() {
   const router = useRouter();
   const colors = useColors();
   const segments = useSegments();
   const [adminLoggedIn, setAdminLoggedIn] = useState<boolean | null>(null);
+  const verifyTokenMutation = trpc.adminAuth.verifyToken.useMutation();
 
   const isOnLoginScreen = segments.includes("login");
 
@@ -32,33 +33,16 @@ export default function AdminLayout() {
       }
 
       try {
-        const baseUrl = getApiBaseUrl();
-        const res = await fetch(`${baseUrl}/api/trpc/adminAuth.verifyToken`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ json: { token } }),
-        });
-        const data = await res.json();
-
-        if (!res.ok || data.error) {
-          const errorMessage = data?.error?.json?.message || data?.error?.message || res.statusText;
-          console.error("[Admin] Admin token verification failed:", errorMessage);
-          await clearAdminToken();
-          setAdminLoggedIn(false);
-          if (!isOnLoginScreen) {
-            router.replace("/admin/login" as any);
-          }
-          return;
-        }
+        await verifyTokenMutation.mutateAsync({ token });
 
         setAdminLoggedIn(true);
         if (isOnLoginScreen) {
           router.replace("/admin" as any);
         }
       } catch (error) {
-        console.error("[Admin] Failed to verify admin token (network/server issue):", error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("[Admin] Admin token verification failed:", errorMessage);
+        await clearAdminToken();
         setAdminLoggedIn(false);
         if (!isOnLoginScreen) {
           router.replace("/admin/login" as any);
