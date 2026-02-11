@@ -56,7 +56,7 @@ export default function AdminLayout() {
           router.replace("/admin" as any);
         }
       } catch (error) {
-        console.error("[Admin] Failed to verify admin token:", error);
+        console.error("[Admin] Failed to verify admin token (network/server issue):", error);
         setAdminLoggedIn(false);
         if (!isOnLoginScreen) {
           router.replace("/admin/login" as any);

@@ -28,7 +28,7 @@ export async function getAdminToken(): Promise<string | null> {
       localStorage.removeItem("admin_email");
     }
 
-    return legacyToken;
+    return sessionStorage.getItem("admin_token");
   } else {
     // 移动端使用SecureStore
     return await SecureStore.getItemAsync("admin_token");
