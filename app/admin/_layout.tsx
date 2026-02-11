@@ -58,6 +58,7 @@ export default function AdminLayout() {
           router.replace("/admin" as any);
         }
       } catch (error) {
+        console.error("[Admin] Failed to verify admin token:", error);
         setAdminLoggedIn(false);
         if (!isOnLoginScreen) {
           router.replace("/admin/login" as any);
@@ -68,15 +69,14 @@ export default function AdminLayout() {
     checkAdminToken();
 
     const unsubscribe = EventEmitter.on("admin_login_success", () => {
-      setAdminLoggedIn(true);
-      router.replace("/admin" as any);
+      void checkAdminToken();
     });
 
     return () => {
       isMounted = false;
       unsubscribe();
     };
-  }, [isOnLoginScreen, router, segments]);
+  }, [isOnLoginScreen, router]);
 
   if (adminLoggedIn === null) {
     return (
