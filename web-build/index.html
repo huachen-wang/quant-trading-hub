@@ -23,28 +23,7 @@
         flex: 1;
       }
     </style>
-    <script>
-      (function() {
-        if (typeof globalThis.crypto === 'undefined') { globalThis.crypto = {}; }
-        if (typeof window !== 'undefined' && typeof window.crypto === 'undefined') { window.crypto = globalThis.crypto; }
-        if (typeof globalThis.crypto.randomUUID !== 'function') {
-          globalThis.crypto.randomUUID = function() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-              var r = Math.random() * 16 | 0;
-              var v = c === 'x' ? r : (r & 0x3 | 0x8);
-              return v.toString(16);
-            });
-          };
-        }
-        if (typeof globalThis.crypto.getRandomValues !== 'function') {
-          globalThis.crypto.getRandomValues = function(arr) {
-            for (var i = 0; i < arr.length; i++) { arr[i] = Math.floor(Math.random() * 256); }
-            return arr;
-          };
-        }
-      })();
-    </script>
-  <link rel="preload" href="/_expo/static/css/web-6df54fd4b3d3f2783a0b8a065615235a.css" as="style"><link rel="stylesheet" href="/_expo/static/css/web-6df54fd4b3d3f2783a0b8a065615235a.css"><link rel="preload" href="/_expo/static/css/desktop-a8bd7ee735de64dbd3344fc4e97ef181.css" as="style"><link rel="stylesheet" href="/_expo/static/css/desktop-a8bd7ee735de64dbd3344fc4e97ef181.css"><link rel="icon" href="/favicon.ico" /></head>
+  <link rel="preload" href="/_expo/static/css/web-df6de912f6bd6bfb26c2a3b05e3fee0f.css" as="style"><link rel="stylesheet" href="/_expo/static/css/web-df6de912f6bd6bfb26c2a3b05e3fee0f.css"><link rel="preload" href="/_expo/static/css/desktop-a8bd7ee735de64dbd3344fc4e97ef181.css" as="style"><link rel="stylesheet" href="/_expo/static/css/desktop-a8bd7ee735de64dbd3344fc4e97ef181.css"><link rel="icon" href="/favicon.ico" /></head>
 
   <body>
     <!-- Use static rendering with Expo Router to support running without JavaScript. -->
@@ -53,6 +32,6 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="/_expo/static/js/web/entry-4a825c6e9b3240314564ecbcb33d8660.js" defer></script>
+  <script src="/_expo/static/js/web/entry-bbea45c8946ce940bd73a00dcfd2d124.js" defer></script>
 </body>
 </html>
