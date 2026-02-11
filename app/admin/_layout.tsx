@@ -70,6 +70,7 @@ export default function AdminLayout() {
     checkAdminToken();
 
     const handleLoginSuccess = async () => {
+      if (!isMounted) return;
       const token =
         Platform.OS === "web" ? localStorage.getItem("admin_token") : await SecureStore.getItemAsync("admin_token");
       if (!isMounted || !token) return;
@@ -77,7 +78,9 @@ export default function AdminLayout() {
     };
 
     const unsubscribe = EventEmitter.on("admin_login_success", () => {
-      void handleLoginSuccess();
+      void handleLoginSuccess().catch((error) => {
+        console.error("[Admin] Failed to handle login success:", error);
+      });
     });
 
     return () => {
