@@ -9,9 +9,9 @@ import { useColors } from "@/hooks/use-colors";
 export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  // Web端增加底部padding以适配手机浏览器底部工具栏和iOS Home Indicator
-  const bottomPadding = Platform.OS === "web" ? 28 : Math.max(insets.bottom, 12);
-  const tabBarHeight = 62 + bottomPadding;
+  // Web端减小底部padding，避免过多空白
+  const bottomPadding = Platform.OS === "web" ? 8 : Math.max(insets.bottom, 8);
+  const tabBarHeight = 52 + bottomPadding;
 
   return (
     <Tabs
@@ -21,7 +21,7 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          paddingTop: 6,
+          paddingTop: 4,
           paddingBottom: bottomPadding,
           height: tabBarHeight,
           backgroundColor: colors.background,
@@ -31,7 +31,7 @@ export default function TabLayout() {
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
-          marginTop: 2,
+          marginTop: 1,
         },
       }}
     >
@@ -39,28 +39,28 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "策略",
-          tabBarIcon: () => <Text style={styles.tabIcon}>📈</Text>,
+          tabBarIcon: ({ color }) => <Text style={[styles.tabIcon, { color }]}>📈</Text>,
         }}
       />
       <Tabs.Screen
         name="moments"
         options={{
           title: "合作",
-          tabBarIcon: () => <Text style={styles.tabIcon}>🏗️</Text>,
+          tabBarIcon: ({ color }) => <Text style={[styles.tabIcon, { color }]}>🤝</Text>,
         }}
       />
       <Tabs.Screen
         name="group-buy"
         options={{
           title: "合购",
-          tabBarIcon: () => <Text style={styles.tabIcon}>🤝</Text>,
+          tabBarIcon: ({ color }) => <Text style={[styles.tabIcon, { color }]}>🛒</Text>,
         }}
       />
       <Tabs.Screen
         name="subscribe"
         options={{
           title: "订阅",
-          tabBarIcon: () => <Text style={styles.tabIcon}>📬</Text>,
+          tabBarIcon: ({ color }) => <Text style={[styles.tabIcon, { color }]}>📬</Text>,
         }}
       />
       {/* 隐藏不需要的Tab页面 */}
@@ -82,7 +82,7 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   tabIcon: {
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 20,
+    lineHeight: 24,
   },
 });

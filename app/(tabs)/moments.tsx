@@ -1,11 +1,16 @@
 import { useRef, useEffect, useMemo } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Platform, Animated, ActivityIndicator, RefreshControl } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Platform, Animated, ActivityIndicator, RefreshControl, LayoutAnimation, UIManager } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 import { useState, useCallback } from "react";
+
+// 启用Android LayoutAnimation
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 // 入场动画
 function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -48,7 +53,7 @@ type PageContentItem = {
   isVisible: boolean;
 };
 
-// 默认服务板块数据（后台无数据时使用）
+// 默认服务板块数据
 interface ServiceItem {
   icon: string;
   title: string;
@@ -110,7 +115,6 @@ const DEFAULT_SERVICES: ServiceSection[] = [
   },
 ];
 
-// 合作伙伴类型
 const PARTNER_TYPES = [
   { icon: "🏦", label: "量化工作室" },
   { icon: "💻", label: "技术开发方" },
@@ -120,7 +124,6 @@ const PARTNER_TYPES = [
   { icon: "🎓", label: "量化培训机构" },
 ];
 
-// 数据亮点
 const HIGHLIGHTS = [
   { number: "50+", label: "合作机构" },
   { number: "12", label: "覆盖国家" },
@@ -128,7 +131,6 @@ const HIGHLIGHTS = [
   { number: "24/7", label: "技术响应" },
 ];
 
-// 将后台数据按sectionKey分组
 function groupContentsBySection(contents: PageContentItem[]): Record<string, PageContentItem[]> {
   const groups: Record<string, PageContentItem[]> = {};
   for (const item of contents) {
@@ -136,20 +138,122 @@ function groupContentsBySection(contents: PageContentItem[]): Record<string, Pag
     if (!groups[item.sectionKey]) groups[item.sectionKey] = [];
     groups[item.sectionKey].push(item);
   }
-  // 按sortOrder排序
   for (const key of Object.keys(groups)) {
     groups[key].sort((a, b) => a.sortOrder - b.sortOrder);
   }
   return groups;
 }
 
-// 将后台数据转换为ServiceItem
 function contentToServiceItem(item: PageContentItem): ServiceItem {
-  return {
-    icon: item.icon || "📄",
-    title: item.title,
-    desc: item.content,
+  return { icon: item.icon || "📄", title: item.title, desc: item.content };
+}
+
+// 可折叠的服务板块组件
+function CollapsibleSection({
+  section,
+  colors,
+  isDesktop,
+  defaultExpanded = false,
+}: {
+  section: ServiceSection;
+  colors: any;
+  isDesktop: boolean;
+  defaultExpanded?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const rotateAnim = useRef(new Animated.Value(defaultExpanded ? 1 : 0)).current;
+  const contentHeight = useRef(new Animated.Value(defaultExpanded ? 1 : 0)).current;
+
+  const toggleExpand = () => {
+    const toValue = expanded ? 0 : 1;
+    LayoutAnimation.configureNext({
+      duration: 350,
+      update: { type: LayoutAnimation.Types.easeInEaseOut },
+      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+    });
+    Animated.parallel([
+      Animated.spring(rotateAnim, {
+        toValue,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 60,
+      }),
+      Animated.timing(contentHeight, {
+        toValue,
+        duration: 350,
+        useNativeDriver: false,
+      }),
+    ]).start();
+    setExpanded(!expanded);
   };
+
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  return (
+    <View style={styles.sectionContainer}>
+      {/* 板块标题 - 可点击折叠 */}
+      <TouchableOpacity activeOpacity={0.85} onPress={toggleExpand}>
+        <LinearGradient
+          colors={section.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.serviceTitleBar}
+        >
+          <Text style={styles.serviceTitleIcon}>{section.icon}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.serviceTitleText}>{section.title}</Text>
+            <Text style={styles.serviceSubtitleText}>{section.subtitle}</Text>
+          </View>
+          <Animated.Text style={[styles.collapseArrow, { transform: [{ rotate: rotation }] }]}>
+            ▼
+          </Animated.Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* 服务项目 - 折叠内容 */}
+      {expanded && (
+        <View style={[styles.serviceGrid, isDesktop && styles.serviceGridDesktop]}>
+          {section.items.map((item, iIdx) => (
+            <View
+              key={iIdx}
+              style={[
+                styles.serviceCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  width: isDesktop ? "48%" as any : "100%" as any,
+                },
+                Platform.OS === "web" ? {
+                  // @ts-ignore
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                  transition: "box-shadow 0.3s ease, transform 0.3s ease",
+                } : {},
+              ]}
+              // @ts-ignore
+              className={Platform.OS === "web" ? "strategy-card-hover" : undefined}
+            >
+              <Text style={styles.serviceItemIcon}>{item.icon}</Text>
+              <Text style={[styles.serviceItemTitle, { color: colors.foreground }]}>{item.title}</Text>
+              <Text style={[styles.serviceItemDesc, { color: colors.muted }]}>{item.desc}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* 收起状态提示 */}
+      {!expanded && (
+        <View style={[styles.collapsedHint, { borderColor: colors.border }]}>
+          <Text style={[styles.collapsedHintText, { color: colors.muted }]}>
+            {section.items.length} 项服务 · 点击展开查看
+          </Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 export default function CooperationScreen() {
@@ -157,7 +261,6 @@ export default function CooperationScreen() {
   const { isDesktop } = useResponsive();
   const [refreshing, setRefreshing] = useState(false);
 
-  // 从后台获取合作页面数据
   const pageContentsQuery = trpc.pageContents.get.useQuery({ pageKey: "cooperation" });
   const contents = (pageContentsQuery.data || []) as PageContentItem[];
   const groupedContents = useMemo(() => groupContentsBySection(contents), [contents]);
@@ -168,21 +271,16 @@ export default function CooperationScreen() {
     setRefreshing(false);
   }, []);
 
-  // 构建服务板块：后台有对应sectionKey的数据就用后台数据，否则用默认数据
   const services = useMemo(() => {
     return DEFAULT_SERVICES.map((section) => {
       const backendItems = groupedContents[section.sectionKey];
       if (backendItems && backendItems.length > 0) {
-        return {
-          ...section,
-          items: backendItems.map(contentToServiceItem),
-        };
+        return { ...section, items: backendItems.map(contentToServiceItem) };
       }
       return section;
     });
   }, [groupedContents]);
 
-  // 检查是否有不属于默认板块的自定义板块
   const customSections = useMemo(() => {
     const defaultKeys = new Set(DEFAULT_SERVICES.map(s => s.sectionKey));
     const customKeys = Object.keys(groupedContents).filter(k => !defaultKeys.has(k));
@@ -213,13 +311,11 @@ export default function CooperationScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.heroSection}
           >
-            <Text style={styles.heroEmoji}>🏗️</Text>
             <Text style={styles.heroTitle}>量化生态合作</Text>
             <Text style={styles.heroSubtitle}>
               为量化工作室、技术方与金融机构提供{"\n"}合规 · 技术 · 业务 全方位支持
             </Text>
 
-            {/* 数据亮点 */}
             <View style={[styles.highlightRow, isDesktop && styles.highlightRowDesktop]}>
               {HIGHLIGHTS.map((h, i) => (
                 <View key={i} style={styles.highlightItem}>
@@ -246,56 +342,19 @@ export default function CooperationScreen() {
           </View>
         </FadeInView>
 
-        {/* 三大服务板块 */}
+        {/* 三大服务板块 - 可折叠 */}
         {services.map((section, sIdx) => (
           <FadeInView key={section.id} delay={200 + sIdx * 150}>
-            <View style={styles.sectionContainer}>
-              {/* 板块标题 */}
-              <LinearGradient
-                colors={section.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.serviceTitleBar}
-              >
-                <Text style={styles.serviceTitleIcon}>{section.icon}</Text>
-                <View>
-                  <Text style={styles.serviceTitleText}>{section.title}</Text>
-                  <Text style={styles.serviceSubtitleText}>{section.subtitle}</Text>
-                </View>
-              </LinearGradient>
-
-              {/* 服务项目 */}
-              <View style={[styles.serviceGrid, isDesktop && styles.serviceGridDesktop]}>
-                {section.items.map((item, iIdx) => (
-                  <View
-                    key={iIdx}
-                    style={[
-                      styles.serviceCard,
-                      {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                        width: isDesktop ? "48%" as any : "100%" as any,
-                      },
-                      Platform.OS === "web" ? {
-                        // @ts-ignore
-                        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                        transition: "box-shadow 0.3s ease, transform 0.3s ease",
-                      } : {},
-                    ]}
-                    // @ts-ignore
-                    className={Platform.OS === "web" ? "strategy-card-hover" : undefined}
-                  >
-                    <Text style={styles.serviceItemIcon}>{item.icon}</Text>
-                    <Text style={[styles.serviceItemTitle, { color: colors.foreground }]}>{item.title}</Text>
-                    <Text style={[styles.serviceItemDesc, { color: colors.muted }]}>{item.desc}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
+            <CollapsibleSection
+              section={section}
+              colors={colors}
+              isDesktop={isDesktop}
+              defaultExpanded={sIdx === 0}
+            />
           </FadeInView>
         ))}
 
-        {/* 自定义板块（后台新增的非默认sectionKey） */}
+        {/* 自定义板块 */}
         {customSections.map((cs, csIdx) => (
           <FadeInView key={cs.sectionKey} delay={700 + csIdx * 100}>
             <View style={styles.sectionContainer}>
@@ -371,13 +430,9 @@ const styles = StyleSheet.create({
   // Hero
   heroSection: {
     paddingHorizontal: 20,
-    paddingTop: 40,
-    paddingBottom: 30,
+    paddingTop: 36,
+    paddingBottom: 28,
     alignItems: "center",
-  },
-  heroEmoji: {
-    fontSize: 48,
-    marginBottom: 12,
   },
   heroTitle: {
     fontSize: 28,
@@ -451,7 +506,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Service title bar
+  // Service title bar (collapsible)
   serviceTitleBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -459,7 +514,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
     gap: 12,
-    marginBottom: 12,
   },
   serviceTitleIcon: {
     fontSize: 28,
@@ -474,10 +528,28 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.7)",
     marginTop: 2,
   },
+  collapseArrow: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
+  },
+
+  // Collapsed hint
+  collapsedHint: {
+    marginTop: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 10,
+  },
+  collapsedHintText: {
+    fontSize: 12,
+  },
 
   // Service grid
   serviceGrid: {
     gap: 10,
+    marginTop: 12,
   },
   serviceGridDesktop: {
     flexDirection: "row",

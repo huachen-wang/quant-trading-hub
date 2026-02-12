@@ -11,10 +11,18 @@ import {
   Animated,
   Platform,
   KeyboardAvoidingView,
+  Linking,
+  LayoutAnimation,
+  UIManager,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
+
+// 启用Android LayoutAnimation
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type PageContentItem = {
   id: number;
@@ -27,17 +35,105 @@ type PageContentItem = {
   isVisible: boolean;
 };
 
+type NotificationItem = {
+  id: number;
+  icon?: string;
+  title: string;
+  type: string;
+  content: string;
+  link?: string | null;
+};
+
+// 公告卡片组件 - 支持展开/收起
+function NotifCard({ item, colors }: { item: NotificationItem; colors: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const animHeight = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  const typeColors: Record<string, string> = {
+    info: colors.primary,
+    success: colors.success,
+    warning: colors.warning,
+    promo: "#F59E0B",
+  };
+
+  const accentColor = typeColors[item.type] || colors.primary;
+
+  const toggleExpand = () => {
+    const toValue = expanded ? 0 : 1;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    Animated.parallel([
+      Animated.spring(animHeight, {
+        toValue,
+        useNativeDriver: false,
+        friction: 8,
+        tension: 60,
+      }),
+      Animated.timing(rotateAnim, {
+        toValue,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    setExpanded(!expanded);
+  };
+
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.8}
+      onPress={toggleExpand}
+      style={[styles.notifCard, { backgroundColor: colors.surface, borderLeftColor: accentColor }]}
+    >
+      <View style={styles.notifCardHeader}>
+        <Text style={{ fontSize: 18 }}>{item.icon || "📌"}</Text>
+        <Text style={[styles.notifCardTitle, { color: colors.foreground }]} numberOfLines={expanded ? undefined : 1}>
+          {item.title}
+        </Text>
+        <Animated.Text style={[styles.expandArrow, { color: colors.muted, transform: [{ rotate: rotation }] }]}>
+          ▼
+        </Animated.Text>
+      </View>
+      {expanded && (
+        <View>
+          <Text style={[styles.notifCardContent, { color: colors.muted }]}>{item.content}</Text>
+          {item.link && (
+            <TouchableOpacity
+              onPress={() => Linking.openURL(item.link!)}
+              activeOpacity={0.7}
+              style={[styles.notifLinkBtn, { backgroundColor: accentColor + "15" }]}
+            >
+              <Text style={[styles.notifLinkText, { color: accentColor }]}>查看详情 →</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+      {!expanded && (
+        <Text style={[styles.notifCardPreview, { color: colors.muted }]} numberOfLines={1}>
+          {item.content}
+        </Text>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 export default function SubscribeScreen() {
   const colors = useColors();
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subscribeMsg, setSubscribeMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const currentNotifIndexRef = useRef(0);
-  const [displayNotifIndex, setDisplayNotifIndex] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
   const emailInputRef = useRef<TextInput>(null);
   const isEmailFocused = useRef(false);
+
+  // 轮播动画状态
+  const [currentNotifIdx, setCurrentNotifIdx] = useState(0);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const isAnimating = useRef(false);
 
   // 获取数据
   const pageContentsQuery = trpc.pageContents.get.useQuery({ pageKey: "subscribe" });
@@ -46,24 +142,34 @@ export default function SubscribeScreen() {
   const subscribeMutation = trpc.subscriptions.subscribe.useMutation();
 
   const contents = (pageContentsQuery.data || []) as PageContentItem[];
-  const notifications = notificationsQuery.data || [];
+  const notifications = (notificationsQuery.data || []) as NotificationItem[];
 
-  // 通知栏轮播动画 - 使用ref避免重渲染导致TextInput失焦
+  // 顶部通知栏滑动轮播动画
   useEffect(() => {
     if (notifications.length <= 1) return;
     const interval = setInterval(() => {
-      // 如果邮箱输入框正在聚焦，跳过轮播更新避免键盘跳出
-      if (isEmailFocused.current) return;
-      Animated.sequence([
-        Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      ]).start();
-      setTimeout(() => {
-        currentNotifIndexRef.current = (currentNotifIndexRef.current + 1) % notifications.length;
-        if (!isEmailFocused.current) {
-          setDisplayNotifIndex(currentNotifIndexRef.current);
-        }
-      }, 300);
+      if (isEmailFocused.current || isAnimating.current) return;
+      isAnimating.current = true;
+
+      // 滑出动画
+      Animated.timing(slideAnim, {
+        toValue: -1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        // 切换到下一条
+        setCurrentNotifIdx((prev) => (prev + 1) % notifications.length);
+        // 从下方准备进入
+        slideAnim.setValue(1);
+        // 滑入动画
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }).start(() => {
+          isAnimating.current = false;
+        });
+      });
     }, 4000);
     return () => clearInterval(interval);
   }, [notifications.length]);
@@ -107,13 +213,6 @@ export default function SubscribeScreen() {
     }
   };
 
-  const typeColors: Record<string, string> = {
-    info: colors.primary,
-    success: colors.success,
-    warning: colors.warning,
-    promo: "#F59E0B",
-  };
-
   if (pageContentsQuery.isLoading && !pageContentsQuery.data) {
     return (
       <ScreenContainer>
@@ -123,6 +222,16 @@ export default function SubscribeScreen() {
       </ScreenContainer>
     );
   }
+
+  // 轮播偏移
+  const slideTranslateY = slideAnim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [-24, 0, 24],
+  });
+  const slideOpacity = slideAnim.interpolate({
+    inputRange: [-1, -0.5, 0, 0.5, 1],
+    outputRange: [0, 0.5, 1, 0.5, 0],
+  });
 
   return (
     <ScreenContainer>
@@ -140,23 +249,38 @@ export default function SubscribeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
           }
         >
-          {/* 通知栏 - 顶部滚动公告 */}
+          {/* 通知栏 - 顶部滑动轮播公告 */}
           {notifications.length > 0 && (
-            <View style={[styles.notifBar, { backgroundColor: colors.primary + "10" }]}>
+            <View style={[styles.notifBar, { backgroundColor: colors.primary + "10", overflow: "hidden" }]}>
               <Text style={styles.notifBarIcon}>📢</Text>
-              <Animated.View style={[styles.notifBarTextBox, { opacity: fadeAnim }]}>
-                <Text style={[styles.notifBarText, { color: colors.foreground }]} numberOfLines={1}>
-                  {notifications[displayNotifIndex]?.icon} {notifications[displayNotifIndex]?.title}
-                  {" — "}
-                  {notifications[displayNotifIndex]?.content}
-                </Text>
-              </Animated.View>
+              <View style={styles.notifBarTextBox}>
+                <Animated.View style={{ transform: [{ translateY: slideTranslateY }], opacity: slideOpacity }}>
+                  <Text style={[styles.notifBarText, { color: colors.foreground }]} numberOfLines={1}>
+                    {notifications[currentNotifIdx]?.title}
+                    {" — "}
+                    {notifications[currentNotifIdx]?.content}
+                  </Text>
+                </Animated.View>
+              </View>
+              {notifications.length > 1 && (
+                <View style={styles.notifDots}>
+                  {notifications.map((_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.notifDot,
+                        { backgroundColor: i === currentNotifIdx ? colors.primary : colors.muted + "40" },
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
-          {/* 页面标题 */}
+          {/* 页面标题 - 去掉多余emoji */}
           <View style={styles.headerSection}>
-            <Text style={[styles.pageTitle, { color: colors.foreground }]}>📬 订阅中心</Text>
+            <Text style={[styles.pageTitle, { color: colors.foreground }]}>订阅中心</Text>
             <Text style={[styles.pageSubtitle, { color: colors.muted }]}>
               订阅获取最新策略更新、行业资讯和技术支持
             </Text>
@@ -220,21 +344,12 @@ export default function SubscribeScreen() {
             )}
           </View>
 
-          {/* 通知公告列表 */}
+          {/* 通知公告列表 - 可展开/收起 */}
           {notifications.length > 0 && (
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>📋 最新公告</Text>
-              {notifications.map((n: { id: number; icon?: string; title: string; type: string; content: string }) => (
-                <View
-                  key={n.id}
-                  style={[styles.notifCard, { backgroundColor: colors.surface, borderLeftColor: typeColors[n.type] || colors.primary }]}
-                >
-                  <View style={styles.notifCardHeader}>
-                    <Text style={{ fontSize: 18 }}>{n.icon || "📌"}</Text>
-                    <Text style={[styles.notifCardTitle, { color: colors.foreground }]}>{n.title}</Text>
-                  </View>
-                  <Text style={[styles.notifCardContent, { color: colors.muted }]}>{n.content}</Text>
-                </View>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>最新公告</Text>
+              {notifications.map((n) => (
+                <NotifCard key={n.id} item={n} colors={colors} />
               ))}
             </View>
           )}
@@ -242,7 +357,7 @@ export default function SubscribeScreen() {
           {/* 自定义内容区域 */}
           {contents.length > 0 && (
             <View>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>📄 详细信息</Text>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>详细信息</Text>
               {contents.map((item) => (
                 <View key={item.id} style={[styles.contentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <View style={styles.contentCardHeader}>
@@ -265,19 +380,36 @@ export default function SubscribeScreen() {
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   listContainer: { paddingBottom: 16 },
+
+  // 通知栏
   notifBar: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     marginBottom: 4,
+    height: 42,
   },
   notifBarIcon: { fontSize: 16, marginRight: 8 },
-  notifBarTextBox: { flex: 1 },
-  notifBarText: { fontSize: 14 },
+  notifBarTextBox: { flex: 1, overflow: "hidden", height: 20 },
+  notifBarText: { fontSize: 13 },
+  notifDots: {
+    flexDirection: "row",
+    gap: 4,
+    marginLeft: 8,
+  },
+  notifDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+
+  // Header
   headerSection: { paddingHorizontal: 16, marginTop: 12, marginBottom: 20 },
-  pageTitle: { fontSize: 28, fontWeight: "800", marginBottom: 8 },
+  pageTitle: { fontSize: 26, fontWeight: "800", marginBottom: 6 },
   pageSubtitle: { fontSize: 14, lineHeight: 20 },
+
+  // Subscribe card
   subscribeCard: {
     borderRadius: 16,
     borderWidth: 1,
@@ -302,17 +434,38 @@ const styles = StyleSheet.create({
   subscribeBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   msgBox: { marginTop: 10, padding: 10, borderRadius: 8 },
   subscriberCount: { marginTop: 10, fontSize: 12, textAlign: "center" },
+
+  // Section
   section: { paddingHorizontal: 16, marginBottom: 24 },
   sectionTitle: { fontSize: 20, fontWeight: "800", marginBottom: 12, paddingHorizontal: 16 },
+
+  // Notification card
   notifCard: {
     borderRadius: 14,
     padding: 14,
     marginBottom: 10,
     borderLeftWidth: 4,
   },
-  notifCardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
-  notifCardTitle: { fontSize: 16, fontWeight: "700", marginLeft: 8 },
-  notifCardContent: { fontSize: 14, lineHeight: 20 },
+  notifCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  notifCardTitle: { fontSize: 15, fontWeight: "700", flex: 1 },
+  expandArrow: { fontSize: 10 },
+  notifCardPreview: { fontSize: 13, marginTop: 4, marginLeft: 26 },
+  notifCardContent: { fontSize: 14, lineHeight: 22, marginTop: 10, marginLeft: 26 },
+  notifLinkBtn: {
+    marginTop: 10,
+    marginLeft: 26,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  notifLinkText: { fontSize: 13, fontWeight: "700" },
+
+  // Content card
   contentCard: {
     borderRadius: 14,
     borderWidth: 1,

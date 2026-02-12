@@ -58,9 +58,45 @@
   }
 }
 
+/* 修复底部tab双emoji问题 - 隐藏 React Navigation 的宽度测量副本 */
+[role="tab"] > div > div:first-child {
+  display: none !important;
+}
+
 /* 平滑滚动 */
 @supports (-webkit-overflow-scrolling: touch) {
   * {
     -webkit-overflow-scrolling: touch;
   }
+}
+
+/* 订阅页面通知栏滑动动画 */
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutUp {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+.notif-slide-enter {
+  animation: slideInUp 0.4s ease forwards;
+}
+
+.notif-slide-exit {
+  animation: slideOutUp 0.4s ease forwards;
 }
