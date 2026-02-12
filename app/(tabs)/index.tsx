@@ -50,7 +50,7 @@ export default function HomeScreen() {
   };
 
   const renderHeader = () => (
-    <Animated.View style={{ opacity: headerFade, transform: [{ translateY: headerSlide }] }} className="mb-2">
+    <Animated.View style={{ opacity: headerFade, transform: [{ translateY: headerSlide }] }} className="mb-3">
       <View className="flex-row items-center justify-between mb-3">
         <Text className="text-3xl font-bold text-foreground">📊 策略广场</Text>
         <View className="flex-row">
@@ -166,6 +166,10 @@ export default function HomeScreen() {
             isFree={item.isFree}
             downloadCount={item.downloadCount}
             virtualDownloads={item.virtualDownloads || 0}
+            coverImage={item.coverImage}
+            pairs={item.pairs}
+            viewCount={item.viewCount}
+            createdAt={item.createdAt}
             onPress={() => handleStrategyPress(item.id)}
             onSubscribePress={() => handleSubscribePress(item.title)}
           />
@@ -173,7 +177,7 @@ export default function HomeScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         columnWrapperStyle={{ justifyContent: "flex-start" }}
-        contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 12, paddingBottom: 20 }}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 20 }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
       />
     </ScreenContainer>

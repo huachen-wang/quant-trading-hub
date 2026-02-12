@@ -5,11 +5,13 @@ import { ScreenContainer } from "@/components/screen-container";
 import { StrategyCard } from "@/components/strategy-card";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
+import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 
 export default function SearchScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { numColumns } = useResponsive();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
@@ -81,7 +83,8 @@ export default function SearchScreen() {
           <FlatList
             data={strategies}
             keyExtractor={(item) => item.id.toString()}
-            numColumns={2}
+            numColumns={numColumns}
+            key={numColumns}
             renderItem={({ item }) => (
               <StrategyCard
                 id={item.id}
@@ -93,9 +96,14 @@ export default function SearchScreen() {
                 isFree={item.isFree}
                 downloadCount={item.downloadCount}
                 virtualDownloads={item.virtualDownloads || 0}
+                coverImage={item.coverImage}
+                pairs={item.pairs}
+                viewCount={item.viewCount}
+                createdAt={item.createdAt}
                 onPress={() => handleStrategyPress(item.id)}
               />
             )}
+            columnWrapperStyle={numColumns > 1 ? { justifyContent: "flex-start" } : undefined}
             contentContainerStyle={{ paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
           />

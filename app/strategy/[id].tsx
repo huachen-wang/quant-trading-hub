@@ -12,6 +12,7 @@ import {
   Platform,
   useWindowDimensions,
 } from "react-native";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { ScreenContainer } from "@/components/screen-container";
@@ -134,18 +135,32 @@ export default function StrategyDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* 封面 - 紧凑设计 */}
-          <LinearGradient
-            colors={gradientColors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.coverGradient, isDesktop && styles.coverDesktop]}
-          >
-            <Text style={styles.coverEmoji}>📈</Text>
-            <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
-              <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform}</Text>
+          {/* 封面 - 支持自定义图片 */}
+          {strategy.coverImage ? (
+            <View style={[styles.coverGradient, isDesktop && styles.coverDesktop, { overflow: 'hidden' }]}>
+              <Image
+                source={{ uri: strategy.coverImage }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                transition={300}
+              />
+              <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
+                <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform}</Text>
+              </View>
             </View>
-          </LinearGradient>
+          ) : (
+            <LinearGradient
+              colors={gradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.coverGradient, isDesktop && styles.coverDesktop]}
+            >
+              <Text style={styles.coverEmoji}>📈</Text>
+              <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
+                <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform}</Text>
+              </View>
+            </LinearGradient>
+          )}
 
           {/* 标题和描述 */}
           <View style={styles.titleSection}>
@@ -359,14 +374,14 @@ const styles = StyleSheet.create({
   },
   coverGradient: {
     marginHorizontal: 16,
-    height: 140,
+    height: 180,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
   coverDesktop: {
-    height: 160,
+    height: 220,
   },
   coverEmoji: {
     fontSize: 48,

@@ -5,8 +5,17 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 触摸反馈 */
+/* 策略卡片hover效果 */
 @media (hover: hover) {
+  .strategy-card-hover {
+    transition: box-shadow 0.3s ease, transform 0.3s ease !important;
+  }
+  
+  .strategy-card-hover:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08) !important;
+    transform: translateY(-4px) !important;
+  }
+
   button:hover,
   [role="button"]:hover {
     opacity: 0.9;
