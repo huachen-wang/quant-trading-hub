@@ -1,15 +1,66 @@
-import { useRef, useEffect, useMemo } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Platform, Animated, ActivityIndicator, RefreshControl, LayoutAnimation, UIManager } from "react-native";
+import { useRef, useEffect, useMemo, useState, useCallback } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Platform, Animated, RefreshControl, LayoutAnimation, UIManager } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
-import { useState, useCallback } from "react";
 
 // 启用Android LayoutAnimation
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// 数字滚动动画组件
+function AnimatedNumber({ value, duration = 1500, delay = 0 }: { value: string; duration?: number; delay?: number }) {
+  // 解析数字部分和后缀
+  const match = value.match(/^([\d.]+)(.*)$/);
+  const numericPart = match ? parseFloat(match[1]) : 0;
+  const suffix = match ? match[2] : value;
+  const isFloat = value.includes(".");
+  const decimalPlaces = isFloat ? (match?.[1]?.split(".")[1]?.length || 1) : 0;
+
+  const animValue = useRef(new Animated.Value(0)).current;
+  const [displayNum, setDisplayNum] = useState("0");
+
+  useEffect(() => {
+    const listener = animValue.addListener(({ value: v }) => {
+      if (isFloat) {
+        setDisplayNum(v.toFixed(decimalPlaces));
+      } else {
+        setDisplayNum(Math.round(v).toString());
+      }
+    });
+
+    const timer = setTimeout(() => {
+      Animated.timing(animValue, {
+        toValue: numericPart,
+        duration,
+        useNativeDriver: false,
+      }).start();
+    }, delay);
+
+    return () => {
+      animValue.removeListener(listener);
+      clearTimeout(timer);
+    };
+  }, [numericPart]);
+
+  // 对于非数字值（如 "24/7"），直接显示
+  if (!match) {
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+      }, delay);
+      return () => clearTimeout(timer);
+    }, []);
+    return <Animated.Text style={[styles.highlightNumber, { opacity: fadeAnim }]}>{value}</Animated.Text>;
+  }
+
+  return (
+    <Text style={styles.highlightNumber}>{displayNum}{suffix}</Text>
+  );
 }
 
 // 入场动画
@@ -19,18 +70,8 @@ function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 500,
-        delay,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 500, delay, useNativeDriver: true }),
     ]).start();
   }, []);
 
@@ -53,7 +94,6 @@ type PageContentItem = {
   isVisible: boolean;
 };
 
-// 默认服务板块数据
 interface ServiceItem {
   icon: string;
   title: string;
@@ -162,7 +202,6 @@ function CollapsibleSection({
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const rotateAnim = useRef(new Animated.Value(defaultExpanded ? 1 : 0)).current;
-  const contentHeight = useRef(new Animated.Value(defaultExpanded ? 1 : 0)).current;
 
   const toggleExpand = () => {
     const toValue = expanded ? 0 : 1;
@@ -172,19 +211,12 @@ function CollapsibleSection({
       create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
       delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
     });
-    Animated.parallel([
-      Animated.spring(rotateAnim, {
-        toValue,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 60,
-      }),
-      Animated.timing(contentHeight, {
-        toValue,
-        duration: 350,
-        useNativeDriver: false,
-      }),
-    ]).start();
+    Animated.spring(rotateAnim, {
+      toValue,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 60,
+    }).start();
     setExpanded(!expanded);
   };
 
@@ -195,7 +227,6 @@ function CollapsibleSection({
 
   return (
     <View style={styles.sectionContainer}>
-      {/* 板块标题 - 可点击折叠 */}
       <TouchableOpacity activeOpacity={0.85} onPress={toggleExpand}>
         <LinearGradient
           colors={section.gradient}
@@ -214,7 +245,6 @@ function CollapsibleSection({
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* 服务项目 - 折叠内容 */}
       {expanded && (
         <View style={[styles.serviceGrid, isDesktop && styles.serviceGridDesktop]}>
           {section.items.map((item, iIdx) => (
@@ -244,7 +274,6 @@ function CollapsibleSection({
         </View>
       )}
 
-      {/* 收起状态提示 */}
       {!expanded && (
         <View style={[styles.collapsedHint, { borderColor: colors.border }]}>
           <Text style={[styles.collapsedHintText, { color: colors.muted }]}>
@@ -255,6 +284,14 @@ function CollapsibleSection({
     </View>
   );
 }
+
+// 合作流程步骤
+const PROCESS_STEPS = [
+  { step: "01", icon: "💬", label: "需求沟通" },
+  { step: "02", icon: "📝", label: "方案定制" },
+  { step: "03", icon: "🤝", label: "签约合作" },
+  { step: "04", icon: "🚀", label: "落地交付" },
+];
 
 export default function CooperationScreen() {
   const colors = useColors();
@@ -316,10 +353,11 @@ export default function CooperationScreen() {
               为量化工作室、技术方与金融机构提供{"\n"}合规 · 技术 · 业务 全方位支持
             </Text>
 
+            {/* 数字滚动动画 */}
             <View style={[styles.highlightRow, isDesktop && styles.highlightRowDesktop]}>
               {HIGHLIGHTS.map((h, i) => (
                 <View key={i} style={styles.highlightItem}>
-                  <Text style={styles.highlightNumber}>{h.number}</Text>
+                  <AnimatedNumber value={h.number} delay={300 + i * 200} />
                   <Text style={styles.highlightLabel}>{h.label}</Text>
                 </View>
               ))}
@@ -370,27 +408,29 @@ export default function CooperationScreen() {
           </FadeInView>
         ))}
 
-        {/* 合作流程 */}
+        {/* 合作流程 - 重新设计箭头和居中 */}
         <FadeInView delay={700}>
           <View style={styles.sectionContainer}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>合作流程</Text>
-            <View style={styles.processRow}>
-              {[
-                { step: "01", icon: "💬", label: "需求沟通" },
-                { step: "02", icon: "📝", label: "方案定制" },
-                { step: "03", icon: "🤝", label: "签约合作" },
-                { step: "04", icon: "🚀", label: "落地交付" },
-              ].map((p, i) => (
-                <View key={i} style={styles.processStep}>
-                  <LinearGradient
-                    colors={["#1e40af", "#3b82f6"]}
-                    style={styles.processCircle}
-                  >
-                    <Text style={styles.processIcon}>{p.icon}</Text>
-                  </LinearGradient>
-                  <Text style={[styles.processStepNum, { color: colors.primary }]}>{p.step}</Text>
-                  <Text style={[styles.processLabel, { color: colors.foreground }]}>{p.label}</Text>
-                  {i < 3 && <Text style={[styles.processArrow, { color: colors.muted }]}>→</Text>}
+            <View style={[styles.processContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {PROCESS_STEPS.map((p, i) => (
+                <View key={i} style={styles.processStepWrapper}>
+                  <View style={styles.processStepContent}>
+                    <LinearGradient
+                      colors={["#1e40af", "#3b82f6"]}
+                      style={styles.processCircle}
+                    >
+                      <Text style={styles.processIcon}>{p.icon}</Text>
+                    </LinearGradient>
+                    <Text style={[styles.processStepNum, { color: colors.primary }]}>{p.step}</Text>
+                    <Text style={[styles.processLabel, { color: colors.foreground }]}>{p.label}</Text>
+                  </View>
+                  {i < PROCESS_STEPS.length - 1 && (
+                    <View style={styles.processArrowContainer}>
+                      <View style={[styles.processArrowLine, { backgroundColor: colors.primary + "30" }]} />
+                      <View style={[styles.processArrowHead, { borderLeftColor: colors.primary }]} />
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -575,43 +615,66 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // Process
-  processRow: {
+  // Process - 重新设计
+  processContainer: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 4,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 12,
+    borderWidth: 0.5,
   },
-  processStep: {
+  processStepWrapper: {
+    flexDirection: "row",
     alignItems: "center",
-    position: "relative",
+    flex: 1,
+  },
+  processStepContent: {
+    alignItems: "center",
+    flex: 1,
   },
   processCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   processIcon: {
-    fontSize: 22,
+    fontSize: 20,
   },
   processStepNum: {
     fontSize: 11,
     fontWeight: "800",
+    marginBottom: 2,
   },
   processLabel: {
     fontSize: 12,
     fontWeight: "600",
-    marginTop: 2,
+    textAlign: "center",
   },
-  processArrow: {
-    position: "absolute",
-    right: -16,
-    top: 18,
-    fontSize: 16,
+  processArrowContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: 24,
+    justifyContent: "center",
+    marginTop: -20,
+  },
+  processArrowLine: {
+    height: 2,
+    flex: 1,
+    borderRadius: 1,
+  },
+  processArrowHead: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 5,
+    borderBottomWidth: 5,
+    borderLeftWidth: 7,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
   },
 
   // CTA

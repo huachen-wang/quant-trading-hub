@@ -11,6 +11,7 @@ import {
   StyleSheet,
   Platform,
   useWindowDimensions,
+  Modal,
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -21,7 +22,6 @@ import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 import { EquityCurveChart } from "@/components/equity-curve-chart";
-import { CommentSection } from "@/components/comment-section";
 import { SubscribeModal } from "@/components/subscribe-modal";
 
 export default function StrategyDetailScreen() {
@@ -32,6 +32,13 @@ export default function StrategyDetailScreen() {
   const { width } = useWindowDimensions();
   const [commentText, setCommentText] = useState("");
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [showAllComments, setShowAllComments] = useState(false);
+  // 用户评价弹窗
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewNickname, setReviewNickname] = useState("");
+  const [reviewContent, setReviewContent] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [showReviewSuccess, setShowReviewSuccess] = useState(false);
 
   const strategyId = parseInt(id || "0");
   const isDesktop = Platform.OS === "web" && width >= 768;
@@ -40,6 +47,10 @@ export default function StrategyDetailScreen() {
   const { data: strategy, isLoading } = trpc.strategies.detail.useQuery({ id: strategyId });
   const { data: comments, refetch: refetchComments } = trpc.comments.list.useQuery({ strategyId });
   const { data: backtestData } = trpc.strategies.backtestData.useQuery({ strategyId });
+  const { data: userReviews, refetch: refetchReviews } = trpc.anonymousComments.list.useQuery({
+    strategyId,
+    limit: 50,
+  });
 
   const createCommentMutation = trpc.comments.create.useMutation({
     onSuccess: () => {
@@ -50,6 +61,19 @@ export default function StrategyDetailScreen() {
 
   const deleteCommentMutation = trpc.comments.delete.useMutation({
     onSuccess: () => refetchComments(),
+  });
+
+  const createReviewMutation = trpc.anonymousComments.create.useMutation({
+    onSuccess: () => {
+      setReviewNickname("");
+      setReviewContent("");
+      setShowReviewSuccess(true);
+      setTimeout(() => setShowReviewSuccess(false), 5000);
+      refetchReviews();
+    },
+    onError: (error: any) => {
+      Alert.alert("提交失败", error.message);
+    },
   });
 
   const handleAddComment = () => {
@@ -64,6 +88,23 @@ export default function StrategyDetailScreen() {
     ]);
   };
 
+  const handleSubmitReview = async () => {
+    if (!reviewContent.trim()) {
+      Alert.alert("提示", "请输入评价内容");
+      return;
+    }
+    setIsSubmittingReview(true);
+    try {
+      await createReviewMutation.mutateAsync({
+        strategyId,
+        nickname: reviewNickname.trim() || undefined,
+        content: reviewContent.trim(),
+      });
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   const handleDownload = () => {
     if (strategy?.downloadUrl) {
       Linking.openURL(strategy.downloadUrl);
@@ -76,6 +117,20 @@ export default function StrategyDetailScreen() {
     } else if (type === "qq" && strategy?.qqGroup) {
       Alert.alert("QQ群", `QQ群号: ${strategy.qqGroup}`, [{ text: "确定" }]);
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    if (minutes < 1) return "刚刚";
+    if (minutes < 60) return `${minutes}分钟前`;
+    if (hours < 24) return `${hours}小时前`;
+    if (days < 7) return `${days}天前`;
+    return date.toLocaleDateString("zh-CN");
   };
 
   if (isLoading) {
@@ -107,6 +162,14 @@ export default function StrategyDetailScreen() {
   const isPositive = returnValue >= 0;
   const isAdmin = user?.role === "admin";
 
+  const hasDownloadUrl = !!strategy.downloadUrl;
+  const hasTelegram = !!strategy.telegramGroup;
+  const hasQQ = !!strategy.qqGroup;
+
+  // 用户评价最多显示3条
+  const displayReviews = userReviews ? userReviews.slice(0, 3) : [];
+  const hasMoreReviews = userReviews && userReviews.length > 3;
+
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
       <SubscribeModal
@@ -114,6 +177,142 @@ export default function StrategyDetailScreen() {
         onClose={() => setShowSubscribeModal(false)}
         strategyTitle={strategy.title}
       />
+
+      {/* 用户评价弹窗 */}
+      <Modal
+        visible={showReviewModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowReviewModal(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowReviewModal(false)}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={[styles.modalContent, { backgroundColor: colors.background }]}
+          >
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>发表评价</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.muted }]}>匿名留言，无需登录</Text>
+
+            {showReviewSuccess && (
+              <View style={[styles.successBanner, { backgroundColor: colors.success + "15" }]}>
+                <Text style={[styles.successText, { color: colors.success }]}>
+                  ✅ 评价已提交，审核通过后将显示
+                </Text>
+              </View>
+            )}
+
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+              placeholder="昵称（可选，默认匿名）"
+              placeholderTextColor={colors.muted}
+              value={reviewNickname}
+              onChangeText={setReviewNickname}
+              maxLength={100}
+            />
+            <TextInput
+              style={[styles.modalTextarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+              placeholder="分享你的使用体验..."
+              placeholderTextColor={colors.muted}
+              value={reviewContent}
+              onChangeText={setReviewContent}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              maxLength={1000}
+            />
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                onPress={() => setShowReviewModal(false)}
+                style={[styles.modalCancelBtn, { borderColor: colors.border }]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSubmitReview}
+                disabled={isSubmittingReview || !reviewContent.trim()}
+                style={[
+                  styles.modalSubmitBtn,
+                  { backgroundColor: isSubmittingReview || !reviewContent.trim() ? colors.muted : colors.primary },
+                ]}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.modalSubmitText}>
+                  {isSubmittingReview ? "提交中..." : "发表评价"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 查看全部评价弹窗 */}
+      <Modal
+        visible={showAllComments}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAllComments(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowAllComments(false)}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={[styles.allCommentsModal, { backgroundColor: colors.background }]}
+          >
+            <View style={styles.modalHandle} />
+            <View style={styles.allCommentsHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                全部评价 ({userReviews?.length || 0})
+              </Text>
+              <TouchableOpacity onPress={() => setShowAllComments(false)}>
+                <Text style={[{ fontSize: 18, color: colors.muted }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.allCommentsList} showsVerticalScrollIndicator={false}>
+              {userReviews && userReviews.length > 0 ? (
+                userReviews.map((review: any) => (
+                  <View key={review.id} style={[styles.reviewCard, { backgroundColor: colors.surface }]}>
+                    <View style={styles.reviewHeader}>
+                      <View style={[styles.reviewAvatar, { backgroundColor: colors.primary + "15" }]}>
+                        <Text style={[styles.reviewAvatarText, { color: colors.primary }]}>
+                          {(review.nickname || "匿名")[0]}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.reviewNickname, { color: colors.foreground }]}>
+                          {review.nickname || "匿名用户"}
+                        </Text>
+                        <Text style={[styles.reviewTime, { color: colors.muted }]}>
+                          {formatDate(String(review.createdAt))}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.reviewContent, { color: colors.foreground }]}>
+                      {review.content}
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyReviews}>
+                  <Text style={{ color: colors.muted, textAlign: "center" }}>暂无评价</Text>
+                </View>
+              )}
+              <View style={{ height: 20 }} />
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       <ScrollView className="flex-1" contentContainerStyle={isDesktop ? styles.desktopContainer : undefined}>
         <View style={isDesktop ? [styles.desktopContent, { maxWidth: maxContentWidth }] : undefined}>
           {/* 顶部导航栏 */}
@@ -135,7 +334,7 @@ export default function StrategyDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* 封面 - 支持自定义图片 */}
+          {/* 封面 */}
           {strategy.coverImage ? (
             <View style={[styles.coverGradient, isDesktop && styles.coverDesktop, { overflow: 'hidden' }]}>
               <Image
@@ -168,7 +367,7 @@ export default function StrategyDetailScreen() {
             <Text style={[styles.description, { color: colors.muted }]}>{strategy.description}</Text>
           </View>
 
-          {/* 核心数据 - 3列紧凑布局 */}
+          {/* 核心数据 */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>实盘数据</Text>
             <View style={[styles.statsCard, { backgroundColor: colors.surface }]}>
@@ -200,24 +399,24 @@ export default function StrategyDetailScreen() {
             </View>
           )}
 
-          {/* 交易信息 - 紧凑横排 */}
+          {/* 交易信息 */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>交易信息</Text>
             <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
               <View style={styles.infoRow}>
                 <View style={styles.infoItem}>
                   <Text style={[styles.infoLabel, { color: colors.muted }]}>交易对</Text>
-                  <Text style={[styles.infoValue, { color: colors.foreground }]}>{strategy.pairs}</Text>
+                  <Text style={[styles.infoValue, { color: colors.foreground }]}>{strategy.pairs || "—"}</Text>
                 </View>
                 <View style={styles.infoItem}>
                   <Text style={[styles.infoLabel, { color: colors.muted }]}>时间周期</Text>
-                  <Text style={[styles.infoValue, { color: colors.foreground }]}>{strategy.timeframe}</Text>
+                  <Text style={[styles.infoValue, { color: colors.foreground }]}>{strategy.timeframe || "—"}</Text>
                 </View>
               </View>
             </View>
           </View>
 
-          {/* 价格和操作 - 紧凑设计 */}
+          {/* 价格和操作 - 按钮无数据时置灰 */}
           <View style={styles.section}>
             <View style={[styles.actionCard, { backgroundColor: colors.surface }]}>
               <View style={styles.priceRow}>
@@ -235,33 +434,66 @@ export default function StrategyDetailScreen() {
                 </View>
               </View>
 
+              {/* 下载按钮 - 无URL时置灰 */}
               <TouchableOpacity
-                onPress={handleDownload}
-                style={[styles.downloadBtn, { backgroundColor: colors.primary }]}
-                activeOpacity={0.8}
+                onPress={hasDownloadUrl ? handleDownload : undefined}
+                disabled={!hasDownloadUrl}
+                style={[
+                  styles.downloadBtn,
+                  { backgroundColor: hasDownloadUrl ? colors.primary : colors.muted + "40" },
+                ]}
+                activeOpacity={hasDownloadUrl ? 0.8 : 1}
               >
-                <Text style={styles.downloadBtnText}>下载EA</Text>
+                <Text style={[
+                  styles.downloadBtnText,
+                  { color: hasDownloadUrl ? "#fff" : colors.muted },
+                ]}>
+                  {hasDownloadUrl ? "下载EA" : "暂无下载链接"}
+                </Text>
               </TouchableOpacity>
 
+              {/* 联系按钮 - 无数据时置灰或隐藏 */}
               <View style={styles.contactRow}>
-                {strategy.telegramGroup && (
-                  <TouchableOpacity
-                    onPress={() => handleContact("telegram")}
-                    style={[styles.contactBtn, { backgroundColor: colors.primary + "12" }]}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.contactBtnText, { color: colors.primary }]}>Telegram</Text>
-                  </TouchableOpacity>
-                )}
-                {strategy.qqGroup && (
-                  <TouchableOpacity
-                    onPress={() => handleContact("qq")}
-                    style={[styles.contactBtn, { backgroundColor: colors.primary + "12" }]}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.contactBtnText, { color: colors.primary }]}>QQ群</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  onPress={hasTelegram ? () => handleContact("telegram") : undefined}
+                  disabled={!hasTelegram}
+                  style={[
+                    styles.contactBtn,
+                    {
+                      backgroundColor: hasTelegram ? colors.primary + "12" : colors.muted + "10",
+                      borderWidth: hasTelegram ? 0 : 0.5,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  activeOpacity={hasTelegram ? 0.7 : 1}
+                >
+                  <Text style={[
+                    styles.contactBtnText,
+                    { color: hasTelegram ? colors.primary : colors.muted },
+                  ]}>
+                    {hasTelegram ? "Telegram" : "Telegram —"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={hasQQ ? () => handleContact("qq") : undefined}
+                  disabled={!hasQQ}
+                  style={[
+                    styles.contactBtn,
+                    {
+                      backgroundColor: hasQQ ? colors.primary + "12" : colors.muted + "10",
+                      borderWidth: hasQQ ? 0 : 0.5,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  activeOpacity={hasQQ ? 0.7 : 1}
+                >
+                  <Text style={[
+                    styles.contactBtnText,
+                    { color: hasQQ ? colors.primary : colors.muted },
+                  ]}>
+                    {hasQQ ? "QQ群" : "QQ群 —"}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -326,9 +558,74 @@ export default function StrategyDetailScreen() {
             )}
           </View>
 
-          {/* 用户留言区 */}
+          {/* 用户评价区 - 最多显示3条 + 查看更多 + 弹窗发表 */}
           <View style={styles.section}>
-            <CommentSection strategyId={strategyId} />
+            <View style={styles.reviewSectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>
+                💬 用户评价 {userReviews && userReviews.length > 0 ? `(${userReviews.length})` : ""}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowReviewModal(true)}
+                style={[styles.writeReviewBtn, { backgroundColor: colors.primary }]}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.writeReviewBtnText}>写评价</Text>
+              </TouchableOpacity>
+            </View>
+
+            {showReviewSuccess && (
+              <View style={[styles.successBanner, { backgroundColor: colors.success + "15", marginBottom: 10 }]}>
+                <Text style={[styles.successText, { color: colors.success }]}>
+                  ✅ 评价已提交，审核通过后将显示
+                </Text>
+              </View>
+            )}
+
+            {displayReviews.length > 0 ? (
+              <>
+                {displayReviews.map((review: any) => (
+                  <View key={review.id} style={[styles.reviewCard, { backgroundColor: colors.surface }]}>
+                    <View style={styles.reviewHeader}>
+                      <View style={[styles.reviewAvatar, { backgroundColor: colors.primary + "15" }]}>
+                        <Text style={[styles.reviewAvatarText, { color: colors.primary }]}>
+                          {(review.nickname || "匿名")[0]}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.reviewNickname, { color: colors.foreground }]}>
+                          {review.nickname || "匿名用户"}
+                        </Text>
+                        <Text style={[styles.reviewTime, { color: colors.muted }]}>
+                          {formatDate(String(review.createdAt))}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.reviewContent, { color: colors.foreground }]} numberOfLines={3}>
+                      {review.content}
+                    </Text>
+                  </View>
+                ))}
+
+                {/* 查看全部评价按钮 */}
+                {hasMoreReviews && (
+                  <TouchableOpacity
+                    onPress={() => setShowAllComments(true)}
+                    style={[styles.viewAllBtn, { borderColor: colors.border }]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.viewAllText, { color: colors.primary }]}>
+                      查看全部 {userReviews?.length} 条评价 →
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <View style={[styles.emptyReviews, { backgroundColor: colors.surface }]}>
+                <Text style={{ color: colors.muted, textAlign: "center", fontSize: 14 }}>
+                  暂无评价，快来抢沙发吧~
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={{ height: 40 }} />
@@ -498,7 +795,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   downloadBtnText: {
-    color: "#fff",
     fontWeight: "700",
     fontSize: 16,
   },
@@ -563,5 +859,172 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     padding: 20,
     alignItems: "center",
+  },
+
+  // 用户评价区
+  reviewSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  writeReviewBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  writeReviewBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  reviewCard: {
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 8,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 10,
+  },
+  reviewAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reviewAvatarText: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  reviewNickname: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  reviewTime: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  reviewContent: {
+    fontSize: 14,
+    lineHeight: 22,
+  },
+  viewAllBtn: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+    marginTop: 4,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  emptyReviews: {
+    borderRadius: 14,
+    padding: 24,
+    alignItems: "center",
+  },
+
+  // 弹窗
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 36,
+  },
+  allCommentsModal: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 36,
+    maxHeight: "80%",
+  },
+  allCommentsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  allCommentsList: {
+    flex: 1,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#ccc",
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginBottom: 10,
+  },
+  modalTextarea: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginBottom: 16,
+    minHeight: 100,
+  },
+  modalBtnRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  modalCancelText: {
+    fontWeight: "600",
+    fontSize: 15,
+  },
+  modalSubmitBtn: {
+    flex: 2,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  modalSubmitText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  successBanner: {
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  successText: {
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

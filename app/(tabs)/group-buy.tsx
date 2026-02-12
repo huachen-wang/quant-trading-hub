@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Linking, StyleSheet, Platform, Animated } from "react-native";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Linking, StyleSheet, Platform, Animated, Easing } from "react-native";
 
 // 卡片入场动画组件
 function AnimatedListItem({ children, index, style }: { children: React.ReactNode; index: number; style?: any }) {
@@ -28,6 +28,72 @@ function AnimatedListItem({ children, index, style }: { children: React.ReactNod
     <Animated.View style={[style, { opacity: fadeAnim, transform: [{ translateY }] }]}>
       {children}
     </Animated.View>
+  );
+}
+
+// 进度条动画组件
+function AnimatedProgressBar({ progress, color, delay = 0 }: { progress: number; color: string; delay?: number }) {
+  const widthAnim = useRef(new Animated.Value(0)).current;
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // 进度条从0增长到目标值
+    const timer = setTimeout(() => {
+      Animated.timing(widthAnim, {
+        toValue: progress,
+        duration: 1200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+    }, delay);
+
+    // 光泽动画循环
+    Animated.loop(
+      Animated.timing(shimmerAnim, {
+        toValue: 1,
+        duration: 2000,
+        easing: Easing.linear,
+        useNativeDriver: false,
+      })
+    ).start();
+
+    return () => clearTimeout(timer);
+  }, [progress]);
+
+  const animWidth = widthAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ["0%" as any, "100%" as any],
+    extrapolate: "clamp",
+  });
+
+  const shimmerOpacity = shimmerAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [0.3, 0.8, 0.3],
+  });
+
+  return (
+    <View style={[styles.progressTrack, { backgroundColor: color + "15" }]}>
+      <Animated.View
+        style={[
+          styles.progressFill,
+          {
+            width: animWidth,
+            backgroundColor: color,
+          },
+        ]}
+      />
+      {progress < 100 && (
+        <Animated.View
+          style={[
+            styles.progressShimmer,
+            {
+              width: animWidth,
+              opacity: shimmerOpacity,
+            },
+          ]}
+        />
+      )}
+    </View>
   );
 }
 import { useRouter } from "expo-router";
@@ -165,14 +231,7 @@ export default function GroupBuyScreen() {
                   {progress.toFixed(0)}%
                 </Text>
               </View>
-              <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${progress}%` as any, backgroundColor: gradientColors[1] },
-                  ]}
-                />
-              </View>
+              <AnimatedProgressBar progress={progress} color={gradientColors[1]} delay={Math.min(index * 80, 400) + 300} />
             </View>
 
             <View style={[styles.priceRow, { borderTopColor: colors.border }]}>
@@ -409,8 +468,9 @@ const styles = StyleSheet.create({
   progressHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
   progressLabel: { fontSize: 12, fontWeight: "600" },
   progressPercent: { fontSize: 13, fontWeight: "700" },
-  progressTrack: { height: 6, borderRadius: 3, overflow: "hidden" },
+  progressTrack: { height: 6, borderRadius: 3, overflow: "hidden", position: "relative" as any },
   progressFill: { height: "100%", borderRadius: 3 },
+  progressShimmer: { position: "absolute" as any, top: 0, left: 0, height: "100%", borderRadius: 3, backgroundColor: "rgba(255,255,255,0.3)" },
   priceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, marginBottom: 8 },
   priceLabel: { fontSize: 11, marginBottom: 2 },
   priceValue: { fontSize: 18, fontWeight: "800" },

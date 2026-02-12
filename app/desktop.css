@@ -63,6 +63,12 @@
   display: none !important;
 }
 
+/* Tab bar hover effect */
+[role="tab"]:hover {
+  opacity: 0.85;
+  transition: opacity 0.2s ease;
+}
+
 /* 平滑滚动 */
 @supports (-webkit-overflow-scrolling: touch) {
   * {
