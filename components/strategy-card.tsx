@@ -24,24 +24,6 @@ export interface StrategyCardProps {
   onSubscribePress?: () => void;
 }
 
-// 相对时间格式化
-function formatRelativeTime(date: Date | string | null | undefined): string {
-  if (!date) return "";
-  const now = new Date();
-  const d = typeof date === "string" ? new Date(date) : date;
-  const diff = now.getTime() - d.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 1) return "刚刚";
-  if (minutes < 60) return `${minutes}分钟前`;
-  if (hours < 24) return `${hours}小时前`;
-  if (days < 7) return `${days}天前`;
-  if (days < 30) return `${Math.floor(days / 7)}周前`;
-  return d.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
-}
-
 export function StrategyCard({
   title,
   platform,
@@ -52,9 +34,7 @@ export function StrategyCard({
   downloadCount,
   virtualDownloads = 0,
   coverImage,
-  pairs,
   viewCount = 0,
-  createdAt,
   onPress,
   onSubscribePress,
 }: StrategyCardProps) {
@@ -96,11 +76,6 @@ export function StrategyCard({
   const gap = numColumns >= 4 ? 12 : numColumns >= 3 ? 10 : 8;
   const cardMargin = gap / 2;
 
-  // 解析交易对标签（最多显示3个）
-  const pairTags = pairs
-    ? pairs.split(",").map((p) => p.trim()).filter(Boolean).slice(0, 3)
-    : [];
-
   // 封面高度：桌面端更大
   const coverHeight = isDesktop ? 180 : numColumns >= 3 ? 150 : 140;
 
@@ -127,16 +102,16 @@ export function StrategyCard({
             backgroundColor: colors.surface,
             borderColor: colors.border,
             ...(Platform.OS === "web" ? {
-              // @ts-ignore - web-only CSS property
+              // @ts-ignore
               boxShadow: "0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)",
               transition: "box-shadow 0.3s ease, transform 0.3s ease",
             } : {}),
           },
         ]}
-        // @ts-ignore - web-only className for hover effect
+        // @ts-ignore
         className={Platform.OS === "web" ? "strategy-card-hover" : undefined}
       >
-        {/* 封面区域 - 增大显示 */}
+        {/* 封面区域 */}
         <View style={[styles.coverContainer, { height: coverHeight }]}>
           {coverImage ? (
             <Image
@@ -163,7 +138,7 @@ export function StrategyCard({
             </Text>
           </View>
 
-          {/* 订阅/技术支持按钮 */}
+          {/* 订阅按钮 */}
           {onSubscribePress && (
             <TouchableOpacity
               onPress={(e) => {
@@ -177,7 +152,7 @@ export function StrategyCard({
             </TouchableOpacity>
           )}
 
-          {/* 收益率浮层 - 右下角醒目显示 */}
+          {/* 收益率浮层 */}
           <View style={[styles.returnOverlay, { backgroundColor: isPositive ? "rgba(16,185,129,0.9)" : "rgba(239,68,68,0.9)" }]}>
             <Text style={styles.returnOverlayText}>
               {isPositive ? "+" : ""}{totalReturn}%
@@ -185,7 +160,7 @@ export function StrategyCard({
           </View>
         </View>
 
-        {/* 策略信息 */}
+        {/* 精简信息区 */}
         <View style={styles.infoContainer}>
           {/* 标题 */}
           <Text
@@ -195,60 +170,25 @@ export function StrategyCard({
             {title}
           </Text>
 
-          {/* 交易对标签 */}
-          {pairTags.length > 0 && (
-            <View style={styles.tagRow}>
-              {pairTags.map((tag, idx) => (
-                <View key={idx} style={[styles.tag, { backgroundColor: gradientColors[1] + "15" }]}>
-                  <Text style={[styles.tagText, { color: gradientColors[1] }]}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* 数据行 */}
-          <View style={styles.dataSection}>
-            <View style={styles.dataRow}>
-              <Text style={[styles.dataLabel, { color: colors.muted }]}>总收益</Text>
-              <Text
-                style={[
-                  styles.dataValue,
-                  { color: isPositive ? colors.success : colors.error },
-                ]}
-              >
-                {isPositive ? "+" : ""}
-                {totalReturn}%
-              </Text>
-            </View>
-            <View style={styles.dataRow}>
-              <Text style={[styles.dataLabel, { color: colors.muted }]}>胜率</Text>
-              <Text style={[styles.dataValue, { color: colors.primary }]}>{winRate}%</Text>
-            </View>
-          </View>
-
-          {/* 底部信息 */}
-          <View style={[styles.footer, { borderTopColor: colors.border }]}>
-            <View>
+          {/* 价格 + 胜率 + 下载量 一行搞定 */}
+          <View style={styles.bottomRow}>
+            <View style={styles.bottomLeft}>
               {isFree ? (
                 <Text style={[styles.freePrice, { color: colors.success }]}>免费</Text>
               ) : (
                 <Text style={[styles.price, { color: "#F59E0B" }]}>¥{price}</Text>
               )}
+              <Text style={[styles.winRateInline, { color: colors.muted }]}>
+                胜率 <Text style={{ color: colors.primary, fontWeight: "700" }}>{winRate}%</Text>
+              </Text>
             </View>
-            <View style={styles.footerRight}>
+            <View style={styles.bottomRight}>
               {viewCount > 0 && (
                 <Text style={[styles.metaText, { color: colors.muted }]}>👁 {viewCount}</Text>
               )}
               <Text style={[styles.metaText, { color: colors.muted }]}>💾 {downloadCount + virtualDownloads}</Text>
             </View>
           </View>
-
-          {/* 相对时间 */}
-          {createdAt && (
-            <Text style={[styles.timeText, { color: colors.muted }]}>
-              {formatRelativeTime(createdAt)}
-            </Text>
-          )}
         </View>
       </View>
       </Animated.View>
@@ -317,74 +257,44 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   infoContainer: {
-    padding: 14,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   title: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 8,
-    lineHeight: 22,
-  },
-  tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 8,
-  },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  tagText: {
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  dataSection: {
-    marginBottom: 8,
-  },
-  dataRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  dataLabel: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  dataValue: {
     fontSize: 14,
     fontWeight: "700",
+    marginBottom: 6,
     lineHeight: 20,
   },
-  footer: {
+  bottomRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  freePrice: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  price: {
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  footerRight: {
+  bottomLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  metaText: {
-    fontSize: 11,
-    lineHeight: 16,
+  bottomRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  timeText: {
+  freePrice: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  price: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  winRateInline: {
+    fontSize: 11,
+  },
+  metaText: {
     fontSize: 10,
-    marginTop: 6,
+    lineHeight: 14,
   },
 });

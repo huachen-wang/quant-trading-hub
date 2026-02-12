@@ -1,23 +1,26 @@
-import { useState, useMemo, useRef, useEffect } from "react";
-import { View, Text, FlatList, TouchableOpacity, Linking, StyleSheet, Platform, RefreshControl, Animated } from "react-native";
+import { useRef, useEffect } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Platform, Animated } from "react-native";
+import { ScreenContainer } from "@/components/screen-container";
+import { useColors } from "@/hooks/use-colors";
+import { LinearGradient } from "expo-linear-gradient";
+import { useResponsive } from "@/hooks/use-responsive";
 
-// 列表项入场动画组件
-function AnimatedListItem({ children, index }: { children: React.ReactNode; index: number }) {
+// 入场动画
+function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(16)).current;
+  const translateY = useRef(new Animated.Value(24)).current;
 
   useEffect(() => {
-    const delay = Math.min(index * 80, 400);
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 350,
+        duration: 500,
         delay,
         useNativeDriver: true,
       }),
       Animated.timing(translateY, {
         toValue: 0,
-        duration: 350,
+        duration: 500,
         delay,
         useNativeDriver: true,
       }),
@@ -30,322 +33,445 @@ function AnimatedListItem({ children, index }: { children: React.ReactNode; inde
     </Animated.View>
   );
 }
-import { ScreenContainer } from "@/components/screen-container";
-import { useColors } from "@/hooks/use-colors";
-import { LinearGradient } from "expo-linear-gradient";
 
-// 动态数据类型
-interface MomentItem {
-  id: number;
-  type: "official" | "news" | "update" | "tip" | "promo";
+// 服务板块数据
+interface ServiceSection {
+  id: string;
+  icon: string;
   title: string;
-  content: string;
-  emoji: string;
-  time: string;
-  link?: string;
-  tags?: string[];
+  subtitle: string;
+  gradient: readonly [string, string, ...string[]];
+  items: { icon: string; title: string; desc: string }[];
 }
 
-// 静态动态数据（后续可改为API获取）
-const MOMENTS_DATA: MomentItem[] = [
+const SERVICES: ServiceSection[] = [
   {
-    id: 1,
-    type: "official",
-    title: "量化军火库正式上线",
-    content: "欢迎来到量化军火库！我们致力于为MT4/MT5交易者提供最优质的EA策略评测和分享平台。在这里，您可以浏览各类经过实盘验证的量化策略，查看真实的交易数据和回测报告。",
-    emoji: "🎉",
-    time: "2025-02-10",
-    tags: ["官方公告", "平台上线"],
+    id: "compliance",
+    icon: "🛡️",
+    title: "合规支持",
+    subtitle: "全球多司法管辖区合规框架搭建",
+    gradient: ["#0f172a", "#1e40af", "#3b82f6"],
+    items: [
+      { icon: "📋", title: "牌照申请与维护", desc: "协助申请 FCA / ASIC / CySEC / FSA 等主流监管牌照，提供持续合规维护方案" },
+      { icon: "📑", title: "法律文件审查", desc: "客户协议、风险披露、隐私政策等合规文件的起草与审查" },
+      { icon: "🔍", title: "反洗钱(AML)体系", desc: "KYC/AML 流程设计、可疑交易监控系统搭建与合规培训" },
+      { icon: "🌐", title: "跨境合规咨询", desc: "多司法管辖区运营的合规架构设计，规避监管冲突风险" },
+    ],
   },
   {
-    id: 2,
-    type: "update",
-    title: "新增合购功能",
-    content: "为了降低大家的EA使用成本，我们推出了合购功能！多人拼团购买高价EA，人均费用大幅降低。快去合购专区看看有没有感兴趣的策略吧。",
-    emoji: "🤝",
-    time: "2025-02-09",
-    tags: ["功能更新", "合购"],
+    id: "technology",
+    icon: "⚡",
+    title: "技术支持",
+    subtitle: "企业级量化交易基础设施",
+    gradient: ["#1a0533", "#7c3aed", "#a78bfa"],
+    items: [
+      { icon: "🖥️", title: "交易服务器部署", desc: "全球低延迟 VPS 集群部署，纽约 NY4 / 伦敦 LD4 / 东京 TY3 机房直连" },
+      { icon: "🤖", title: "EA 策略开发", desc: "MQL4/MQL5 专业开发团队，从策略原型到生产级代码的全流程交付" },
+      { icon: "📊", title: "风控系统搭建", desc: "实时风险监控、自动止损熔断、仓位管理系统的定制开发" },
+      { icon: "🔗", title: "流动性对接", desc: "主流 LP 流动性聚合接入，FIX 协议桥接，点差优化方案" },
+    ],
   },
   {
-    id: 3,
-    type: "news",
-    title: "2025年黄金市场展望",
-    content: "随着全球央行持续购金和地缘政治不确定性加剧，2025年黄金市场有望延续强势。多家机构预测金价将突破2800美元/盎司。对于黄金EA交易者来说，这意味着更多的交易机会和波动空间。",
-    emoji: "📊",
-    time: "2025-02-08",
-    tags: ["行业资讯", "黄金"],
-  },
-  {
-    id: 4,
-    type: "tip",
-    title: "EA选择指南：如何评估一个EA的真实表现",
-    content: "选择EA时，不要只看总收益率。关键指标包括：1) 最大回撤 - 控制在20%以内为佳；2) 夏普比率 - 大于1.5说明风险调整后收益优秀；3) 胜率 - 结合盈亏比综合评估；4) 实盘运行时间 - 至少3个月以上的实盘数据才有参考价值。",
-    emoji: "💡",
-    time: "2025-02-07",
-    tags: ["交易技巧", "EA评测"],
-  },
-  {
-    id: 5,
-    type: "official",
-    title: "关注我们的官方频道",
-    content: "加入我们的Telegram频道和QQ群，获取最新的EA策略更新、市场分析和独家优惠信息。\n\nTelegram: @quant_arsenal\nQQ群: 888888888\n微信公众号: 量化军火库",
-    emoji: "📢",
-    time: "2025-02-06",
-    tags: ["官方", "联系方式"],
-    link: "https://t.me/quant_arsenal",
-  },
-  {
-    id: 6,
-    type: "news",
-    title: "MT5平台新功能：支持Python集成",
-    content: "MetaQuotes最新更新为MT5平台添加了Python集成支持，交易者现在可以直接在MT5中运行Python脚本进行数据分析和策略开发。这对于量化交易者来说是一个重大利好。",
-    emoji: "🐍",
-    time: "2025-02-05",
-    tags: ["行业资讯", "MT5"],
-  },
-  {
-    id: 7,
-    type: "promo",
-    title: "新用户专享：首单EA 8折优惠",
-    content: "新注册用户首次购买任意付费EA策略，均可享受8折优惠！活动时间有限，抓紧机会入手心仪的策略。详情请联系客服获取优惠码。",
-    emoji: "🎁",
-    time: "2025-02-04",
-    tags: ["优惠活动"],
-  },
-  {
-    id: 8,
-    type: "tip",
-    title: "风险管理：EA交易中的仓位控制",
-    content: "无论使用多么优秀的EA策略，合理的仓位管理都是盈利的关键。建议：1) 单笔交易风险不超过账户的2%；2) 同时运行多个EA时，总风险敞口不超过10%；3) 定期提取利润，保护本金安全。",
-    emoji: "🛡️",
-    time: "2025-02-03",
-    tags: ["交易技巧", "风险管理"],
-  },
-  {
-    id: 9,
-    type: "update",
-    title: "策略详情页优化",
-    content: "我们对策略详情页进行了全面优化，现在可以查看更详细的回测数据、收益曲线和月度收益报告。同时新增了匿名评价功能，欢迎大家分享使用体验。",
-    emoji: "✨",
-    time: "2025-02-02",
-    tags: ["功能更新"],
-  },
-  {
-    id: 10,
-    type: "news",
-    title: "外汇市场波动率创新高",
-    content: "受美联储政策预期变化影响，近期外汇市场波动率显著上升。EUR/USD、GBP/USD等主要货币对日内波幅扩大，为EA交易提供了更多机会。建议交易者适当调整止损距离以适应当前市场环境。",
-    emoji: "📈",
-    time: "2025-02-01",
-    tags: ["行业资讯", "外汇"],
+    id: "business",
+    icon: "🚀",
+    title: "业务支持",
+    subtitle: "从 0 到 1 的量化业务全链路赋能",
+    gradient: ["#14260b", "#16a34a", "#4ade80"],
+    items: [
+      { icon: "🏢", title: "工作室孵化", desc: "为量化交易工作室提供办公场地、资金对接、运营管理的一站式孵化服务" },
+      { icon: "💰", title: "资金引入", desc: "对接合规资金方，协助搭建资管产品结构，提供业绩审计与报告服务" },
+      { icon: "📈", title: "品牌与获客", desc: "量化品牌定位策划、官网与社媒矩阵搭建、精准客户获取方案" },
+      { icon: "🤝", title: "机构合作", desc: "券商 / 经纪商白标方案、MAM/PAMM 多账户管理系统、IB 代理体系搭建" },
+    ],
   },
 ];
 
-// 类型对应的颜色和标签
-const TYPE_CONFIG: Record<string, { label: string; gradient: readonly [string, string, ...string[]] }> = {
-  official: { label: "官方", gradient: ["#1a365d", "#2563eb", "#60a5fa"] },
-  news: { label: "资讯", gradient: ["#065f46", "#10b981", "#6ee7b7"] },
-  update: { label: "更新", gradient: ["#4c1d95", "#7c3aed", "#a78bfa"] },
-  tip: { label: "技巧", gradient: ["#7c2d12", "#f97316", "#fdba74"] },
-  promo: { label: "活动", gradient: ["#831843", "#ec4899", "#f9a8d4"] },
-};
+// 合作伙伴类型
+const PARTNER_TYPES = [
+  { icon: "🏦", label: "量化工作室" },
+  { icon: "💻", label: "技术开发方" },
+  { icon: "🏛️", label: "金融机构" },
+  { icon: "📊", label: "资管公司" },
+  { icon: "🌍", label: "海外经纪商" },
+  { icon: "🎓", label: "量化培训机构" },
+];
 
-type FilterType = "all" | "official" | "news" | "update" | "tip" | "promo";
+// 数据亮点
+const HIGHLIGHTS = [
+  { number: "50+", label: "合作机构" },
+  { number: "12", label: "覆盖国家" },
+  { number: "99.9%", label: "系统可用率" },
+  { number: "24/7", label: "技术响应" },
+];
 
-export default function MomentsScreen() {
+export default function CooperationScreen() {
   const colors = useColors();
-  const [filter, setFilter] = useState<FilterType>("all");
-  const [refreshing, setRefreshing] = useState(false);
+  const { isDesktop } = useResponsive();
 
-  const filteredData = useMemo(() => {
-    if (filter === "all") return MOMENTS_DATA;
-    return MOMENTS_DATA.filter((item) => item.type === filter);
-  }, [filter]);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+  const handleContact = () => {
+    Linking.openURL("mailto:contact@eaxau.com");
   };
-
-  const handleLinkPress = (link: string) => {
-    Linking.openURL(link);
-  };
-
-  const filters: { key: FilterType; label: string }[] = [
-    { key: "all", label: "全部" },
-    { key: "official", label: "官方" },
-    { key: "news", label: "资讯" },
-    { key: "update", label: "更新" },
-    { key: "tip", label: "技巧" },
-    { key: "promo", label: "活动" },
-  ];
-
-  const renderHeader = () => (
-    <View style={styles.headerSection}>
-      <Text style={[styles.headerTitle, { color: colors.foreground }]}>📣 动态</Text>
-      <Text style={[styles.headerSubtitle, { color: colors.muted }]}>
-        最新公告、行业资讯、交易技巧
-      </Text>
-
-      {/* 筛选标签 */}
-      <View style={styles.filterRow}>
-        {filters.map((f) => (
-          <TouchableOpacity
-            key={f.key}
-            onPress={() => setFilter(f.key)}
-            activeOpacity={0.7}
-            style={[
-              styles.filterChip,
-              {
-                backgroundColor: filter === f.key ? colors.primary : colors.surface,
-                borderColor: filter === f.key ? colors.primary : colors.border,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.filterChipText,
-                { color: filter === f.key ? "#fff" : colors.foreground },
-              ]}
-            >
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
-
-  const renderMomentCard = ({ item, index }: { item: MomentItem; index: number }) => {
-    const config = TYPE_CONFIG[item.type] || TYPE_CONFIG.news;
-
-    return (
-      <AnimatedListItem index={index}>
-      <View style={[styles.momentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {/* 顶部：类型标签和时间 */}
-        <View style={styles.cardHeader}>
-          <View style={styles.cardHeaderLeft}>
-            <LinearGradient
-              colors={config.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.typeBadge}
-            >
-              <Text style={styles.typeBadgeText}>{config.label}</Text>
-            </LinearGradient>
-            <Text style={[styles.cardTime, { color: colors.muted }]}>{item.time}</Text>
-          </View>
-          <Text style={styles.cardEmoji}>{item.emoji}</Text>
-        </View>
-
-        {/* 标题 */}
-        <Text style={[styles.cardTitle, { color: colors.foreground }]}>{item.title}</Text>
-
-        {/* 内容 */}
-        <Text style={[styles.cardContent, { color: colors.muted }]}>{item.content}</Text>
-
-        {/* 标签 */}
-        {item.tags && item.tags.length > 0 && (
-          <View style={styles.tagRow}>
-            {item.tags.map((tag, index) => (
-              <View key={index} style={[styles.tag, { backgroundColor: config.gradient[1] + "12" }]}>
-                <Text style={[styles.tagText, { color: config.gradient[1] }]}>#{tag}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* 链接按钮 */}
-        {item.link && (
-          <TouchableOpacity
-            onPress={() => handleLinkPress(item.link!)}
-            activeOpacity={0.7}
-            style={[styles.linkBtn, { backgroundColor: config.gradient[1] + "10" }]}
-          >
-            <Text style={[styles.linkBtnText, { color: config.gradient[1] }]}>
-              查看详情 →
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      </AnimatedListItem>
-    );
-  };
-
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyEmoji}>📭</Text>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>暂无动态</Text>
-      <Text style={[styles.emptySubtitle, { color: colors.muted }]}>该分类下还没有内容，请查看其他分类</Text>
-    </View>
-  );
 
   return (
     <ScreenContainer>
-      <FlatList
-        data={filteredData}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderMomentCard}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 20 }}
+      <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
-        }
-        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-      />
+        contentContainerStyle={{ paddingBottom: 40 }}
+      >
+        {/* Hero 区域 */}
+        <FadeInView>
+          <LinearGradient
+            colors={["#0f172a", "#1e293b", "#334155"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroSection}
+          >
+            <Text style={styles.heroEmoji}>🏗️</Text>
+            <Text style={styles.heroTitle}>量化生态合作</Text>
+            <Text style={styles.heroSubtitle}>
+              为量化工作室、技术方与金融机构提供{"\n"}合规 · 技术 · 业务 全方位支持
+            </Text>
+
+            {/* 数据亮点 */}
+            <View style={[styles.highlightRow, isDesktop && styles.highlightRowDesktop]}>
+              {HIGHLIGHTS.map((h, i) => (
+                <View key={i} style={styles.highlightItem}>
+                  <Text style={styles.highlightNumber}>{h.number}</Text>
+                  <Text style={styles.highlightLabel}>{h.label}</Text>
+                </View>
+              ))}
+            </View>
+          </LinearGradient>
+        </FadeInView>
+
+        {/* 合作对象 */}
+        <FadeInView delay={100}>
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>合作对象</Text>
+            <View style={styles.partnerGrid}>
+              {PARTNER_TYPES.map((p, i) => (
+                <View key={i} style={[styles.partnerChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={styles.partnerIcon}>{p.icon}</Text>
+                  <Text style={[styles.partnerLabel, { color: colors.foreground }]}>{p.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </FadeInView>
+
+        {/* 三大服务板块 */}
+        {SERVICES.map((section, sIdx) => (
+          <FadeInView key={section.id} delay={200 + sIdx * 150}>
+            <View style={styles.sectionContainer}>
+              {/* 板块标题 */}
+              <LinearGradient
+                colors={section.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.serviceTitleBar}
+              >
+                <Text style={styles.serviceTitleIcon}>{section.icon}</Text>
+                <View>
+                  <Text style={styles.serviceTitleText}>{section.title}</Text>
+                  <Text style={styles.serviceSubtitleText}>{section.subtitle}</Text>
+                </View>
+              </LinearGradient>
+
+              {/* 服务项目 */}
+              <View style={[styles.serviceGrid, isDesktop && styles.serviceGridDesktop]}>
+                {section.items.map((item, iIdx) => (
+                  <View
+                    key={iIdx}
+                    style={[
+                      styles.serviceCard,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                        width: isDesktop ? "48%" as any : "100%" as any,
+                      },
+                      Platform.OS === "web" ? {
+                        // @ts-ignore
+                        boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+                        transition: "box-shadow 0.3s ease, transform 0.3s ease",
+                      } : {},
+                    ]}
+                    // @ts-ignore
+                    className={Platform.OS === "web" ? "strategy-card-hover" : undefined}
+                  >
+                    <Text style={styles.serviceItemIcon}>{item.icon}</Text>
+                    <Text style={[styles.serviceItemTitle, { color: colors.foreground }]}>{item.title}</Text>
+                    <Text style={[styles.serviceItemDesc, { color: colors.muted }]}>{item.desc}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </FadeInView>
+        ))}
+
+        {/* 合作流程 */}
+        <FadeInView delay={700}>
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>合作流程</Text>
+            <View style={styles.processRow}>
+              {[
+                { step: "01", icon: "💬", label: "需求沟通" },
+                { step: "02", icon: "📝", label: "方案定制" },
+                { step: "03", icon: "🤝", label: "签约合作" },
+                { step: "04", icon: "🚀", label: "落地交付" },
+              ].map((p, i) => (
+                <View key={i} style={styles.processStep}>
+                  <LinearGradient
+                    colors={["#1e40af", "#3b82f6"]}
+                    style={styles.processCircle}
+                  >
+                    <Text style={styles.processIcon}>{p.icon}</Text>
+                  </LinearGradient>
+                  <Text style={[styles.processStepNum, { color: colors.primary }]}>{p.step}</Text>
+                  <Text style={[styles.processLabel, { color: colors.foreground }]}>{p.label}</Text>
+                  {i < 3 && <Text style={[styles.processArrow, { color: colors.muted }]}>→</Text>}
+                </View>
+              ))}
+            </View>
+          </View>
+        </FadeInView>
+
+        {/* CTA */}
+        <FadeInView delay={850}>
+          <View style={styles.sectionContainer}>
+            <LinearGradient
+              colors={["#1e40af", "#7c3aed"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.ctaCard}
+            >
+              <Text style={styles.ctaTitle}>开启合作</Text>
+              <Text style={styles.ctaDesc}>
+                无论您是量化工作室、技术团队还是金融机构，{"\n"}我们都能为您提供专业的定制化解决方案
+              </Text>
+              <TouchableOpacity
+                onPress={handleContact}
+                activeOpacity={0.8}
+                style={styles.ctaButton}
+              >
+                <Text style={styles.ctaButtonText}>联系我们 →</Text>
+              </TouchableOpacity>
+              <Text style={styles.ctaEmail}>contact@eaxau.com</Text>
+            </LinearGradient>
+          </View>
+        </FadeInView>
+      </ScrollView>
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  headerSection: { marginBottom: 16 },
-  headerTitle: { fontSize: 26, fontWeight: "800", marginBottom: 4 },
-  headerSubtitle: { fontSize: 14, marginBottom: 14 },
-  filterRow: { flexDirection: "row", flexWrap: "wrap" },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginRight: 8,
+  // Hero
+  heroSection: {
+    paddingHorizontal: 20,
+    paddingTop: 40,
+    paddingBottom: 30,
+    alignItems: "center",
+  },
+  heroEmoji: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#fff",
     marginBottom: 8,
-    borderWidth: 1,
+    textAlign: "center",
   },
-  filterChipText: { fontSize: 13, fontWeight: "600" },
-  momentCard: {
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 0.5,
-    ...(Platform.OS === "web"
-      ? { boxShadow: "0 1px 4px rgba(0,0,0,0.06)" } as any
-      : {}),
+  heroSubtitle: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.7)",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 24,
   },
-  cardHeader: {
+  highlightRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 16,
+  },
+  highlightRowDesktop: {
+    gap: 32,
+  },
+  highlightItem: {
+    alignItems: "center",
+    minWidth: 70,
+  },
+  highlightNumber: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#60a5fa",
+  },
+  highlightLabel: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.6)",
+    marginTop: 2,
+  },
+
+  // Section
+  sectionContainer: {
+    paddingHorizontal: 16,
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    marginBottom: 14,
+  },
+
+  // Partner chips
+  partnerGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  partnerChip: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 0.5,
+    gap: 6,
+  },
+  partnerIcon: {
+    fontSize: 18,
+  },
+  partnerLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  // Service title bar
+  serviceTitleBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 12,
+    marginBottom: 12,
+  },
+  serviceTitleIcon: {
+    fontSize: 28,
+  },
+  serviceTitleText: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#fff",
+  },
+  serviceSubtitleText: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 2,
+  },
+
+  // Service grid
+  serviceGrid: {
+    gap: 10,
+  },
+  serviceGridDesktop: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     justifyContent: "space-between",
+  },
+  serviceCard: {
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 0.5,
+  },
+  serviceItemIcon: {
+    fontSize: 28,
+    marginBottom: 8,
+  },
+  serviceItemTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  serviceItemDesc: {
+    fontSize: 13,
+    lineHeight: 20,
+  },
+
+  // Process
+  processRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  processStep: {
+    alignItems: "center",
+    position: "relative",
+  },
+  processCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 6,
+  },
+  processIcon: {
+    fontSize: 22,
+  },
+  processStepNum: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  processLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  processArrow: {
+    position: "absolute",
+    right: -16,
+    top: 18,
+    fontSize: 16,
+  },
+
+  // CTA
+  ctaCard: {
+    borderRadius: 16,
+    padding: 28,
+    alignItems: "center",
+  },
+  ctaTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#fff",
     marginBottom: 10,
   },
-  cardHeaderLeft: { flexDirection: "row", alignItems: "center" },
-  typeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginRight: 10,
+  ctaDesc: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.8)",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
   },
-  typeBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  cardTime: { fontSize: 12 },
-  cardEmoji: { fontSize: 28 },
-  cardTitle: { fontSize: 17, fontWeight: "700", marginBottom: 8, lineHeight: 24 },
-  cardContent: { fontSize: 14, lineHeight: 22, marginBottom: 12 },
-  tagRow: { flexDirection: "row", flexWrap: "wrap", marginBottom: 8 },
-  tag: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, marginRight: 8, marginBottom: 4 },
-  tagText: { fontSize: 12, fontWeight: "600" },
-  linkBtn: { borderRadius: 10, paddingVertical: 10, alignItems: "center", marginTop: 4 },
-  linkBtnText: { fontSize: 14, fontWeight: "700" },
-  emptyContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 60 },
-  emptyEmoji: { fontSize: 56, marginBottom: 16 },
-  emptyTitle: { fontSize: 17, fontWeight: "700", marginBottom: 8 },
-  emptySubtitle: { fontSize: 14 },
+  ctaButton: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  ctaButtonText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#1e40af",
+  },
+  ctaEmail: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.6)",
+  },
 });

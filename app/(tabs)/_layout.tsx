@@ -45,8 +45,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="moments"
         options={{
-          title: "动态",
-          tabBarIcon: () => <Text style={styles.tabIcon}>📣</Text>,
+          title: "合作",
+          tabBarIcon: () => <Text style={styles.tabIcon}>🏗️</Text>,
         }}
       />
       <Tabs.Screen
