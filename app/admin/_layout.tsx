@@ -167,6 +167,12 @@ export default function AdminLayout() {
         }}
       />
       <Stack.Screen
+        name="cooperation-contents"
+        options={{
+          title: "合作页面管理",
+        }}
+      />
+      <Stack.Screen
         name="login"
         options={{
           title: "管理员登录",

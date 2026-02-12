@@ -104,6 +104,12 @@ export default function AdminDashboard() {
       description: "管理订阅页面展示内容",
     },
     {
+      title: "🏗️ 合作页面管理",
+      route: "/admin/cooperation-contents",
+      count: 0,
+      description: "管理合作页面服务内容（合规/技术/业务）",
+    },
+    {
       title: "📧 订阅用户",
       route: "/admin/subscribers",
       count: 0,

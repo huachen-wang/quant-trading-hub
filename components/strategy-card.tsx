@@ -76,8 +76,15 @@ export function StrategyCard({
   const gap = numColumns >= 4 ? 12 : numColumns >= 3 ? 10 : 8;
   const cardMargin = gap / 2;
 
-  // 封面高度：桌面端更大
-  const coverHeight = isDesktop ? 180 : numColumns >= 3 ? 150 : 140;
+  // 封面高度
+  const coverHeight = isDesktop ? 180 : numColumns >= 3 ? 150 : 130;
+
+  // 响应式尺寸
+  const titleSize = isDesktop ? 14 : 13;
+  const priceSize = isDesktop ? 13 : 12;
+  const metaSize = isDesktop ? 10 : 9;
+  const infoPadH = isDesktop ? 12 : 8;
+  const infoPadV = isDesktop ? 10 : 6;
 
   return (
     <TouchableOpacity
@@ -161,32 +168,32 @@ export function StrategyCard({
         </View>
 
         {/* 精简信息区 */}
-        <View style={styles.infoContainer}>
+        <View style={[styles.infoContainer, { paddingHorizontal: infoPadH, paddingTop: infoPadV, paddingBottom: infoPadV }]}>
           {/* 标题 */}
           <Text
-            style={[styles.title, { color: colors.foreground }]}
+            style={[styles.title, { color: colors.foreground, fontSize: titleSize }]}
             numberOfLines={1}
           >
             {title}
           </Text>
 
-          {/* 价格 + 胜率 + 下载量 一行搞定 */}
+          {/* 价格 + 胜率 + 下载量 一行 */}
           <View style={styles.bottomRow}>
             <View style={styles.bottomLeft}>
               {isFree ? (
-                <Text style={[styles.freePrice, { color: colors.success }]}>免费</Text>
+                <Text style={[styles.freePrice, { color: colors.success, fontSize: priceSize }]}>免费</Text>
               ) : (
-                <Text style={[styles.price, { color: "#F59E0B" }]}>¥{price}</Text>
+                <Text style={[styles.price, { color: "#F59E0B", fontSize: priceSize }]}>¥{price}</Text>
               )}
-              <Text style={[styles.winRateInline, { color: colors.muted }]}>
+              <Text style={[styles.winRateInline, { color: colors.muted, fontSize: isDesktop ? 11 : 10 }]}>
                 胜率 <Text style={{ color: colors.primary, fontWeight: "700" }}>{winRate}%</Text>
               </Text>
             </View>
             <View style={styles.bottomRight}>
-              {viewCount > 0 && (
-                <Text style={[styles.metaText, { color: colors.muted }]}>👁 {viewCount}</Text>
+              {isDesktop && viewCount > 0 && (
+                <Text style={[styles.metaText, { color: colors.muted, fontSize: metaSize }]}>👁 {viewCount}</Text>
               )}
-              <Text style={[styles.metaText, { color: colors.muted }]}>💾 {downloadCount + virtualDownloads}</Text>
+              <Text style={[styles.metaText, { color: colors.muted, fontSize: metaSize }]}>💾 {downloadCount + virtualDownloads}</Text>
             </View>
           </View>
         </View>
@@ -199,7 +206,7 @@ export function StrategyCard({
 const styles = StyleSheet.create({
   cardWrapper: {},
   card: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: "hidden",
     borderWidth: 0.5,
   },
@@ -220,52 +227,49 @@ const styles = StyleSheet.create({
   },
   platformBadge: {
     position: "absolute",
-    top: 10,
-    left: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   platformText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
   },
   subscribeBtn: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    top: 8,
+    right: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
   },
   subscribeBtnIcon: {
-    fontSize: 15,
+    fontSize: 14,
   },
   returnOverlay: {
     position: "absolute",
-    bottom: 10,
-    right: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    bottom: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   returnOverlayText: {
     color: "#fff",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
   },
   infoContainer: {
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 10,
+    // padding set dynamically
   },
   title: {
-    fontSize: 14,
     fontWeight: "700",
-    marginBottom: 6,
-    lineHeight: 20,
+    marginBottom: 3,
+    lineHeight: 18,
   },
   bottomRow: {
     flexDirection: "row",
@@ -275,26 +279,21 @@ const styles = StyleSheet.create({
   bottomLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   bottomRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
   },
   freePrice: {
-    fontSize: 13,
     fontWeight: "700",
   },
   price: {
-    fontSize: 13,
     fontWeight: "700",
   },
-  winRateInline: {
-    fontSize: 11,
-  },
+  winRateInline: {},
   metaText: {
-    fontSize: 10,
     lineHeight: 14,
   },
 });

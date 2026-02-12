@@ -1,9 +1,11 @@
-import { useRef, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Platform, Animated } from "react-native";
+import { useRef, useEffect, useMemo } from "react";
+import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Platform, Animated, ActivityIndicator, RefreshControl } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { useResponsive } from "@/hooks/use-responsive";
+import { trpc } from "@/lib/trpc";
+import { useState, useCallback } from "react";
 
 // 入场动画
 function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -34,19 +36,39 @@ function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?
   );
 }
 
-// 服务板块数据
+// 后台内容类型
+type PageContentItem = {
+  id: number;
+  pageKey: string;
+  sectionKey: string;
+  title: string;
+  content: string;
+  icon: string | null;
+  sortOrder: number;
+  isVisible: boolean;
+};
+
+// 默认服务板块数据（后台无数据时使用）
+interface ServiceItem {
+  icon: string;
+  title: string;
+  desc: string;
+}
+
 interface ServiceSection {
   id: string;
+  sectionKey: string;
   icon: string;
   title: string;
   subtitle: string;
   gradient: readonly [string, string, ...string[]];
-  items: { icon: string; title: string; desc: string }[];
+  items: ServiceItem[];
 }
 
-const SERVICES: ServiceSection[] = [
+const DEFAULT_SERVICES: ServiceSection[] = [
   {
     id: "compliance",
+    sectionKey: "compliance",
     icon: "🛡️",
     title: "合规支持",
     subtitle: "全球多司法管辖区合规框架搭建",
@@ -60,6 +82,7 @@ const SERVICES: ServiceSection[] = [
   },
   {
     id: "technology",
+    sectionKey: "technology",
     icon: "⚡",
     title: "技术支持",
     subtitle: "企业级量化交易基础设施",
@@ -73,6 +96,7 @@ const SERVICES: ServiceSection[] = [
   },
   {
     id: "business",
+    sectionKey: "business",
     icon: "🚀",
     title: "业务支持",
     subtitle: "从 0 到 1 的量化业务全链路赋能",
@@ -104,9 +128,69 @@ const HIGHLIGHTS = [
   { number: "24/7", label: "技术响应" },
 ];
 
+// 将后台数据按sectionKey分组
+function groupContentsBySection(contents: PageContentItem[]): Record<string, PageContentItem[]> {
+  const groups: Record<string, PageContentItem[]> = {};
+  for (const item of contents) {
+    if (!item.isVisible) continue;
+    if (!groups[item.sectionKey]) groups[item.sectionKey] = [];
+    groups[item.sectionKey].push(item);
+  }
+  // 按sortOrder排序
+  for (const key of Object.keys(groups)) {
+    groups[key].sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+  return groups;
+}
+
+// 将后台数据转换为ServiceItem
+function contentToServiceItem(item: PageContentItem): ServiceItem {
+  return {
+    icon: item.icon || "📄",
+    title: item.title,
+    desc: item.content,
+  };
+}
+
 export default function CooperationScreen() {
   const colors = useColors();
   const { isDesktop } = useResponsive();
+  const [refreshing, setRefreshing] = useState(false);
+
+  // 从后台获取合作页面数据
+  const pageContentsQuery = trpc.pageContents.get.useQuery({ pageKey: "cooperation" });
+  const contents = (pageContentsQuery.data || []) as PageContentItem[];
+  const groupedContents = useMemo(() => groupContentsBySection(contents), [contents]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await pageContentsQuery.refetch();
+    setRefreshing(false);
+  }, []);
+
+  // 构建服务板块：后台有对应sectionKey的数据就用后台数据，否则用默认数据
+  const services = useMemo(() => {
+    return DEFAULT_SERVICES.map((section) => {
+      const backendItems = groupedContents[section.sectionKey];
+      if (backendItems && backendItems.length > 0) {
+        return {
+          ...section,
+          items: backendItems.map(contentToServiceItem),
+        };
+      }
+      return section;
+    });
+  }, [groupedContents]);
+
+  // 检查是否有不属于默认板块的自定义板块
+  const customSections = useMemo(() => {
+    const defaultKeys = new Set(DEFAULT_SERVICES.map(s => s.sectionKey));
+    const customKeys = Object.keys(groupedContents).filter(k => !defaultKeys.has(k));
+    return customKeys.map(key => ({
+      sectionKey: key,
+      items: groupedContents[key],
+    }));
+  }, [groupedContents]);
 
   const handleContact = () => {
     Linking.openURL("mailto:contact@eaxau.com");
@@ -117,6 +201,9 @@ export default function CooperationScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
       >
         {/* Hero 区域 */}
         <FadeInView>
@@ -160,7 +247,7 @@ export default function CooperationScreen() {
         </FadeInView>
 
         {/* 三大服务板块 */}
-        {SERVICES.map((section, sIdx) => (
+        {services.map((section, sIdx) => (
           <FadeInView key={section.id} delay={200 + sIdx * 150}>
             <View style={styles.sectionContainer}>
               {/* 板块标题 */}
@@ -204,6 +291,22 @@ export default function CooperationScreen() {
                   </View>
                 ))}
               </View>
+            </View>
+          </FadeInView>
+        ))}
+
+        {/* 自定义板块（后台新增的非默认sectionKey） */}
+        {customSections.map((cs, csIdx) => (
+          <FadeInView key={cs.sectionKey} delay={700 + csIdx * 100}>
+            <View style={styles.sectionContainer}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{cs.sectionKey}</Text>
+              {cs.items.map((item) => (
+                <View key={item.id} style={[styles.serviceCard, { backgroundColor: colors.surface, borderColor: colors.border, width: "100%" as any, marginBottom: 10 }]}>
+                  <Text style={styles.serviceItemIcon}>{item.icon || "📄"}</Text>
+                  <Text style={[styles.serviceItemTitle, { color: colors.foreground }]}>{item.title}</Text>
+                  <Text style={[styles.serviceItemDesc, { color: colors.muted }]}>{item.content}</Text>
+                </View>
+              ))}
             </View>
           </FadeInView>
         ))}
