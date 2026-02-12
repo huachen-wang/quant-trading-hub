@@ -340,8 +340,10 @@ export default function StrategyDetailScreen() {
               <Image
                 source={{ uri: strategy.coverImage }}
                 style={{ width: '100%', height: '100%' }}
+                placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
                 contentFit="cover"
                 transition={300}
+                cachePolicy="memory-disk"
               />
               <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
                 <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform}</Text>

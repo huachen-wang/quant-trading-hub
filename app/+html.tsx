@@ -5,6 +5,8 @@ import type { PropsWithChildren } from "react";
  * Custom HTML template for Expo Router web export.
  * Overrides the default ScrollViewStyleReset to remove body overflow:hidden,
  * which prevents scrolling on mobile browsers.
+ *
+ * Enhanced with comprehensive SEO meta tags, Open Graph, and structured data.
  */
 export default function Root({ children }: PropsWithChildren) {
   return (
@@ -16,8 +18,68 @@ export default function Root({ children }: PropsWithChildren) {
           name="viewport"
           content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
-        <title>量化军火库</title>
-        <meta name="description" content="MT4/MT5量化交易策略分享、评分和实盘数据展示平台" />
+
+        {/* ===== SEO Core Meta Tags ===== */}
+        <title>量化军火库 | 专业EA策略展示与量化交易合作平台</title>
+        <meta name="description" content="量化军火库（eaxau.com）是专业的MT4/MT5 EA策略展示平台，提供精选量化交易策略的实盘数据、权益曲线和回测报告。我们致力于促成工作室合作，提供技术支持、策略扶持和行业信息差服务。" />
+        <meta name="keywords" content="量化交易,EA策略,MT4,MT5,外汇EA,量化军火库,自动化交易,EA展示,量化合作,交易策略,实盘数据,权益曲线,eaxau" />
+        <meta name="author" content="量化军火库" />
+        <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+        <link rel="canonical" href="https://www.eaxau.com/" />
+
+        {/* ===== Open Graph (社交媒体分享) ===== */}
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="量化军火库" />
+        <meta property="og:title" content="量化军火库 | 专业EA策略展示与量化交易合作平台" />
+        <meta property="og:description" content="精选MT4/MT5 EA策略展示，实盘数据透明可查。促成量化交易工作室合作，提供技术支持与行业信息差服务。" />
+        <meta property="og:url" content="https://www.eaxau.com/" />
+        <meta property="og:locale" content="zh_CN" />
+
+        {/* ===== Twitter Card ===== */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="量化军火库 | 专业EA策略展示与量化交易合作平台" />
+        <meta name="twitter:description" content="精选MT4/MT5 EA策略展示，实盘数据透明可查。促成量化交易工作室合作。" />
+
+        {/* ===== Mobile App Meta ===== */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-title" content="量化军火库" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="theme-color" content="#10B981" />
+        <meta name="application-name" content="量化军火库" />
+
+        {/* ===== JSON-LD Structured Data ===== */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              "name": "量化军火库",
+              "alternateName": "eaxau",
+              "url": "https://www.eaxau.com",
+              "description": "专业的MT4/MT5 EA策略展示平台，提供精选量化交易策略的实盘数据展示，促成工作室合作。",
+              "potentialAction": {
+                "@type": "SearchAction",
+                "target": "https://www.eaxau.com/search?q={search_term_string}",
+                "query-input": "required name=search_term_string"
+              }
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "量化军火库",
+              "url": "https://www.eaxau.com",
+              "description": "专业EA策略展示与量化交易合作平台",
+              "sameAs": []
+            }),
+          }}
+        />
+
         {/*
           Custom style reset: keep full-height layout but allow body scrolling.
           The default Expo ScrollViewStyleReset sets body { overflow: hidden }

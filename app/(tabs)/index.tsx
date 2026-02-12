@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Animated } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
@@ -13,6 +13,8 @@ import { trpc } from "@/lib/trpc";
 type PlatformFilter = "MT4" | "MT5" | undefined;
 type OrderBy = "latest" | "popular" | "return";
 
+const PAGE_SIZE = 12;
+
 export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -22,6 +24,12 @@ export default function HomeScreen() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [selectedStrategyTitle, setSelectedStrategyTitle] = useState("");
+
+  // 分页状态
+  const [allStrategies, setAllStrategies] = useState<any[]>([]);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Header入场动画
   const headerFade = useRef(new Animated.Value(0)).current;
@@ -33,12 +41,67 @@ export default function HomeScreen() {
     ]).start();
   }, []);
 
-  const { data: strategies, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
+  // 首次加载
+  const { data: initialData, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
     platform: platformFilter,
     orderBy,
-    limit: 20,
+    limit: PAGE_SIZE,
     offset: 0,
   });
+
+  // 当筛选条件或首次数据变化时，重置分页状态
+  useEffect(() => {
+    if (initialData) {
+      setAllStrategies(initialData);
+      setOffset(initialData.length);
+      setHasMore(initialData.length >= PAGE_SIZE);
+    }
+  }, [initialData]);
+
+  // 加载更多的 query（手动触发）
+  const loadMoreQuery = trpc.strategies.list.useQuery(
+    {
+      platform: platformFilter,
+      orderBy,
+      limit: PAGE_SIZE,
+      offset: offset,
+    },
+    {
+      enabled: false, // 不自动执行，手动调用 refetch
+    }
+  );
+
+  const handleLoadMore = useCallback(async () => {
+    if (!hasMore || isLoadingMore || isLoading) return;
+
+    setIsLoadingMore(true);
+    try {
+      const result = await loadMoreQuery.refetch();
+      if (result.data && result.data.length > 0) {
+        setAllStrategies((prev) => {
+          // 去重：防止并发请求导致重复数据
+          const existingIds = new Set(prev.map((s) => s.id));
+          const newItems = result.data.filter((s: any) => !existingIds.has(s.id));
+          return [...prev, ...newItems];
+        });
+        setOffset((prev) => prev + result.data.length);
+        setHasMore(result.data.length >= PAGE_SIZE);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Load more failed:", error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [hasMore, isLoadingMore, isLoading, loadMoreQuery]);
+
+  // 下拉刷新时重置分页
+  const handleRefresh = useCallback(async () => {
+    setOffset(0);
+    setHasMore(true);
+    await refetch();
+  }, [refetch]);
 
   const handleSubscribePress = (title: string) => {
     setSelectedStrategyTitle(title);
@@ -134,7 +197,25 @@ export default function HomeScreen() {
     </View>
   );
 
-  if (isLoading && !strategies) {
+  const renderFooter = () => {
+    if (isLoadingMore) {
+      return (
+        <View style={{ paddingVertical: 16, alignItems: "center" }}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      );
+    }
+    if (!hasMore && allStrategies.length > 0) {
+      return (
+        <View style={{ paddingVertical: 16, alignItems: "center" }}>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>已展示全部策略</Text>
+        </View>
+      );
+    }
+    return null;
+  };
+
+  if (isLoading && !initialData) {
     return (
       <ScreenContainer className="items-center justify-center">
         <ActivityIndicator size="large" color={colors.primary} />
@@ -151,7 +232,7 @@ export default function HomeScreen() {
         strategyTitle={selectedStrategyTitle}
       />
       <FlatList
-        data={strategies || []}
+        data={allStrategies}
         keyExtractor={(item) => item.id.toString()}
         key={numColumns}
         numColumns={numColumns}
@@ -176,9 +257,18 @@ export default function HomeScreen() {
         )}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
+        ListFooterComponent={renderFooter}
         columnWrapperStyle={{ justifyContent: "flex-start" }}
         contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 20 }}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        // 分页加载
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.5}
+        // FlatList 虚拟化优化
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        removeClippedSubviews={true}
       />
     </ScreenContainer>
   );

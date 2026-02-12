@@ -6,6 +6,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useResponsive } from "@/hooks/use-responsive";
 import * as Haptics from "expo-haptics";
 
+// 默认 blurhash 占位符 - 深色渐变风格，适合金融/交易类封面
+const DEFAULT_BLURHASH = "L6PZfSi_.AyE_3t7t7R**0o#DgR4";
+
 export interface StrategyCardProps {
   id: number;
   title: string;
@@ -17,6 +20,7 @@ export interface StrategyCardProps {
   downloadCount: number;
   virtualDownloads?: number;
   coverImage?: string | null;
+  coverImageBlurhash?: string | null;
   pairs?: string;
   viewCount?: number;
   createdAt?: Date | string | null;
@@ -34,6 +38,7 @@ export function StrategyCard({
   downloadCount,
   virtualDownloads = 0,
   coverImage,
+  coverImageBlurhash,
   viewCount = 0,
   onPress,
   onSubscribePress,
@@ -124,8 +129,11 @@ export function StrategyCard({
             <Image
               source={{ uri: coverImage }}
               style={[styles.coverImage, { height: coverHeight }]}
+              placeholder={{ blurhash: coverImageBlurhash || DEFAULT_BLURHASH }}
               contentFit="cover"
               transition={300}
+              recyclingKey={coverImage}
+              cachePolicy="memory-disk"
             />
           ) : (
             <LinearGradient
