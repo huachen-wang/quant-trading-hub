@@ -149,6 +149,14 @@ const SCREENING_CRITERIA = [
   { icon: "💰", label: "盈利因子>1.5", desc: "总盈利至少是总亏损的1.5倍" },
 ];
 
+// 订阅权益
+const SUBSCRIBE_BENEFITS = [
+  { icon: "🔔", title: "新策略上架通知", desc: "第一时间获取通过审核的优质EA策略" },
+  { icon: "📈", title: "行业数据报告", desc: "定期推送EA市场分析和趋势洞察" },
+  { icon: "🎁", title: "合作激励动态", desc: "最新合作活动、返利计划等信息" },
+  { icon: "💡", title: "量化交易干货", desc: "EA避坑指南、风控技巧、实战经验" },
+];
+
 export default function SubscribeScreen() {
   const colors = useColors();
   const [email, setEmail] = useState("");
@@ -237,7 +245,7 @@ export default function SubscribeScreen() {
     }
   };
 
-  const handleOpenBlueberry = () => {
+  const handleLearnMore = () => {
     Linking.openURL("https://www.eaxau.com");
   };
 
@@ -310,56 +318,19 @@ export default function SubscribeScreen() {
           <View style={styles.headerSection}>
             <Text style={[styles.pageTitle, { color: colors.foreground }]}>订阅中心</Text>
             <Text style={[styles.pageSubtitle, { color: colors.muted }]}>
-              订阅获取最新策略更新、行业资讯和蓝莓合作动态
+              订阅获取最新策略更新、行业资讯和合作动态
             </Text>
           </View>
 
-          {/* ===== 蓝莓平台推荐卡片 - 核心引导 ===== */}
-          <FadeInView delay={50}>
-            <TouchableOpacity activeOpacity={0.85} onPress={handleOpenBlueberry}>
-              <LinearGradient
-                colors={["#0a1628", "#1e40af", "#3b82f6"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.blueberryCard}
-              >
-                <View style={styles.blueberryBadge}>
-                  <Text style={styles.blueberryBadgeText}>推荐合作平台</Text>
-                </View>
-                <Text style={styles.blueberryTitle}>蓝莓 BlueberryMarkets</Text>
-                <Text style={styles.blueberryDesc}>
-                  ASIC MM全牌照 · 月交易量2000亿+ · Google 4.9/5
-                </Text>
-                <View style={styles.blueberryHighlights}>
-                  <View style={styles.blueberryHighlightItem}>
-                    <Text style={styles.blueberryHighlightNum}>1.5%-5%</Text>
-                    <Text style={styles.blueberryHighlightLabel}>净入金返利</Text>
-                  </View>
-                  <View style={styles.blueberryHighlightItem}>
-                    <Text style={styles.blueberryHighlightNum}>$150K</Text>
-                    <Text style={styles.blueberryHighlightLabel}>最高季度奖励</Text>
-                  </View>
-                  <View style={styles.blueberryHighlightItem}>
-                    <Text style={styles.blueberryHighlightNum}>2-5h</Text>
-                    <Text style={styles.blueberryHighlightLabel}>极速出金</Text>
-                  </View>
-                </View>
-                <View style={styles.blueberryCTA}>
-                  <Text style={styles.blueberryCTAText}>立即了解 → www.eaxau.com</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          </FadeInView>
-
           {/* 邮箱订阅卡片 */}
-          <FadeInView delay={100}>
+          <FadeInView delay={50}>
             <View style={[styles.subscribeCard, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}>
               <View style={styles.subscribeHeader}>
                 <Text style={{ fontSize: 28 }}>📧</Text>
                 <View style={styles.subscribeHeaderText}>
                   <Text style={[styles.subscribeTitle, { color: colors.foreground }]}>邮箱订阅</Text>
                   <Text style={[styles.subscribeDesc, { color: colors.muted }]}>
-                    订阅后将收到最新策略上架、蓝莓激励活动等通知
+                    订阅后将收到最新策略上架、激励活动、行业分析等通知
                   </Text>
                 </View>
               </View>
@@ -411,6 +382,24 @@ export default function SubscribeScreen() {
             </View>
           </FadeInView>
 
+          {/* 订阅权益 */}
+          <FadeInView delay={100}>
+            <View style={styles.dataSection}>
+              <Text style={[styles.dataSectionTitle, { color: colors.foreground }]}>订阅权益</Text>
+              <View style={styles.benefitsGrid}>
+                {SUBSCRIBE_BENEFITS.map((item, i) => (
+                  <View key={i} style={[styles.benefitCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <Text style={styles.benefitIcon}>{item.icon}</Text>
+                    <View style={styles.benefitContent}>
+                      <Text style={[styles.benefitTitle, { color: colors.foreground }]}>{item.title}</Text>
+                      <Text style={[styles.benefitDesc, { color: colors.muted }]}>{item.desc}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </FadeInView>
+
           {/* ===== EA市场数据分析 ===== */}
           <FadeInView delay={200}>
             <View style={styles.dataSection}>
@@ -457,20 +446,20 @@ export default function SubscribeScreen() {
             </View>
           </FadeInView>
 
-          {/* ===== 蓝莓合作引导 ===== */}
+          {/* ===== 底部引导 - 软性 ===== */}
           <FadeInView delay={400}>
             <View style={styles.dataSection}>
-              <View style={[styles.cooperationGuide, { backgroundColor: "#1e40af10", borderColor: "#1e40af30" }]}>
+              <View style={[styles.cooperationGuide, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}>
                 <Text style={[styles.guideTitle, { color: colors.foreground }]}>选好策略，更要选好平台</Text>
                 <Text style={[styles.guideDesc, { color: colors.muted }]}>
-                  量化军火库帮你筛选优质EA策略，蓝莓BlueberryMarkets为你提供最优交易环境。ASIC MM全牌照监管、极速出入金、丰厚激励回报，让你的量化交易事半功倍。
+                  量化军火库帮你筛选优质EA策略，同时为你对接顶级合规交易平台。MM全牌照监管、极速出入金、丰厚激励回报，让你的量化交易事半功倍。
                 </Text>
                 <TouchableOpacity
-                  onPress={handleOpenBlueberry}
+                  onPress={handleLearnMore}
                   activeOpacity={0.8}
                   style={styles.guideBtn}
                 >
-                  <Text style={styles.guideBtnText}>前往蓝莓平台 →</Text>
+                  <Text style={styles.guideBtnText}>了解合作详情 →</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -545,70 +534,6 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: 26, fontWeight: "800", marginBottom: 6 },
   pageSubtitle: { fontSize: 14, lineHeight: 20 },
 
-  // Blueberry推荐卡片
-  blueberryCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 20,
-    alignItems: "center",
-  },
-  blueberryBadge: {
-    backgroundColor: "rgba(212,168,67,0.2)",
-    borderWidth: 1,
-    borderColor: "rgba(212,168,67,0.5)",
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 3,
-    marginBottom: 10,
-  },
-  blueberryBadgeText: {
-    color: "#d4a843",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  blueberryTitle: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: "#fff",
-    marginBottom: 6,
-  },
-  blueberryDesc: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.7)",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  blueberryHighlights: {
-    flexDirection: "row",
-    gap: 20,
-    marginBottom: 16,
-  },
-  blueberryHighlightItem: {
-    alignItems: "center",
-  },
-  blueberryHighlightNum: {
-    fontSize: 18,
-    fontWeight: "900",
-    color: "#60a5fa",
-  },
-  blueberryHighlightLabel: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.6)",
-    marginTop: 2,
-  },
-  blueberryCTA: {
-    backgroundColor: "#d4a843",
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  blueberryCTAText: {
-    color: "#0f172a",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-
   // Subscribe card
   subscribeCard: {
     borderRadius: 16,
@@ -634,6 +559,34 @@ const styles = StyleSheet.create({
   subscribeBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   msgBox: { marginTop: 10, padding: 10, borderRadius: 8 },
   subscriberCount: { marginTop: 10, fontSize: 12, textAlign: "center" },
+
+  // Benefits
+  benefitsGrid: {
+    gap: 8,
+  },
+  benefitCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 0.5,
+    padding: 14,
+    gap: 12,
+  },
+  benefitIcon: {
+    fontSize: 24,
+  },
+  benefitContent: {
+    flex: 1,
+  },
+  benefitTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  benefitDesc: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
 
   // Data section
   dataSection: {
