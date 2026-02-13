@@ -153,7 +153,7 @@ const SCREENING_CRITERIA = [
 const SUBSCRIBE_BENEFITS = [
   { icon: "🔔", title: "新策略上架通知", desc: "第一时间获取通过审核的优质EA策略" },
   { icon: "📈", title: "行业数据报告", desc: "定期推送EA市场分析和趋势洞察" },
-  { icon: "🎁", title: "合作激励动态", desc: "最新合作活动、返利计划等信息" },
+  { icon: "🎁", title: "合作动态", desc: "最新合作活动、行业资源对接等信息" },
   { icon: "💡", title: "量化交易干货", desc: "EA避坑指南、风控技巧、实战经验" },
 ];
 
@@ -245,7 +245,7 @@ export default function SubscribeScreen() {
     }
   };
 
-  const handleLearnMore = () => {
+  const handleConsult = () => {
     Linking.openURL("https://www.eaxau.com");
   };
 
@@ -450,16 +450,16 @@ export default function SubscribeScreen() {
           <FadeInView delay={400}>
             <View style={styles.dataSection}>
               <View style={[styles.cooperationGuide, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}>
-                <Text style={[styles.guideTitle, { color: colors.foreground }]}>选好策略，更要选好平台</Text>
+                <Text style={[styles.guideTitle, { color: colors.foreground }]}>好策略，配好平台</Text>
                 <Text style={[styles.guideDesc, { color: colors.muted }]}>
-                  量化军火库帮你筛选优质EA策略，同时为你对接顶级合规交易平台。MM全牌照监管、极速出入金、丰厚激励回报，让你的量化交易事半功倍。
+                  量化军火库不仅帮你筛选优质EA策略，还为你匹配最适合的合规交易平台。告诉我们你的需求，我们帮你做好功课。
                 </Text>
                 <TouchableOpacity
-                  onPress={handleLearnMore}
+                  onPress={handleConsult}
                   activeOpacity={0.8}
                   style={styles.guideBtn}
                 >
-                  <Text style={styles.guideBtnText}>了解合作详情 →</Text>
+                  <Text style={styles.guideBtnText}>免费咨询平台匹配方案 →</Text>
                 </TouchableOpacity>
               </View>
             </View>

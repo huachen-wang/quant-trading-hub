@@ -25,56 +25,6 @@ function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?
   );
 }
 
-// 数字滚动动画
-function AnimatedNumber({ value, duration = 1500, delay = 0 }: { value: string; duration?: number; delay?: number }) {
-  const match = value.match(/^([\d.]+)(.*)$/);
-  const numericPart = match ? parseFloat(match[1]) : 0;
-  const suffix = match ? match[2] : value;
-  const isFloat = value.includes(".");
-  const decimalPlaces = isFloat ? (match?.[1]?.split(".")[1]?.length || 1) : 0;
-
-  const animValue = useRef(new Animated.Value(0)).current;
-  const [displayNum, setDisplayNum] = useState("0");
-
-  useEffect(() => {
-    const listener = animValue.addListener(({ value: v }) => {
-      if (isFloat) {
-        setDisplayNum(v.toFixed(decimalPlaces));
-      } else {
-        setDisplayNum(Math.round(v).toString());
-      }
-    });
-
-    const timer = setTimeout(() => {
-      Animated.timing(animValue, {
-        toValue: numericPart,
-        duration,
-        useNativeDriver: false,
-      }).start();
-    }, delay);
-
-    return () => {
-      animValue.removeListener(listener);
-      clearTimeout(timer);
-    };
-  }, [numericPart]);
-
-  if (!match) {
-    const fadeAnim = useRef(new Animated.Value(0)).current;
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
-      }, delay);
-      return () => clearTimeout(timer);
-    }, []);
-    return <Animated.Text style={[styles.highlightNumber, { opacity: fadeAnim }]}>{value}</Animated.Text>;
-  }
-
-  return (
-    <Text style={styles.highlightNumber}>{displayNum}{suffix}</Text>
-  );
-}
-
 // ===== 行业数据 =====
 // EA市场真相数据
 const EA_TRUTH_DATA = [
@@ -85,49 +35,48 @@ const EA_TRUTH_DATA = [
   { label: "参数过度敏感", pct: 8, color: "#6b7280" },
 ];
 
-// 选平台的核心维度
+// 选平台的核心维度 — 行业通用标准
 const PLATFORM_CRITERIA = [
-  { icon: "🛡️", title: "监管等级", desc: "做市商(MM)牌照是最高等级，牌照价值数百万美元，远超普通STP牌照", key: "regulation" },
-  { icon: "⚡", title: "出入金效率", desc: "优质平台出金2-5小时到账，支持多种入金渠道（支付宝/微信/USDT等）", key: "speed" },
-  { icon: "🔒", title: "资金安全", desc: "隔离账户、多重加密、反洗钱合规、第三方保障计划缺一不可", key: "safety" },
-  { icon: "📊", title: "流动性深度", desc: "月交易量千亿级别以上，确保EA策略获得最优执行价格和低滑点", key: "liquidity" },
-  { icon: "⭐", title: "真实口碑", desc: "Google/Trustpilot/天眼等多平台评分4.5+，数千条真实用户评价", key: "reputation" },
-  { icon: "🤝", title: "合作支持", desc: "专属客户经理、技术团队支持、MAM多账户管理、社群资源对接", key: "support" },
+  { icon: "🛡️", title: "监管资质", desc: "是否持有FCA/ASIC/CySEC等主流监管牌照，牌照等级和价值直接反映平台实力" },
+  { icon: "⚡", title: "出入金效率", desc: "出金到账时间、支持的入金渠道数量、是否有隐藏费用，直接影响资金灵活性" },
+  { icon: "🔒", title: "资金安全", desc: "是否采用隔离账户、是否有第三方保障计划、反洗钱合规体系是否健全" },
+  { icon: "📊", title: "执行质量", desc: "滑点控制、流动性深度、订单执行速度，决定了EA策略能否按预期运行" },
+  { icon: "⭐", title: "市场口碑", desc: "Google/Trustpilot/外汇天眼等第三方平台的真实用户评价和评分" },
+  { icon: "🤝", title: "服务支持", desc: "是否有专属客户经理、技术团队响应速度、是否支持MAM等专业需求" },
 ];
 
-// 平台对比维度（不点名，用"顶级平台"vs"普通平台"）
-const COMPARISON_DATA = [
-  { item: "监管牌照", top: "MM做市商全牌照", normal: "STP/普通牌照" },
-  { item: "牌照价值", top: "$500万+", normal: "~$20万" },
-  { item: "月交易量", top: "千亿级 USD", normal: "不透明" },
-  { item: "出金速度", top: "2-5小时", normal: "1-5个工作日" },
-  { item: "用户评分", top: "4.7-4.9/5", normal: "3-4分" },
-  { item: "入金方式", top: "10+种", normal: "2-3种" },
-  { item: "资金保障", top: "隔离账户+第三方保障", normal: "无额外保障" },
+// 我们能提供的服务（桥梁角色）
+const OUR_SERVICES = [
+  { icon: "🔍", title: "平台筛选", desc: "根据你的交易风格、资金规模和需求，从多家合规平台中匹配最适合的方案" },
+  { icon: "📋", title: "合规审核", desc: "我们对接的每家平台都经过监管资质、资金安全、用户口碑等多维度审核" },
+  { icon: "💰", title: "激励谈判", desc: "不同平台提供不同的激励政策，我们帮你争取最优的入金返利和合作条件" },
+  { icon: "🔧", title: "技术对接", desc: "EA部署、VPS配置、MAM账户管理等技术问题，我们提供全程支持" },
+  { icon: "👥", title: "社群资源", desc: "加入量化交易社群，与同行交流策略、分享经验、获取行业一手资讯" },
+  { icon: "📞", title: "持续服务", desc: "合作不是一次性的，我们提供长期的平台对接、问题协调和方案优化服务" },
 ];
 
-// 合作模式
+// 合作模式 — 中性表述
 const COOPERATION_MODELS = [
-  { icon: "👤", title: "个人交易者", desc: "使用我们筛选的EA策略，在合规平台上稳健交易，享受入金激励", tag: "入门" },
-  { icon: "🏢", title: "量化工作室", desc: "MAM多账户管理、专属技术支持、阶梯激励计划，规模化运营", tag: "进阶" },
-  { icon: "🔧", title: "EA开发者", desc: "上架策略到军火库，获得曝光和用户，对接优质交易环境", tag: "开发" },
-  { icon: "📈", title: "代理合作", desc: "月度/季度激励叠加，专属团队支持，长期共赢的深度合作关系", tag: "深度" },
+  { icon: "👤", title: "个人交易者", desc: "我们帮你筛选优质EA策略，匹配合适的合规交易平台，让你专注交易本身", tag: "入门" },
+  { icon: "🏢", title: "量化工作室", desc: "多账户管理需求、技术对接支持、阶梯合作方案，助力团队规模化运营", tag: "进阶" },
+  { icon: "🔧", title: "EA开发者", desc: "上架策略到军火库获得曝光，我们帮你对接优质交易环境和真实用户", tag: "开发" },
+  { icon: "📈", title: "机构合作", desc: "定制化合作方案、专属团队支持、长期共赢的深度合作关系", tag: "深度" },
 ];
 
-// 合作流程（不提品牌名）
+// 合作流程 — 强调"匹配"而非"推荐"
 const COOPERATION_STEPS = [
-  { step: "01", icon: "📱", label: "关注量化军火库", desc: "了解EA策略生态" },
-  { step: "02", icon: "🔍", label: "选择优质策略", desc: "180天+实盘验证" },
-  { step: "03", icon: "🏦", label: "开设合规账户", desc: "顶级监管保障" },
-  { step: "04", icon: "🤝", label: "开启深度合作", desc: "激励+技术+社群" },
+  { step: "01", icon: "📱", label: "沟通需求", desc: "了解你的交易风格和目标" },
+  { step: "02", icon: "🔍", label: "方案匹配", desc: "筛选最适合的平台和策略" },
+  { step: "03", icon: "📋", label: "合规对接", desc: "协助开户和技术配置" },
+  { step: "04", icon: "🚀", label: "持续优化", desc: "长期跟踪和方案调整" },
 ];
 
-// 激励概览（不提品牌名）
-const INCENTIVE_HIGHLIGHTS = [
-  { number: "1.5%-5%", label: "净入金返利" },
-  { number: "150K", label: "最高季度奖励(USD)" },
-  { number: "10+", label: "入金渠道" },
-  { number: "24/7", label: "专属团队支持" },
+// 为什么选择量化军火库（桥梁价值）
+const WHY_US = [
+  { number: "200+", label: "已分析EA策略" },
+  { number: "多家", label: "合规平台资源" },
+  { number: "24h", label: "技术响应" },
+  { number: "1v1", label: "专属服务" },
 ];
 
 export default function CooperationScreen() {
@@ -144,7 +93,7 @@ export default function CooperationScreen() {
     setRefreshing(false);
   }, []);
 
-  const handleLearnMore = () => {
+  const handleConsult = () => {
     Linking.openURL("https://www.eaxau.com");
   };
 
@@ -165,7 +114,7 @@ export default function CooperationScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        {/* ===== Hero 区域 - 以"量化交易合作生态"为主题 ===== */}
+        {/* ===== Hero 区域 - 中立桥梁定位 ===== */}
         <FadeInView>
           <LinearGradient
             colors={["#0a1628", "#0f2847", "#1a3a6b"]}
@@ -176,30 +125,31 @@ export default function CooperationScreen() {
             <View style={styles.heroBadge}>
               <Text style={styles.heroBadgeText}>量化军火库 · 合作生态</Text>
             </View>
-            <Text style={styles.heroTitle}>打造你的量化交易闭环</Text>
-            <Text style={styles.heroTitleSub}>策略 + 平台 + 激励 = 长期盈利</Text>
+            <Text style={styles.heroTitle}>好策略，配好平台</Text>
+            <Text style={styles.heroTitleSub}>我们帮你匹配最适合的合规交易环境</Text>
             <Text style={styles.heroSubtitle}>
-              选对EA策略只是第一步，选对交易平台才是关键{"\n"}
-              我们为你筛选顶级合规平台，提供全方位合作支持
+              选对EA策略只是第一步{"\n"}
+              交易平台的监管资质、执行质量、资金安全同样决定最终收益{"\n"}
+              量化军火库为你做好功课，省去踩坑的时间
             </Text>
 
-            {/* 核心数据 */}
+            {/* 核心数据 — 突出桥梁价值 */}
             <View style={[styles.highlightRow, isDesktop && styles.highlightRowDesktop]}>
-              {INCENTIVE_HIGHLIGHTS.map((h, i) => (
+              {WHY_US.map((h, i) => (
                 <View key={i} style={styles.highlightItem}>
-                  <AnimatedNumber value={h.number} delay={300 + i * 200} />
+                  <Text style={styles.highlightNumber}>{h.number}</Text>
                   <Text style={styles.highlightLabel}>{h.label}</Text>
                 </View>
               ))}
             </View>
 
-            {/* CTA按钮 */}
+            {/* CTA按钮 — 自然引导 */}
             <TouchableOpacity
-              onPress={handleLearnMore}
+              onPress={handleConsult}
               activeOpacity={0.8}
               style={styles.heroCTABtn}
             >
-              <Text style={styles.heroCTAText}>了解合作详情 →</Text>
+              <Text style={styles.heroCTAText}>免费咨询平台匹配方案 →</Text>
             </TouchableOpacity>
           </LinearGradient>
         </FadeInView>
@@ -227,18 +177,18 @@ export default function CooperationScreen() {
             </View>
             <View style={[styles.insightBox, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}>
               <Text style={[styles.insightText, { color: colors.foreground }]}>
-                选对策略只解决了一半问题。平台的执行质量、滑点控制、出入金效率同样决定了你的最终收益。
+                策略本身只是一半，另一半取决于你用什么平台跑。执行质量差、滑点大、出入金慢，再好的策略也白搭。
               </Text>
             </View>
           </View>
         </FadeInView>
 
-        {/* ===== 如何选择靠谱的交易平台 ===== */}
+        {/* ===== 怎么判断一个平台靠不靠谱 ===== */}
         <FadeInView delay={200}>
           <View style={styles.sectionContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>如何选择靠谱的交易平台？</Text>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>怎么判断一个平台靠不靠谱？</Text>
             <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>
-              6个核心维度，帮你避开90%的坑
+              行业通用的6个核心评估维度
             </Text>
             <View style={[styles.criteriaGrid, isDesktop && styles.criteriaGridDesktop]}>
               {PLATFORM_CRITERIA.map((item, i) => (
@@ -262,25 +212,29 @@ export default function CooperationScreen() {
           </View>
         </FadeInView>
 
-        {/* ===== 顶级平台 vs 普通平台 ===== */}
+        {/* ===== 量化军火库能帮你做什么（桥梁服务） ===== */}
         <FadeInView delay={300}>
           <View style={styles.sectionContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>顶级平台 vs 普通平台</Text>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>我们能帮你做什么？</Text>
             <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>
-              选择不同等级的平台，交易体验天差地别
+              量化军火库不是平台方，而是帮你对接优质资源的桥梁
             </Text>
-            <View style={[styles.comparisonTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              {/* 表头 */}
-              <View style={[styles.tableRow, styles.tableHeader, { backgroundColor: "#1e40af" }]}>
-                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>对比维度</Text>
-                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>顶级合规平台</Text>
-                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>普通平台</Text>
-              </View>
-              {COMPARISON_DATA.map((row, i) => (
-                <View key={i} style={[styles.tableRow, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.tableCell, { flex: 2, color: colors.foreground, fontWeight: "600" }]}>{row.item}</Text>
-                  <Text style={[styles.tableCell, { flex: 2, color: "#10b981", fontWeight: "700" }]}>{row.top}</Text>
-                  <Text style={[styles.tableCell, { flex: 2, color: colors.muted }]}>{row.normal}</Text>
+            <View style={[styles.criteriaGrid, isDesktop && styles.criteriaGridDesktop]}>
+              {OUR_SERVICES.map((item, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.criteriaCard,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      width: isDesktop ? "48%" as any : "100%" as any,
+                    },
+                  ]}
+                >
+                  <Text style={styles.criteriaIcon}>{item.icon}</Text>
+                  <Text style={[styles.criteriaTitle, { color: colors.foreground }]}>{item.title}</Text>
+                  <Text style={[styles.criteriaDesc, { color: colors.muted }]}>{item.desc}</Text>
                 </View>
               ))}
             </View>
@@ -290,9 +244,9 @@ export default function CooperationScreen() {
         {/* ===== 合作模式 ===== */}
         <FadeInView delay={350}>
           <View style={styles.sectionContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>合作模式</Text>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>适合你的合作方式</Text>
             <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>
-              无论你是个人交易者还是量化团队，都能找到适合的合作方式
+              无论你是刚入门还是已经有团队，我们都有对应的支持方案
             </Text>
             <View style={[styles.modelGrid, isDesktop && styles.modelGridDesktop]}>
               {COOPERATION_MODELS.map((item, i) => (
@@ -311,7 +265,7 @@ export default function CooperationScreen() {
           </View>
         </FadeInView>
 
-        {/* ===== 激励计划概览（不提品牌名，用"合作平台"代替） ===== */}
+        {/* ===== 关于激励 — 不写具体数字 ===== */}
         <FadeInView delay={400}>
           <View style={styles.sectionContainer}>
             <TouchableOpacity activeOpacity={0.85} onPress={() => toggleSection("incentive")}>
@@ -323,8 +277,8 @@ export default function CooperationScreen() {
               >
                 <Text style={styles.incentiveHeaderIcon}>💰</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.incentiveHeaderTitle}>合作激励计划</Text>
-                  <Text style={styles.incentiveHeaderSub}>月度返利 + 季度奖励 · 可叠加 · 无隐藏门槛</Text>
+                  <Text style={styles.incentiveHeaderTitle}>合作激励说明</Text>
+                  <Text style={styles.incentiveHeaderSub}>不同平台提供不同激励政策，我们帮你争取最优条件</Text>
                 </View>
                 <Text style={styles.collapseArrow}>{expandedSection === "incentive" ? "▲" : "▼"}</Text>
               </LinearGradient>
@@ -332,73 +286,29 @@ export default function CooperationScreen() {
 
             {expandedSection === "incentive" && (
               <View style={[styles.incentiveBody, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                {/* 月度激励 */}
                 <View style={styles.incentiveSection}>
-                  <Text style={[styles.incentiveSectionTitle, { color: colors.foreground }]}>月度激励</Text>
-                  <Text style={[styles.incentiveSectionSub, { color: colors.muted }]}>
-                    净入金返利 1.5%-1.7% · 无交易手数要求 · 奖励形式：购物卡
-                  </Text>
-                  <View style={[styles.tableRow, styles.tableHeader, { backgroundColor: "#1e3a5f" }]}>
-                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1 }]}>档位</Text>
-                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>首次入金(USD)</Text>
-                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>返利(CNY)</Text>
-                  </View>
-                  {[
-                    { tier: 1, deposit: "$3,000", gift: "¥300" },
-                    { tier: 2, deposit: "$5,000", gift: "¥500" },
-                    { tier: 3, deposit: "$10,000", gift: "¥1,100" },
-                    { tier: 4, deposit: "$30,000", gift: "¥3,500" },
-                    { tier: 5, deposit: "$50,000", gift: "¥6,000" },
-                  ].map((t, i) => (
-                    <View key={i} style={[styles.tableRow, { borderBottomColor: colors.border }]}>
-                      <Text style={[styles.tableCell, { flex: 1, color: colors.foreground, fontWeight: "700" }]}>{t.tier}</Text>
-                      <Text style={[styles.tableCell, { flex: 2, color: colors.foreground }]}>{t.deposit}</Text>
-                      <Text style={[styles.tableCell, { flex: 2, color: "#d4a843", fontWeight: "700" }]}>{t.gift}</Text>
-                    </View>
-                  ))}
-                </View>
-
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                {/* 季度激励 */}
-                <View style={styles.incentiveSection}>
-                  <Text style={[styles.incentiveSectionTitle, { color: colors.foreground }]}>季度激励</Text>
-                  <Text style={[styles.incentiveSectionSub, { color: colors.muted }]}>
-                    净入金返利 2%-5% · 阶梯奖励 · 最高 $150,000 USD
-                  </Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View>
-                      <View style={[styles.tableRow, styles.tableHeader, { backgroundColor: "#3b1a6b" }]}>
-                        <Text style={[styles.tableCell, styles.tableCellHeader, { width: 50 }]}>档位</Text>
-                        <Text style={[styles.tableCell, styles.tableCellHeader, { width: 120 }]}>净入金(USD)</Text>
-                        <Text style={[styles.tableCell, styles.tableCellHeader, { width: 80 }]}>交易量</Text>
-                        <Text style={[styles.tableCell, styles.tableCellHeader, { width: 90 }]}>奖励金</Text>
-                        <Text style={[styles.tableCell, styles.tableCellHeader, { width: 70 }]}>客户数</Text>
-                      </View>
-                      {[
-                        { tier: 1, deposit: "$10万-20万", lots: "600", reward: "$2,000", clients: "≥15名" },
-                        { tier: 2, deposit: "$20万-40万", lots: "1,200", reward: "$5,000", clients: "≥20名" },
-                        { tier: 3, deposit: "$40万-60万", lots: "2,500", reward: "$8,000", clients: "≥25名" },
-                        { tier: 4, deposit: "$60万-100万", lots: "6,000", reward: "$15,000", clients: "≥30名" },
-                        { tier: 5, deposit: "$100万-200万", lots: "15,000", reward: "$20,000", clients: "≥35名" },
-                        { tier: 6, deposit: "$200万-300万", lots: "40,000", reward: "$80,000", clients: "≥40名" },
-                        { tier: 7, deposit: ">$300万", lots: "70,000", reward: "$150,000", clients: "≥45名" },
-                      ].map((t, i) => (
-                        <View key={i} style={[styles.tableRow, { borderBottomColor: colors.border }]}>
-                          <Text style={[styles.tableCell, { width: 50, color: colors.foreground, fontWeight: "700" }]}>{t.tier}</Text>
-                          <Text style={[styles.tableCell, { width: 120, color: colors.foreground }]}>{t.deposit}</Text>
-                          <Text style={[styles.tableCell, { width: 80, color: colors.muted }]}>{t.lots}</Text>
-                          <Text style={[styles.tableCell, { width: 90, color: "#d4a843", fontWeight: "700" }]}>{t.reward}</Text>
-                          <Text style={[styles.tableCell, { width: 70, color: colors.muted }]}>{t.clients}</Text>
+                  <Text style={[styles.incentiveSectionTitle, { color: colors.foreground }]}>激励类型</Text>
+                  <View style={styles.incentiveList}>
+                    {[
+                      { icon: "📅", title: "月度返利", desc: "根据净入金金额按比例返利，不同平台比例不同，我们帮你对比选择最优方案" },
+                      { icon: "🏆", title: "季度奖励", desc: "达到一定交易量和客户数后可获得额外奖励，具体条件因平台而异" },
+                      { icon: "🎁", title: "专属福利", desc: "部分平台提供VPS补贴、培训资源、社群资源等额外权益" },
+                      { icon: "📈", title: "阶梯递增", desc: "合作规模越大，激励条件越优，我们帮你持续谈判升级合作方案" },
+                    ].map((item, i) => (
+                      <View key={i} style={[styles.incentiveItem, { borderBottomColor: colors.border }]}>
+                        <Text style={styles.incentiveItemIcon}>{item.icon}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.incentiveItemTitle, { color: colors.foreground }]}>{item.title}</Text>
+                          <Text style={[styles.incentiveItemDesc, { color: colors.muted }]}>{item.desc}</Text>
                         </View>
-                      ))}
-                    </View>
-                  </ScrollView>
+                      </View>
+                    ))}
+                  </View>
                 </View>
 
                 <View style={styles.incentiveNote}>
                   <Text style={[styles.incentiveNoteText, { color: colors.muted }]}>
-                    月度与季度激励可叠加 · 次月中旬发放 · 详情请咨询合作团队
+                    具体激励方案因平台和合作模式而异 · 联系我们获取针对你的定制方案
                   </Text>
                 </View>
               </View>
@@ -436,32 +346,8 @@ export default function CooperationScreen() {
           </View>
         </FadeInView>
 
-        {/* ===== 专属服务 ===== */}
-        <FadeInView delay={550}>
-          <View style={styles.sectionContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>专属合作服务</Text>
-            <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>
-              3-4人专属团队 · 24小时响应 · 全方位技术支持
-            </Text>
-            <View style={[styles.serviceGrid, isDesktop && styles.serviceGridDesktop]}>
-              {[
-                { icon: "👨‍💼", title: "专属客户经理", desc: "一对一服务，直连平台总部各部门" },
-                { icon: "👨‍💻", title: "技术工程师", desc: "量化技术全方位支持，EA部署调试" },
-                { icon: "💬", title: "千人技术社群", desc: "量化交流、策略分享、资源对接" },
-                { icon: "⚖️", title: "合规法律支持", desc: "合同审核、合规咨询、法律保障" },
-              ].map((item, i) => (
-                <View key={i} style={[styles.serviceCard, { backgroundColor: colors.surface, borderColor: colors.border, width: isDesktop ? "48%" as any : "100%" as any }]}>
-                  <Text style={styles.serviceIcon}>{item.icon}</Text>
-                  <Text style={[styles.serviceTitle, { color: colors.foreground }]}>{item.title}</Text>
-                  <Text style={[styles.serviceDesc, { color: colors.muted }]}>{item.desc}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </FadeInView>
-
-        {/* ===== 底部CTA - 软性引导 ===== */}
-        <FadeInView delay={650}>
+        {/* ===== 底部CTA - 自然引导 ===== */}
+        <FadeInView delay={600}>
           <View style={styles.sectionContainer}>
             <LinearGradient
               colors={["#0a1628", "#1e40af", "#3b82f6"]}
@@ -469,25 +355,24 @@ export default function CooperationScreen() {
               end={{ x: 1, y: 1 }}
               style={styles.ctaCard}
             >
-              <Text style={styles.ctaBadge}>限时激励活动进行中</Text>
-              <Text style={styles.ctaTitle}>开启深度合作</Text>
+              <Text style={styles.ctaTitle}>找到适合你的方案</Text>
               <Text style={styles.ctaDesc}>
-                无论你是量化工作室、EA开发者还是个人交易者{"\n"}
-                我们都能为你匹配最优质的交易环境和最丰厚的激励回报
+                每个人的交易风格和需求都不一样{"\n"}
+                告诉我们你的情况，我们帮你匹配最合适的平台和合作方案
               </Text>
               <TouchableOpacity
-                onPress={handleLearnMore}
+                onPress={handleConsult}
                 activeOpacity={0.8}
                 style={styles.ctaButton}
               >
-                <Text style={styles.ctaButtonText}>了解合作方案 →</Text>
+                <Text style={styles.ctaButtonText}>免费咨询平台匹配方案 →</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleContact}
                 activeOpacity={0.8}
                 style={styles.ctaButtonSecondary}
               >
-                <Text style={styles.ctaButtonSecondaryText}>咨询合作详情</Text>
+                <Text style={styles.ctaButtonSecondaryText}>获取专属合作建议</Text>
               </TouchableOpacity>
             </LinearGradient>
           </View>
@@ -527,7 +412,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   heroTitleSub: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     color: "#60a5fa",
     marginBottom: 12,
@@ -544,7 +429,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
-    gap: 16,
+    gap: 20,
     marginBottom: 20,
   },
   highlightRowDesktop: {
@@ -644,7 +529,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // Platform criteria
+  // Platform criteria & services
   criteriaGrid: {
     gap: 10,
     marginTop: 8,
@@ -671,30 +556,6 @@ const styles = StyleSheet.create({
   criteriaDesc: {
     fontSize: 13,
     lineHeight: 20,
-  },
-
-  // Comparison Table
-  comparisonTable: {
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 0.5,
-  },
-  tableRow: {
-    flexDirection: "row",
-    borderBottomWidth: 0.5,
-  },
-  tableHeader: {
-    borderBottomWidth: 0,
-  },
-  tableCell: {
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    fontSize: 12,
-  },
-  tableCellHeader: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 12,
   },
 
   // Cooperation models
@@ -778,16 +639,30 @@ const styles = StyleSheet.create({
   incentiveSectionTitle: {
     fontSize: 16,
     fontWeight: "700",
-    marginBottom: 4,
-  },
-  incentiveSectionSub: {
-    fontSize: 12,
     marginBottom: 10,
-    lineHeight: 18,
   },
-  divider: {
-    height: 0.5,
-    marginHorizontal: 14,
+  incentiveList: {
+    gap: 0,
+  },
+  incentiveItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    gap: 12,
+  },
+  incentiveItemIcon: {
+    fontSize: 24,
+    marginTop: 2,
+  },
+  incentiveItemTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
+  incentiveItemDesc: {
+    fontSize: 12,
+    lineHeight: 18,
   },
   incentiveNote: {
     padding: 12,
@@ -866,51 +741,11 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
 
-  // Service
-  serviceGrid: {
-    gap: 10,
-    marginTop: 8,
-  },
-  serviceGridDesktop: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  serviceCard: {
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 0.5,
-  },
-  serviceIcon: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  serviceTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  serviceDesc: {
-    fontSize: 13,
-    lineHeight: 20,
-  },
-
   // CTA
   ctaCard: {
     borderRadius: 16,
     padding: 28,
     alignItems: "center",
-  },
-  ctaBadge: {
-    backgroundColor: "rgba(212,168,67,0.2)",
-    color: "#d4a843",
-    fontSize: 12,
-    fontWeight: "700",
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 12,
   },
   ctaTitle: {
     fontSize: 22,
