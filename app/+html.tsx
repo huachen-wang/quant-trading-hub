@@ -21,7 +21,7 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* ===== SEO Core Meta Tags ===== */}
         <title>量化军火库 | 专业EA策略展示与量化交易合作平台</title>
-        <meta name="description" content="量化军火库（eaxau.com）是专业的MT4/MT5 EA策略展示平台，提供精选量化交易策略的实盘数据、权益曲线和回测报告。我们致力于促成工作室合作，提供技术支持、策略扶持和行业信息差服务。" />
+        <meta name="description" content="量化军火库（eaxau.com）是专业的MT4/MT5 EA策略展示与筛选平台，提供精选量化交易策略的实盘数据、权益曲线和回测报告。同时帮助交易者匹配最适合的合规交易环境，提供策略筛选、平台对接、技术支持等一站式服务。" />
         <meta name="keywords" content="量化交易,EA策略,MT4,MT5,外汇EA,量化军火库,自动化交易,EA展示,量化合作,交易策略,实盘数据,权益曲线,eaxau" />
         <meta name="author" content="量化军火库" />
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
@@ -31,14 +31,14 @@ export default function Root({ children }: PropsWithChildren) {
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="量化军火库" />
         <meta property="og:title" content="量化军火库 | 专业EA策略展示与量化交易合作平台" />
-        <meta property="og:description" content="精选MT4/MT5 EA策略展示，实盘数据透明可查。促成量化交易工作室合作，提供技术支持与行业信息差服务。" />
+        <meta property="og:description" content="精选MT4/MT5 EA策略展示，实盘数据透明可查。帮助交易者筛选优质策略、匹配合规交易平台，提供一站式量化交易服务。" />
         <meta property="og:url" content="https://www.eaxau.com/" />
         <meta property="og:locale" content="zh_CN" />
 
         {/* ===== Twitter Card ===== */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="量化军火库 | 专业EA策略展示与量化交易合作平台" />
-        <meta name="twitter:description" content="精选MT4/MT5 EA策略展示，实盘数据透明可查。促成量化交易工作室合作。" />
+        <meta name="twitter:description" content="精选MT4/MT5 EA策略展示，实盘数据透明可查。策略筛选+平台匹配，一站式量化交易服务。" />
 
         {/* ===== Mobile App Meta ===== */}
         <meta name="apple-mobile-web-app-capable" content="yes" />

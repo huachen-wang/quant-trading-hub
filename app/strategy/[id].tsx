@@ -17,6 +17,7 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { ScreenContainer } from "@/components/screen-container";
+import { ContactModal } from "@/components/contact-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
@@ -32,6 +33,7 @@ export default function StrategyDetailScreen() {
   const { width } = useWindowDimensions();
   const [commentText, setCommentText] = useState("");
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
   // 用户评价弹窗
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -630,9 +632,30 @@ export default function StrategyDetailScreen() {
             )}
           </View>
 
+          {/* 平台匹配引导 */}
+          <View style={styles.section}>
+            <TouchableOpacity
+              onPress={() => setShowContactModal(true)}
+              activeOpacity={0.85}
+              style={[styles.platformGuide, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}
+            >
+              <View style={styles.platformGuideContent}>
+                <Text style={styles.platformGuideEmoji}>🎯</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.platformGuideTitle, { color: colors.foreground }]}>需要交易环境支持？</Text>
+                  <Text style={[styles.platformGuideDesc, { color: colors.muted }]}>
+                    量化军火库帮你匹配最适合这款EA的合规交易平台，让策略发挥最大价值
+                  </Text>
+                </View>
+                <Text style={[styles.platformGuideArrow, { color: colors.primary }]}>→</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
+      <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
     </ScreenContainer>
   );
 }
@@ -1028,5 +1051,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     textAlign: "center",
+  },
+  // 平台匹配引导
+  platformGuide: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  platformGuideContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  platformGuideEmoji: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  platformGuideTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
+  platformGuideDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  platformGuideArrow: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginLeft: 8,
   },
 });

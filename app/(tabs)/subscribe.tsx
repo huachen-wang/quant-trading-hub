@@ -16,6 +16,7 @@ import {
   UIManager,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
+import { ContactModal } from "@/components/contact-modal";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { LinearGradient } from "expo-linear-gradient";
@@ -135,9 +136,9 @@ function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?
 // EA市场数据
 const EA_MARKET_DATA = [
   { label: "过度优化", pct: 35, color: "#ef4444" },
-  { label: "马丁/网格", pct: 25, color: "#f97316" },
-  { label: "风控缺失", pct: 20, color: "#eab308" },
-  { label: "高频剥头皮", pct: 12, color: "#7c3aed" },
+  { label: "风控缺失", pct: 25, color: "#f97316" },
+  { label: "加仓使用不当", pct: 20, color: "#eab308" },
+  { label: "环境不匹配", pct: 12, color: "#7c3aed" },
   { label: "参数敏感", pct: 8, color: "#6b7280" },
 ];
 
@@ -163,6 +164,7 @@ export default function SubscribeScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subscribeMsg, setSubscribeMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
   const emailInputRef = useRef<TextInput>(null);
   const isEmailFocused = useRef(false);
 
@@ -246,7 +248,7 @@ export default function SubscribeScreen() {
   };
 
   const handleConsult = () => {
-    Linking.openURL("https://www.eaxau.com");
+    setShowContactModal(true);
   };
 
   if (pageContentsQuery.isLoading && !pageContentsQuery.data) {
@@ -271,6 +273,7 @@ export default function SubscribeScreen() {
 
   return (
     <ScreenContainer>
+      <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}

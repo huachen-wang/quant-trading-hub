@@ -1,5 +1,6 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Platform, Animated, RefreshControl, Image } from "react-native";
+import { ContactModal } from "@/components/contact-modal";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
@@ -29,9 +30,9 @@ function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?
 // EA市场真相数据
 const EA_TRUTH_DATA = [
   { label: "过度优化/曲线拟合", pct: 35, color: "#ef4444" },
-  { label: "马丁/网格高风险", pct: 25, color: "#f97316" },
-  { label: "缺乏风控机制", pct: 20, color: "#eab308" },
-  { label: "高频剥头皮失效", pct: 12, color: "#7c3aed" },
+  { label: "风控机制缺失", pct: 25, color: "#f97316" },
+  { label: "不当使用加仓策略", pct: 20, color: "#eab308" },
+  { label: "高频策略环境不匹配", pct: 12, color: "#7c3aed" },
   { label: "参数过度敏感", pct: 8, color: "#6b7280" },
 ];
 
@@ -84,6 +85,7 @@ export default function CooperationScreen() {
   const { isDesktop } = useResponsive();
   const [refreshing, setRefreshing] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [showContactModal, setShowContactModal] = useState(false);
 
   const pageContentsQuery = trpc.pageContents.get.useQuery({ pageKey: "cooperation" });
 
@@ -94,11 +96,11 @@ export default function CooperationScreen() {
   }, []);
 
   const handleConsult = () => {
-    Linking.openURL("https://www.eaxau.com");
+    setShowContactModal(true);
   };
 
   const handleContact = () => {
-    Linking.openURL("mailto:contact@eaxau.com");
+    setShowContactModal(true);
   };
 
   const toggleSection = (section: string) => {
@@ -107,6 +109,7 @@ export default function CooperationScreen() {
 
   return (
     <ScreenContainer>
+      <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}

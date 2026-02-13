@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Animated } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Animated, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { ScreenContainer } from "@/components/screen-container";
 import { StrategyCard } from "@/components/strategy-card";
 import { ContactModal } from "@/components/contact-modal";
@@ -198,21 +199,46 @@ export default function HomeScreen() {
   );
 
   const renderFooter = () => {
-    if (isLoadingMore) {
-      return (
-        <View style={{ paddingVertical: 16, alignItems: "center" }}>
-          <ActivityIndicator size="small" color={colors.primary} />
-        </View>
-      );
-    }
-    if (!hasMore && allStrategies.length > 0) {
-      return (
-        <View style={{ paddingVertical: 16, alignItems: "center" }}>
-          <Text style={{ color: colors.muted, fontSize: 12 }}>已展示全部策略</Text>
-        </View>
-      );
-    }
-    return null;
+    return (
+      <View>
+        {isLoadingMore && (
+          <View style={{ paddingVertical: 16, alignItems: "center" }}>
+            <ActivityIndicator size="small" color={colors.primary} />
+          </View>
+        )}
+        {!hasMore && allStrategies.length > 0 && (
+          <View style={{ paddingVertical: 12, alignItems: "center" }}>
+            <Text style={{ color: colors.muted, fontSize: 12 }}>已展示全部策略</Text>
+          </View>
+        )}
+        {/* 合作引导横幅 - 策略列表底部 */}
+        {allStrategies.length > 0 && (
+          <TouchableOpacity
+            onPress={() => router.push("/moments" as any)}
+            activeOpacity={0.85}
+            style={footerStyles.bannerWrapper}
+          >
+            <LinearGradient
+              colors={[colors.primary + "12", colors.primary + "06"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[footerStyles.banner, { borderColor: colors.primary + "20" }]}
+            >
+              <View style={footerStyles.bannerContent}>
+                <Text style={footerStyles.bannerEmoji}>🎯</Text>
+                <View style={footerStyles.bannerTextBox}>
+                  <Text style={[footerStyles.bannerTitle, { color: colors.foreground }]}>选好策略，还差一步</Text>
+                  <Text style={[footerStyles.bannerDesc, { color: colors.muted }]}>
+                    量化军火库帮你匹配合规交易环境，让好策略发挥最大价值
+                  </Text>
+                </View>
+                <Text style={[footerStyles.bannerArrow, { color: colors.primary }]}>→</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
   };
 
   if (isLoading && !initialData) {
@@ -273,3 +299,40 @@ export default function HomeScreen() {
     </ScreenContainer>
   );
 }
+
+const footerStyles = StyleSheet.create({
+  bannerWrapper: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  banner: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  bannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  bannerEmoji: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  bannerTextBox: {
+    flex: 1,
+  },
+  bannerTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
+  bannerDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  bannerArrow: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginLeft: 8,
+  },
+});
