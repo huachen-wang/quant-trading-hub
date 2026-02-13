@@ -1,19 +1,32 @@
 import { useRef, useEffect, useMemo, useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Platform, Animated, RefreshControl, LayoutAnimation, UIManager } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Linking, StyleSheet, Platform, Animated, RefreshControl, Image } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 
-// 启用Android LayoutAnimation
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
+// 入场动画
+function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(24)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 500, delay, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
 }
 
-// 数字滚动动画组件
+// 数字滚动动画
 function AnimatedNumber({ value, duration = 1500, delay = 0 }: { value: string; duration?: number; delay?: number }) {
-  // 解析数字部分和后缀
   const match = value.match(/^([\d.]+)(.*)$/);
   const numericPart = match ? parseFloat(match[1]) : 0;
   const suffix = match ? match[2] : value;
@@ -46,7 +59,6 @@ function AnimatedNumber({ value, duration = 1500, delay = 0 }: { value: string; 
     };
   }, [numericPart]);
 
-  // 对于非数字值（如 "24/7"），直接显示
   if (!match) {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     useEffect(() => {
@@ -63,244 +75,66 @@ function AnimatedNumber({ value, duration = 1500, delay = 0 }: { value: string; 
   );
 }
 
-// 入场动画
-function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(24)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 500, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 500, delay, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY }] }}>
-      {children}
-    </Animated.View>
-  );
-}
-
-// 后台内容类型
-type PageContentItem = {
-  id: number;
-  pageKey: string;
-  sectionKey: string;
-  title: string;
-  content: string;
-  icon: string | null;
-  sortOrder: number;
-  isVisible: boolean;
-};
-
-interface ServiceItem {
-  icon: string;
-  title: string;
-  desc: string;
-}
-
-interface ServiceSection {
-  id: string;
-  sectionKey: string;
-  icon: string;
-  title: string;
-  subtitle: string;
-  gradient: readonly [string, string, ...string[]];
-  items: ServiceItem[];
-}
-
-const DEFAULT_SERVICES: ServiceSection[] = [
-  {
-    id: "compliance",
-    sectionKey: "compliance",
-    icon: "🛡️",
-    title: "合规支持",
-    subtitle: "全球多司法管辖区合规框架搭建",
-    gradient: ["#0f172a", "#1e40af", "#3b82f6"],
-    items: [
-      { icon: "📋", title: "牌照申请与维护", desc: "协助申请 FCA / ASIC / CySEC / FSA 等主流监管牌照，提供持续合规维护方案" },
-      { icon: "📑", title: "法律文件审查", desc: "客户协议、风险披露、隐私政策等合规文件的起草与审查" },
-      { icon: "🔍", title: "反洗钱(AML)体系", desc: "KYC/AML 流程设计、可疑交易监控系统搭建与合规培训" },
-      { icon: "🌐", title: "跨境合规咨询", desc: "多司法管辖区运营的合规架构设计，规避监管冲突风险" },
-    ],
-  },
-  {
-    id: "technology",
-    sectionKey: "technology",
-    icon: "⚡",
-    title: "技术支持",
-    subtitle: "企业级量化交易基础设施",
-    gradient: ["#1a0533", "#7c3aed", "#a78bfa"],
-    items: [
-      { icon: "🖥️", title: "交易服务器部署", desc: "全球低延迟 VPS 集群部署，纽约 NY4 / 伦敦 LD4 / 东京 TY3 机房直连" },
-      { icon: "🤖", title: "EA 策略开发", desc: "MQL4/MQL5 专业开发团队，从策略原型到生产级代码的全流程交付" },
-      { icon: "📊", title: "风控系统搭建", desc: "实时风险监控、自动止损熔断、仓位管理系统的定制开发" },
-      { icon: "🔗", title: "流动性对接", desc: "主流 LP 流动性聚合接入，FIX 协议桥接，点差优化方案" },
-    ],
-  },
-  {
-    id: "business",
-    sectionKey: "business",
-    icon: "🚀",
-    title: "业务支持",
-    subtitle: "从 0 到 1 的量化业务全链路赋能",
-    gradient: ["#14260b", "#16a34a", "#4ade80"],
-    items: [
-      { icon: "🏢", title: "工作室孵化", desc: "为量化交易工作室提供办公场地、资金对接、运营管理的一站式孵化服务" },
-      { icon: "💰", title: "资金引入", desc: "对接合规资金方，协助搭建资管产品结构，提供业绩审计与报告服务" },
-      { icon: "📈", title: "品牌与获客", desc: "量化品牌定位策划、官网与社媒矩阵搭建、精准客户获取方案" },
-      { icon: "🤝", title: "机构合作", desc: "券商 / 经纪商白标方案、MAM/PAMM 多账户管理系统、IB 代理体系搭建" },
-    ],
-  },
+// 月度激励档位数据
+const MONTHLY_TIERS = [
+  { tier: 1, deposit: "$3,000", gift: "¥300" },
+  { tier: 2, deposit: "$5,000", gift: "¥500" },
+  { tier: 3, deposit: "$10,000", gift: "¥1,100" },
+  { tier: 4, deposit: "$30,000", gift: "¥3,500" },
+  { tier: 5, deposit: "$50,000", gift: "¥6,000" },
 ];
 
-const PARTNER_TYPES = [
-  { icon: "🏦", label: "量化工作室" },
-  { icon: "💻", label: "技术开发方" },
-  { icon: "🏛️", label: "金融机构" },
-  { icon: "📊", label: "资管公司" },
-  { icon: "🌍", label: "海外经纪商" },
-  { icon: "🎓", label: "量化培训机构" },
+// 季度激励档位数据
+const QUARTERLY_TIERS = [
+  { tier: 1, deposit: "$10万-20万", lots: "600", reward: "$2,000", clients: "≥15名" },
+  { tier: 2, deposit: "$20万-40万", lots: "1,200", reward: "$5,000", clients: "≥20名" },
+  { tier: 3, deposit: "$40万-60万", lots: "2,500", reward: "$8,000", clients: "≥25名" },
+  { tier: 4, deposit: "$60万-100万", lots: "6,000", reward: "$15,000", clients: "≥30名" },
+  { tier: 5, deposit: "$100万-200万", lots: "15,000", reward: "$20,000", clients: "≥35名" },
+  { tier: 6, deposit: "$200万-300万", lots: "40,000", reward: "$80,000", clients: "≥40名" },
+  { tier: 7, deposit: ">$300万", lots: "70,000", reward: "$150,000", clients: "≥45名" },
+];
+
+// 平台优势数据
+const PLATFORM_ADVANTAGES = [
+  { icon: "🛡️", title: "ASIC MM全牌照", desc: "牌照价值$600万+，澳洲政府颁发，业内最高监管等级", highlight: true },
+  { icon: "🌍", title: "全球4大监管", desc: "ASIC MM + ASIC STP + VFSC + FSC 四重监管保障" },
+  { icon: "📊", title: "月交易量2000亿+", desc: "全球顶级流动性，确保最优执行价格" },
+  { icon: "⭐", title: "Google 4.9/5", desc: "2497条真实评价，WikiFX天眼评分9.1/10" },
+  { icon: "⚡", title: "2-5小时极速出金", desc: "多币种结算，支持10+入金渠道" },
+  { icon: "🔒", title: "资金安全保障", desc: "隔离账户 | SSL加密 | 反洗钱合规 | 天眼保障计划" },
+];
+
+// 团队支持
+const TEAM_SUPPORT = [
+  { icon: "👨‍💼", title: "总部客户经理", desc: "蓝莓总部Nathan，中国区代表，直连主管与各部门" },
+  { icon: "👨‍💻", title: "985本硕IT工程师", desc: "悉尼大学技术背景，量化技术全方位支持" },
+  { icon: "💬", title: "千人技术论坛", desc: "量化扶持对接，技术社群资源共享" },
+  { icon: "⚖️", title: "五院四系律师", desc: "合同修改与合规支持，法律保障无忧" },
+];
+
+// 合作流程
+const COOPERATION_STEPS = [
+  { step: "01", icon: "📱", label: "关注量化军火库", desc: "了解EA策略生态" },
+  { step: "02", icon: "🔗", label: "注册蓝莓平台", desc: "通过 www.eaxau.com" },
+  { step: "03", icon: "💰", label: "入金开始交易", desc: "享受月度/季度激励" },
+  { step: "04", icon: "🤝", label: "深度合作", desc: "MAM/代理/工作室孵化" },
 ];
 
 const HIGHLIGHTS = [
-  { number: "50+", label: "合作机构" },
-  { number: "12", label: "覆盖国家" },
-  { number: "99.9%", label: "系统可用率" },
-  { number: "24/7", label: "技术响应" },
-];
-
-function groupContentsBySection(contents: PageContentItem[]): Record<string, PageContentItem[]> {
-  const groups: Record<string, PageContentItem[]> = {};
-  for (const item of contents) {
-    if (!item.isVisible) continue;
-    if (!groups[item.sectionKey]) groups[item.sectionKey] = [];
-    groups[item.sectionKey].push(item);
-  }
-  for (const key of Object.keys(groups)) {
-    groups[key].sort((a, b) => a.sortOrder - b.sortOrder);
-  }
-  return groups;
-}
-
-function contentToServiceItem(item: PageContentItem): ServiceItem {
-  return { icon: item.icon || "📄", title: item.title, desc: item.content };
-}
-
-// 可折叠的服务板块组件
-function CollapsibleSection({
-  section,
-  colors,
-  isDesktop,
-  defaultExpanded = false,
-}: {
-  section: ServiceSection;
-  colors: any;
-  isDesktop: boolean;
-  defaultExpanded?: boolean;
-}) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
-  const rotateAnim = useRef(new Animated.Value(defaultExpanded ? 1 : 0)).current;
-
-  const toggleExpand = () => {
-    const toValue = expanded ? 0 : 1;
-    LayoutAnimation.configureNext({
-      duration: 350,
-      update: { type: LayoutAnimation.Types.easeInEaseOut },
-      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-    });
-    Animated.spring(rotateAnim, {
-      toValue,
-      useNativeDriver: true,
-      friction: 8,
-      tension: 60,
-    }).start();
-    setExpanded(!expanded);
-  };
-
-  const rotation = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "180deg"],
-  });
-
-  return (
-    <View style={styles.sectionContainer}>
-      <TouchableOpacity activeOpacity={0.85} onPress={toggleExpand}>
-        <LinearGradient
-          colors={section.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.serviceTitleBar}
-        >
-          <Text style={styles.serviceTitleIcon}>{section.icon}</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.serviceTitleText}>{section.title}</Text>
-            <Text style={styles.serviceSubtitleText}>{section.subtitle}</Text>
-          </View>
-          <Animated.Text style={[styles.collapseArrow, { transform: [{ rotate: rotation }] }]}>
-            ▼
-          </Animated.Text>
-        </LinearGradient>
-      </TouchableOpacity>
-
-      {expanded && (
-        <View style={[styles.serviceGrid, isDesktop && styles.serviceGridDesktop]}>
-          {section.items.map((item, iIdx) => (
-            <View
-              key={iIdx}
-              style={[
-                styles.serviceCard,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  width: isDesktop ? "48%" as any : "100%" as any,
-                },
-                Platform.OS === "web" ? {
-                  // @ts-ignore
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-                  transition: "box-shadow 0.3s ease, transform 0.3s ease",
-                } : {},
-              ]}
-              // @ts-ignore
-              className={Platform.OS === "web" ? "strategy-card-hover" : undefined}
-            >
-              <Text style={styles.serviceItemIcon}>{item.icon}</Text>
-              <Text style={[styles.serviceItemTitle, { color: colors.foreground }]}>{item.title}</Text>
-              <Text style={[styles.serviceItemDesc, { color: colors.muted }]}>{item.desc}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {!expanded && (
-        <View style={[styles.collapsedHint, { borderColor: colors.border }]}>
-          <Text style={[styles.collapsedHintText, { color: colors.muted }]}>
-            {section.items.length} 项服务 · 点击展开查看
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-// 合作流程步骤
-const PROCESS_STEPS = [
-  { step: "01", icon: "💬", label: "需求沟通" },
-  { step: "02", icon: "📝", label: "方案定制" },
-  { step: "03", icon: "🤝", label: "签约合作" },
-  { step: "04", icon: "🚀", label: "落地交付" },
+  { number: "2000亿+", label: "月交易量(USD)" },
+  { number: "4.9", label: "Google评分" },
+  { number: "600万+", label: "牌照价值(USD)" },
+  { number: "24/7", label: "全天候支持" },
 ];
 
 export default function CooperationScreen() {
   const colors = useColors();
   const { isDesktop } = useResponsive();
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>("monthly");
 
   const pageContentsQuery = trpc.pageContents.get.useQuery({ pageKey: "cooperation" });
-  const contents = (pageContentsQuery.data || []) as PageContentItem[];
-  const groupedContents = useMemo(() => groupContentsBySection(contents), [contents]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -308,27 +142,16 @@ export default function CooperationScreen() {
     setRefreshing(false);
   }, []);
 
-  const services = useMemo(() => {
-    return DEFAULT_SERVICES.map((section) => {
-      const backendItems = groupedContents[section.sectionKey];
-      if (backendItems && backendItems.length > 0) {
-        return { ...section, items: backendItems.map(contentToServiceItem) };
-      }
-      return section;
-    });
-  }, [groupedContents]);
-
-  const customSections = useMemo(() => {
-    const defaultKeys = new Set(DEFAULT_SERVICES.map(s => s.sectionKey));
-    const customKeys = Object.keys(groupedContents).filter(k => !defaultKeys.has(k));
-    return customKeys.map(key => ({
-      sectionKey: key,
-      items: groupedContents[key],
-    }));
-  }, [groupedContents]);
+  const handleOpenBlueberry = () => {
+    Linking.openURL("https://www.eaxau.com");
+  };
 
   const handleContact = () => {
     Linking.openURL("mailto:contact@eaxau.com");
+  };
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(expandedSection === section ? null : section);
   };
 
   return (
@@ -340,20 +163,25 @@ export default function CooperationScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        {/* Hero 区域 */}
+        {/* ===== Hero 区域 - 蓝莓合作主题 ===== */}
         <FadeInView>
           <LinearGradient
-            colors={["#0f172a", "#1e293b", "#334155"]}
+            colors={["#0a1628", "#0f2847", "#1a3a6b"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroSection}
           >
-            <Text style={styles.heroTitle}>量化生态合作</Text>
+            <View style={styles.heroBadge}>
+              <Text style={styles.heroBadgeText}>官方合作伙伴</Text>
+            </View>
+            <Text style={styles.heroTitle}>蓝莓 BlueberryMarkets</Text>
+            <Text style={styles.heroTitleSub}>深度合作计划</Text>
             <Text style={styles.heroSubtitle}>
-              为量化工作室、技术方与金融机构提供{"\n"}合规 · 技术 · 业务 全方位支持
+              ASIC MM全牌照 · 全球顶级监管 · 月交易量2000亿+{"\n"}
+              量化军火库 × 蓝莓平台 为您提供最优交易环境
             </Text>
 
-            {/* 数字滚动动画 */}
+            {/* 核心数据 */}
             <View style={[styles.highlightRow, isDesktop && styles.highlightRowDesktop]}>
               {HIGHLIGHTS.map((h, i) => (
                 <View key={i} style={styles.highlightItem}>
@@ -362,58 +190,252 @@ export default function CooperationScreen() {
                 </View>
               ))}
             </View>
+
+            {/* CTA按钮 */}
+            <TouchableOpacity
+              onPress={handleOpenBlueberry}
+              activeOpacity={0.8}
+              style={styles.heroCTABtn}
+            >
+              <Text style={styles.heroCTAText}>立即开户 → www.eaxau.com</Text>
+            </TouchableOpacity>
           </LinearGradient>
         </FadeInView>
 
-        {/* 合作对象 */}
+        {/* ===== 平台优势 ===== */}
         <FadeInView delay={100}>
           <View style={styles.sectionContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>合作对象</Text>
-            <View style={styles.partnerGrid}>
-              {PARTNER_TYPES.map((p, i) => (
-                <View key={i} style={[styles.partnerChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <Text style={styles.partnerIcon}>{p.icon}</Text>
-                  <Text style={[styles.partnerLabel, { color: colors.foreground }]}>{p.label}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>为什么选择蓝莓？</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>
+              全球仅5家获批的ASIC MM全牌照做市商之一
+            </Text>
+            <View style={[styles.advantageGrid, isDesktop && styles.advantageGridDesktop]}>
+              {PLATFORM_ADVANTAGES.map((item, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.advantageCard,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: item.highlight ? "#d4a843" : colors.border,
+                      borderWidth: item.highlight ? 1.5 : 0.5,
+                      width: isDesktop ? "48%" as any : "100%" as any,
+                    },
+                  ]}
+                >
+                  <Text style={styles.advantageIcon}>{item.icon}</Text>
+                  <Text style={[styles.advantageTitle, { color: colors.foreground }]}>{item.title}</Text>
+                  <Text style={[styles.advantageDesc, { color: colors.muted }]}>{item.desc}</Text>
                 </View>
               ))}
             </View>
           </View>
         </FadeInView>
 
-        {/* 三大服务板块 - 可折叠 */}
-        {services.map((section, sIdx) => (
-          <FadeInView key={section.id} delay={200 + sIdx * 150}>
-            <CollapsibleSection
-              section={section}
-              colors={colors}
-              isDesktop={isDesktop}
-              defaultExpanded={sIdx === 0}
-            />
-          </FadeInView>
-        ))}
-
-        {/* 自定义板块 */}
-        {customSections.map((cs, csIdx) => (
-          <FadeInView key={cs.sectionKey} delay={700 + csIdx * 100}>
-            <View style={styles.sectionContainer}>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{cs.sectionKey}</Text>
-              {cs.items.map((item) => (
-                <View key={item.id} style={[styles.serviceCard, { backgroundColor: colors.surface, borderColor: colors.border, width: "100%" as any, marginBottom: 10 }]}>
-                  <Text style={styles.serviceItemIcon}>{item.icon || "📄"}</Text>
-                  <Text style={[styles.serviceItemTitle, { color: colors.foreground }]}>{item.title}</Text>
-                  <Text style={[styles.serviceItemDesc, { color: colors.muted }]}>{item.content}</Text>
+        {/* ===== 蓝莓 vs 其他平台 ===== */}
+        <FadeInView delay={200}>
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>蓝莓 vs 其他平台</Text>
+            <View style={[styles.comparisonTable, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {/* 表头 */}
+              <View style={[styles.tableRow, styles.tableHeader, { backgroundColor: "#1e40af" }]}>
+                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>对比项</Text>
+                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>蓝莓 Markets</Text>
+                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>二三线平台</Text>
+              </View>
+              {[
+                { item: "牌照类型", bb: "ASIC MM全牌照", other: "STP牌照" },
+                { item: "牌照价值", bb: "$600万+", other: "~$20万" },
+                { item: "月交易量", bb: "2000亿+ USD", other: "不透明" },
+                { item: "出金速度", bb: "2-5小时", other: "1-5个工作日" },
+                { item: "Google评分", bb: "4.9/5 (2497)", other: "3-4分" },
+                { item: "入金渠道", bb: "10+种", other: "2-3种" },
+                { item: "资金安全", bb: "隔离账户+天眼保障", other: "无保障" },
+              ].map((row, i) => (
+                <View key={i} style={[styles.tableRow, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.tableCell, { flex: 2, color: colors.foreground, fontWeight: "600" }]}>{row.item}</Text>
+                  <Text style={[styles.tableCell, { flex: 2, color: "#10b981", fontWeight: "700" }]}>{row.bb}</Text>
+                  <Text style={[styles.tableCell, { flex: 2, color: colors.muted }]}>{row.other}</Text>
                 </View>
               ))}
             </View>
-          </FadeInView>
-        ))}
+          </View>
+        </FadeInView>
 
-        {/* 合作流程 - 重新设计箭头和居中 */}
-        <FadeInView delay={700}>
+        {/* ===== 月度激励计划 ===== */}
+        <FadeInView delay={300}>
+          <View style={styles.sectionContainer}>
+            <TouchableOpacity activeOpacity={0.85} onPress={() => toggleSection("monthly")}>
+              <LinearGradient
+                colors={["#0f172a", "#1e40af", "#3b82f6"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.incentiveHeader}
+              >
+                <Text style={styles.incentiveHeaderIcon}>🎁</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.incentiveHeaderTitle}>月度激励计划</Text>
+                  <Text style={styles.incentiveHeaderSub}>净入金返利 1.5%-1.7% · 无交易手数要求 · 与季度可叠加</Text>
+                </View>
+                <Text style={styles.collapseArrow}>{expandedSection === "monthly" ? "▲" : "▼"}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {expandedSection === "monthly" && (
+              <View style={[styles.incentiveBody, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                {/* 表格 */}
+                <View style={[styles.tableRow, styles.tableHeader, { backgroundColor: "#1e3a5f" }]}>
+                  <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1 }]}>档位</Text>
+                  <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>首次入金(USD)</Text>
+                  <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>礼品卡(CNY)</Text>
+                </View>
+                {MONTHLY_TIERS.map((t, i) => (
+                  <View key={i} style={[styles.tableRow, { borderBottomColor: colors.border }]}>
+                    <Text style={[styles.tableCell, { flex: 1, color: colors.foreground, fontWeight: "700" }]}>{t.tier}</Text>
+                    <Text style={[styles.tableCell, { flex: 2, color: colors.foreground }]}>{t.deposit}</Text>
+                    <Text style={[styles.tableCell, { flex: 2, color: "#d4a843", fontWeight: "700" }]}>{t.gift}</Text>
+                  </View>
+                ))}
+                <View style={styles.incentiveNote}>
+                  <Text style={[styles.incentiveNoteText, { color: colors.muted }]}>
+                    奖励形式：京东/天猫购物卡 · 次月中旬发放 · 每位客户每月仅可参与一次
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </FadeInView>
+
+        {/* ===== 季度激励计划 ===== */}
+        <FadeInView delay={400}>
+          <View style={styles.sectionContainer}>
+            <TouchableOpacity activeOpacity={0.85} onPress={() => toggleSection("quarterly")}>
+              <LinearGradient
+                colors={["#1a0533", "#7c3aed", "#a78bfa"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.incentiveHeader}
+              >
+                <Text style={styles.incentiveHeaderIcon}>🏆</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.incentiveHeaderTitle}>季度激励计划</Text>
+                  <Text style={styles.incentiveHeaderSub}>净入金返利 2%-5% · 阶梯奖励 · 最高 $150,000 USD</Text>
+                </View>
+                <Text style={styles.collapseArrow}>{expandedSection === "quarterly" ? "▲" : "▼"}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {expandedSection === "quarterly" && (
+              <View style={[styles.incentiveBody, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View>
+                    <View style={[styles.tableRow, styles.tableHeader, { backgroundColor: "#3b1a6b" }]}>
+                      <Text style={[styles.tableCell, styles.tableCellHeader, { width: 50 }]}>档位</Text>
+                      <Text style={[styles.tableCell, styles.tableCellHeader, { width: 120 }]}>净入金(USD)</Text>
+                      <Text style={[styles.tableCell, styles.tableCellHeader, { width: 80 }]}>交易量</Text>
+                      <Text style={[styles.tableCell, styles.tableCellHeader, { width: 90 }]}>奖励金</Text>
+                      <Text style={[styles.tableCell, styles.tableCellHeader, { width: 70 }]}>客户数</Text>
+                    </View>
+                    {QUARTERLY_TIERS.map((t, i) => (
+                      <View key={i} style={[styles.tableRow, { borderBottomColor: colors.border }]}>
+                        <Text style={[styles.tableCell, { width: 50, color: colors.foreground, fontWeight: "700" }]}>{t.tier}</Text>
+                        <Text style={[styles.tableCell, { width: 120, color: colors.foreground }]}>{t.deposit}</Text>
+                        <Text style={[styles.tableCell, { width: 80, color: colors.muted }]}>{t.lots}</Text>
+                        <Text style={[styles.tableCell, { width: 90, color: "#d4a843", fontWeight: "700" }]}>{t.reward}</Text>
+                        <Text style={[styles.tableCell, { width: 70, color: colors.muted }]}>{t.clients}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+                <View style={styles.incentiveNote}>
+                  <Text style={[styles.incentiveNoteText, { color: colors.muted }]}>
+                    活动期限：2026年Q1 · 仅限中国大陆代理 · 美金账户入金 · 持续协助跟进
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+        </FadeInView>
+
+        {/* ===== 其他权益与服务 ===== */}
+        <FadeInView delay={450}>
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>专属权益与服务</Text>
+            <View style={[styles.benefitsGrid, isDesktop && styles.benefitsGridDesktop]}>
+              <View style={[styles.benefitCard, { backgroundColor: "#1e40af15", borderColor: "#1e40af40" }]}>
+                <Text style={styles.benefitIcon}>💎</Text>
+                <Text style={[styles.benefitTitle, { color: colors.foreground }]}>{">$50,000 资金量"}</Text>
+                <Text style={[styles.benefitDesc, { color: colors.muted }]}>
+                  首次合作客户量/资金量持续增长，可向总部申请额外一次性扶持
+                </Text>
+              </View>
+              <View style={[styles.benefitCard, { backgroundColor: "#7c3aed15", borderColor: "#7c3aed40" }]}>
+                <Text style={styles.benefitIcon}>👥</Text>
+                <Text style={[styles.benefitTitle, { color: colors.foreground }]}>{">100 客户量"}</Text>
+                <Text style={[styles.benefitDesc, { color: colors.muted }]}>
+                  客户量增长需求更密集，可直连蓝莓总部后台团队
+                </Text>
+              </View>
+              <View style={[styles.benefitCard, { backgroundColor: "#10b98115", borderColor: "#10b98140" }]}>
+                <Text style={styles.benefitIcon}>📈</Text>
+                <Text style={[styles.benefitTitle, { color: colors.foreground }]}>指标达成协助</Text>
+                <Text style={[styles.benefitDesc, { color: colors.muted }]}>
+                  针对注册量与交易量，提供策略支持与协助达成
+                </Text>
+              </View>
+              <View style={[styles.benefitCard, { backgroundColor: "#d4a84315", borderColor: "#d4a84340" }]}>
+                <Text style={styles.benefitIcon}>🔧</Text>
+                <Text style={[styles.benefitTitle, { color: colors.foreground }]}>MAM技术支持</Text>
+                <Text style={[styles.benefitDesc, { color: colors.muted }]}>
+                  多账户管理系统，灵活分配、智能化分配
+                </Text>
+              </View>
+            </View>
+          </View>
+        </FadeInView>
+
+        {/* ===== 3-4人团队支持 ===== */}
+        <FadeInView delay={500}>
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>3-4人专属团队支持</Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.muted }]}>
+              24小时快速响应 · 全方位扶持
+            </Text>
+            <View style={[styles.teamGrid, isDesktop && styles.teamGridDesktop]}>
+              {TEAM_SUPPORT.map((item, i) => (
+                <View key={i} style={[styles.teamCard, { backgroundColor: colors.surface, borderColor: colors.border, width: isDesktop ? "48%" as any : "100%" as any }]}>
+                  <Text style={styles.teamIcon}>{item.icon}</Text>
+                  <Text style={[styles.teamTitle, { color: colors.foreground }]}>{item.title}</Text>
+                  <Text style={[styles.teamDesc, { color: colors.muted }]}>{item.desc}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </FadeInView>
+
+        {/* ===== 入金渠道 ===== */}
+        <FadeInView delay={550}>
+          <View style={styles.sectionContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>便捷入金渠道</Text>
+            <View style={[styles.paymentGrid, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              {["支付宝", "微信", "Wise", "Revolut", "Bank Wire", "银行汇款", "信用卡", "人民币", "Fastpay", "USDT"].map((method, i) => (
+                <View key={i} style={[styles.paymentChip, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                  <Text style={[styles.paymentText, { color: colors.foreground }]}>{method}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={[styles.paymentNote, { color: colors.muted }]}>
+              出金效率：2-5小时极速到账 · 多币种结算
+            </Text>
+          </View>
+        </FadeInView>
+
+        {/* ===== 合作流程 ===== */}
+        <FadeInView delay={600}>
           <View style={styles.sectionContainer}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>合作流程</Text>
             <View style={[styles.processContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              {PROCESS_STEPS.map((p, i) => (
+              {COOPERATION_STEPS.map((p, i) => (
                 <View key={i} style={styles.processStepWrapper}>
                   <View style={styles.processStepContent}>
                     <LinearGradient
@@ -424,8 +446,9 @@ export default function CooperationScreen() {
                     </LinearGradient>
                     <Text style={[styles.processStepNum, { color: colors.primary }]}>{p.step}</Text>
                     <Text style={[styles.processLabel, { color: colors.foreground }]}>{p.label}</Text>
+                    <Text style={[styles.processDesc, { color: colors.muted }]}>{p.desc}</Text>
                   </View>
-                  {i < PROCESS_STEPS.length - 1 && (
+                  {i < COOPERATION_STEPS.length - 1 && (
                     <View style={styles.processArrowContainer}>
                       <View style={[styles.processArrowLine, { backgroundColor: colors.primary + "30" }]} />
                       <View style={[styles.processArrowHead, { borderLeftColor: colors.primary }]} />
@@ -437,27 +460,38 @@ export default function CooperationScreen() {
           </View>
         </FadeInView>
 
-        {/* CTA */}
-        <FadeInView delay={850}>
+        {/* ===== 底部CTA ===== */}
+        <FadeInView delay={700}>
           <View style={styles.sectionContainer}>
             <LinearGradient
-              colors={["#1e40af", "#7c3aed"]}
+              colors={["#0a1628", "#1e40af", "#3b82f6"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.ctaCard}
             >
-              <Text style={styles.ctaTitle}>开启合作</Text>
+              <Text style={styles.ctaBadge}>限时激励活动进行中</Text>
+              <Text style={styles.ctaTitle}>开启蓝莓深度合作</Text>
               <Text style={styles.ctaDesc}>
-                无论您是量化工作室、技术团队还是金融机构，{"\n"}我们都能为您提供专业的定制化解决方案
+                无论您是量化工作室、EA开发者还是个人交易者{"\n"}
+                蓝莓平台都能为您提供最优质的交易环境和最丰厚的激励回报
               </Text>
               <TouchableOpacity
-                onPress={handleContact}
+                onPress={handleOpenBlueberry}
                 activeOpacity={0.8}
                 style={styles.ctaButton}
               >
-                <Text style={styles.ctaButtonText}>联系我们 →</Text>
+                <Text style={styles.ctaButtonText}>立即注册开户 → www.eaxau.com</Text>
               </TouchableOpacity>
-              <Text style={styles.ctaEmail}>contact@eaxau.com</Text>
+              <TouchableOpacity
+                onPress={handleContact}
+                activeOpacity={0.8}
+                style={styles.ctaButtonSecondary}
+              >
+                <Text style={styles.ctaButtonSecondaryText}>咨询合作详情 contact@eaxau.com</Text>
+              </TouchableOpacity>
+              <Text style={styles.ctaDisclaimer}>
+                蓝莓 BlueberryMarkets · 2016年成立 · ASIC MM全牌照 · 全球信赖
+              </Text>
             </LinearGradient>
           </View>
         </FadeInView>
@@ -470,29 +504,51 @@ const styles = StyleSheet.create({
   // Hero
   heroSection: {
     paddingHorizontal: 20,
-    paddingTop: 36,
+    paddingTop: 32,
     paddingBottom: 28,
     alignItems: "center",
+  },
+  heroBadge: {
+    backgroundColor: "rgba(212,168,67,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(212,168,67,0.5)",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 5,
+    marginBottom: 12,
+  },
+  heroBadgeText: {
+    color: "#d4a843",
+    fontSize: 12,
+    fontWeight: "700",
   },
   heroTitle: {
     fontSize: 28,
     fontWeight: "900",
     color: "#fff",
-    marginBottom: 8,
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  heroTitleSub: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#60a5fa",
+    marginBottom: 12,
     textAlign: "center",
   },
   heroSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: "rgba(255,255,255,0.7)",
     textAlign: "center",
     lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   highlightRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
     gap: 16,
+    marginBottom: 20,
   },
   highlightRowDesktop: {
     gap: 32,
@@ -502,14 +558,25 @@ const styles = StyleSheet.create({
     minWidth: 70,
   },
   highlightNumber: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "900",
     color: "#60a5fa",
   },
   highlightLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: "rgba(255,255,255,0.6)",
     marginTop: 2,
+  },
+  heroCTABtn: {
+    backgroundColor: "#d4a843",
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  heroCTAText: {
+    color: "#0f172a",
+    fontSize: 15,
+    fontWeight: "800",
   },
 
   // Section
@@ -520,34 +587,69 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "800",
+    marginBottom: 6,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
     marginBottom: 14,
+    lineHeight: 20,
   },
 
-  // Partner chips
-  partnerGrid: {
+  // Advantages
+  advantageGrid: {
+    gap: 10,
+    marginTop: 8,
+  },
+  advantageGridDesktop: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    justifyContent: "space-between",
   },
-  partnerChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
+  advantageCard: {
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 0.5,
-    gap: 6,
   },
-  partnerIcon: {
-    fontSize: 18,
+  advantageIcon: {
+    fontSize: 28,
+    marginBottom: 8,
   },
-  partnerLabel: {
+  advantageTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  advantageDesc: {
     fontSize: 13,
-    fontWeight: "600",
+    lineHeight: 20,
   },
 
-  // Service title bar (collapsible)
-  serviceTitleBar: {
+  // Comparison Table
+  comparisonTable: {
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 0.5,
+  },
+  tableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.5,
+  },
+  tableHeader: {
+    borderBottomWidth: 0,
+  },
+  tableCell: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    fontSize: 12,
+  },
+  tableCellHeader: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 12,
+  },
+
+  // Incentive sections
+  incentiveHeader: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
@@ -555,16 +657,16 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     gap: 12,
   },
-  serviceTitleIcon: {
+  incentiveHeaderIcon: {
     fontSize: 28,
   },
-  serviceTitleText: {
-    fontSize: 18,
+  incentiveHeaderTitle: {
+    fontSize: 17,
     fontWeight: "800",
     color: "#fff",
   },
-  serviceSubtitleText: {
-    fontSize: 12,
+  incentiveHeaderSub: {
+    fontSize: 11,
     color: "rgba(255,255,255,0.7)",
     marginTop: 2,
   },
@@ -572,58 +674,114 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "rgba(255,255,255,0.7)",
   },
-
-  // Collapsed hint
-  collapsedHint: {
+  incentiveBody: {
+    borderRadius: 14,
+    borderWidth: 0.5,
     marginTop: 8,
-    paddingVertical: 10,
-    alignItems: "center",
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderRadius: 10,
+    overflow: "hidden",
   },
-  collapsedHintText: {
-    fontSize: 12,
+  incentiveNote: {
+    padding: 12,
+  },
+  incentiveNoteText: {
+    fontSize: 11,
+    lineHeight: 18,
+    textAlign: "center",
   },
 
-  // Service grid
-  serviceGrid: {
+  // Benefits
+  benefitsGrid: {
     gap: 10,
-    marginTop: 12,
+    marginTop: 8,
   },
-  serviceGridDesktop: {
+  benefitsGridDesktop: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
   },
-  serviceCard: {
+  benefitCard: {
     borderRadius: 14,
     padding: 16,
-    borderWidth: 0.5,
+    borderWidth: 1,
   },
-  serviceItemIcon: {
+  benefitIcon: {
     fontSize: 28,
     marginBottom: 8,
   },
-  serviceItemTitle: {
+  benefitTitle: {
     fontSize: 15,
     fontWeight: "700",
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  serviceItemDesc: {
+  benefitDesc: {
     fontSize: 13,
     lineHeight: 20,
   },
 
-  // Process - 重新设计
+  // Team
+  teamGrid: {
+    gap: 10,
+    marginTop: 8,
+  },
+  teamGridDesktop: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  teamCard: {
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 0.5,
+  },
+  teamIcon: {
+    fontSize: 28,
+    marginBottom: 8,
+  },
+  teamTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  teamDesc: {
+    fontSize: 13,
+    lineHeight: 20,
+  },
+
+  // Payment
+  paymentGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 0.5,
+  },
+  paymentChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 0.5,
+  },
+  paymentText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  paymentNote: {
+    fontSize: 12,
+    marginTop: 8,
+    textAlign: "center",
+  },
+
+  // Process
   processContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "center",
     borderRadius: 16,
     paddingVertical: 24,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderWidth: 0.5,
+    marginTop: 8,
   },
   processStepWrapper: {
     flexDirection: "row",
@@ -651,14 +809,19 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   processLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     textAlign: "center",
+  },
+  processDesc: {
+    fontSize: 9,
+    textAlign: "center",
+    marginTop: 2,
   },
   processArrowContainer: {
     flexDirection: "row",
     alignItems: "center",
-    width: 24,
+    width: 20,
     justifyContent: "center",
     marginTop: -20,
   },
@@ -683,6 +846,17 @@ const styles = StyleSheet.create({
     padding: 28,
     alignItems: "center",
   },
+  ctaBadge: {
+    backgroundColor: "rgba(212,168,67,0.2)",
+    color: "#d4a843",
+    fontSize: 12,
+    fontWeight: "700",
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 12,
+  },
   ctaTitle: {
     fontSize: 22,
     fontWeight: "900",
@@ -697,19 +871,34 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   ctaButton: {
-    backgroundColor: "#fff",
+    backgroundColor: "#d4a843",
     paddingHorizontal: 28,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 12,
     marginBottom: 10,
   },
   ctaButtonText: {
     fontSize: 15,
     fontWeight: "800",
-    color: "#1e40af",
+    color: "#0f172a",
   },
-  ctaEmail: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.6)",
+  ctaButtonSecondary: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginBottom: 14,
+  },
+  ctaButtonSecondaryText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.9)",
+  },
+  ctaDisclaimer: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.4)",
+    textAlign: "center",
   },
 });

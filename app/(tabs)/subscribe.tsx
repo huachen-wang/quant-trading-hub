@@ -18,6 +18,7 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
+import { LinearGradient } from "expo-linear-gradient";
 
 // 启用Android LayoutAnimation
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -47,7 +48,6 @@ type NotificationItem = {
 // 公告卡片组件 - 支持展开/收起
 function NotifCard({ item, colors }: { item: NotificationItem; colors: any }) {
   const [expanded, setExpanded] = useState(false);
-  const animHeight = useRef(new Animated.Value(0)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
 
   const typeColors: Record<string, string> = {
@@ -62,19 +62,11 @@ function NotifCard({ item, colors }: { item: NotificationItem; colors: any }) {
   const toggleExpand = () => {
     const toValue = expanded ? 0 : 1;
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    Animated.parallel([
-      Animated.spring(animHeight, {
-        toValue,
-        useNativeDriver: false,
-        friction: 8,
-        tension: 60,
-      }),
-      Animated.timing(rotateAnim, {
-        toValue,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.timing(rotateAnim, {
+      toValue,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
     setExpanded(!expanded);
   };
 
@@ -121,6 +113,42 @@ function NotifCard({ item, colors }: { item: NotificationItem; colors: any }) {
   );
 }
 
+// 入场动画
+function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(16)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, delay, useNativeDriver: true }),
+      Animated.timing(translateY, { toValue: 0, duration: 400, delay, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
+}
+
+// EA市场数据
+const EA_MARKET_DATA = [
+  { label: "过度优化", pct: 35, color: "#ef4444" },
+  { label: "马丁/网格", pct: 25, color: "#f97316" },
+  { label: "风控缺失", pct: 20, color: "#eab308" },
+  { label: "高频剥头皮", pct: 12, color: "#7c3aed" },
+  { label: "参数敏感", pct: 8, color: "#6b7280" },
+];
+
+// 量化军火库筛选标准
+const SCREENING_CRITERIA = [
+  { icon: "✅", label: "180天+实盘验证", desc: "所有策略必须提供不少于180天的真实实盘数据" },
+  { icon: "📉", label: "最大回撤<25%", desc: "严格风控标准，剔除高风险策略" },
+  { icon: "📊", label: "夏普比率>1.0", desc: "单位风险获得的回报必须达标" },
+  { icon: "💰", label: "盈利因子>1.5", desc: "总盈利至少是总亏损的1.5倍" },
+];
+
 export default function SubscribeScreen() {
   const colors = useColors();
   const [email, setEmail] = useState("");
@@ -151,17 +179,13 @@ export default function SubscribeScreen() {
       if (isEmailFocused.current || isAnimating.current) return;
       isAnimating.current = true;
 
-      // 滑出动画
       Animated.timing(slideAnim, {
         toValue: -1,
         duration: 300,
         useNativeDriver: true,
       }).start(() => {
-        // 切换到下一条
         setCurrentNotifIdx((prev) => (prev + 1) % notifications.length);
-        // 从下方准备进入
         slideAnim.setValue(1);
-        // 滑入动画
         Animated.timing(slideAnim, {
           toValue: 0,
           duration: 300,
@@ -213,6 +237,10 @@ export default function SubscribeScreen() {
     }
   };
 
+  const handleOpenBlueberry = () => {
+    Linking.openURL("https://www.eaxau.com");
+  };
+
   if (pageContentsQuery.isLoading && !pageContentsQuery.data) {
     return (
       <ScreenContainer>
@@ -249,7 +277,7 @@ export default function SubscribeScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
           }
         >
-          {/* 通知栏 - 顶部滑动轮播公告 */}
+          {/* 通知栏 */}
           {notifications.length > 0 && (
             <View style={[styles.notifBar, { backgroundColor: colors.primary + "10", overflow: "hidden" }]}>
               <Text style={styles.notifBarIcon}>📢</Text>
@@ -278,96 +306,204 @@ export default function SubscribeScreen() {
             </View>
           )}
 
-          {/* 页面标题 - 去掉多余emoji */}
+          {/* 页面标题 */}
           <View style={styles.headerSection}>
             <Text style={[styles.pageTitle, { color: colors.foreground }]}>订阅中心</Text>
             <Text style={[styles.pageSubtitle, { color: colors.muted }]}>
-              订阅获取最新策略更新、行业资讯和技术支持
+              订阅获取最新策略更新、行业资讯和蓝莓合作动态
             </Text>
           </View>
 
-          {/* 邮箱订阅卡片 */}
-          <View style={[styles.subscribeCard, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}>
-            <View style={styles.subscribeHeader}>
-              <Text style={{ fontSize: 28 }}>📧</Text>
-              <View style={styles.subscribeHeaderText}>
-                <Text style={[styles.subscribeTitle, { color: colors.foreground }]}>邮箱订阅</Text>
-                <Text style={[styles.subscribeDesc, { color: colors.muted }]}>
-                  订阅后将收到最新策略上架、优惠活动等通知
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.emailInputRow}>
-              <TextInput
-                ref={emailInputRef}
-                value={email}
-                onChangeText={(t) => { setEmail(t); setSubscribeMsg(null); }}
-                placeholder="请输入您的邮箱地址"
-                placeholderTextColor={colors.muted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="done"
-                onSubmitEditing={handleSubscribe}
-                blurOnSubmit={false}
-                onFocus={() => { isEmailFocused.current = true; }}
-                onBlur={() => { isEmailFocused.current = false; }}
-                style={[styles.emailInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-              />
-              <TouchableOpacity
-                onPress={handleSubscribe}
-                disabled={isSubmitting}
-                activeOpacity={0.8}
-                style={[styles.subscribeBtn, { backgroundColor: colors.primary, opacity: isSubmitting ? 0.7 : 1 }]}
+          {/* ===== 蓝莓平台推荐卡片 - 核心引导 ===== */}
+          <FadeInView delay={50}>
+            <TouchableOpacity activeOpacity={0.85} onPress={handleOpenBlueberry}>
+              <LinearGradient
+                colors={["#0a1628", "#1e40af", "#3b82f6"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.blueberryCard}
               >
-                {isSubmitting ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.subscribeBtnText}>订阅</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+                <View style={styles.blueberryBadge}>
+                  <Text style={styles.blueberryBadgeText}>推荐合作平台</Text>
+                </View>
+                <Text style={styles.blueberryTitle}>蓝莓 BlueberryMarkets</Text>
+                <Text style={styles.blueberryDesc}>
+                  ASIC MM全牌照 · 月交易量2000亿+ · Google 4.9/5
+                </Text>
+                <View style={styles.blueberryHighlights}>
+                  <View style={styles.blueberryHighlightItem}>
+                    <Text style={styles.blueberryHighlightNum}>1.5%-5%</Text>
+                    <Text style={styles.blueberryHighlightLabel}>净入金返利</Text>
+                  </View>
+                  <View style={styles.blueberryHighlightItem}>
+                    <Text style={styles.blueberryHighlightNum}>$150K</Text>
+                    <Text style={styles.blueberryHighlightLabel}>最高季度奖励</Text>
+                  </View>
+                  <View style={styles.blueberryHighlightItem}>
+                    <Text style={styles.blueberryHighlightNum}>2-5h</Text>
+                    <Text style={styles.blueberryHighlightLabel}>极速出金</Text>
+                  </View>
+                </View>
+                <View style={styles.blueberryCTA}>
+                  <Text style={styles.blueberryCTAText}>立即了解 → www.eaxau.com</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </FadeInView>
 
-            {subscribeMsg && (
-              <View style={[styles.msgBox, { backgroundColor: subscribeMsg.type === "success" ? colors.success + "15" : colors.error + "15" }]}>
-                <Text style={{ color: subscribeMsg.type === "success" ? colors.success : colors.error, fontSize: 13 }}>
-                  {subscribeMsg.type === "success" ? "✅ " : "❌ "}{subscribeMsg.text}
+          {/* 邮箱订阅卡片 */}
+          <FadeInView delay={100}>
+            <View style={[styles.subscribeCard, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}>
+              <View style={styles.subscribeHeader}>
+                <Text style={{ fontSize: 28 }}>📧</Text>
+                <View style={styles.subscribeHeaderText}>
+                  <Text style={[styles.subscribeTitle, { color: colors.foreground }]}>邮箱订阅</Text>
+                  <Text style={[styles.subscribeDesc, { color: colors.muted }]}>
+                    订阅后将收到最新策略上架、蓝莓激励活动等通知
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.emailInputRow}>
+                <TextInput
+                  ref={emailInputRef}
+                  value={email}
+                  onChangeText={(t) => { setEmail(t); setSubscribeMsg(null); }}
+                  placeholder="请输入您的邮箱地址"
+                  placeholderTextColor={colors.muted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={handleSubscribe}
+                  blurOnSubmit={false}
+                  onFocus={() => { isEmailFocused.current = true; }}
+                  onBlur={() => { isEmailFocused.current = false; }}
+                  style={[styles.emailInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+                />
+                <TouchableOpacity
+                  onPress={handleSubscribe}
+                  disabled={isSubmitting}
+                  activeOpacity={0.8}
+                  style={[styles.subscribeBtn, { backgroundColor: colors.primary, opacity: isSubmitting ? 0.7 : 1 }]}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.subscribeBtnText}>订阅</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {subscribeMsg && (
+                <View style={[styles.msgBox, { backgroundColor: subscribeMsg.type === "success" ? colors.success + "15" : colors.error + "15" }]}>
+                  <Text style={{ color: subscribeMsg.type === "success" ? colors.success : colors.error, fontSize: 13 }}>
+                    {subscribeMsg.type === "success" ? "✅ " : "❌ "}{subscribeMsg.text}
+                  </Text>
+                </View>
+              )}
+
+              {subscriberCountQuery.data != null && (
+                <Text style={[styles.subscriberCount, { color: colors.muted }]}>
+                  已有 {subscriberCountQuery.data} 位用户订阅
+                </Text>
+              )}
+            </View>
+          </FadeInView>
+
+          {/* ===== EA市场数据分析 ===== */}
+          <FadeInView delay={200}>
+            <View style={styles.dataSection}>
+              <Text style={[styles.dataSectionTitle, { color: colors.foreground }]}>EA市场数据洞察</Text>
+              <Text style={[styles.dataSectionSub, { color: colors.muted }]}>
+                为什么90%的EA都会亏钱？数据告诉你答案
+              </Text>
+
+              {/* 亏损原因可视化 */}
+              <View style={[styles.dataCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[styles.dataCardTitle, { color: colors.foreground }]}>EA亏损原因分布</Text>
+                {EA_MARKET_DATA.map((item, i) => (
+                  <View key={i} style={styles.barRow}>
+                    <Text style={[styles.barLabel, { color: colors.foreground }]}>{item.label}</Text>
+                    <View style={styles.barTrack}>
+                      <View style={[styles.barFill, { width: `${item.pct}%` as any, backgroundColor: item.color }]} />
+                    </View>
+                    <Text style={[styles.barPct, { color: colors.muted }]}>{item.pct}%</Text>
+                  </View>
+                ))}
+                <Text style={[styles.dataSource, { color: colors.muted }]}>
+                  数据来源：量化军火库数据库 200+ EA策略分析
                 </Text>
               </View>
-            )}
+            </View>
+          </FadeInView>
 
-            {subscriberCountQuery.data != null && (
-              <Text style={[styles.subscriberCount, { color: colors.muted }]}>
-                已有 {subscriberCountQuery.data} 位用户订阅
+          {/* ===== 量化军火库筛选标准 ===== */}
+          <FadeInView delay={300}>
+            <View style={styles.dataSection}>
+              <Text style={[styles.dataSectionTitle, { color: colors.foreground }]}>量化军火库筛选标准</Text>
+              <Text style={[styles.dataSectionSub, { color: colors.muted }]}>
+                我们用严格的审核机制，为你过滤掉虚假宣传和高风险EA
               </Text>
-            )}
-          </View>
-
-          {/* 通知公告列表 - 可展开/收起 */}
-          {notifications.length > 0 && (
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>最新公告</Text>
-              {notifications.map((n) => (
-                <NotifCard key={n.id} item={n} colors={colors} />
+              {SCREENING_CRITERIA.map((item, i) => (
+                <View key={i} style={[styles.criteriaCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <Text style={styles.criteriaIcon}>{item.icon}</Text>
+                  <View style={styles.criteriaContent}>
+                    <Text style={[styles.criteriaLabel, { color: colors.foreground }]}>{item.label}</Text>
+                    <Text style={[styles.criteriaDesc, { color: colors.muted }]}>{item.desc}</Text>
+                  </View>
+                </View>
               ))}
             </View>
+          </FadeInView>
+
+          {/* ===== 蓝莓合作引导 ===== */}
+          <FadeInView delay={400}>
+            <View style={styles.dataSection}>
+              <View style={[styles.cooperationGuide, { backgroundColor: "#1e40af10", borderColor: "#1e40af30" }]}>
+                <Text style={[styles.guideTitle, { color: colors.foreground }]}>选好策略，更要选好平台</Text>
+                <Text style={[styles.guideDesc, { color: colors.muted }]}>
+                  量化军火库帮你筛选优质EA策略，蓝莓BlueberryMarkets为你提供最优交易环境。ASIC MM全牌照监管、极速出入金、丰厚激励回报，让你的量化交易事半功倍。
+                </Text>
+                <TouchableOpacity
+                  onPress={handleOpenBlueberry}
+                  activeOpacity={0.8}
+                  style={styles.guideBtn}
+                >
+                  <Text style={styles.guideBtnText}>前往蓝莓平台 →</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </FadeInView>
+
+          {/* 通知公告列表 */}
+          {notifications.length > 0 && (
+            <FadeInView delay={500}>
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitleInner, { color: colors.foreground }]}>最新公告</Text>
+                {notifications.map((n) => (
+                  <NotifCard key={n.id} item={n} colors={colors} />
+                ))}
+              </View>
+            </FadeInView>
           )}
 
           {/* 自定义内容区域 */}
           {contents.length > 0 && (
-            <View>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>详细信息</Text>
-              {contents.map((item) => (
-                <View key={item.id} style={[styles.contentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  <View style={styles.contentCardHeader}>
-                    <Text style={{ fontSize: 24 }}>{item.icon || "📄"}</Text>
-                    <Text style={[styles.contentCardTitle, { color: colors.foreground }]}>{item.title}</Text>
+            <FadeInView delay={600}>
+              <View>
+                <Text style={[styles.sectionTitleInner, { color: colors.foreground }]}>详细信息</Text>
+                {contents.map((item) => (
+                  <View key={item.id} style={[styles.contentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                    <View style={styles.contentCardHeader}>
+                      <Text style={{ fontSize: 24 }}>{item.icon || "📄"}</Text>
+                      <Text style={[styles.contentCardTitle, { color: colors.foreground }]}>{item.title}</Text>
+                    </View>
+                    <Text style={[styles.contentCardBody, { color: colors.muted }]}>{item.content}</Text>
                   </View>
-                  <Text style={[styles.contentCardBody, { color: colors.muted }]}>{item.content}</Text>
-                </View>
-              ))}
-            </View>
+                ))}
+              </View>
+            </FadeInView>
           )}
 
           <View style={{ height: 40 }} />
@@ -405,9 +541,73 @@ const styles = StyleSheet.create({
   },
 
   // Header
-  headerSection: { paddingHorizontal: 16, marginTop: 12, marginBottom: 20 },
+  headerSection: { paddingHorizontal: 16, marginTop: 12, marginBottom: 16 },
   pageTitle: { fontSize: 26, fontWeight: "800", marginBottom: 6 },
   pageSubtitle: { fontSize: 14, lineHeight: 20 },
+
+  // Blueberry推荐卡片
+  blueberryCard: {
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginBottom: 20,
+    alignItems: "center",
+  },
+  blueberryBadge: {
+    backgroundColor: "rgba(212,168,67,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(212,168,67,0.5)",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    marginBottom: 10,
+  },
+  blueberryBadgeText: {
+    color: "#d4a843",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  blueberryTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#fff",
+    marginBottom: 6,
+  },
+  blueberryDesc: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.7)",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  blueberryHighlights: {
+    flexDirection: "row",
+    gap: 20,
+    marginBottom: 16,
+  },
+  blueberryHighlightItem: {
+    alignItems: "center",
+  },
+  blueberryHighlightNum: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#60a5fa",
+  },
+  blueberryHighlightLabel: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.6)",
+    marginTop: 2,
+  },
+  blueberryCTA: {
+    backgroundColor: "#d4a843",
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  blueberryCTAText: {
+    color: "#0f172a",
+    fontSize: 13,
+    fontWeight: "800",
+  },
 
   // Subscribe card
   subscribeCard: {
@@ -415,7 +615,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 20,
     marginHorizontal: 16,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   subscribeHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 12 },
   subscribeHeaderText: { flex: 1 },
@@ -435,9 +635,125 @@ const styles = StyleSheet.create({
   msgBox: { marginTop: 10, padding: 10, borderRadius: 8 },
   subscriberCount: { marginTop: 10, fontSize: 12, textAlign: "center" },
 
+  // Data section
+  dataSection: {
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  dataSectionTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  dataSectionSub: {
+    fontSize: 13,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  dataCard: {
+    borderRadius: 14,
+    borderWidth: 0.5,
+    padding: 16,
+  },
+  dataCardTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  barRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  barLabel: {
+    width: 80,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  barTrack: {
+    flex: 1,
+    height: 16,
+    backgroundColor: "rgba(100,116,139,0.15)",
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  barFill: {
+    height: "100%",
+    borderRadius: 8,
+  },
+  barPct: {
+    width: 35,
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "right",
+  },
+  dataSource: {
+    fontSize: 10,
+    marginTop: 8,
+    textAlign: "right",
+    fontStyle: "italic",
+  },
+
+  // Screening criteria
+  criteriaCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 0.5,
+    padding: 14,
+    marginBottom: 8,
+    gap: 12,
+  },
+  criteriaIcon: {
+    fontSize: 24,
+  },
+  criteriaContent: {
+    flex: 1,
+  },
+  criteriaLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  criteriaDesc: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+  // Cooperation guide
+  cooperationGuide: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 20,
+    alignItems: "center",
+  },
+  guideTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    marginBottom: 8,
+  },
+  guideDesc: {
+    fontSize: 13,
+    lineHeight: 22,
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  guideBtn: {
+    backgroundColor: "#1e40af",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  guideBtnText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
   // Section
   section: { paddingHorizontal: 16, marginBottom: 24 },
-  sectionTitle: { fontSize: 20, fontWeight: "800", marginBottom: 12, paddingHorizontal: 16 },
+  sectionTitleInner: { fontSize: 18, fontWeight: "800", marginBottom: 12, paddingHorizontal: 16 },
 
   // Notification card
   notifCard: {
