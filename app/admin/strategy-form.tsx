@@ -32,8 +32,6 @@ export default function StrategyForm() {
     qqGroup: "",
     virtualSubscribers: 0,
     virtualDownloads: 0,
-    sortOrder: 0,
-    hotScore: 0,
     status: "published" as "draft" | "published" | "archived",
   });
 
@@ -61,8 +59,6 @@ export default function StrategyForm() {
               qqGroup: strategy.qqGroup || "",
               virtualSubscribers: strategy.virtualSubscribers || 0,
               virtualDownloads: strategy.virtualDownloads || 0,
-              sortOrder: strategy.sortOrder || 0,
-              hotScore: strategy.hotScore || 0,
               status: strategy.status || "published",
             });
           }
@@ -201,20 +197,6 @@ export default function StrategyForm() {
           <View style={{ flex: 1 }}>
             <Text style={[s.label, { color: colors.foreground }]}>虚拟下载量</Text>
             <TextInput value={String(formData.virtualDownloads)} onChangeText={(t) => setFormData({ ...formData, virtualDownloads: parseInt(t) || 0 })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.muted} style={inputStyle} />
-          </View>
-        </View>
-
-        {/* 排序和热度 */}
-        <Text style={[s.sectionTitle, { color: colors.foreground }]}>排序和热度</Text>
-        <Text style={[{ fontSize: 12, color: colors.muted, marginBottom: 8 }]}>排序值越大越靠前，默认0；热度值越大在“热度”排序中越靠前</Text>
-        <View style={s.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.label, { color: colors.foreground }]}>排序值</Text>
-            <TextInput value={String(formData.sortOrder)} onChangeText={(t) => setFormData({ ...formData, sortOrder: parseInt(t) || 0 })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.muted} style={inputStyle} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.label, { color: colors.foreground }]}>热度值</Text>
-            <TextInput value={String(formData.hotScore)} onChangeText={(t) => setFormData({ ...formData, hotScore: parseInt(t) || 0 })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.muted} style={inputStyle} />
           </View>
         </View>
 

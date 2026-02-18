@@ -34,7 +34,7 @@ export const appRouter = router({
       .input(
         z.object({
           platform: z.enum(["MT4", "MT5"]).optional(),
-          orderBy: z.enum(["latest", "popular", "return", "hot"]).optional(),
+          orderBy: z.enum(["latest", "popular", "return"]).optional(),
           limit: z.number().min(1).max(100).optional(),
           offset: z.number().min(0).optional(),
         })
@@ -168,8 +168,6 @@ export const appRouter = router({
             qqGroup: z.string().optional(),
             virtualSubscribers: z.number().optional(),
             virtualDownloads: z.number().optional(),
-            sortOrder: z.number().optional(),
-            hotScore: z.number().optional(),
             status: z.enum(["draft", "published", "archived"]).optional(),
           })
         )
@@ -196,8 +194,6 @@ export const appRouter = router({
             qqGroup: z.string().optional(),
             virtualSubscribers: z.number().optional(),
             virtualDownloads: z.number().optional(),
-            sortOrder: z.number().optional(),
-            hotScore: z.number().optional(),
             status: z.enum(["draft", "published", "archived"]).optional(),
           })
         )
@@ -225,54 +221,6 @@ export const appRouter = router({
           if (!strategy) throw new Error("Strategy not found");
           return strategy;
         }),
-    }),
-
-    // 回测数据管理
-    backtestData: router({
-      list: adminProcedure
-        .input(z.object({ strategyId: z.number() }))
-        .query(({ input }) => db.getBacktestData(input.strategyId)),
-
-      create: adminProcedure
-        .input(z.object({
-          strategyId: z.number(),
-          date: z.string(),
-          equity: z.string(),
-          balance: z.string(),
-          profit: z.string(),
-          drawdown: z.string(),
-          tradesCount: z.number().optional(),
-        }))
-        .mutation(({ input }) => db.createBacktestData(input as any)),
-
-      batchCreate: adminProcedure
-        .input(z.object({
-          strategyId: z.number(),
-          data: z.array(z.object({
-            date: z.string(),
-            equity: z.string(),
-            balance: z.string(),
-            profit: z.string(),
-            drawdown: z.string(),
-            tradesCount: z.number().optional(),
-          })),
-        }))
-        .mutation(({ input }) => {
-          const dataWithStrategyId = input.data.map(d => ({
-            ...d,
-            strategyId: input.strategyId,
-            tradesCount: d.tradesCount || 0,
-          }));
-          return db.createBacktestDataBatch(dataWithStrategyId as any);
-        }),
-
-      deleteAll: adminProcedure
-        .input(z.object({ strategyId: z.number() }))
-        .mutation(({ input }) => db.deleteBacktestData(input.strategyId)),
-
-      deleteOne: adminProcedure
-        .input(z.object({ id: z.number() }))
-        .mutation(({ input }) => db.deleteBacktestDataById(input.id)),
     }),
 
     // 评论管理

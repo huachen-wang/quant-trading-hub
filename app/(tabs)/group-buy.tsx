@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet, Platform, Animated, Easing } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Linking, StyleSheet, Platform, Animated, Easing } from "react-native";
 
 // 卡片入场动画组件
 function AnimatedListItem({ children, index, style }: { children: React.ReactNode; index: number; style?: any }) {
@@ -98,7 +98,6 @@ function AnimatedProgressBar({ progress, color, delay = 0 }: { progress: number;
 }
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
-import { ContactModal } from "@/components/contact-modal";
 import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
@@ -123,6 +122,7 @@ export default function GroupBuyScreen() {
   const router = useRouter();
   const colors = useColors();
   const { numColumns, isDesktop, isTablet } = useResponsive();
+  const [selectedItem, setSelectedItem] = useState<GroupBuyItem | null>(null);
   const [showContactModal, setShowContactModal] = useState(false);
 
   const { data: groupBuys, isLoading } = trpc.groupBuys.list.useQuery({
@@ -134,7 +134,7 @@ export default function GroupBuyScreen() {
     if (Platform.OS !== "web") {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    // 直接弹出固定联系方式
+    setSelectedItem(item);
     setShowContactModal(true);
   };
 
@@ -297,6 +297,127 @@ export default function GroupBuyScreen() {
     </View>
   );
 
+  const renderContactModal = () => {
+    if (!selectedItem) return null;
+
+    const contactInfo = selectedItem.contactInfo;
+    const contacts: { type: string; value: string; link?: string }[] = [];
+
+    if (contactInfo.includes("t.me") || contactInfo.toLowerCase().includes("telegram")) {
+      const tgMatch = contactInfo.match(/(?:https?:\/\/)?t\.me\/(\S+)/);
+      contacts.push({
+        type: "Telegram",
+        value: tgMatch ? `@${tgMatch[1]}` : contactInfo,
+        link: tgMatch ? `https://t.me/${tgMatch[1]}` : undefined,
+      });
+    }
+
+    if (contactInfo.match(/\d{5,12}/)) {
+      const qqMatch = contactInfo.match(/(\d{5,12})/);
+      if (qqMatch) {
+        contacts.push({ type: "QQ群", value: qqMatch[1] });
+      }
+    }
+
+    if (contactInfo.toLowerCase().includes("wechat") || contactInfo.includes("微信")) {
+      contacts.push({
+        type: "微信",
+        value: contactInfo.replace(/微信[:：]?\s*/i, "").replace(/wechat[:：]?\s*/i, ""),
+      });
+    }
+
+    if (contacts.length === 0) {
+      contacts.push({ type: "联系方式", value: contactInfo });
+    }
+
+    return (
+      <Modal
+        visible={showContactModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowContactModal(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowContactModal(false)}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={[styles.modalContent, { backgroundColor: colors.background }]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                {selectedItem.title}
+              </Text>
+              <Text style={[styles.modalSubtitle, { color: colors.muted }]}>
+                EA: {selectedItem.eaName}
+              </Text>
+            </View>
+
+            <View style={[styles.modalPriceCard, { backgroundColor: colors.surface }]}>
+              <View style={styles.modalPriceRow}>
+                <View style={styles.modalPriceItem}>
+                  <Text style={[styles.modalPriceLabel, { color: colors.muted }]}>人均价格</Text>
+                  <Text style={[styles.modalPriceValue, { color: "#F59E0B" }]}>
+                    ¥{selectedItem.pricePerPerson}
+                  </Text>
+                </View>
+                <View style={[styles.modalPriceDivider, { backgroundColor: colors.border }]} />
+                <View style={styles.modalPriceItem}>
+                  <Text style={[styles.modalPriceLabel, { color: colors.muted }]}>参与人数</Text>
+                  <Text style={[styles.modalPriceValue, { color: colors.primary }]}>
+                    {selectedItem.currentParticipants}/{selectedItem.targetParticipants}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.contactList}>
+              <Text style={[styles.contactTitle, { color: colors.foreground }]}>📱 联系方式</Text>
+              {contacts.map((contact, index) => (
+                <TouchableOpacity
+                  key={index}
+                  onPress={() => contact.link && Linking.openURL(contact.link)}
+                  activeOpacity={contact.link ? 0.7 : 1}
+                  style={[styles.contactItem, { backgroundColor: colors.surface }]}
+                >
+                  <View style={[styles.contactIcon, { backgroundColor: colors.primary + "15" }]}>
+                    <Text style={styles.contactIconText}>
+                      {contact.type === "Telegram" ? "✈️" : contact.type === "QQ群" ? "💬" : contact.type === "微信" ? "💚" : "📞"}
+                    </Text>
+                  </View>
+                  <View style={styles.contactInfoView}>
+                    <Text style={[styles.contactType, { color: colors.muted }]}>{contact.type}</Text>
+                    <Text style={[styles.contactValue, { color: colors.foreground }]}>{contact.value}</Text>
+                  </View>
+                  {contact.link && (
+                    <Text style={[styles.contactArrow, { color: colors.primary }]}>→</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={[styles.modalHint, { backgroundColor: colors.primary + "08" }]}>
+              <Text style={[styles.modalHintText, { color: colors.muted }]}>
+                请通过以上联系方式联系发起人加入合购，确认后完成付款。
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setShowContactModal(false)}
+              activeOpacity={0.8}
+              style={[styles.closeBtn, { backgroundColor: colors.primary }]}
+            >
+              <Text style={styles.closeBtnText}>关闭</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
   if (isLoading) {
     return (
       <ScreenContainer>
@@ -309,12 +430,7 @@ export default function GroupBuyScreen() {
 
   return (
     <ScreenContainer>
-      <ContactModal
-        visible={showContactModal}
-        onClose={() => setShowContactModal(false)}
-        title="合购联系方式"
-        subtitle="加入合购 | 咨询合购详情"
-      />
+      {renderContactModal()}
       <FlatList
         data={(groupBuys as GroupBuyItem[]) || []}
         keyExtractor={(item) => item.id.toString()}
@@ -369,4 +485,28 @@ const styles = StyleSheet.create({
   emptyBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 },
   emptyBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 24 },
+  modalContent: { width: "100%", maxWidth: 400, borderRadius: 24, padding: 24 },
+  modalHeader: { alignItems: "center", marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: "800", marginBottom: 6, textAlign: "center" },
+  modalSubtitle: { fontSize: 14 },
+  modalPriceCard: { borderRadius: 16, padding: 16, marginBottom: 20 },
+  modalPriceRow: { flexDirection: "row", alignItems: "center" },
+  modalPriceItem: { flex: 1, alignItems: "center" },
+  modalPriceDivider: { width: 1, height: 40 },
+  modalPriceLabel: { fontSize: 12, marginBottom: 4 },
+  modalPriceValue: { fontSize: 22, fontWeight: "800" },
+  contactList: { marginBottom: 16 },
+  contactTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12 },
+  contactItem: { flexDirection: "row", alignItems: "center", borderRadius: 14, padding: 14, marginBottom: 10 },
+  contactIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", marginRight: 14 },
+  contactIconText: { fontSize: 22 },
+  contactInfoView: { flex: 1 },
+  contactType: { fontSize: 12, marginBottom: 2 },
+  contactValue: { fontSize: 16, fontWeight: "600" },
+  contactArrow: { fontSize: 18, fontWeight: "700" },
+  modalHint: { borderRadius: 12, padding: 14, marginBottom: 16 },
+  modalHintText: { fontSize: 12, lineHeight: 18, textAlign: "center" },
+  closeBtn: { borderRadius: 14, paddingVertical: 14, alignItems: "center" },
+  closeBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });

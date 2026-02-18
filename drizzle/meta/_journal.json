@@ -15,13 +15,6 @@
       "when": 1770562544466,
       "tag": "0001_brief_the_captain",
       "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1739836800000,
-      "tag": "0002_add_sort_and_hot",
-      "breakpoints": true
     }
   ]
 }

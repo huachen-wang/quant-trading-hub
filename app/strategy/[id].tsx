@@ -17,7 +17,7 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { ScreenContainer } from "@/components/screen-container";
-import { ContactModal, FIXED_CONTACTS } from "@/components/contact-modal";
+import { ContactModal } from "@/components/contact-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
@@ -113,11 +113,11 @@ export default function StrategyDetailScreen() {
     }
   };
 
-  const handleContact = (type: "telegram" | "qq" | "wechat") => {
-    if (type === "telegram") {
-      Linking.openURL(FIXED_CONTACTS.telegramLink);
-    } else if (type === "qq") {
-      Alert.alert("QQ群", `QQ群号: ${FIXED_CONTACTS.qq}`, [{ text: "确定" }]);
+  const handleContact = (type: "telegram" | "qq") => {
+    if (type === "telegram" && strategy?.telegramGroup) {
+      Linking.openURL(strategy.telegramGroup);
+    } else if (type === "qq" && strategy?.qqGroup) {
+      Alert.alert("QQ群", `QQ群号: ${strategy.qqGroup}`, [{ text: "确定" }]);
     }
   };
 
@@ -165,8 +165,8 @@ export default function StrategyDetailScreen() {
   const isAdmin = user?.role === "admin";
 
   const hasDownloadUrl = !!strategy.downloadUrl;
-  const hasTelegram = true;
-  const hasQQ = true;
+  const hasTelegram = !!strategy.telegramGroup;
+  const hasQQ = !!strategy.qqGroup;
 
   // 用户评价最多显示3条
   const displayReviews = userReviews ? userReviews.slice(0, 3) : [];
@@ -475,7 +475,7 @@ export default function StrategyDetailScreen() {
                     styles.contactBtnText,
                     { color: hasTelegram ? colors.primary : colors.muted },
                   ]}>
-                    Telegram
+                    {hasTelegram ? "Telegram" : "Telegram —"}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -495,7 +495,7 @@ export default function StrategyDetailScreen() {
                     styles.contactBtnText,
                     { color: hasQQ ? colors.primary : colors.muted },
                   ]}>
-                    QQ群
+                    {hasQQ ? "QQ群" : "QQ群 —"}
                   </Text>
                 </TouchableOpacity>
               </View>

@@ -98,7 +98,7 @@ export async function upsertUser(data: Partial<typeof users.$inferInsert> & { op
 
 export async function getStrategies(params: {
   platform?: "MT4" | "MT5";
-  orderBy?: "latest" | "popular" | "return" | "hot";
+  orderBy?: "latest" | "popular" | "return";
   limit?: number;
   offset?: number;
 }) {
@@ -109,24 +109,18 @@ export async function getStrategies(params: {
     ? and(eq(strategies.status, "published"), eq(strategies.platform, params.platform))
     : eq(strategies.status, "published");
 
-  // sortOrder作为第一排序优先级（数字越小越靠前，0为默认）
-  // 然后按用户选择的排序方式作为第二排序
-  let secondaryOrder;
-  if (params.orderBy === "popular") {
-    secondaryOrder = desc(strategies.downloadCount);
-  } else if (params.orderBy === "return") {
-    secondaryOrder = desc(strategies.totalReturn);
-  } else if (params.orderBy === "hot") {
-    secondaryOrder = desc(strategies.hotScore);
-  } else {
-    secondaryOrder = desc(strategies.createdAt);
-  }
+  const orderByColumn =
+    params.orderBy === "popular"
+      ? desc(strategies.downloadCount)
+      : params.orderBy === "return"
+        ? desc(strategies.totalReturn)
+        : desc(strategies.createdAt);
 
   const query = db
     .select()
     .from(strategies)
     .where(whereConditions)
-    .orderBy(desc(strategies.sortOrder), secondaryOrder)
+    .orderBy(orderByColumn)
     .limit(params.limit || 20)
     .offset(params.offset || 0);
 
@@ -443,34 +437,10 @@ export async function getBacktestData(strategyId: number) {
 export async function createBacktestData(data: typeof schema.backtestData.$inferInsert) {
   const db = await getDb();
   if (!db) return null;
+
   const { backtestData } = schema;
   const result = await db.insert(backtestData).values(data);
   return result;
-}
-
-export async function createBacktestDataBatch(dataArray: typeof schema.backtestData.$inferInsert[]) {
-  const db = await getDb();
-  if (!db) return null;
-  const { backtestData } = schema;
-  if (dataArray.length === 0) return { success: true };
-  const result = await db.insert(backtestData).values(dataArray);
-  return { success: true, count: dataArray.length };
-}
-
-export async function deleteBacktestData(strategyId: number) {
-  const db = await getDb();
-  if (!db) return null;
-  const { backtestData } = schema;
-  await db.delete(backtestData).where(eq(backtestData.strategyId, strategyId));
-  return { success: true };
-}
-
-export async function deleteBacktestDataById(id: number) {
-  const db = await getDb();
-  if (!db) return null;
-  const { backtestData } = schema;
-  await db.delete(backtestData).where(eq(backtestData.id, id));
-  return { success: true };
 }
 
 // ========== 匿名留言相关 ==========
