@@ -300,35 +300,11 @@ export default function GroupBuyScreen() {
   const renderContactModal = () => {
     if (!selectedItem) return null;
 
-    const contactInfo = selectedItem.contactInfo;
-    const contacts: { type: string; value: string; link?: string }[] = [];
-
-    if (contactInfo.includes("t.me") || contactInfo.toLowerCase().includes("telegram")) {
-      const tgMatch = contactInfo.match(/(?:https?:\/\/)?t\.me\/(\S+)/);
-      contacts.push({
-        type: "Telegram",
-        value: tgMatch ? `@${tgMatch[1]}` : contactInfo,
-        link: tgMatch ? `https://t.me/${tgMatch[1]}` : undefined,
-      });
-    }
-
-    if (contactInfo.match(/\d{5,12}/)) {
-      const qqMatch = contactInfo.match(/(\d{5,12})/);
-      if (qqMatch) {
-        contacts.push({ type: "QQ群", value: qqMatch[1] });
-      }
-    }
-
-    if (contactInfo.toLowerCase().includes("wechat") || contactInfo.includes("微信")) {
-      contacts.push({
-        type: "微信",
-        value: contactInfo.replace(/微信[:：]?\s*/i, "").replace(/wechat[:：]?\s*/i, ""),
-      });
-    }
-
-    if (contacts.length === 0) {
-      contacts.push({ type: "联系方式", value: contactInfo });
-    }
+    const contacts: { type: string; value: string; link?: string }[] = [
+      { type: "Telegram", value: "@XAU9876", link: "https://t.me/XAU9876" },
+      { type: "QQ群", value: "1079091794" },
+      { type: "微信", value: "XAU9876" },
+    ];
 
     return (
       <Modal
@@ -401,7 +377,7 @@ export default function GroupBuyScreen() {
 
             <View style={[styles.modalHint, { backgroundColor: colors.primary + "08" }]}>
               <Text style={[styles.modalHintText, { color: colors.muted }]}>
-                请通过以上联系方式联系发起人加入合购，确认后完成付款。
+                请通过以上联系方式咨询合购详情。
               </Text>
             </View>
 

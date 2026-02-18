@@ -81,7 +81,7 @@ export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === "web" ? 4 : Math.max(insets.bottom, 4);
-  const tabBarHeight = 56 + bottomPadding;
+  const tabBarHeight = (Platform.OS === "web" ? 72 : 56) + bottomPadding;
 
   return (
     <View style={{ flex: 1 }}>
@@ -92,6 +92,7 @@ export default function TabLayout() {
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarShowLabel: false,
+          tabBarIconStyle: Platform.OS === "web" ? { height: 52 } : undefined,
           tabBarStyle: {
             paddingTop: 2,
             paddingBottom: bottomPadding,

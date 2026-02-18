@@ -98,7 +98,7 @@ export async function upsertUser(data: Partial<typeof users.$inferInsert> & { op
 
 export async function getStrategies(params: {
   platform?: "MT4" | "MT5";
-  orderBy?: "latest" | "popular" | "return";
+  orderBy?: "latest" | "popular" | "return" | "hot";
   limit?: number;
   offset?: number;
 }) {
@@ -114,7 +114,9 @@ export async function getStrategies(params: {
       ? desc(strategies.downloadCount)
       : params.orderBy === "return"
         ? desc(strategies.totalReturn)
-        : desc(strategies.createdAt);
+        : params.orderBy === "hot"
+          ? desc(sql`${strategies.viewCount} + ${strategies.virtualSubscribers} * 10`)
+          : desc(strategies.createdAt);
 
   const query = db
     .select()
@@ -441,6 +443,22 @@ export async function createBacktestData(data: typeof schema.backtestData.$infer
   const { backtestData } = schema;
   const result = await db.insert(backtestData).values(data);
   return result;
+}
+
+export async function deleteBacktestData(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  const { backtestData } = schema;
+  await db.delete(backtestData).where(eq(backtestData.id, id));
+  return { success: true };
+}
+
+export async function deleteAllBacktestData(strategyId: number) {
+  const db = await getDb();
+  if (!db) return;
+  const { backtestData } = schema;
+  await db.delete(backtestData).where(eq(backtestData.strategyId, strategyId));
+  return { success: true };
 }
 
 // ========== 匿名留言相关 ==========

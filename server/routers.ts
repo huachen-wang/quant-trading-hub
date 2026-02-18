@@ -34,7 +34,7 @@ export const appRouter = router({
       .input(
         z.object({
           platform: z.enum(["MT4", "MT5"]).optional(),
-          orderBy: z.enum(["latest", "popular", "return"]).optional(),
+          orderBy: z.enum(["latest", "popular", "return", "hot"]).optional(),
           limit: z.number().min(1).max(100).optional(),
           offset: z.number().min(0).optional(),
         })
@@ -223,6 +223,29 @@ export const appRouter = router({
         }),
     }),
 
+    // 回测数据管理
+    backtestData: router({
+      list: adminProcedure
+        .input(z.object({ strategyId: z.number() }))
+        .query(({ input }) => db.getBacktestData(input.strategyId)),
+      create: adminProcedure
+        .input(z.object({
+          strategyId: z.number(),
+          date: z.string(),
+          equity: z.string(),
+          balance: z.string(),
+          profit: z.string(),
+          drawdown: z.string(),
+          tradesCount: z.number().optional(),
+        }))
+        .mutation(({ input }) => db.createBacktestData(input)),
+      delete: adminProcedure
+        .input(z.object({ id: z.number() }))
+        .mutation(({ input }) => db.deleteBacktestData(input.id)),
+      deleteAll: adminProcedure
+        .input(z.object({ strategyId: z.number() }))
+        .mutation(({ input }) => db.deleteAllBacktestData(input.strategyId)),
+    }),
     // 评论管理
     comments: router({
       list: adminProcedure

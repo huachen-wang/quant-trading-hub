@@ -131,6 +131,13 @@ export default function AdminStrategies() {
                     <Text style={{ color: colors.primary, fontWeight: "600", fontSize: 13 }}>编辑</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
+                    onPress={() => router.push(`/admin/backtest-data?strategyId=${item.id}&title=${encodeURIComponent(item.title)}` as any)}
+                    style={[s.actionBtn, { backgroundColor: colors.success + "12" }]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ color: colors.success, fontWeight: "600", fontSize: 13 }}>回测数据</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
                     onPress={() => handleDelete(item.id, item.title)}
                     style={[s.actionBtn, { backgroundColor: colors.error + "12" }]}
                     activeOpacity={0.7}

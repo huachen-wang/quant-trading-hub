@@ -237,3 +237,29 @@ export async function deleteGroupBuy(id: number) {
 export async function deleteListingRequest(id: number) {
   return adminMutation("listingRequests.delete", { id });
 }
+
+// ============= 回测数据管理 =============
+
+export async function getBacktestData(strategyId: number) {
+  return adminQuery("admin.backtestData.list", { strategyId });
+}
+
+export async function createBacktestDataItem(data: {
+  strategyId: number;
+  date: string;
+  equity: string;
+  balance: string;
+  profit: string;
+  drawdown: string;
+  tradesCount?: number;
+}) {
+  return adminMutation("admin.backtestData.create", data);
+}
+
+export async function deleteBacktestDataItem(id: number) {
+  return adminMutation("admin.backtestData.delete", { id });
+}
+
+export async function deleteAllBacktestData(strategyId: number) {
+  return adminMutation("admin.backtestData.deleteAll", { strategyId });
+}
