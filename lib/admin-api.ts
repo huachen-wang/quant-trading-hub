@@ -232,6 +232,28 @@ export async function deleteGroupBuy(id: number) {
   return adminMutation("groupBuys.delete", { id });
 }
 
+// ============= 回测数据管理 =============
+
+export async function getBacktestData(strategyId: number) {
+  return adminQuery("admin.backtestData.list", { strategyId });
+}
+
+export async function createBacktestDataSingle(data: any) {
+  return adminMutation("admin.backtestData.create", data);
+}
+
+export async function createBacktestDataBatch(strategyId: number, data: any[]) {
+  return adminMutation("admin.backtestData.batchCreate", { strategyId, data });
+}
+
+export async function deleteAllBacktestData(strategyId: number) {
+  return adminMutation("admin.backtestData.deleteAll", { strategyId });
+}
+
+export async function deleteBacktestDataById(id: number) {
+  return adminMutation("admin.backtestData.deleteOne", { id });
+}
+
 // ============= 上架申请管理 =============
 
 export async function deleteListingRequest(id: number) {

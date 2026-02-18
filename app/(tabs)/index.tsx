@@ -12,7 +12,7 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 
 type PlatformFilter = "MT4" | "MT5" | undefined;
-type OrderBy = "latest" | "popular" | "return";
+type OrderBy = "latest" | "popular" | "return" | "hot";
 
 const PAGE_SIZE = 12;
 
@@ -174,10 +174,17 @@ export default function HomeScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setOrderBy("return")}
-          className={`px-3 py-1.5 rounded-full mb-2 ${orderBy === "return" ? "bg-surface border border-primary" : "bg-surface"}`}
+          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${orderBy === "return" ? "bg-surface border border-primary" : "bg-surface"}`}
           activeOpacity={0.7}
         >
           <Text className={`text-sm ${orderBy === "return" ? "text-primary font-semibold" : "text-muted"}`}>收益率</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setOrderBy("hot")}
+          className={`px-3 py-1.5 rounded-full mb-2 ${orderBy === "hot" ? "bg-surface border border-primary" : "bg-surface"}`}
+          activeOpacity={0.7}
+        >
+          <Text className={`text-sm ${orderBy === "hot" ? "text-primary font-semibold" : "text-muted"}`}>热度</Text>
         </TouchableOpacity>
       </View>
     </Animated.View>

@@ -54,6 +54,12 @@ export const strategies = mysqlTable("strategies", {
   // 统计
   viewCount: int("viewCount").default(0).notNull(),
   
+  // 自定义排序（数字越小越靠前，默认0）
+  sortOrder: int("sortOrder").default(0).notNull(),
+  
+  // 热度值（后台手动设置，用于热度排序）
+  hotScore: int("hotScore").default(0).notNull(),
+  
   // 状态
   status: mysqlEnum("status", ["draft", "published", "archived"]).default("published").notNull(),
   

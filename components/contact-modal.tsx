@@ -1,15 +1,24 @@
 import { useRef, useEffect } from "react";
-import { View, Text, Modal, TouchableOpacity, Linking, ActivityIndicator, StyleSheet, Animated } from "react-native";
+import { View, Text, Modal, TouchableOpacity, Linking, StyleSheet, Animated } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "./ui/icon-symbol";
-import { trpc } from "@/lib/trpc";
 
 interface ContactModalProps {
   visible: boolean;
   onClose: () => void;
+  title?: string;
+  subtitle?: string;
 }
 
-export function ContactModal({ visible, onClose }: ContactModalProps) {
+// 固定联系方式常量 - 全站统一
+export const FIXED_CONTACTS = {
+  telegram: "XAU9876",
+  telegramLink: "https://t.me/XAU9876",
+  wechat: "XAU9876",
+  qq: "1079091794",
+};
+
+export function ContactModal({ visible, onClose, title, subtitle }: ContactModalProps) {
   const colors = useColors();
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -24,37 +33,26 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
       ]).start();
     }
   }, [visible]);
-  const { data: contactData, isLoading } = trpc.siteSettings.getContact.useQuery(undefined, {
-    enabled: visible,
-  });
-
-  const telegram = contactData?.contact_telegram || "";
-  const telegramLink = contactData?.contact_telegram_link || "";
-  const qq = contactData?.contact_qq || "";
-  const wechat = contactData?.contact_wechat || "";
-  const description = contactData?.contact_description || "";
-  const title = contactData?.contact_title || "联系我们";
-  const subtitle = contactData?.contact_subtitle || "上架EA策略 | 代挂合作服务";
 
   const contactMethods = [
-    ...(telegram ? [{
+    {
       icon: "paperplane.fill" as const,
       label: "Telegram",
-      value: telegram,
-      link: telegramLink || null,
-    }] : []),
-    ...(qq ? [{
-      icon: "bubble.left.fill" as const,
-      label: "QQ群",
-      value: qq,
-      link: null,
-    }] : []),
-    ...(wechat ? [{
+      value: `@${FIXED_CONTACTS.telegram}`,
+      link: FIXED_CONTACTS.telegramLink,
+    },
+    {
       icon: "message.fill" as const,
       label: "微信",
-      value: wechat,
+      value: FIXED_CONTACTS.wechat,
       link: null,
-    }] : []),
+    },
+    {
+      icon: "bubble.left.fill" as const,
+      label: "QQ群",
+      value: FIXED_CONTACTS.qq,
+      link: null,
+    },
   ];
 
   const handlePress = (link: string | null) => {
@@ -88,47 +86,32 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
         >
           {/* 标题 */}
           <View style={styles.headerSection}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>{title}</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.muted }]}>{subtitle}</Text>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>{title || "联系我们"}</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.muted }]}>{subtitle || "上架EA策略 | 代挂合作服务"}</Text>
           </View>
 
-          {isLoading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          ) : (
-            <>
-              {/* 联系方式列表 */}
-              <View style={styles.contactList}>
-                {contactMethods.map((method, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => handlePress(method.link)}
-                    style={[styles.contactItem, { backgroundColor: colors.surface }]}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.contactIcon, { backgroundColor: colors.primary + "15" }]}>
-                      <IconSymbol name={method.icon} size={24} color={colors.primary} />
-                    </View>
-                    <View style={styles.contactInfo}>
-                      <Text style={[styles.contactLabel, { color: colors.muted }]}>{method.label}</Text>
-                      <Text style={[styles.contactValue, { color: colors.foreground }]}>{method.value}</Text>
-                    </View>
-                    {method.link && (
-                      <IconSymbol name="chevron.right" size={20} color={colors.muted} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* 说明 */}
-              {description ? (
-                <View style={[styles.descBox, { backgroundColor: colors.primary + "08" }]}>
-                  <Text style={[styles.descText, { color: colors.foreground }]}>{description}</Text>
+          {/* 联系方式列表 */}
+          <View style={styles.contactList}>
+            {contactMethods.map((method, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => handlePress(method.link)}
+                style={[styles.contactItem, { backgroundColor: colors.surface }]}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.contactIcon, { backgroundColor: colors.primary + "15" }]}>
+                  <IconSymbol name={method.icon} size={24} color={colors.primary} />
                 </View>
-              ) : null}
-            </>
-          )}
+                <View style={styles.contactInfo}>
+                  <Text style={[styles.contactLabel, { color: colors.muted }]}>{method.label}</Text>
+                  <Text style={[styles.contactValue, { color: colors.foreground }]}>{method.value}</Text>
+                </View>
+                {method.link && (
+                  <IconSymbol name="chevron.right" size={20} color={colors.muted} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
 
           {/* 关闭按钮 */}
           <TouchableOpacity
@@ -162,7 +145,6 @@ const styles = StyleSheet.create({
   headerSection: { alignItems: "center", marginBottom: 20 },
   modalTitle: { fontSize: 22, fontWeight: "800", marginBottom: 6 },
   modalSubtitle: { fontSize: 14 },
-  loadingBox: { paddingVertical: 40 },
   contactList: { marginBottom: 16 },
   contactItem: {
     flexDirection: "row",
@@ -182,8 +164,6 @@ const styles = StyleSheet.create({
   contactInfo: { flex: 1 },
   contactLabel: { fontSize: 12, marginBottom: 2 },
   contactValue: { fontSize: 16, fontWeight: "700" },
-  descBox: { borderRadius: 14, padding: 14, marginBottom: 16 },
-  descText: { fontSize: 14, lineHeight: 22 },
   closeBtn: { borderRadius: 24, paddingVertical: 14, alignItems: "center" },
   closeBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });
