@@ -22,7 +22,6 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
-import { EquityCurveChart } from "@/components/equity-curve-chart";
 import { SubscribeModal } from "@/components/subscribe-modal";
 
 export default function StrategyDetailScreen() {
@@ -48,7 +47,6 @@ export default function StrategyDetailScreen() {
 
   const { data: strategy, isLoading } = trpc.strategies.detail.useQuery({ id: strategyId });
   const { data: comments, refetch: refetchComments } = trpc.comments.list.useQuery({ strategyId });
-  const { data: backtestData } = trpc.strategies.backtestData.useQuery({ strategyId });
   const { data: userReviews, refetch: refetchReviews } = trpc.anonymousComments.list.useQuery({
     strategyId,
     limit: 50,
@@ -395,13 +393,6 @@ export default function StrategyDetailScreen() {
               </View>
             </View>
           </View>
-
-          {/* 回测数据 */}
-          {backtestData && backtestData.length > 0 && (
-            <View style={styles.section}>
-              <EquityCurveChart data={backtestData} />
-            </View>
-          )}
 
           {/* 交易信息 */}
           <View style={styles.section}>
