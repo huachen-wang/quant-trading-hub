@@ -12,7 +12,7 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 
 type PlatformFilter = "MT4" | "MT5" | undefined;
-type OrderBy = "latest" | "popular" | "return" | "hot";
+type OrderBy = "latest" | "return" | "hot";
 
 const PAGE_SIZE = 12;
 
@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { numColumns, isDesktop } = useResponsive();
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(undefined);
-  const [orderBy, setOrderBy] = useState<OrderBy>("latest");
+  const [orderBy, setOrderBy] = useState<OrderBy>("hot");
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [selectedStrategyTitle, setSelectedStrategyTitle] = useState("");
@@ -164,13 +164,6 @@ export default function HomeScreen() {
           activeOpacity={0.7}
         >
           <Text className={`text-sm ${orderBy === "latest" ? "text-primary font-semibold" : "text-muted"}`}>最新</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setOrderBy("popular")}
-          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${orderBy === "popular" ? "bg-surface border border-primary" : "bg-surface"}`}
-          activeOpacity={0.7}
-        >
-          <Text className={`text-sm ${orderBy === "popular" ? "text-primary font-semibold" : "text-muted"}`}>最热</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setOrderBy("return")}
