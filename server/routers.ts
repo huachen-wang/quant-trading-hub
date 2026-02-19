@@ -257,6 +257,21 @@ export const appRouter = router({
         )
         .query(({ input }) => db.getAllComments(input.limit, input.offset)),
 
+      create: adminProcedure
+        .input(
+          z.object({
+            strategyId: z.number(),
+            content: z.string().min(1).max(1000),
+          })
+        )
+        .mutation(async ({ ctx, input }) => {
+          return db.createComment({
+            userId: ctx.user.id,
+            strategyId: input.strategyId,
+            content: input.content,
+          });
+        }),
+
       delete: adminProcedure
         .input(z.object({ id: z.number() }))
         .mutation(({ input }) => db.deleteCommentByAdmin(input.id)),
