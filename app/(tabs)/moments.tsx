@@ -1,64 +1,145 @@
+/*
+ * 合作生态页面
+ * 移植自 quant-promo-showcase/CooperationSection.tsx
+ * Design: Deep blue-black + Gold accent (#F59E0B)
+ */
 import { useRef, useEffect, useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Animated, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  Animated,
+  RefreshControl,
+  Linking,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { ContactModal } from "@/components/contact-modal";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-import { LinearGradient } from "expo-linear-gradient";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 
-// 入场动画
-function FadeInView({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+// ===== 动画 =====
+function FadeInView({
+  children,
+  delay = 0,
+  style,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  style?: any;
+}) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(24)).current;
+  const translateY = useRef(new Animated.Value(40)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 600, delay, useNativeDriver: true }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 700,
+        delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 700,
+        delay,
+        useNativeDriver: true,
+      }),
     ]).start();
   }, []);
 
   return (
-    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY }] }}>
+    <Animated.View
+      style={[{ opacity: fadeAnim, transform: [{ translateY }] }, style]}
+    >
       {children}
     </Animated.View>
   );
 }
 
-// ===== 平台评估6大维度 =====
-const PLATFORM_DIMENSIONS = [
-  { icon: "🛡️", title: "监管资质", desc: "FCA/ASIC/CySEC主流牌照" },
-  { icon: "⚡", title: "出入金效率", desc: "到账速度与隐藏费用" },
-  { icon: "🔒", title: "资金安全", desc: "隔离账户与保障计划" },
-  { icon: "📊", title: "执行质量", desc: "滑点控制与流动性深度" },
-  { icon: "⭐", title: "市场口碑", desc: "第三方平台真实评价" },
-  { icon: "🤝", title: "服务支持", desc: "专属客户经理与技术响应" },
+// ===== 数据 =====
+const GOLD = "#F59E0B";
+const GOLD_DIM = "rgba(245,158,11,0.6)";
+const GOLD_BG = "rgba(245,158,11,0.1)";
+const GOLD_BORDER = "rgba(245,158,11,0.2)";
+const CARD_BG = "rgba(255,255,255,0.03)";
+const CARD_BORDER = "rgba(255,255,255,0.08)";
+const CARD_BORDER_HOVER = "rgba(245,158,11,0.2)";
+const TEXT_PRIMARY = "rgba(255,255,255,0.9)";
+const TEXT_SECONDARY = "rgba(255,255,255,0.45)";
+const TEXT_BODY = "rgba(255,255,255,0.6)";
+const DARK_BG = "#0a0f1a";
+const DARK_BG_MID = "#0d1225";
+
+const platformDimensions = [
+  { icon: "🛡️", label: "监管资质", desc: "FCA/ASIC/CySEC主流牌照" },
+  { icon: "⚡", label: "出入金效率", desc: "到账速度与隐藏费用" },
+  { icon: "🔒", label: "资金安全", desc: "隔离账户与保障计划" },
+  { icon: "📊", label: "执行质量", desc: "滑点控制与流动性深度" },
+  { icon: "⭐", label: "市场口碑", desc: "第三方平台真实评价" },
+  { icon: "🤝", label: "服务支持", desc: "专属客户经理与技术响应" },
 ];
 
-// ===== 我们能帮你做什么 =====
-const OUR_SERVICES = [
-  { icon: "🔍", title: "平台筛选", desc: "根据交易风格和资金规模，匹配最合适的合规平台" },
-  { icon: "📋", title: "合规审核", desc: "每家平台经过监管资质、资金安全等多维度审核" },
-  { icon: "💰", title: "激励谈判", desc: "帮你争取最优的入金返利和合作条件" },
-  { icon: "🔧", title: "技术对接", desc: "EA部署、VPS配置、MAM账户管理全程支持" },
+const services = [
+  {
+    icon: "🔍",
+    title: "平台筛选",
+    desc: "根据交易风格和资金规模，匹配最合适的合规平台",
+  },
+  {
+    icon: "📋",
+    title: "合规审核",
+    desc: "每家平台经过监管资质、资金安全等多维度审核",
+  },
+  {
+    icon: "💰",
+    title: "激励谈判",
+    desc: "帮你争取最优的入金返利和合作条件",
+  },
+  {
+    icon: "🔧",
+    title: "技术对接",
+    desc: "EA部署、VPS配置、MAM账户管理全程支持",
+  },
 ];
 
-// ===== 合作方式 =====
-const COOPERATION_MODELS = [
-  { icon: "👤", title: "个人交易者", desc: "筛选优质EA，匹配合规平台，专注交易本身" },
-  { icon: "🏢", title: "量化工作室", desc: "多账户管理、技术对接、阶梯合作方案" },
-  { icon: "🔧", title: "EA开发者", desc: "上架策略获得曝光，对接优质交易环境", highlight: true },
-  { icon: "📈", title: "机构合作", desc: "定制化方案、专属团队、深度合作关系" },
+const cooperationTypes = [
+  {
+    title: "个人交易者",
+    desc: "筛选优质EA，匹配合规平台，专注交易本身",
+    highlight: false,
+  },
+  {
+    title: "量化工作室",
+    desc: "多账户管理、技术对接、阶梯合作方案",
+    highlight: false,
+  },
+  {
+    title: "EA开发者",
+    desc: "上架策略获得曝光，对接优质交易环境",
+    highlight: true,
+  },
+  {
+    title: "机构合作",
+    desc: "定制化方案、专属团队、深度合作关系",
+    highlight: false,
+  },
 ];
 
+// ===== 主组件 =====
 export default function CooperationScreen() {
   const colors = useColors();
-  const { isDesktop } = useResponsive();
+  const { isDesktop, isMobile } = useResponsive();
   const [refreshing, setRefreshing] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
 
-  const pageContentsQuery = trpc.pageContents.get.useQuery({ pageKey: "cooperation" });
+  const pageContentsQuery = trpc.pageContents.get.useQuery({
+    pageKey: "cooperation",
+  });
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -70,52 +151,80 @@ export default function CooperationScreen() {
     setShowContactModal(true);
   };
 
+  const maxContentWidth = 960;
+
   return (
-    <ScreenContainer>
-      <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
+    <ScreenContainer containerClassName="bg-[#0a0f1a]">
+      <ContactModal
+        visible={showContactModal}
+        onClose={() => setShowContactModal(false)}
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 60 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={GOLD}
+          />
         }
       >
-        {/* ===== Hero 区域 ===== */}
-        <FadeInView>
-          <View style={styles.heroSection}>
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>合作生态</Text>
+        {/* ===== 背景渐变 ===== */}
+        <LinearGradient
+          colors={[DARK_BG, DARK_BG_MID, DARK_BG]}
+          style={StyleSheet.absoluteFill}
+        />
+
+        {/* ===== Header ===== */}
+        <FadeInView delay={0}>
+          <View style={[styles.headerContainer, { maxWidth: maxContentWidth }]}>
+            {/* Tag */}
+            <View style={styles.sectionTag}>
+              <Text style={styles.sectionTagText}>合作生态</Text>
             </View>
+            {/* Title */}
             <Text style={styles.heroTitle}>好策略，配好平台</Text>
+            {/* Subtitle */}
             <Text style={styles.heroSubtitle}>
-              选对EA只是第一步。交易平台的监管资质、执行质量、{"\n"}资金安全同样决定最终收益。
+              选对EA只是第一步。交易平台的监管资质、执行质量、
+              {"\n"}资金安全同样决定最终收益。
             </Text>
           </View>
         </FadeInView>
 
         {/* ===== 平台评估6大维度 ===== */}
         <FadeInView delay={100}>
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionTitleRow}>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>平台评估 </Text>
-              <Text style={[styles.sectionTitleHighlight, { color: colors.primary }]}>6大维度</Text>
-            </View>
-            <View style={[styles.dimensionGrid, isDesktop && styles.dimensionGridDesktop]}>
-              {PLATFORM_DIMENSIONS.map((item, i) => (
+          <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth }]}>
+            <Text style={styles.sectionTitle}>
+              平台评估 <Text style={{ color: GOLD }}>6大维度</Text>
+            </Text>
+            <View
+              style={[
+                styles.gridContainer,
+                {
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  justifyContent: isMobile ? "space-between" : "center",
+                  gap: isMobile ? 10 : 14,
+                },
+              ]}
+            >
+              {platformDimensions.map((dim, i) => (
                 <View
                   key={i}
                   style={[
                     styles.dimensionCard,
                     {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                      width: isDesktop ? "31%" as any : "48%" as any,
+                      width: isMobile ? "48%" : isDesktop ? "30%" : "31%",
                     },
                   ]}
                 >
-                  <Text style={styles.dimensionIcon}>{item.icon}</Text>
-                  <Text style={[styles.dimensionTitle, { color: colors.foreground }]}>{item.title}</Text>
-                  <Text style={[styles.dimensionDesc, { color: colors.muted }]}>{item.desc}</Text>
+                  <View style={styles.dimensionIconBox}>
+                    <Text style={styles.dimensionIconText}>{dim.icon}</Text>
+                  </View>
+                  <Text style={styles.dimensionLabel}>{dim.label}</Text>
+                  <Text style={styles.dimensionDesc}>{dim.desc}</Text>
                 </View>
               ))}
             </View>
@@ -124,25 +233,32 @@ export default function CooperationScreen() {
 
         {/* ===== 我们能帮你做什么 ===== */}
         <FadeInView delay={200}>
-          <View style={styles.sectionContainer}>
-            <Text style={[styles.sectionTitleCenter, { color: colors.foreground }]}>我们能帮你做什么</Text>
-            <View style={[styles.serviceGrid, isDesktop && styles.serviceGridDesktop]}>
-              {OUR_SERVICES.map((item, i) => (
+          <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth }]}>
+            <Text style={styles.sectionTitle}>我们能帮你做什么</Text>
+            <View
+              style={[
+                styles.gridContainer,
+                {
+                  flexDirection: isMobile ? "column" : "row",
+                  flexWrap: "wrap",
+                  gap: isMobile ? 12 : 16,
+                },
+              ]}
+            >
+              {services.map((svc, i) => (
                 <View
                   key={i}
                   style={[
                     styles.serviceCard,
                     {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                      width: isDesktop ? "48%" as any : "100%" as any,
+                      width: isMobile ? "100%" : "48%",
                     },
                   ]}
                 >
-                  <Text style={styles.serviceIcon}>{item.icon}</Text>
-                  <View style={styles.serviceTextContainer}>
-                    <Text style={[styles.serviceTitle, { color: colors.foreground }]}>{item.title}</Text>
-                    <Text style={[styles.serviceDesc, { color: colors.muted }]}>{item.desc}</Text>
+                  <Text style={styles.serviceIcon}>{svc.icon}</Text>
+                  <View style={styles.serviceTextBox}>
+                    <Text style={styles.serviceTitle}>{svc.title}</Text>
+                    <Text style={styles.serviceDesc}>{svc.desc}</Text>
                   </View>
                 </View>
               ))}
@@ -152,55 +268,75 @@ export default function CooperationScreen() {
 
         {/* ===== 适合你的合作方式 ===== */}
         <FadeInView delay={300}>
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionTitleRow}>
-              <Text style={[styles.sectionTitleCenter, { color: colors.foreground }]}>适合你的 </Text>
-              <Text style={[styles.sectionTitleHighlight, { color: colors.primary }]}>合作方式</Text>
-            </View>
-            <View style={[styles.modelGrid, isDesktop && styles.modelGridDesktop]}>
-              {COOPERATION_MODELS.map((item, i) => (
+          <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth }]}>
+            <Text style={styles.sectionTitle}>
+              适合你的 <Text style={{ color: GOLD }}>合作方式</Text>
+            </Text>
+            <View
+              style={[
+                styles.gridContainer,
+                {
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  justifyContent: "center",
+                  gap: isMobile ? 10 : 14,
+                },
+              ]}
+            >
+              {cooperationTypes.map((type, i) => (
                 <View
                   key={i}
                   style={[
-                    styles.modelCard,
+                    styles.coopCard,
+                    type.highlight
+                      ? styles.coopCardHighlight
+                      : styles.coopCardNormal,
                     {
-                      backgroundColor: item.highlight ? "#d4a84315" : colors.surface,
-                      borderColor: item.highlight ? "#d4a84340" : colors.border,
+                      width: isMobile ? "48%" : isDesktop ? "23%" : "48%",
                     },
-                    isDesktop && { width: "23%" as any },
                   ]}
                 >
-                  <Text style={styles.modelIcon}>{item.icon}</Text>
-                  <Text style={[
-                    styles.modelTitle,
-                    { color: item.highlight ? "#d4a843" : colors.foreground },
-                  ]}>{item.title}</Text>
-                  <Text style={[styles.modelDesc, { color: colors.muted }]}>{item.desc}</Text>
+                  <Text
+                    style={[
+                      styles.coopTitle,
+                      type.highlight && { color: GOLD },
+                    ]}
+                  >
+                    {type.title}
+                  </Text>
+                  <Text style={styles.coopDesc}>{type.desc}</Text>
                 </View>
               ))}
             </View>
           </View>
         </FadeInView>
 
-        {/* ===== 底部CTA ===== */}
+        {/* ===== CTA ===== */}
         <FadeInView delay={400}>
-          <View style={styles.sectionContainer}>
-            <View style={styles.ctaContainer}>
-              <TouchableOpacity
-                onPress={handleConsult}
-                activeOpacity={0.8}
-                style={styles.ctaPrimaryBtn}
+          <View style={[styles.ctaWrapper, { maxWidth: maxContentWidth }]}>
+            <TouchableOpacity
+              onPress={handleConsult}
+              activeOpacity={0.85}
+              style={styles.ctaPrimary}
+            >
+              <LinearGradient
+                colors={["#F59E0B", "#D97706"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.ctaPrimaryGradient}
               >
-                <Text style={styles.ctaPrimaryText}>免费咨询合作方案  →</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleConsult}
-                activeOpacity={0.8}
-                style={[styles.ctaSecondaryBtn, { borderColor: colors.border }]}
-              >
-                <Text style={[styles.ctaSecondaryText, { color: colors.foreground }]}>查看完整合作详情</Text>
-              </TouchableOpacity>
-            </View>
+                <Text style={styles.ctaPrimaryText}>免费咨询合作方案</Text>
+                <Text style={styles.ctaPrimaryArrow}>→</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={handleConsult}
+              activeOpacity={0.85}
+              style={styles.ctaSecondary}
+            >
+              <Text style={styles.ctaSecondaryText}>查看完整合作详情</Text>
+            </TouchableOpacity>
           </View>
         </FadeInView>
       </ScrollView>
@@ -208,203 +344,220 @@ export default function CooperationScreen() {
   );
 }
 
+// ===== 样式 =====
 const styles = StyleSheet.create({
-  // Hero
-  heroSection: {
-    paddingHorizontal: 20,
-    paddingTop: 48,
-    paddingBottom: 40,
+  // Header
+  headerContainer: {
     alignItems: "center",
+    paddingTop: 48,
+    paddingBottom: 32,
+    paddingHorizontal: 16,
+    alignSelf: "center",
+    width: "100%",
   },
-  heroBadge: {
-    backgroundColor: "rgba(212,168,67,0.15)",
+  sectionTag: {
     borderWidth: 1,
-    borderColor: "rgba(212,168,67,0.3)",
+    borderColor: GOLD_BORDER,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 6,
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  heroBadgeText: {
-    color: "#d4a843",
-    fontSize: 12,
+  sectionTagText: {
+    fontSize: 11,
+    letterSpacing: 3,
+    color: GOLD_DIM,
     fontWeight: "600",
-    letterSpacing: 2,
+    textTransform: "uppercase",
   },
   heroTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "900",
-    color: "#d4a843",
-    marginBottom: 12,
+    color: "#ffffff",
     textAlign: "center",
-    letterSpacing: 1,
+    marginBottom: 16,
+    ...(Platform.OS === "web"
+      ? { fontFamily: "system-ui, -apple-system, sans-serif" }
+      : {}),
   },
   heroSubtitle: {
-    fontSize: 14,
-    color: "rgba(148,163,184,0.9)",
+    fontSize: 15,
+    color: TEXT_BODY,
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 26,
+    maxWidth: 480,
   },
 
   // Section
-  sectionContainer: {
+  sectionWrapper: {
     paddingHorizontal: 16,
-    marginTop: 32,
-  },
-  sectionTitleRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
+    marginTop: 40,
+    alignSelf: "center",
+    width: "100%",
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: "800",
-  },
-  sectionTitleCenter: {
-    fontSize: 20,
-    fontWeight: "800",
+    color: "rgba(255,255,255,0.8)",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  sectionTitleHighlight: {
-    fontSize: 20,
-    fontWeight: "800",
+  gridContainer: {
+    width: "100%",
   },
 
-  // 平台评估6大维度 - 网格
-  dimensionGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  dimensionGridDesktop: {
-    gap: 14,
-  },
+  // 6大维度卡片
   dimensionCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
     borderRadius: 14,
     padding: 18,
-    borderWidth: 0.5,
     alignItems: "center",
-    marginBottom: 4,
   },
-  dimensionIcon: {
-    fontSize: 28,
+  dimensionIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: GOLD_BG,
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 10,
   },
-  dimensionTitle: {
-    fontSize: 15,
+  dimensionIconText: {
+    fontSize: 20,
+  },
+  dimensionLabel: {
+    fontSize: 14,
     fontWeight: "700",
+    color: TEXT_PRIMARY,
     marginBottom: 4,
     textAlign: "center",
   },
   dimensionDesc: {
     fontSize: 12,
-    lineHeight: 18,
+    color: TEXT_SECONDARY,
     textAlign: "center",
+    lineHeight: 18,
   },
 
-  // 我们能帮你做什么 - 服务卡片
-  serviceGrid: {
-    gap: 10,
-  },
-  serviceGridDesktop: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
+  // 服务卡片
   serviceCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
     borderRadius: 14,
-    padding: 16,
-    borderWidth: 0.5,
+    padding: 20,
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 14,
   },
   serviceIcon: {
-    fontSize: 28,
+    fontSize: 26,
     marginTop: 2,
   },
-  serviceTextContainer: {
+  serviceTextBox: {
     flex: 1,
   },
   serviceTitle: {
     fontSize: 15,
     fontWeight: "700",
+    color: "#ffffff",
     marginBottom: 4,
   },
   serviceDesc: {
     fontSize: 13,
+    color: "rgba(255,255,255,0.5)",
     lineHeight: 20,
   },
 
-  // 合作方式 - 卡片
-  modelGrid: {
-    gap: 10,
-  },
-  modelGridDesktop: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  modelCard: {
+  // 合作方式卡片
+  coopCard: {
     borderRadius: 14,
     padding: 18,
-    borderWidth: 0.5,
     alignItems: "center",
-    flex: 1,
-    minWidth: 150,
+    borderWidth: 1,
   },
-  modelIcon: {
-    fontSize: 28,
-    marginBottom: 10,
+  coopCardNormal: {
+    backgroundColor: CARD_BG,
+    borderColor: CARD_BORDER,
   },
-  modelTitle: {
+  coopCardHighlight: {
+    backgroundColor: "rgba(245,158,11,0.1)",
+    borderColor: "rgba(245,158,11,0.25)",
+  },
+  coopTitle: {
     fontSize: 15,
     fontWeight: "700",
-    marginBottom: 6,
+    color: TEXT_PRIMARY,
+    marginBottom: 8,
     textAlign: "center",
   },
-  modelDesc: {
+  coopDesc: {
     fontSize: 12,
-    lineHeight: 18,
+    color: TEXT_SECONDARY,
     textAlign: "center",
+    lineHeight: 18,
   },
 
   // CTA
-  ctaContainer: {
+  ctaWrapper: {
+    marginTop: 48,
+    alignItems: "center",
+    paddingHorizontal: 16,
+    alignSelf: "center",
+    width: "100%",
     flexDirection: "row",
     justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 12,
     flexWrap: "wrap",
+    gap: 14,
   },
-  ctaPrimaryBtn: {
-    backgroundColor: "#d4a843",
+  ctaPrimary: {
+    borderRadius: 14,
+    overflow: "hidden",
+    ...(Platform.OS === "web"
+      ? {
+          boxShadow: "0 0 40px rgba(245,158,11,0.15)",
+        }
+      : {
+          shadowColor: GOLD,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 16,
+          elevation: 10,
+        }),
+  },
+  ctaPrimaryGradient: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 28,
     paddingVertical: 16,
-    borderRadius: 12,
-    shadowColor: "#d4a843",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    gap: 8,
   },
   ctaPrimaryText: {
-    color: "#0f172a",
-    fontSize: 15,
+    color: DARK_BG,
+    fontSize: 16,
     fontWeight: "800",
   },
-  ctaSecondaryBtn: {
+  ctaPrimaryArrow: {
+    color: DARK_BG,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  ctaSecondary: {
     borderWidth: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
+    borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 14,
+    paddingHorizontal: 28,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   ctaSecondaryText: {
-    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 15,
     fontWeight: "600",
   },
 });
