@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# 环境
+.env
+.venv/
+venv/
+
+# 数据（包含敏感信息）
+data/
+*.db
+*.session
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+
+# 抓包数据
+gold_pattern_captures/
