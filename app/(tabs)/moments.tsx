@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { ContactModal } from "@/components/contact-modal";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 
@@ -152,6 +153,7 @@ export default function CooperationScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: DARK_BG }}>
+      <SafeAreaView edges={["top", "left", "right"]} style={{ flex: 1 }}>
       <ContactModal
         visible={showContactModal}
         onClose={() => setShowContactModal(false)}
@@ -337,6 +339,7 @@ export default function CooperationScreen() {
           </View>
         </FadeInView>
       </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
