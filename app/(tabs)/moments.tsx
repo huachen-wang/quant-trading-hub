@@ -17,8 +17,6 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { ContactModal } from "@/components/contact-modal";
-import { ScreenContainer } from "@/components/screen-container";
-import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 
@@ -132,7 +130,6 @@ const cooperationTypes = [
 
 // ===== 主组件 =====
 export default function CooperationScreen() {
-  const colors = useColors();
   const { isDesktop, isMobile } = useResponsive();
   const [refreshing, setRefreshing] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
@@ -154,7 +151,7 @@ export default function CooperationScreen() {
   const maxContentWidth = 960;
 
   return (
-    <ScreenContainer containerClassName="bg-[#0a0f1a]">
+    <View style={{ flex: 1, backgroundColor: DARK_BG }}>
       <ContactModal
         visible={showContactModal}
         onClose={() => setShowContactModal(false)}
@@ -340,7 +337,7 @@ export default function CooperationScreen() {
           </View>
         </FadeInView>
       </ScrollView>
-    </ScreenContainer>
+    </View>
   );
 }
 
