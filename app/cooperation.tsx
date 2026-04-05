@@ -14,6 +14,18 @@ const { width: SW } = Dimensions.get("window");
 const isDesktop = SW >= 768;
 const CONTENT_W = Math.min(SW, 960);
 
+// ─── 卡片主题配色 ───
+const CARD_THEMES = [
+  { gradient: ["#1a0a2e", "#2d1b69", "#44318d"] as const, accent: "#e9c46a", glow: "rgba(233,196,106,0.15)" },
+  { gradient: ["#0a192f", "#112240", "#1d3557"] as const, accent: "#64ffda", glow: "rgba(100,255,218,0.15)" },
+  { gradient: ["#1a1a2e", "#16213e", "#0f3460"] as const, accent: "#e94560", glow: "rgba(233,69,96,0.15)" },
+  { gradient: ["#0d1b2a", "#1b263b", "#415a77"] as const, accent: "#f77f00", glow: "rgba(247,127,0,0.15)" },
+  { gradient: ["#2d0a0a", "#4a1010", "#6b1d1d"] as const, accent: "#ffd700", glow: "rgba(255,215,0,0.15)" },
+  { gradient: ["#0a2e1a", "#1b4332", "#2d6a4f"] as const, accent: "#95d5b2", glow: "rgba(149,213,178,0.15)" },
+  { gradient: ["#1a0a1e", "#2e1a3e", "#4a2c6e"] as const, accent: "#c77dff", glow: "rgba(199,125,255,0.15)" },
+  { gradient: ["#1e1a0a", "#3e2e1a", "#6e4a2c"] as const, accent: "#ffb703", glow: "rgba(255,183,3,0.15)" },
+];
+
 // ─── 默认策略档案（后台无数据时展示） ───
 const DEFAULT_CARDS: any[] = [
   {
@@ -22,11 +34,6 @@ const DEFAULT_CARDS: any[] = [
     badge: "🔥 热门", badgeColor: "red", strategyType: "对冲策略", platform: "MT4",
     observeNote: "私聊备注「极限对冲」获取观摩账户",
     coverImage: null, galleryImages: null,
-    highlights: ["日均交易量大，返佣可观", "回撤控制优秀，客户体验好", "多账户分散风险", "6个月+实盘验证"],
-    riskLevel: "中低风险", minCapital: "$3,000",
-    monthlyReturn: "8-15%", maxDrawdown: "12%", runningDays: "180+",
-    gradient: ["#1a1a2e", "#16213e", "#0f3460"],
-    accentColor: "#e94560",
   },
   {
     id: -2, title: "一单一结（武汉小艺）", subtitle: "日均20-80单 · 历史零爆仓",
@@ -34,11 +41,6 @@ const DEFAULT_CARDS: any[] = [
     badge: "🛡️ 零爆仓", badgeColor: "green", strategyType: "一次一单", platform: "MT5",
     observeNote: "私聊备注「一单一结」获取观摩账户",
     coverImage: null, galleryImages: null,
-    highlights: ["历史零爆仓记录", "一次一单极致安全", "客户信任度极高", "稳定月化收益"],
-    riskLevel: "低风险", minCapital: "$1,000",
-    monthlyReturn: "5-10%", maxDrawdown: "5%", runningDays: "300+",
-    gradient: ["#0a192f", "#112240", "#1d3557"],
-    accentColor: "#64ffda",
   },
   {
     id: -3, title: "超级黄金调优 2026", subtitle: "两个月战绩600%",
@@ -46,11 +48,6 @@ const DEFAULT_CARDS: any[] = [
     badge: "⚡ 主力", badgeColor: "gold", strategyType: "网格策略", platform: "MT4",
     observeNote: "私聊备注「超级调优」获取观摩账户",
     coverImage: null, galleryImages: null,
-    highlights: ["两个月600%收益", "深度参数调优", "多实盘验证", "适合激进型工作室"],
-    riskLevel: "高风险", minCapital: "$2,000",
-    monthlyReturn: "30-80%", maxDrawdown: "35%", runningDays: "60+",
-    gradient: ["#1a0a2e", "#2d1b69", "#44318d"],
-    accentColor: "#e9c46a",
   },
   {
     id: -4, title: "趋势刷单 · 军火库独家版", subtitle: "单边1000点暴跌不爆仓",
@@ -58,11 +55,6 @@ const DEFAULT_CARDS: any[] = [
     badge: "💎 独家", badgeColor: "gold", strategyType: "趋势马丁", platform: "MT4",
     observeNote: "私聊备注「趋势刷单」获取观摩账户",
     coverImage: null, galleryImages: null,
-    highlights: ["1000点暴跌不爆仓", "独家调优版本", "极端行情验证", "市面无同款"],
-    riskLevel: "中风险", minCapital: "$3,000",
-    monthlyReturn: "15-25%", maxDrawdown: "18%", runningDays: "120+",
-    gradient: ["#0d1b2a", "#1b263b", "#415a77"],
-    accentColor: "#f77f00",
   },
   {
     id: -5, title: "点金订单流", subtitle: "四维共振 · 专业机构选择",
@@ -70,11 +62,6 @@ const DEFAULT_CARDS: any[] = [
     badge: "👑 旗舰", badgeColor: "gold", strategyType: "订单流", platform: "MT4/MT5",
     observeNote: "私聊备注「点金订单流」获取观摩账户",
     coverImage: null, galleryImages: null,
-    highlights: ["四维共振信号系统", "机构级分析能力", "专业团队首选", "独家旗舰产品"],
-    riskLevel: "中风险", minCapital: "$5,000",
-    monthlyReturn: "10-20%", maxDrawdown: "10%", runningDays: "200+",
-    gradient: ["#2d0a0a", "#4a1010", "#6b1d1d"],
-    accentColor: "#ffd700",
   },
 ];
 
@@ -113,11 +100,7 @@ export default function CooperationPage() {
     if (!f) return []; try { return JSON.parse(f); } catch { return []; }
   };
 
-  const getRiskColor = (level?: string) => {
-    if (level?.includes("低")) return "#10B981";
-    if (level?.includes("高")) return "#EF4444";
-    return "#F59E0B";
-  };
+  const getTheme = (idx: number) => CARD_THEMES[idx % CARD_THEMES.length];
 
   if (cardsLoading) {
     return <ScreenContainer><View style={s.loadingWrap}><ActivityIndicator size="large" color="#D97706" /></View></ScreenContainer>;
@@ -134,18 +117,13 @@ export default function CooperationPage() {
         {/* ═══════════════════ HERO ═══════════════════ */}
         <LinearGradient colors={["#0A0E1A", "#111827", "#0A0E1A"]} style={s.hero}>
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], alignItems: "center" }}>
-            {/* 装饰线 */}
             <View style={s.heroAccent} />
-
             <View style={s.heroBadge}>
               <View style={s.liveDot} />
               <Text style={s.heroBadgeText}>量化军火库 · 策略源头</Text>
             </View>
-
             <Text style={s.heroTitle}>工作室深度合作</Text>
-            <Text style={s.heroTagline}>
-              源码掌控 · 独家优化 · 源头直供
-            </Text>
+            <Text style={s.heroTagline}>源码掌控 · 独家优化 · 源头直供</Text>
             <Text style={s.heroDesc}>
               我们持有全网200+款主流EA的源码{"\n"}
               具备100%破解与独家优化能力{"\n"}
@@ -185,113 +163,104 @@ export default function CooperationPage() {
             <Text style={s.sectionSubtitle}>每一款都经过实盘验证 · 点击查看详情与观摩</Text>
           </View>
 
-          {/* 策略卡片 - 全宽档案风格 */}
+          {/* ═══ 策略卡片 - 全新视觉设计 ═══ */}
           {cards.map((card: any, index: number) => {
-            const gradient = card.gradient || ["#1E293B", "#334155", "#475569"];
-            const accent = card.accentColor || "#D97706";
+            const theme = getTheme(index);
             const gallery = parseGallery(card.galleryImages);
-            const highlights = card.highlights || [];
+            const hasCover = !!card.coverImage;
 
             return (
               <TouchableOpacity
                 key={card.id}
-                style={s.archiveCard}
+                style={s.cardOuter}
                 onPress={() => setSelectedCard(card)}
                 activeOpacity={0.92}
               >
+                {/* 外发光层 */}
+                <View style={[s.cardGlow, { backgroundColor: theme.glow }]} />
+
                 <LinearGradient
-                  colors={gradient}
+                  colors={[...theme.gradient]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  style={s.archiveCardInner}
+                  style={s.cardContainer}
                 >
-                  {/* 序号装饰 */}
-                  <Text style={[s.archiveIndex, { color: accent }]}>
+                  {/* 序号水印 */}
+                  <Text style={[s.cardWatermark, { color: theme.accent }]}>
                     {String(index + 1).padStart(2, "0")}
                   </Text>
 
-                  {/* 顶部：角标 + 平台 */}
-                  <View style={s.archiveTopRow}>
-                    {card.badge && (
-                      <View style={[s.archiveBadge, { backgroundColor: `${accent}22`, borderColor: `${accent}66` }]}>
-                        <Text style={[s.archiveBadgeText, { color: accent }]}>{card.badge}</Text>
-                      </View>
-                    )}
-                    {card.platform && (
-                      <View style={s.archivePlatform}>
-                        <Text style={s.archivePlatformText}>{card.platform}</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* 标题区 */}
-                  <Text style={s.archiveTitle}>{card.title}</Text>
-                  {card.subtitle && <Text style={[s.archiveSubtitle, { color: accent }]}>{card.subtitle}</Text>}
-
-                  {/* 描述 */}
-                  <Text style={s.archiveDesc} numberOfLines={3}>{card.description}</Text>
-
-                  {/* 核心指标面板 */}
-                  <View style={s.metricsPanel}>
-                    {card.monthlyReturn && (
-                      <View style={s.metricItem}>
-                        <Text style={s.metricLabel}>月化收益</Text>
-                        <Text style={[s.metricValue, { color: "#10B981" }]}>{card.monthlyReturn}</Text>
-                      </View>
-                    )}
-                    {card.maxDrawdown && (
-                      <View style={s.metricItem}>
-                        <Text style={s.metricLabel}>最大回撤</Text>
-                        <Text style={[s.metricValue, { color: "#EF4444" }]}>{card.maxDrawdown}</Text>
-                      </View>
-                    )}
-                    {card.minCapital && (
-                      <View style={s.metricItem}>
-                        <Text style={s.metricLabel}>最低资金</Text>
-                        <Text style={s.metricValue}>{card.minCapital}</Text>
-                      </View>
-                    )}
-                    {card.runningDays && (
-                      <View style={s.metricItem}>
-                        <Text style={s.metricLabel}>运行天数</Text>
-                        <Text style={s.metricValue}>{card.runningDays}</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* 亮点标签 */}
-                  {highlights.length > 0 && (
-                    <View style={s.archiveHighlights}>
-                      {highlights.slice(0, 3).map((h: string, i: number) => (
-                        <View key={i} style={[s.highlightChip, { borderColor: `${accent}44` }]}>
-                          <Ionicons name="checkmark" size={10} color={accent} />
-                          <Text style={s.highlightChipText}>{h}</Text>
+                  {/* 顶部区域：封面图 + 信息 */}
+                  <View style={s.cardTopSection}>
+                    {/* 封面图区域 */}
+                    <View style={s.coverSection}>
+                      {hasCover ? (
+                        <Image source={{ uri: card.coverImage }} style={s.coverImage} resizeMode="cover" />
+                      ) : (
+                        <LinearGradient
+                          colors={[`${theme.accent}15`, `${theme.accent}05`]}
+                          style={s.coverPlaceholder}
+                        >
+                          <View style={[s.coverIconRing, { borderColor: `${theme.accent}40` }]}>
+                            <Ionicons name="trending-up" size={28} color={`${theme.accent}60`} />
+                          </View>
+                        </LinearGradient>
+                      )}
+                      {/* 封面上的角标 */}
+                      {card.badge && (
+                        <View style={[s.coverBadge, { backgroundColor: theme.accent }]}>
+                          <Text style={s.coverBadgeText}>{card.badge}</Text>
                         </View>
-                      ))}
+                      )}
+                      {/* 平台标签 */}
+                      {card.platform && (
+                        <View style={s.coverPlatform}>
+                          <Text style={s.coverPlatformText}>{card.platform}</Text>
+                        </View>
+                      )}
                     </View>
-                  )}
+
+                    {/* 右侧信息区 */}
+                    <View style={s.cardInfoSection}>
+                      {/* 策略类型 */}
+                      {card.strategyType && (
+                        <View style={[s.typeTag, { borderColor: `${theme.accent}50` }]}>
+                          <View style={[s.typeDot, { backgroundColor: theme.accent }]} />
+                          <Text style={[s.typeTagText, { color: theme.accent }]}>{card.strategyType}</Text>
+                        </View>
+                      )}
+
+                      {/* 标题 */}
+                      <Text style={s.cardTitle} numberOfLines={2}>{card.title}</Text>
+
+                      {/* 副标题 */}
+                      {card.subtitle && (
+                        <Text style={[s.cardSubtitle, { color: theme.accent }]} numberOfLines={1}>
+                          {card.subtitle}
+                        </Text>
+                      )}
+
+                      {/* 描述 */}
+                      <Text style={s.cardDesc} numberOfLines={2}>{card.description}</Text>
+                    </View>
+                  </View>
+
+                  {/* 分隔线 */}
+                  <View style={[s.cardDivider, { backgroundColor: `${theme.accent}20` }]} />
 
                   {/* 底部操作栏 */}
-                  <View style={s.archiveFooter}>
-                    <View style={s.archiveObserve}>
+                  <View style={s.cardBottom}>
+                    <View style={s.cardBottomLeft}>
                       <Ionicons name="eye-outline" size={14} color="#94A3B8" />
-                      <Text style={s.archiveObserveText}>
+                      <Text style={s.cardObserveText}>
                         {gallery.length > 0 ? `${gallery.length}张观摩截图` : "可获取观摩账户"}
                       </Text>
                     </View>
-                    <View style={[s.archiveViewBtn, { backgroundColor: `${accent}22`, borderColor: `${accent}66` }]}>
-                      <Text style={[s.archiveViewBtnText, { color: accent }]}>查看详情</Text>
-                      <Ionicons name="arrow-forward" size={14} color={accent} />
+                    <View style={[s.cardViewBtn, { backgroundColor: `${theme.accent}18`, borderColor: `${theme.accent}50` }]}>
+                      <Text style={[s.cardViewBtnText, { color: theme.accent }]}>查看详情</Text>
+                      <Ionicons name="arrow-forward" size={13} color={theme.accent} />
                     </View>
                   </View>
-
-                  {/* 风险等级指示条 */}
-                  {card.riskLevel && (
-                    <View style={s.riskBar}>
-                      <View style={[s.riskIndicator, { backgroundColor: getRiskColor(card.riskLevel), width: card.riskLevel?.includes("高") ? "80%" : card.riskLevel?.includes("低") ? "25%" : "50%" }]} />
-                      <Text style={[s.riskText, { color: getRiskColor(card.riskLevel) }]}>{card.riskLevel}</Text>
-                    </View>
-                  )}
                 </LinearGradient>
               </TouchableOpacity>
             );
@@ -327,7 +296,7 @@ export default function CooperationPage() {
           </View>
         </View>
 
-        {/* ═══════════════════ 合作方案（放最后） ═══════════════════ */}
+        {/* ═══════════════════ 合作方案 ═══════════════════ */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <View style={s.sectionLine} />
@@ -377,7 +346,7 @@ export default function CooperationPage() {
           <LinearGradient colors={["#1E293B", "#0F172A"]} style={s.bottomCTAInner}>
             <Text style={s.bottomCTATitle}>准备好开始合作了吗？</Text>
             <Text style={s.bottomCTADesc}>私聊备注「策略名称」获取观摩账户 & 专属报价</Text>
-            <TouchableOpacity style={s.bottomCTABtn} onPress={() => setShowContact(true)}>
+            <TouchableOpacity style={s.bottomCTABtnWrap} onPress={() => setShowContact(true)}>
               <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bottomCTABtnInner}>
                 <Ionicons name="chatbubbles" size={20} color="#0A0E1A" />
                 <Text style={s.bottomCTABtnText}>立即联系</Text>
@@ -406,11 +375,14 @@ export default function CooperationPage() {
               </TouchableOpacity>
             </View>
             <ScrollView style={s.modalBody} showsVerticalScrollIndicator={false}>
-              {/* 封面 */}
+              {/* 封面 - 大图展示 */}
               {selectedCard?.coverImage ? (
                 <Image source={{ uri: selectedCard.coverImage }} style={s.modalCover} resizeMode="cover" />
               ) : (
-                <LinearGradient colors={selectedCard?.gradient || ["#1E293B", "#334155"]} style={[s.modalCover, { justifyContent: "center", alignItems: "center" }]}>
+                <LinearGradient
+                  colors={getTheme(cards.indexOf(selectedCard)).gradient as any || ["#1E293B", "#334155", "#475569"]}
+                  style={[s.modalCover, { justifyContent: "center", alignItems: "center" }]}
+                >
                   <Ionicons name="trending-up" size={48} color="rgba(255,255,255,0.2)" />
                   <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 8 }}>暂无封面 · 后台可上传</Text>
                 </LinearGradient>
@@ -423,36 +395,10 @@ export default function CooperationPage() {
               <View style={s.modalTags}>
                 {selectedCard?.strategyType && <View style={s.modalTag}><Text style={s.modalTagText}>{selectedCard.strategyType}</Text></View>}
                 {selectedCard?.platform && <View style={[s.modalTag, { backgroundColor: "#1E40AF" }]}><Text style={s.modalTagText}>{selectedCard.platform}</Text></View>}
-                {selectedCard?.riskLevel && (
-                  <View style={[s.modalTag, { backgroundColor: "transparent", borderWidth: 1, borderColor: getRiskColor(selectedCard.riskLevel) }]}>
-                    <Text style={[s.modalTagText, { color: getRiskColor(selectedCard.riskLevel) }]}>{selectedCard.riskLevel}</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* 核心指标 */}
-              <View style={s.modalMetrics}>
-                {selectedCard?.monthlyReturn && <View style={s.modalMetricItem}><Text style={s.modalMetricLabel}>月化收益</Text><Text style={[s.modalMetricValue, { color: "#10B981" }]}>{selectedCard.monthlyReturn}</Text></View>}
-                {selectedCard?.maxDrawdown && <View style={s.modalMetricItem}><Text style={s.modalMetricLabel}>最大回撤</Text><Text style={[s.modalMetricValue, { color: "#EF4444" }]}>{selectedCard.maxDrawdown}</Text></View>}
-                {selectedCard?.minCapital && <View style={s.modalMetricItem}><Text style={s.modalMetricLabel}>最低资金</Text><Text style={s.modalMetricValue}>{selectedCard.minCapital}</Text></View>}
-                {selectedCard?.runningDays && <View style={s.modalMetricItem}><Text style={s.modalMetricLabel}>运行天数</Text><Text style={s.modalMetricValue}>{selectedCard.runningDays}</Text></View>}
               </View>
 
               {/* 描述 */}
               <Text style={s.modalDesc}>{selectedCard?.description}</Text>
-
-              {/* 亮点 */}
-              {selectedCard?.highlights?.length > 0 && (
-                <View style={s.modalHighlights}>
-                  <Text style={s.modalSectionTitle}>核心亮点</Text>
-                  {selectedCard.highlights.map((h: string, i: number) => (
-                    <View key={i} style={s.modalHighlightRow}>
-                      <Ionicons name="checkmark-circle" size={16} color="#D97706" />
-                      <Text style={s.modalHighlightText}>{h}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
 
               {/* 截图画廊 */}
               {parseGallery(selectedCard?.galleryImages).length > 0 && (
@@ -553,6 +499,8 @@ export default function CooperationPage() {
 }
 
 // ═══════════════════ 样式 ═══════════════════
+const COVER_SIZE = isDesktop ? 180 : 130;
+
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#0A0E1A" },
   loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0A0E1A" },
@@ -583,41 +531,186 @@ const s = StyleSheet.create({
   sectionTitle: { color: "#F1F5F9", fontSize: 24, fontWeight: "900", marginBottom: 6 },
   sectionSubtitle: { color: "#94A3B8", fontSize: 13 },
 
-  // Archive Card (策略档案卡)
-  archiveCard: { marginBottom: 16, borderRadius: 16, overflow: "hidden" },
-  archiveCardInner: { padding: 24, position: "relative" },
-  archiveIndex: { position: "absolute", top: 16, right: 20, fontSize: 48, fontWeight: "900", opacity: 0.12 },
-  archiveTopRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 },
-  archiveBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1 },
-  archiveBadgeText: { fontSize: 12, fontWeight: "800" },
-  archivePlatform: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.08)" },
-  archivePlatformText: { color: "#94A3B8", fontSize: 11, fontWeight: "700" },
-  archiveTitle: { color: "#F1F5F9", fontSize: 22, fontWeight: "900", marginBottom: 4, letterSpacing: 0.5 },
-  archiveSubtitle: { fontSize: 14, fontWeight: "700", marginBottom: 12 },
-  archiveDesc: { color: "#CBD5E1", fontSize: 13, lineHeight: 21, marginBottom: 20, opacity: 0.9 },
+  // ═══ 全新策略卡片样式 ═══
+  cardOuter: {
+    marginBottom: 20,
+    borderRadius: 18,
+    position: "relative",
+  },
+  cardGlow: {
+    position: "absolute",
+    top: 4, left: 4, right: 4, bottom: 4,
+    borderRadius: 18,
+    // 外发光效果
+  },
+  cardContainer: {
+    borderRadius: 18,
+    padding: 0,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  cardWatermark: {
+    position: "absolute",
+    top: 12,
+    right: 16,
+    fontSize: 56,
+    fontWeight: "900",
+    opacity: 0.06,
+  },
 
-  // Metrics Panel
-  metricsPanel: { flexDirection: "row", backgroundColor: "rgba(0,0,0,0.25)", borderRadius: 12, padding: 14, marginBottom: 16, gap: 0 },
-  metricItem: { flex: 1, alignItems: "center" },
-  metricLabel: { color: "#64748B", fontSize: 10, marginBottom: 4, fontWeight: "600" },
-  metricValue: { color: "#F1F5F9", fontSize: 16, fontWeight: "900" },
+  // 卡片顶部：封面 + 信息
+  cardTopSection: {
+    flexDirection: "row",
+    padding: 16,
+    paddingBottom: 12,
+    gap: 14,
+  },
 
-  // Highlights
-  archiveHighlights: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 },
-  highlightChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, backgroundColor: "rgba(255,255,255,0.03)" },
-  highlightChipText: { color: "#CBD5E1", fontSize: 11, fontWeight: "600" },
+  // 封面图区域
+  coverSection: {
+    width: COVER_SIZE,
+    height: COVER_SIZE,
+    borderRadius: 14,
+    overflow: "hidden",
+    position: "relative",
+    // 添加内阴影效果
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  coverImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 14,
+  },
+  coverPlaceholder: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  coverIconRing: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  coverBadge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  coverBadgeText: {
+    color: "#0A0E1A",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  coverPlatform: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  coverPlatformText: {
+    color: "#E2E8F0",
+    fontSize: 10,
+    fontWeight: "700",
+  },
 
-  // Archive Footer
-  archiveFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  archiveObserve: { flexDirection: "row", alignItems: "center", gap: 6 },
-  archiveObserveText: { color: "#64748B", fontSize: 12 },
-  archiveViewBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
-  archiveViewBtnText: { fontSize: 12, fontWeight: "700" },
+  // 右侧信息区
+  cardInfoSection: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  typeTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  typeDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  typeTagText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  cardTitle: {
+    color: "#F1F5F9",
+    fontSize: isDesktop ? 20 : 17,
+    fontWeight: "900",
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  cardSubtitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+  cardDesc: {
+    color: "#CBD5E1",
+    fontSize: 12,
+    lineHeight: 18,
+    opacity: 0.85,
+  },
 
-  // Risk Bar
-  riskBar: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16 },
-  riskIndicator: { height: 3, borderRadius: 2 },
-  riskText: { fontSize: 11, fontWeight: "700" },
+  // 分隔线
+  cardDivider: {
+    height: 1,
+    marginHorizontal: 16,
+  },
+
+  // 底部操作栏
+  cardBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  cardBottomLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cardObserveText: {
+    color: "#64748B",
+    fontSize: 12,
+  },
+  cardViewBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  cardViewBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
 
   // Support Grid
   supportGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 16 },
@@ -649,7 +742,7 @@ const s = StyleSheet.create({
   bottomCTAInner: { borderRadius: 16, padding: 28, alignItems: "center", borderWidth: 1, borderColor: "#D97706" },
   bottomCTATitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "900", marginBottom: 8 },
   bottomCTADesc: { color: "#94A3B8", fontSize: 13, marginBottom: 20, textAlign: "center" },
-  bottomCTABtn: { borderRadius: 28, overflow: "hidden" },
+  bottomCTABtnWrap: { borderRadius: 28, overflow: "hidden" },
   bottomCTABtnInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14 },
   bottomCTABtnText: { color: "#0A0E1A", fontSize: 15, fontWeight: "800" },
 
@@ -667,20 +760,13 @@ const s = StyleSheet.create({
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: "#1E293B" },
   modalTitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "900", flex: 1, marginRight: 12 },
   modalBody: { padding: 20 },
-  modalCover: { width: "100%", height: 200, borderRadius: 12, marginBottom: 16 },
+  modalCover: { width: "100%", height: 220, borderRadius: 12, marginBottom: 16 },
   modalSubtitle: { color: "#D97706", fontSize: 15, fontWeight: "700", marginBottom: 12 },
   modalTags: { flexDirection: "row", gap: 8, marginBottom: 16, flexWrap: "wrap" },
   modalTag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: "#334155" },
   modalTagText: { color: "#F1F5F9", fontSize: 12, fontWeight: "700" },
-  modalMetrics: { flexDirection: "row", backgroundColor: "#0A0E1A", borderRadius: 12, padding: 14, marginBottom: 16, gap: 0 },
-  modalMetricItem: { flex: 1, alignItems: "center" },
-  modalMetricLabel: { color: "#64748B", fontSize: 10, marginBottom: 4 },
-  modalMetricValue: { color: "#F1F5F9", fontSize: 16, fontWeight: "900" },
   modalDesc: { color: "#CBD5E1", fontSize: 14, lineHeight: 22, marginBottom: 16 },
-  modalHighlights: { marginBottom: 16 },
   modalSectionTitle: { color: "#F1F5F9", fontSize: 16, fontWeight: "800", marginBottom: 10 },
-  modalHighlightRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
-  modalHighlightText: { color: "#CBD5E1", fontSize: 13 },
   modalGallery: { marginBottom: 16 },
   galleryThumb: { width: 160, height: 110, borderRadius: 8, marginRight: 10, backgroundColor: "#334155" },
   modalObserve: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 10, gap: 10, marginBottom: 20, backgroundColor: "rgba(217,119,6,0.1)", borderWidth: 1, borderColor: "rgba(217,119,6,0.3)" },

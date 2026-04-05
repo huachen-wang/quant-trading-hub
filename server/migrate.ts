@@ -172,6 +172,42 @@ async function runMigrations() {
       migrationsRun++;
     }
 
+    // ==================== 插入默认促销商品数据（如果表为空）====================
+    const [promoRows] = await connection.query("SELECT COUNT(*) as cnt FROM `promo_products`") as any[];
+    if (promoRows[0].cnt === 0) {
+      console.log("[migrate] Inserting default promo products...");
+      await connection.query(`
+        INSERT INTO \`promo_products\` (\`title\`, \`description\`, \`coverImage\`, \`platform\`, \`category\`, \`originalPrice\`, \`promoPrice\`, \`promoLabel\`, \`promoEndTime\`, \`detailContent\`, \`stock\`, \`soldCount\`, \`sortOrder\`, \`status\`) VALUES
+        ('Gold Scalper Pro MT5', '专业黄金剥头皮EA，超低延迟执行，日均50-200单。适合ECN账户，点差要求低于15点。经过3年实盘验证，年化收益180%+。', 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/QVUXRHilJWhcYKTW.png', 'MT5', 'ea', 2999.00, 899.00, '限时3折', '2026-06-30 23:59:59', '【策略原理】基于黄金市场微观结构的高频剥头皮策略，利用价格回归特性在波动中获利。\n【核心优势】超低延迟执行引擎、智能滑点控制、多层风控体系。\n【适用环境】ECN/STP账户，点差<15点，建议VPS延迟<5ms。\n【历史表现】年化180%+，最大回撤12%，夏普比率2.8。', 50, 23, 1, 'active'),
+        ('Quantum Grid Master', '量子网格交易系统，智能动态网格间距，自适应市场波动。支持多货币对同时运行，内置资金管理模块。', 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/gBeMVyXMhnKurKQb.png', 'MT4', 'ea', 4999.00, 1599.00, '爆款直降', '2026-07-15 23:59:59', '【策略原理】基于量子计算理论的动态网格系统，根据ATR和波动率自动调整网格间距。\n【核心优势】自适应网格间距、多货币对支持、智能仓位管理。\n【适用环境】标准账户即可，建议资金5000美元以上。\n【历史表现】年化150%+，最大回撤18%。', 30, 15, 2, 'active'),
+        ('Sniper Entry System', '狙击手入场系统，精准捕捉趋势起点。一次一单模式，胜率高达78%。配合独家出场算法，盈亏比达到1:3以上。', 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/WXZZOEwdmycsCooS.png', 'MT5', 'ea', 3999.00, 1299.00, '源头特供', '2026-08-01 23:59:59', '【策略原理】多时间框架趋势共振+关键位突破确认，精准捕捉趋势启动点。\n【核心优势】78%胜率、1:3盈亏比、严格止损控制。\n【适用环境】H1/H4时间框架，适合黄金/主流货币对。\n【历史表现】年化120%+，最大回撤8%，连续亏损不超过3单。', 100, 42, 3, 'active'),
+        ('Turbo Scalping Engine', '涡轮剥头皮引擎，毫秒级下单速度。专为黄金高频交易设计，日均交易200-500单，稳定盈利。', 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/qckOdYQDkJZKplag.png', 'MT4', 'ea', 5999.00, 1999.00, '限量特价', '2026-06-15 23:59:59', '【策略原理】基于Tick级别数据的超高频交易策略，利用市场微结构获利。\n【核心优势】毫秒级执行、智能流动性检测、自动避开新闻时段。\n【适用环境】必须使用ECN账户+低延迟VPS，点差<10点。\n【历史表现】月均15-25%收益，最大回撤10%。', 20, 11, 4, 'active'),
+        ('AI Matrix Trader', 'AI矩阵交易系统，基于深度学习的多策略组合。自动识别市场状态，动态切换最优策略。', 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/IqDbJxzTcYPbrfRv.png', 'MT5', 'ea', 8999.00, 2999.00, '旗舰首发', '2026-09-01 23:59:59', '【策略原理】基于LSTM神经网络的市场状态识别+多策略动态切换系统。\n【核心优势】AI自适应市场、多策略组合、全自动风控。\n【适用环境】MT5平台，建议资金10000美元以上。\n【历史表现】年化200%+，最大回撤15%，夏普比率3.2。', 15, 8, 5, 'active'),
+        ('Neural Trend Follower', '神经网络趋势跟踪器，利用机器学习识别趋势方向和强度。低频高质量交易，周均3-5单。', 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/WXZZOEwdmycsCooS.png', 'MT4', 'indicator', 1999.00, 699.00, '新品上架', '2026-07-31 23:59:59', '【产品类型】智能指标+半自动EA\n【核心功能】AI趋势识别、信号强度评分、自动画线标注。\n【适用场景】适合有一定交易基础的手动交易者辅助决策。\n【使用方式】安装后自动在图表上标注买卖信号和趋势方向。', 200, 67, 6, 'active')
+      `);
+      migrationsRun++;
+    }
+
+    // ==================== 更新合作卡片封面图（如果为空）====================
+    const coverImages: Record<number, string> = {
+      1: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/QVUXRHilJWhcYKTW.png',
+      2: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/gBeMVyXMhnKurKQb.png',
+      3: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/WXZZOEwdmycsCooS.png',
+      4: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/qckOdYQDkJZKplag.png',
+      5: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/IqDbJxzTcYPbrfRv.png',
+      6: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/QVUXRHilJWhcYKTW.png',
+      7: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/qckOdYQDkJZKplag.png',
+      8: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/gBeMVyXMhnKurKQb.png',
+    };
+    for (const [id, url] of Object.entries(coverImages)) {
+      await connection.query(
+        "UPDATE `cooperation_cards` SET `coverImage` = ? WHERE `id` = ? AND (`coverImage` IS NULL OR `coverImage` = '')",
+        [url, id]
+      );
+    }
+    console.log("[migrate] Updated cooperation card cover images");
+    migrationsRun++;
+
     if (migrationsRun > 0) {
       console.log(`[migrate] ✓ ${migrationsRun} migration(s) applied successfully`);
     } else {
