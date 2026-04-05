@@ -289,3 +289,80 @@ export const siteSettings = mysqlTable("site_settings", {
 
 export type SiteSetting = typeof siteSettings.$inferSelect;
 export type InsertSiteSetting = typeof siteSettings.$inferInsert;
+
+// ==================== 合作方案页 ====================
+// 合作展示卡片（后台高度可定制，每张卡片=标题+文本+图片+观摩说明）
+export const cooperationCards = mysqlTable("cooperation_cards", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(), // 卡片标题，如"极限黄金对冲 Pro"
+  subtitle: varchar("subtitle", { length: 255 }), // 副标题/一句话亮点
+  description: text("description"), // 详细描述（支持多行）
+  coverImage: text("coverImage"), // 封面图URL
+  galleryImages: text("galleryImages"), // JSON数组，观摩截图URLs
+  badge: varchar("badge", { length: 50 }), // 标签，如"热门"/"零爆仓"/"主力"
+  badgeColor: varchar("badgeColor", { length: 20 }).default("gold"), // 标签颜色
+  strategyType: varchar("strategyType", { length: 50 }), // 策略类型，如"对冲策略"/"网格策略"
+  platform: varchar("platform", { length: 20 }), // MT4/MT5/MT4&MT5
+  observeNote: text("observeNote"), // 观摩说明（如何获取观摩账户等）
+  contactInfo: text("contactInfo"), // 联系方式说明
+  sortOrder: int("sortOrder").default(0).notNull(), // 排序
+  isVisible: boolean("isVisible").default(true).notNull(), // 是否显示
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  sortOrderIdx: index("sortOrder_idx").on(table.sortOrder),
+  isVisibleIdx: index("isVisible_idx").on(table.isVisible),
+}));
+
+export type CooperationCard = typeof cooperationCards.$inferSelect;
+export type InsertCooperationCard = typeof cooperationCards.$inferInsert;
+
+// 合作模式配置（试用/授权/源码买断，后台可编辑价格和权益）
+export const cooperationPlans = mysqlTable("cooperation_plans", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 100 }).notNull(), // 如"试用合作"/"策略授权"/"源码买断"
+  badge: varchar("badge", { length: 50 }), // 如"零门槛"/"推荐"
+  price: varchar("price", { length: 100 }), // 如"免费"/"¥1,000/月"/"¥9,800起"
+  priceNote: varchar("priceNote", { length: 100 }), // 价格补充说明，如"¥2,500/年"
+  features: text("features"), // JSON数组，权益列表
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CooperationPlan = typeof cooperationPlans.$inferSelect;
+export type InsertCooperationPlan = typeof cooperationPlans.$inferInsert;
+
+// ==================== 限时促销商城页 ====================
+// 促销商品表（参考1mt5跳蚤市场）
+export const promoProducts = mysqlTable("promo_products", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(), // 商品标题
+  description: text("description"), // 商品描述
+  coverImage: text("coverImage"), // 封面图
+  galleryImages: text("galleryImages"), // JSON数组，详情图
+  platform: varchar("platform", { length: 20 }), // MT4/MT5
+  category: varchar("category", { length: 50 }).default("ea").notNull(), // ea/indicator/tool/course
+  originalPrice: decimal("originalPrice", { precision: 10, scale: 2 }).notNull(), // 原价
+  promoPrice: decimal("promoPrice", { precision: 10, scale: 2 }).notNull(), // 促销价
+  promoLabel: varchar("promoLabel", { length: 50 }), // 促销标签，如"限时特价"/"新品首发"/"爆款"
+  promoEndTime: timestamp("promoEndTime"), // 促销结束时间（用于倒计时）
+  detailContent: text("detailContent"), // 弹窗详细说明（富文本/markdown）
+  paymentInfo: text("paymentInfo"), // 支付说明（如何购买、联系方式）
+  contactInfo: text("contactInfo"), // 联系方式
+  stock: int("stock").default(-1).notNull(), // 库存，-1为无限
+  soldCount: int("soldCount").default(0).notNull(), // 已售数量
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  status: mysqlEnum("status", ["active", "expired", "soldout"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  statusIdx: index("status_idx").on(table.status),
+  categoryIdx: index("category_idx").on(table.category),
+  sortOrderIdx: index("sortOrder_idx").on(table.sortOrder),
+}));
+
+export type PromoProduct = typeof promoProducts.$inferSelect;
+export type InsertPromoProduct = typeof promoProducts.$inferInsert;

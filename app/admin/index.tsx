@@ -110,6 +110,18 @@ export default function AdminDashboard() {
       description: "管理合作页面服务内容（合规/技术/业务）",
     },
     {
+      title: "🤝 合作方案管理",
+      route: "/admin/cooperation-manage",
+      count: 0,
+      description: "管理合作展示卡片、合作模式（面向工作室/客户）",
+    },
+    {
+      title: "💰 促销商城管理",
+      route: "/admin/promo-manage",
+      count: 0,
+      description: "管理限时促销商品、价格和库存",
+    },
+    {
       title: "📧 订阅用户",
       route: "/admin/subscribers",
       count: 0,

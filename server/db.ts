@@ -1,9 +1,9 @@
-import { eq, and, desc, sql, or, like } from "drizzle-orm";
+import { eq, and, desc, asc, sql, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../drizzle/schema";
 
-const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings, backtestData: backtestDataTable } = schema;
+const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings, backtestData: backtestDataTable, cooperationCards, cooperationPlans, promoProducts } = schema;
 
 let pool: mysql.Pool | null = null;
 let db: any = null;
@@ -877,5 +877,141 @@ export async function deleteListingRequest(id: number) {
   const db = await getDb();
   if (!db) return null;
   await db.delete(listingRequests).where(eq(listingRequests.id, id));
+  return { success: true };
+}
+
+// ========== 合作方案页 ==========
+
+// 获取可见的合作展示卡片
+export async function getCooperationCards() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cooperationCards)
+    .where(eq(cooperationCards.isVisible, true))
+    .orderBy(asc(cooperationCards.sortOrder));
+}
+
+// 获取所有合作展示卡片（管理员）
+export async function getAllCooperationCards() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cooperationCards).orderBy(asc(cooperationCards.sortOrder));
+}
+
+// 创建合作展示卡片
+export async function createCooperationCard(data: any) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(cooperationCards).values(data);
+  return { id: result[0].insertId };
+}
+
+// 更新合作展示卡片
+export async function updateCooperationCard(id: number, data: any) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(cooperationCards).set(data).where(eq(cooperationCards.id, id));
+  return { success: true };
+}
+
+// 删除合作展示卡片
+export async function deleteCooperationCard(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(cooperationCards).where(eq(cooperationCards.id, id));
+  return { success: true };
+}
+
+// 获取可见的合作模式
+export async function getCooperationPlans() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cooperationPlans)
+    .where(eq(cooperationPlans.isVisible, true))
+    .orderBy(asc(cooperationPlans.sortOrder));
+}
+
+// 获取所有合作模式（管理员）
+export async function getAllCooperationPlans() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cooperationPlans).orderBy(asc(cooperationPlans.sortOrder));
+}
+
+// 创建合作模式
+export async function createCooperationPlan(data: any) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(cooperationPlans).values(data);
+  return { id: result[0].insertId };
+}
+
+// 更新合作模式
+export async function updateCooperationPlan(id: number, data: any) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(cooperationPlans).set(data).where(eq(cooperationPlans.id, id));
+  return { success: true };
+}
+
+// 删除合作模式
+export async function deleteCooperationPlan(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(cooperationPlans).where(eq(cooperationPlans.id, id));
+  return { success: true };
+}
+
+// ========== 限时促销商城 ==========
+
+// 获取可见的促销商品
+export async function getPromoProducts(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(promoProducts.isVisible, true), eq(promoProducts.status, "active")];
+  if (category) {
+    conditions.push(eq(promoProducts.category, category));
+  }
+  return db.select().from(promoProducts)
+    .where(and(...conditions))
+    .orderBy(asc(promoProducts.sortOrder));
+}
+
+// 获取促销商品详情
+export async function getPromoProductById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(promoProducts).where(eq(promoProducts.id, id)).limit(1);
+  return result[0] || null;
+}
+
+// 获取所有促销商品（管理员）
+export async function getAllPromoProducts() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(promoProducts).orderBy(asc(promoProducts.sortOrder));
+}
+
+// 创建促销商品
+export async function createPromoProduct(data: any) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(promoProducts).values(data);
+  return { id: result[0].insertId };
+}
+
+// 更新促销商品
+export async function updatePromoProduct(id: number, data: any) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.update(promoProducts).set(data).where(eq(promoProducts.id, id));
+  return { success: true };
+}
+
+// 删除促销商品
+export async function deletePromoProduct(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.delete(promoProducts).where(eq(promoProducts.id, id));
   return { success: true };
 }
