@@ -34,6 +34,7 @@ export default function StrategyDetailScreen() {
   const [commentText, setCommentText] = useState("");
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showVpsModal, setShowVpsModal] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
   // 用户评价弹窗
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -689,13 +690,13 @@ export default function StrategyDetailScreen() {
                 </View>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => Linking.openURL("https://www.fxvm.net/?ref=quantarsenal")}
+                onPress={() => setShowVpsModal(true)}
                 style={[styles.recommendCard, { backgroundColor: colors.surface }]}
                 activeOpacity={0.8}
               >
                 <Text style={styles.recommendEmoji}>🖥️</Text>
-                <Text style={[styles.recommendTitle, { color: colors.foreground }]}>FXVM</Text>
-                <Text style={[styles.recommendDesc, { color: colors.muted }]}>推荐VPS · 低延迟</Text>
+                <Text style={[styles.recommendTitle, { color: colors.foreground }]}>VPS 服务器</Text>
+                <Text style={[styles.recommendDesc, { color: colors.muted }]}>推荐可靠VPS · 可申请免费</Text>
                 <View style={[styles.recommendBadge, { backgroundColor: colors.primary + "15" }]}>
                   <Text style={[styles.recommendBadgeText, { color: colors.primary }]}>稳定可靠</Text>
                 </View>
@@ -856,6 +857,53 @@ export default function StrategyDetailScreen() {
         </View>
       </ScrollView>
       <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
+
+      {/* VPS 推荐弹窗 */}
+      <Modal
+        visible={showVpsModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowVpsModal(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowVpsModal(false)}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={[styles.modalContent, { backgroundColor: colors.background, maxWidth: 400 }]}
+          >
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>🖥️ VPS 服务器推荐</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.muted, marginBottom: 16 }]}>EA 全天候稳定运行的必备基础设施</Text>
+
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>为什么需要 VPS？</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>EA 需要 7×24 小时不间断运行，家用电脑无法保证稳定性。专业外汇 VPS 提供低延迟、高可用的服务器环境，确保您的 EA 策略不错过任何交易机会。</Text>
+            </View>
+
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>🎁 免费 VPS 申请</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>通过我们的合作经纪商开户并达到一定交易量，即可申请免费 VPS 服务。详情请联系客服咨询。</Text>
+            </View>
+
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>📞 联系方式</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>Telegram：@quantarsenal{"\n"}QQ：3832001817{"\n"}添加客服咨询可靠 VPS 推荐及免费申请方案</Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setShowVpsModal(false)}
+              style={{ backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: "center" }}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>我知道了</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </ScreenContainer>
   );
 }
