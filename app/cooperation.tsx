@@ -99,8 +99,11 @@ export default function CooperationPage() {
   const { data: plans } = trpc.cooperation.plans.useQuery();
   const { data: contactSettings } = trpc.siteSettings.getContact.useQuery();
 
-  const telegram = contactSettings?.telegram || "@quantarsenal";
-  const qq = contactSettings?.qq || "3832001817";
+  const telegram = contactSettings?.telegram || "@xau6000";
+  const qq1 = "1226426670";
+  const qq2 = contactSettings?.qq || "3832001817";
+  const wechat1 = "oooiniooo0624";
+  const wechat2 = "xau6000";
   const cards = (backendCards && backendCards.length > 0) ? backendCards : DEFAULT_CARDS;
 
   const parseGallery = (g?: string | null): string[] => {
@@ -495,14 +498,32 @@ export default function CooperationPage() {
               </View>
               <Text style={s.contactTitle}>联系我们</Text>
               <Text style={s.contactDesc}>私聊备注「策略名称」获取观摩账户 & 专属报价</Text>
+
+              {/* 微信 */}
+              <View style={[s.contactBtn, { backgroundColor: "#07C160" }]}>
+                <Ionicons name="logo-wechat" size={20} color="#fff" />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.contactBtnLabel}>微信</Text>
+                  <Text style={s.contactBtnValue}>1号: {wechat1}</Text>
+                  <Text style={[s.contactBtnValue, { fontSize: 14, marginTop: 2 }]}>2号: {wechat2}</Text>
+                </View>
+              </View>
+
+              {/* QQ */}
+              <View style={[s.contactBtn, { backgroundColor: "#12B7F5" }]}>
+                <Ionicons name="chatbox" size={20} color="#fff" />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.contactBtnLabel}>QQ</Text>
+                  <Text style={s.contactBtnValue}>1号: {qq1}</Text>
+                  <Text style={[s.contactBtnValue, { fontSize: 14, marginTop: 2 }]}>2号: {qq2}</Text>
+                </View>
+              </View>
+
+              {/* Telegram */}
               <TouchableOpacity style={[s.contactBtn, { backgroundColor: "#0088cc" }]} onPress={() => Linking.openURL(`https://t.me/${telegram.replace("@", "")}`)}>
                 <Ionicons name="paper-plane" size={20} color="#fff" />
                 <View><Text style={s.contactBtnLabel}>Telegram</Text><Text style={s.contactBtnValue}>{telegram}</Text></View>
               </TouchableOpacity>
-              <View style={[s.contactBtn, { backgroundColor: "#12B7F5" }]}>
-                <Ionicons name="chatbox" size={20} color="#fff" />
-                <View><Text style={s.contactBtnLabel}>QQ</Text><Text style={s.contactBtnValue}>{qq}</Text></View>
-              </View>
               <TouchableOpacity style={s.contactCloseBtn} onPress={() => setShowContact(false)}>
                 <Text style={s.contactCloseBtnText}>我知道了</Text>
               </TouchableOpacity>
@@ -606,8 +627,8 @@ const s = StyleSheet.create({
   supportDesc: { color: "#94A3B8", fontSize: 12, lineHeight: 18 },
 
   // Plans
-  plansRow: { gap: 12, marginBottom: 20 },
-  planCard: { backgroundColor: "#111827", borderRadius: 16, padding: 24, borderWidth: 1, borderColor: "#1E293B" },
+  plansRow: { flexDirection: isDesktop ? "row" : "column", gap: 12, marginBottom: 20 },
+  planCard: { flex: isDesktop ? 1 : undefined, backgroundColor: "#111827", borderRadius: 16, padding: 24, borderWidth: 1, borderColor: "#1E293B" },
   planCardMain: { borderColor: "#D97706", borderWidth: 2, position: "relative" },
   planRibbon: { position: "absolute", top: 0, right: 24, paddingHorizontal: 14, paddingVertical: 4, borderBottomLeftRadius: 8, borderBottomRightRadius: 8 },
   planRibbonText: { color: "#0A0E1A", fontSize: 12, fontWeight: "800" },

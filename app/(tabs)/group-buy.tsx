@@ -186,10 +186,12 @@ export default function GroupBuyScreen() {
     }
     // 始终添加默认联系方式
     if (!contacts.find(c => c.type === "Telegram")) {
-      contacts.push({ type: "Telegram", value: "@XAU9876", link: "https://t.me/XAU9876" });
+      contacts.push({ type: "Telegram", value: "@xau6000", link: "https://t.me/xau6000" });
     }
-    contacts.push({ type: "QQ群", value: "1079091794" });
-    contacts.push({ type: "微信", value: "XAU9876" });
+    contacts.push({ type: "QQ1号", value: "1226426670" });
+    contacts.push({ type: "QQ2号", value: "3832001817" });
+    contacts.push({ type: "微信1号", value: "oooiniooo0624" });
+    contacts.push({ type: "微信2号", value: "xau6000" });
     return contacts;
   };
 

@@ -134,8 +134,11 @@ export default function PromoPage() {
   const { data: backendProducts, isLoading } = trpc.promo.list.useQuery({ category: activeCategory || undefined });
   const { data: contactSettings } = trpc.siteSettings.getContact.useQuery();
 
-  const telegram = contactSettings?.telegram || "@quantarsenal";
-  const qq = contactSettings?.qq || "3832001817";
+  const telegram = contactSettings?.telegram || "@xau6000";
+  const qq1 = "1226426670";
+  const qq2 = contactSettings?.qq || "3832001817";
+  const wechat1 = "oooiniooo0624";
+  const wechat2 = "xau6000";
 
   const products = (backendProducts && backendProducts.length > 0)
     ? backendProducts
@@ -624,6 +627,25 @@ export default function PromoPage() {
               </View>
 
               <View style={s.contactMethods}>
+                {/* 微信 */}
+                <View style={[s.contactMethod, { backgroundColor: "#07C160" }]}>
+                  <Ionicons name="logo-wechat" size={22} color="#fff" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.contactMethodLabel}>微信</Text>
+                    <Text style={s.contactMethodValue}>1号: {wechat1}</Text>
+                    <Text style={[s.contactMethodValue, { fontSize: 13, marginTop: 2 }]}>2号: {wechat2}</Text>
+                  </View>
+                </View>
+                {/* QQ */}
+                <View style={[s.contactMethod, { backgroundColor: "#12B7F5" }]}>
+                  <Ionicons name="chatbox" size={22} color="#fff" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.contactMethodLabel}>QQ</Text>
+                    <Text style={s.contactMethodValue}>1号: {qq1}</Text>
+                    <Text style={[s.contactMethodValue, { fontSize: 13, marginTop: 2 }]}>2号: {qq2}</Text>
+                  </View>
+                </View>
+                {/* Telegram */}
                 <TouchableOpacity
                   style={[s.contactMethod, { backgroundColor: "#0088cc" }]}
                   onPress={() => Linking.openURL(`https://t.me/${telegram.replace("@", "")}`)}
@@ -634,13 +656,6 @@ export default function PromoPage() {
                     <Text style={s.contactMethodValue}>{telegram}</Text>
                   </View>
                 </TouchableOpacity>
-                <View style={[s.contactMethod, { backgroundColor: "#12B7F5" }]}>
-                  <Ionicons name="chatbox" size={22} color="#fff" />
-                  <View>
-                    <Text style={s.contactMethodLabel}>QQ</Text>
-                    <Text style={s.contactMethodValue}>{qq}</Text>
-                  </View>
-                </View>
               </View>
 
               <View style={s.payMethods}>
