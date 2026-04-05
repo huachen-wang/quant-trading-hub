@@ -100,7 +100,10 @@ export default function CooperationPage() {
     if (!f) return []; try { return JSON.parse(f); } catch { return []; }
   };
 
-  const getTheme = (idx: number) => CARD_THEMES[idx % CARD_THEMES.length];
+  const getTheme = (idx: number) => {
+    if (idx < 0 || !Number.isFinite(idx)) return CARD_THEMES[0];
+    return CARD_THEMES[idx % CARD_THEMES.length];
+  };
 
   if (cardsLoading) {
     return <ScreenContainer><View style={s.loadingWrap}><ActivityIndicator size="large" color="#D97706" /></View></ScreenContainer>;
@@ -380,7 +383,7 @@ export default function CooperationPage() {
                 <Image source={{ uri: selectedCard.coverImage }} style={s.modalCover} resizeMode="cover" />
               ) : (
                 <LinearGradient
-                  colors={getTheme(cards.indexOf(selectedCard)).gradient as any || ["#1E293B", "#334155", "#475569"]}
+                  colors={[...(getTheme(Math.max(0, cards.indexOf(selectedCard)))?.gradient || ["#1E293B", "#334155", "#475569"])]}
                   style={[s.modalCover, { justifyContent: "center", alignItems: "center" }]}
                 >
                   <Ionicons name="trending-up" size={48} color="rgba(255,255,255,0.2)" />
