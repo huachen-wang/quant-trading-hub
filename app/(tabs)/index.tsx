@@ -17,7 +17,6 @@ type OrderBy = "latest" | "return" | "hot";
 
 const PAGE_SIZE = 12;
 
-// 标签筛选选项
 const TAG_FILTERS = [
   { label: "全部", value: "" },
   { label: "黄金", value: "黄金" },
@@ -27,6 +26,46 @@ const TAG_FILTERS = [
   { label: "剥头皮", value: "剥头皮" },
   { label: "网格", value: "网格" },
   { label: "多品种", value: "多品种" },
+];
+
+// 固定快捷入口配置
+const QUICK_ENTRIES = [
+  {
+    id: "ddxau",
+    title: "点金DDXAU",
+    subtitle: "四维共振·订单流",
+    icon: "🏆",
+    gradient: ["#92400E", "#D97706"] as readonly [string, string, ...string[]],
+    type: "link" as const,
+    target: "https://ddxau.com",
+  },
+  {
+    id: "cooperation",
+    title: "工作室合作",
+    subtitle: "策略观摩·源头扶持",
+    icon: "🤝",
+    gradient: ["#1E3A8A", "#3B82F6"] as readonly [string, string, ...string[]],
+    type: "route" as const,
+    target: "/cooperation",
+  },
+  {
+    id: "promo",
+    title: "全网EA提货",
+    subtitle: "源头直供·限时特惠",
+    icon: "⚡",
+    gradient: ["#7F1D1D", "#DC2626"] as readonly [string, string, ...string[]],
+    type: "route" as const,
+    target: "/promo",
+  },
+  {
+    id: "groupbuy",
+    title: "EA合购",
+    subtitle: "拼团低至1/10",
+    icon: "🛒",
+    gradient: ["#064E3B", "#10B981"] as readonly [string, string, ...string[]],
+    type: "route" as const,
+    target: "/group-buy",
+  },
 ];
 
 export default function HomeScreen() {
@@ -40,73 +79,11 @@ export default function HomeScreen() {
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [selectedStrategyTitle, setSelectedStrategyTitle] = useState("");
 
-  // 分页状态
   const [allStrategies, setAllStrategies] = useState<any[]>([]);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Banner 自动轮播
-  const bannerScrollRef = useRef<ScrollView>(null);
-  const [bannerIndex, setBannerIndex] = useState(0);
-  const screenWidth = Dimensions.get("window").width;
-  const bannerWidth = Math.min(screenWidth - 24, 800); // 减去 padding
-
-  const banners = [
-    {
-      id: "ddxau",
-      title: "点金 DDXAU",
-      subtitle: "四维共振 × 订单流 × AI量化",
-      description: "$280,000+ 实盘验证，4年+ 稳定盈利",
-      gradient: ["#92400E", "#D97706", "#FCD34D"] as readonly [string, string, ...string[]],
-      emoji: "🏆",
-      link: "https://ddxau.com",
-    },
-    {
-      id: "cooperation",
-      title: "工作室合作",
-      subtitle: "策略观摩 · 工作室扶持 · 定制服务",
-      description: "全方位合作方案，助力工作室快速起步",
-      gradient: ["#1E40AF", "#3B82F6", "#93C5FD"] as readonly [string, string, ...string[]],
-      emoji: "🤝",
-      link: "",
-      route: "/cooperation",
-    },
-    {
-      id: "promo",
-      title: "限时特惠",
-      subtitle: "EA跳蚤市场 · 低价抢购",
-      description: "精选EA策略限时折扣，先到先得",
-      gradient: ["#7C2D12", "#DC2626", "#FCA5A5"] as readonly [string, string, ...string[]],
-      emoji: "⚡",
-      link: "",
-      route: "/promo",
-    },
-    {
-      id: "groupbuy",
-      title: "EA合购专区",
-      subtitle: "拼团购买，低价获取正版EA",
-      description: "多人合购，人均低至原价1/10",
-      gradient: ["#065F46", "#10B981", "#6EE7B7"] as readonly [string, string, ...string[]],
-      emoji: "🛒",
-      link: "",
-      route: "/group-buy",
-    },
-  ];
-
-  // Banner 自动轮播
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setBannerIndex((prev) => {
-        const next = (prev + 1) % banners.length;
-        bannerScrollRef.current?.scrollTo({ x: next * bannerWidth, animated: true });
-        return next;
-      });
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [bannerWidth]);
-
-  // Header入场动画
   const headerFade = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(-12)).current;
   useEffect(() => {
@@ -116,7 +93,6 @@ export default function HomeScreen() {
     ]).start();
   }, []);
 
-  // 首次加载
   const { data: initialData, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
     platform: platformFilter,
     orderBy,
@@ -125,7 +101,6 @@ export default function HomeScreen() {
     offset: 0,
   });
 
-  // 当筛选条件或首次数据变化时，重置分页状态
   useEffect(() => {
     if (initialData) {
       setAllStrategies(initialData);
@@ -134,29 +109,18 @@ export default function HomeScreen() {
     }
   }, [initialData]);
 
-  // 加载更多的 query（手动触发）
   const loadMoreQuery = trpc.strategies.list.useQuery(
-    {
-      platform: platformFilter,
-      orderBy,
-      tag: tagFilter || undefined,
-      limit: PAGE_SIZE,
-      offset: offset,
-    },
-    {
-      enabled: false, // 不自动执行，手动调用 refetch
-    }
+    { platform: platformFilter, orderBy, tag: tagFilter || undefined, limit: PAGE_SIZE, offset },
+    { enabled: false }
   );
 
   const handleLoadMore = useCallback(async () => {
     if (!hasMore || isLoadingMore || isLoading) return;
-
     setIsLoadingMore(true);
     try {
       const result = await loadMoreQuery.refetch();
       if (result.data && result.data.length > 0) {
         setAllStrategies((prev) => {
-          // 去重：防止并发请求导致重复数据
           const existingIds = new Set(prev.map((s) => s.id));
           const newItems = result.data.filter((s: any) => !existingIds.has(s.id));
           return [...prev, ...newItems];
@@ -173,7 +137,6 @@ export default function HomeScreen() {
     }
   }, [hasMore, isLoadingMore, isLoading, loadMoreQuery]);
 
-  // 下拉刷新时重置分页
   const handleRefresh = useCallback(async () => {
     setOffset(0);
     setHasMore(true);
@@ -189,80 +152,42 @@ export default function HomeScreen() {
     router.push(`/strategy/${id}` as any);
   };
 
-  const handleBannerPress = (banner: typeof banners[0]) => {
-    if (banner.link) {
-      Linking.openURL(banner.link);
-    } else if (banner.route) {
-      router.push(banner.route as any);
+  const handleEntryPress = (entry: typeof QUICK_ENTRIES[0]) => {
+    if (entry.type === "link") {
+      Linking.openURL(entry.target);
+    } else {
+      router.push(entry.target as any);
     }
   };
 
-  const renderBanner = () => (
-    <View style={bannerStyles.container}>
-      <ScrollView
-        ref={bannerScrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        scrollEventThrottle={16}
-        onMomentumScrollEnd={(e) => {
-          const idx = Math.round(e.nativeEvent.contentOffset.x / bannerWidth);
-          setBannerIndex(idx);
-        }}
-        style={{ width: bannerWidth }}
-      >
-        {banners.map((banner) => (
-          <TouchableOpacity
-            key={banner.id}
-            onPress={() => handleBannerPress(banner)}
-            activeOpacity={0.9}
-            style={{ width: bannerWidth }}
+  const renderQuickEntries = () => (
+    <View style={qeStyles.container}>
+      {QUICK_ENTRIES.map((entry) => (
+        <TouchableOpacity
+          key={entry.id}
+          style={qeStyles.entryWrap}
+          onPress={() => handleEntryPress(entry)}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={entry.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={qeStyles.entryCard}
           >
-            <LinearGradient
-              colors={banner.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={bannerStyles.bannerCard}
-            >
-              <View style={bannerStyles.bannerContent}>
-                <View style={bannerStyles.bannerTextArea}>
-                  <Text style={bannerStyles.bannerTitle}>{banner.title}</Text>
-                  <Text style={bannerStyles.bannerSubtitle}>{banner.subtitle}</Text>
-                  <Text style={bannerStyles.bannerDesc}>{banner.description}</Text>
-                  {banner.link ? (
-                    <View style={bannerStyles.bannerCta}>
-                      <Text style={bannerStyles.bannerCtaText}>立即了解 →</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Text style={bannerStyles.bannerEmoji}>{banner.emoji}</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-      {/* 指示器 */}
-      <View style={bannerStyles.indicatorRow}>
-        {banners.map((_, i) => (
-          <View
-            key={i}
-            style={[
-              bannerStyles.indicator,
-              {
-                backgroundColor: i === bannerIndex ? colors.primary : colors.muted + "40",
-                width: i === bannerIndex ? 20 : 6,
-              },
-            ]}
-          />
-        ))}
-      </View>
+            <Text style={qeStyles.entryIcon}>{entry.icon}</Text>
+            <Text style={qeStyles.entryTitle}>{entry.title}</Text>
+            <Text style={qeStyles.entrySubtitle}>{entry.subtitle}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      ))}
     </View>
   );
 
   const renderHeader = () => (
     <Animated.View style={{ opacity: headerFade, transform: [{ translateY: headerSlide }] }} className="mb-3">
-      {/* Banner 轮播 */}
-      {renderBanner()}
+      {/* 固定快捷入口 */}
+      {renderQuickEntries()}
 
       {/* 标题栏 */}
       <View className="flex-row items-center justify-between mb-3 mt-4">
@@ -288,78 +213,36 @@ export default function HomeScreen() {
 
       {/* 平台 + 排序筛选 */}
       <View className="flex-row flex-wrap">
-        <TouchableOpacity
-          onPress={() => setPlatformFilter(undefined)}
-          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${!platformFilter ? "bg-primary" : "bg-surface"}`}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => setPlatformFilter(undefined)} className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${!platformFilter ? "bg-primary" : "bg-surface"}`} activeOpacity={0.7}>
           <Text className={`text-sm font-medium ${!platformFilter ? "text-background" : "text-foreground"}`}>全部</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setPlatformFilter("MT4")}
-          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${platformFilter === "MT4" ? "bg-primary" : "bg-surface"}`}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => setPlatformFilter("MT4")} className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${platformFilter === "MT4" ? "bg-primary" : "bg-surface"}`} activeOpacity={0.7}>
           <Text className={`text-sm font-medium ${platformFilter === "MT4" ? "text-background" : "text-foreground"}`}>MT4</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setPlatformFilter("MT5")}
-          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${platformFilter === "MT5" ? "bg-primary" : "bg-surface"}`}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => setPlatformFilter("MT5")} className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${platformFilter === "MT5" ? "bg-primary" : "bg-surface"}`} activeOpacity={0.7}>
           <Text className={`text-sm font-medium ${platformFilter === "MT5" ? "text-background" : "text-foreground"}`}>MT5</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setOrderBy("latest")}
-          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${orderBy === "latest" ? "bg-surface border border-primary" : "bg-surface"}`}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => setOrderBy("latest")} className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${orderBy === "latest" ? "bg-surface border border-primary" : "bg-surface"}`} activeOpacity={0.7}>
           <Text className={`text-sm ${orderBy === "latest" ? "text-primary font-semibold" : "text-muted"}`}>最新</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setOrderBy("return")}
-          className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${orderBy === "return" ? "bg-surface border border-primary" : "bg-surface"}`}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => setOrderBy("return")} className={`px-3 py-1.5 rounded-full mr-2 mb-2 ${orderBy === "return" ? "bg-surface border border-primary" : "bg-surface"}`} activeOpacity={0.7}>
           <Text className={`text-sm ${orderBy === "return" ? "text-primary font-semibold" : "text-muted"}`}>收益率</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setOrderBy("hot")}
-          className={`px-3 py-1.5 rounded-full mb-2 ${orderBy === "hot" ? "bg-surface border border-primary" : "bg-surface"}`}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => setOrderBy("hot")} className={`px-3 py-1.5 rounded-full mb-2 ${orderBy === "hot" ? "bg-surface border border-primary" : "bg-surface"}`} activeOpacity={0.7}>
           <Text className={`text-sm ${orderBy === "hot" ? "text-primary font-semibold" : "text-muted"}`}>热度</Text>
         </TouchableOpacity>
       </View>
 
       {/* 标签筛选行 */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={{ marginBottom: 8 }}
-        contentContainerStyle={{ paddingRight: 12 }}
-      >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }} contentContainerStyle={{ paddingRight: 12 }}>
         {TAG_FILTERS.map((tag) => (
           <TouchableOpacity
             key={tag.value}
             onPress={() => setTagFilter(tag.value)}
-            style={[
-              tagStyles.chip,
-              {
-                backgroundColor: tagFilter === tag.value ? colors.primary + "20" : colors.surface,
-                borderColor: tagFilter === tag.value ? colors.primary : colors.border,
-              },
-            ]}
+            style={[tagStyles.chip, { backgroundColor: tagFilter === tag.value ? colors.primary + "20" : colors.surface, borderColor: tagFilter === tag.value ? colors.primary : colors.border }]}
             activeOpacity={0.7}
           >
-            <Text
-              style={[
-                tagStyles.chipText,
-                { color: tagFilter === tag.value ? colors.primary : colors.muted },
-              ]}
-            >
-              {tag.label}
-            </Text>
+            <Text style={[tagStyles.chipText, { color: tagFilter === tag.value ? colors.primary : colors.muted }]}>{tag.label}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -371,58 +254,26 @@ export default function HomeScreen() {
       <Text style={{ fontSize: 56 }}>📊</Text>
       <Text className="text-foreground text-lg font-bold mt-4">暂无策略</Text>
       <Text className="text-muted text-sm mt-2">策略广场正在上架中，敬请期待</Text>
-      <TouchableOpacity
-        onPress={() => setShowContactModal(true)}
-        className="mt-6 bg-primary px-6 py-3 rounded-full"
-        activeOpacity={0.8}
-      >
+      <TouchableOpacity onPress={() => setShowContactModal(true)} className="mt-6 bg-primary px-6 py-3 rounded-full" activeOpacity={0.8}>
         <Text className="text-background font-semibold">上架我的EA</Text>
       </TouchableOpacity>
     </View>
   );
 
-  const renderFooter = () => {
-    return (
-      <View>
-        {isLoadingMore && (
-          <View style={{ paddingVertical: 16, alignItems: "center" }}>
-            <ActivityIndicator size="small" color={colors.primary} />
-          </View>
-        )}
-        {!hasMore && allStrategies.length > 0 && (
-          <View style={{ paddingVertical: 12, alignItems: "center" }}>
-            <Text style={{ color: colors.muted, fontSize: 12 }}>已展示全部策略</Text>
-          </View>
-        )}
-        {/* 合作引导横幅 - 策略列表底部 */}
-        {allStrategies.length > 0 && (
-          <TouchableOpacity
-            onPress={() => router.push("/moments" as any)}
-            activeOpacity={0.85}
-            style={footerStyles.bannerWrapper}
-          >
-            <LinearGradient
-              colors={[colors.primary + "12", colors.primary + "06"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[footerStyles.banner, { borderColor: colors.primary + "20" }]}
-            >
-              <View style={footerStyles.bannerContent}>
-                <Text style={footerStyles.bannerEmoji}>🎯</Text>
-                <View style={footerStyles.bannerTextBox}>
-                  <Text style={[footerStyles.bannerTitle, { color: colors.foreground }]}>选好策略，还差一步</Text>
-                  <Text style={[footerStyles.bannerDesc, { color: colors.muted }]}>
-                    量化军火库帮你匹配合规交易环境，让好策略发挥最大价值
-                  </Text>
-                </View>
-                <Text style={[footerStyles.bannerArrow, { color: colors.primary }]}>→</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  };
+  const renderFooter = () => (
+    <View>
+      {isLoadingMore && (
+        <View style={{ paddingVertical: 16, alignItems: "center" }}>
+          <ActivityIndicator size="small" color={colors.primary} />
+        </View>
+      )}
+      {!hasMore && allStrategies.length > 0 && (
+        <View style={{ paddingVertical: 12, alignItems: "center" }}>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>已展示全部策略</Text>
+        </View>
+      )}
+    </View>
+  );
 
   if (isLoading && !initialData) {
     return (
@@ -435,11 +286,7 @@ export default function HomeScreen() {
   return (
     <ScreenContainer>
       <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
-      <SubscribeModal
-        visible={showSubscribeModal}
-        onClose={() => setShowSubscribeModal(false)}
-        strategyTitle={selectedStrategyTitle}
-      />
+      <SubscribeModal visible={showSubscribeModal} onClose={() => setShowSubscribeModal(false)} strategyTitle={selectedStrategyTitle} />
       <FlatList
         data={allStrategies}
         keyExtractor={(item) => item.id.toString()}
@@ -475,10 +322,8 @@ export default function HomeScreen() {
         columnWrapperStyle={{ justifyContent: "flex-start" }}
         contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 20 }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor={colors.primary} />}
-        // 分页加载
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        // FlatList 虚拟化优化
         initialNumToRender={8}
         maxToRenderPerBatch={6}
         windowSize={5}
@@ -488,119 +333,42 @@ export default function HomeScreen() {
   );
 }
 
-const bannerStyles = StyleSheet.create({
+// 快捷入口样式
+const qeStyles = StyleSheet.create({
   container: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     marginBottom: 4,
   },
-  bannerCard: {
-    borderRadius: 16,
-    padding: 20,
-    marginHorizontal: 0,
-    minHeight: 130,
+  entryWrap: {
+    width: "48.5%",
+    flexGrow: 1,
+  },
+  entryCard: {
+    borderRadius: 14,
+    padding: 14,
+    minHeight: 88,
     justifyContent: "center",
   },
-  bannerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  bannerTextArea: {
-    flex: 1,
-    paddingRight: 16,
-  },
-  bannerTitle: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "900",
+  entryIcon: {
+    fontSize: 24,
     marginBottom: 4,
   },
-  bannerSubtitle: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 6,
-  },
-  bannerDesc: {
-    color: "rgba(255,255,255,0.75)",
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  bannerCta: {
-    marginTop: 10,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: "flex-start",
-  },
-  bannerCtaText: {
+  entryTitle: {
     color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 2,
   },
-  bannerEmoji: {
-    fontSize: 52,
-  },
-  indicatorRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 10,
-    gap: 4,
-  },
-  indicator: {
-    height: 4,
-    borderRadius: 2,
+  entrySubtitle: {
+    color: "rgba(255,255,255,0.8)",
+    fontSize: 11,
+    fontWeight: "500",
   },
 });
 
 const tagStyles = StyleSheet.create({
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
-    marginRight: 8,
-    borderWidth: 1,
-  },
-  chipText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-});
-
-const footerStyles = StyleSheet.create({
-  bannerWrapper: {
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  banner: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-  },
-  bannerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  bannerEmoji: {
-    fontSize: 28,
-    marginRight: 12,
-  },
-  bannerTextBox: {
-    flex: 1,
-  },
-  bannerTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 3,
-  },
-  bannerDesc: {
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  bannerArrow: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginLeft: 8,
-  },
+  chip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, marginRight: 8, borderWidth: 1 },
+  chipText: { fontSize: 12, fontWeight: "600" },
 });
