@@ -135,83 +135,6 @@ export default function CooperationPage() {
     return <ScreenContainer><View style={s.loadingWrap}><ActivityIndicator size="large" color="#D97706" /></View></ScreenContainer>;
   }
 
-  const renderStrategyCard = (card: any, isFeatured: boolean = false) => {
-    const badgeStyle = getBadgeStyle(card.badgeColor);
-    const gallery = parseGallery(card.galleryImages);
-
-    return (
-      <TouchableOpacity
-        key={card.id}
-        style={[
-          s.strategyCard,
-          isFeatured && s.strategyCardFeatured,
-        ]}
-        onPress={() => setSelectedCard(card)}
-        activeOpacity={0.85}
-      >
-        {/* 封面 */}
-        <View style={s.strategyImageWrap}>
-          {card.coverImage ? (
-            <Image source={{ uri: card.coverImage }} style={s.strategyImage} resizeMode="cover" />
-          ) : (
-            <View style={[s.strategyImage, s.strategyImagePlaceholder]}>
-              <View style={[s.strategyPlaceholderIcon, isFeatured && { backgroundColor: "rgba(239,68,68,0.15)" }]}>
-                <Ionicons name="trending-up" size={24} color={isFeatured ? "#EF4444" : "#F59E0B"} />
-              </View>
-            </View>
-          )}
-
-          {/* 角标 */}
-          {card.badge && (
-            <View style={[s.strategyBadge, { backgroundColor: badgeStyle.bg }]}>
-              {isFeatured && <Ionicons name="star" size={10} color={badgeStyle.text} />}
-              <Text style={[s.strategyBadgeText, { color: badgeStyle.text }]}>{card.badge}</Text>
-            </View>
-          )}
-
-          {/* 平台 */}
-          {card.platform && (
-            <View style={s.strategyPlatform}>
-              <Text style={s.strategyPlatformText}>{card.platform}</Text>
-            </View>
-          )}
-
-          {/* 策略类型 */}
-          {card.strategyType && (
-            <View style={s.strategyType}>
-              <Text style={s.strategyTypeText}>{card.strategyType}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* 内容 */}
-        <View style={s.strategyContent}>
-          <Text style={s.strategyTitle} numberOfLines={1}>{card.title}</Text>
-          {card.subtitle && (
-            <Text style={s.strategySubtitle} numberOfLines={1}>{card.subtitle}</Text>
-          )}
-          {card.description && (
-            <Text style={s.strategyDesc} numberOfLines={isFeatured ? 3 : 2}>{card.description}</Text>
-          )}
-
-          {/* 底部信息 */}
-          <View style={s.strategyFooter}>
-            {gallery.length > 0 && (
-              <View style={s.galleryHint}>
-                <Ionicons name="images" size={12} color="#94A3B8" />
-                <Text style={s.galleryHintText}>{gallery.length}张观摩</Text>
-              </View>
-            )}
-            <View style={s.strategyViewBtn}>
-              <Text style={s.strategyViewBtnText}>查看详情</Text>
-              <Ionicons name="chevron-forward" size={12} color="#F59E0B" />
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
   return (
     <ScreenContainer>
       <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
@@ -380,22 +303,7 @@ export default function CooperationPage() {
                       </Text>
                     </View>
                   </View>
-                  <View style={s.planDivider} />
-                  <View style={s.planFeatures}>
-                    {parseFeatures(plan.features).map((feature: string, fi: number) => (
-                      <View key={fi} style={s.planFeatureRow}>
-                        <Ionicons name="checkmark-circle" size={16} color={isRecommended ? "#F59E0B" : "#10B981"} />
-                        <Text style={s.planFeatureText}>{feature}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  <TouchableOpacity
-                    style={[s.planCTA, isRecommended && s.planCTARecommended]}
-                    onPress={() => setShowContact(true)}
-                  >
-                    <Text style={[s.planCTAText, isRecommended && { color: "#0A0E1A" }]}>立即咨询</Text>
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>
@@ -546,10 +454,6 @@ export default function CooperationPage() {
                     <Text style={[s.modalTagText, { color: getRiskColor(selectedCard.riskLevel) }]}>{selectedCard.riskLevel}</Text>
                   </View>
                 )}
-                <View style={[s.modalMetaTag, { backgroundColor: "rgba(245,158,11,0.1)" }]}>
-                  <Ionicons name="code-slash" size={12} color="#F59E0B" />
-                  <Text style={[s.modalMetaTagText, { color: "#F59E0B" }]}>源码可查</Text>
-                </View>
               </View>
 
               {/* 核心数据 */}
@@ -602,6 +506,7 @@ export default function CooperationPage() {
                 </View>
               )}
 
+              {/* 观摩说明 */}
               {selectedCard?.observeNote && (
                 <View style={s.observeNote}>
                   <Ionicons name="eye" size={18} color="#D97706" />
