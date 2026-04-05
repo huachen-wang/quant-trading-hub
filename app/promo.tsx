@@ -77,6 +77,46 @@ const AUTHORITY_BADGES = [
   { icon: "lock-open", text: "破解能力", desc: "技术实力保障" },
 ];
 
+// 占位产品数据（后台没有数据时展示）
+const PLACEHOLDER_PRODUCTS = [
+  {
+    id: "p1", title: "Quantum Emperor MT5", description: "2024年度最佳黄金EA，AI驱动量化策略，回撤极低",
+    originalPrice: "999", promoPrice: "199", platform: "MT5", category: "ea",
+    promoLabel: "爆款", promoEndTime: new Date(Date.now() + 3 * 86400000).toISOString(),
+    stock: 50, soldCount: 37, coverImage: null,
+  },
+  {
+    id: "p2", title: "Waka Waka EA", description: "网格对冲策略鼻祖，7年实盘验证，稳定如老狗",
+    originalPrice: "1299", promoPrice: "249", platform: "MT4/MT5", category: "ea",
+    promoLabel: "经典", promoEndTime: new Date(Date.now() + 5 * 86400000).toISOString(),
+    stock: 30, soldCount: 22, coverImage: null,
+  },
+  {
+    id: "p3", title: "The Gold Reaper", description: "黄金收割机，趋势跟踪+动态止损，月化15-25%",
+    originalPrice: "799", promoPrice: "159", platform: "MT5", category: "ea",
+    promoLabel: "热销", promoEndTime: new Date(Date.now() + 2 * 86400000).toISOString(),
+    stock: 20, soldCount: 15, coverImage: null,
+  },
+  {
+    id: "p4", title: "Dark Algo V3", description: "暗黑算法，多品种对冲，适合大资金稳健运行",
+    originalPrice: "1599", promoPrice: "329", platform: "MT5", category: "ea",
+    promoLabel: "源头价", promoEndTime: new Date(Date.now() + 7 * 86400000).toISOString(),
+    stock: 15, soldCount: 8, coverImage: null,
+  },
+  {
+    id: "p5", title: "Night Hunter Pro", description: "亚盘剥头皮之王，低风险高频策略，适合Prop Firm",
+    originalPrice: "699", promoPrice: "139", platform: "MT4/MT5", category: "ea",
+    promoLabel: "限时", promoEndTime: new Date(Date.now() + 1 * 86400000).toISOString(),
+    stock: 40, soldCount: 31, coverImage: null,
+  },
+  {
+    id: "p6", title: "Gold Trade Pro", description: "黄金专属趋势EA，自动识别趋势方向，智能加仓",
+    originalPrice: "899", promoPrice: "179", platform: "MT5", category: "ea",
+    promoLabel: "新品", promoEndTime: new Date(Date.now() + 4 * 86400000).toISOString(),
+    stock: 25, soldCount: 10, coverImage: null,
+  },
+];
+
 export default function PromoPage() {
   const colors = useColors();
   const router = useRouter();
@@ -322,6 +362,17 @@ export default function PromoPage() {
                     </View>
                   )}
                 </View>
+
+                {/* 底部按钮 */}
+                <View style={s.cardFooter}>
+                  <TouchableOpacity
+                    style={s.cardBuyBtn}
+                    onPress={() => { setSelectedProduct(product); }}
+                  >
+                    <Ionicons name="cart" size={14} color="#0A0E1A" />
+                    <Text style={s.cardBuyBtnText}>立即抢购</Text>
+                  </TouchableOpacity>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -428,6 +479,9 @@ export default function PromoPage() {
                     <Text style={[s.modalTagText, { color: "#0F172A" }]}>{selectedProduct.promoLabel}</Text>
                   </View>
                 )}
+                <View style={[s.modalTag, { backgroundColor: "rgba(245,158,11,0.2)" }]}>
+                  <Text style={[s.modalTagText, { color: "#F59E0B" }]}>源头直供</Text>
+                </View>
               </View>
 
               {/* 描述 */}

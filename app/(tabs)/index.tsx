@@ -8,6 +8,7 @@ import { StrategyCard } from "@/components/strategy-card";
 import { ContactModal } from "@/components/contact-modal";
 import { SubscribeModal } from "@/components/subscribe-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
@@ -188,6 +189,28 @@ export default function HomeScreen() {
     <Animated.View style={{ opacity: headerFade, transform: [{ translateY: headerSlide }] }} className="mb-3">
       {/* 固定快捷入口 */}
       {renderQuickEntries()}
+
+      {/* 快捷导航入口 */}
+      <View style={quickNavStyles.container}>
+        {[
+          { icon: "pricetags", label: "源头提货", route: "/promo", color: "#EF4444", bg: "rgba(239,68,68,0.12)" },
+          { icon: "people", label: "策略合作", route: "/cooperation", color: "#3B82F6", bg: "rgba(59,130,246,0.12)" },
+          { icon: "cart", label: "EA合购", route: "/group-buy", color: "#10B981", bg: "rgba(16,185,129,0.12)" },
+          { icon: "newspaper", label: "行业动态", route: "/moments", color: "#F59E0B", bg: "rgba(245,158,11,0.12)" },
+        ].map((item, i) => (
+          <TouchableOpacity
+            key={i}
+            style={quickNavStyles.item}
+            onPress={() => router.push(item.route as any)}
+            activeOpacity={0.7}
+          >
+            <View style={[quickNavStyles.iconWrap, { backgroundColor: item.bg }]}>
+              <Ionicons name={item.icon as any} size={22} color={item.color} />
+            </View>
+            <Text style={[quickNavStyles.label, { color: colors.foreground }]}>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       {/* 标题栏 */}
       <View className="flex-row items-center justify-between mb-3 mt-4">
