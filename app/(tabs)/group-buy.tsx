@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Linking, StyleSheet, Platform, Animated, Easing } from "react-native";
 import { Image } from "expo-image";
+import { QuickNav } from "@/components/quick-nav";
 
 // 卡片入场动画组件
 function AnimatedListItem({ children, index, style }: { children: React.ReactNode; index: number; style?: any }) {
@@ -528,6 +529,7 @@ export default function GroupBuyScreen() {
         renderItem={renderCard}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
+        ListFooterComponent={() => <QuickNav />}
         columnWrapperStyle={cardColumns > 1 ? { justifyContent: "flex-start" } : undefined}
         contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 12, paddingBottom: 20 }}
         showsVerticalScrollIndicator={false}

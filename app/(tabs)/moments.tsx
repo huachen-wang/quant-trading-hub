@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { ContactModal } from "@/components/contact-modal";
+import { QuickNav } from "@/components/quick-nav";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
@@ -543,6 +544,8 @@ export default function CooperationScreen() {
             </TouchableOpacity>
           </View>
         </FadeInView>
+        {/* 常驻快捷导航 */}
+        <QuickNav />
       </ScrollView>
       </SafeAreaView>
     </View>

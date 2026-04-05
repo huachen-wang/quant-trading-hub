@@ -7,6 +7,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { StrategyCard } from "@/components/strategy-card";
 import { ContactModal } from "@/components/contact-modal";
 import { SubscribeModal } from "@/components/subscribe-modal";
+import { QuickNav } from "@/components/quick-nav";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
@@ -29,37 +30,40 @@ const TAG_FILTERS = [
   { label: "多品种", value: "多品种" },
 ];
 
-// ─── 快捷入口（去掉合购，保留3个，点金放第三） ───
+// ─── 快捷入口（文字已修改） ───
 const QUICK_ENTRIES = [
   {
     id: "cooperation",
-    title: "工作室合作",
-    subtitle: "策略观摩 · 源头扶持",
+    title: "工作室扶持合作",
+    subtitle: "深度扶持 · 源头直供",
     icon: "🤝",
     gradient: ["#0F172A", "#1E3A8A", "#2563EB"] as readonly [string, string, ...string[]],
     type: "route" as const,
     target: "/cooperation",
     accentColor: "#60A5FA",
+    glowColor: "rgba(96,165,250,0.15)",
   },
   {
     id: "promo",
-    title: "全网EA提货",
-    subtitle: "源头直供 · 限时特惠",
+    title: "EA限时促销",
+    subtitle: "源头价 · 限时特惠",
     icon: "⚡",
     gradient: ["#1A0000", "#7F1D1D", "#DC2626"] as readonly [string, string, ...string[]],
     type: "route" as const,
     target: "/promo",
     accentColor: "#F87171",
+    glowColor: "rgba(248,113,113,0.15)",
   },
   {
     id: "ddxau",
-    title: "点金DDXAU",
-    subtitle: "四维共振 · 订单流",
+    title: "订单流独家策略",
+    subtitle: "四维共振 · 独家研发",
     icon: "🏆",
     gradient: ["#1A0E00", "#78350F", "#D97706"] as readonly [string, string, ...string[]],
     type: "link" as const,
     target: "https://ddxau.com",
     accentColor: "#FBBF24",
+    glowColor: "rgba(251,191,36,0.15)",
   },
 ];
 
@@ -84,12 +88,17 @@ export default function HomeScreen() {
   const heroSlide = useRef(new Animated.Value(20)).current;
   const entryAnims = useRef(QUICK_ENTRIES.map(() => new Animated.Value(0))).current;
   const entrySlides = useRef(QUICK_ENTRIES.map(() => new Animated.Value(30))).current;
+  // 脉冲动画
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  // 数据计数动画
+  const countAnim = useRef(new Animated.Value(0)).current;
+  const [displayCount, setDisplayCount] = useState({ ea: 0, studio: 0, exclusive: 0 });
 
   useEffect(() => {
     // Hero 动画
     Animated.parallel([
-      Animated.timing(heroFade, { toValue: 1, duration: 600, useNativeDriver: true }),
-      Animated.timing(heroSlide, { toValue: 0, duration: 600, useNativeDriver: true }),
+      Animated.timing(heroFade, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(heroSlide, { toValue: 0, duration: 800, useNativeDriver: true }),
     ]).start();
     // 入口卡片依次入场
     QUICK_ENTRIES.forEach((_, i) => {
@@ -98,8 +107,25 @@ export default function HomeScreen() {
           Animated.spring(entryAnims[i], { toValue: 1, tension: 80, friction: 12, useNativeDriver: true }),
           Animated.spring(entrySlides[i], { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
         ]).start();
-      }, 200 + i * 120);
+      }, 300 + i * 150);
     });
+    // 脉冲光环
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.15, duration: 2000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+      ])
+    ).start();
+    // 数字递增动画
+    Animated.timing(countAnim, { toValue: 1, duration: 1500, useNativeDriver: false }).start();
+    const listener = countAnim.addListener(({ value }) => {
+      setDisplayCount({
+        ea: Math.round(200 * value),
+        studio: Math.round(30 * value),
+        exclusive: Math.round(50 * value),
+      });
+    });
+    return () => countAnim.removeListener(listener);
   }, []);
 
   const { data: initialData, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
@@ -169,7 +195,77 @@ export default function HomeScreen() {
     }
   };
 
-  // ═══════════════════ 快捷入口 - 3列横排炫酷卡片 ═══════════════════
+  // ═══════════════════ 炫酷 Hero 区域 ═══════════════════
+  const renderHero = () => (
+    <Animated.View style={[heroStyles.container, { opacity: heroFade, transform: [{ translateY: heroSlide }] }]}>
+      <LinearGradient
+        colors={["#050810", "#0A0E1A", "#0D1525", "#0A0E1A"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={heroStyles.gradient}
+      >
+        {/* ─── 装饰网格线 ─── */}
+        {[...Array(5)].map((_, i) => (
+          <View key={`vl${i}`} style={[heroStyles.gridLineV, { right: 30 + i * 60, opacity: 0.03 - i * 0.004 }]} />
+        ))}
+        {[...Array(3)].map((_, i) => (
+          <View key={`hl${i}`} style={[heroStyles.gridLineH, { top: 20 + i * 40, opacity: 0.03 - i * 0.005 }]} />
+        ))}
+
+        {/* ─── 脉冲光环 ─── */}
+        <Animated.View style={[heroStyles.pulseRing, { transform: [{ scale: pulseAnim }] }]} />
+
+        {/* ─── 装饰粒子 ─── */}
+        <View style={[heroStyles.particle, { top: 15, right: 25, width: 3, height: 3, backgroundColor: "rgba(251,191,36,0.5)" }]} />
+        <View style={[heroStyles.particle, { top: 45, right: 80, width: 2, height: 2, backgroundColor: "rgba(96,165,250,0.4)" }]} />
+        <View style={[heroStyles.particle, { bottom: 30, right: 40, width: 2, height: 2, backgroundColor: "rgba(52,211,153,0.4)" }]} />
+        <View style={[heroStyles.particle, { top: 60, right: 140, width: 2, height: 2, backgroundColor: "rgba(251,191,36,0.3)" }]} />
+        <View style={[heroStyles.particle, { bottom: 50, left: 30, width: 2, height: 2, backgroundColor: "rgba(248,113,113,0.3)" }]} />
+
+        {/* ─── 品牌标识 ─── */}
+        <View style={heroStyles.brandRow}>
+          <View style={heroStyles.liveDotOuter}>
+            <View style={heroStyles.liveDot} />
+          </View>
+          <Text style={heroStyles.brandText}>量化军火库</Text>
+          <View style={heroStyles.brandDivider} />
+          <Text style={heroStyles.brandSub}>eaxau.com</Text>
+        </View>
+
+        {/* ─── 主标题 ─── */}
+        <Text style={heroStyles.title}>全网EA源头提货</Text>
+        <Text style={heroStyles.tagline}>
+          200+源码库 · 100%破解能力 · 独家调优
+        </Text>
+
+        {/* ─── 数据指标（带计数动画） ─── */}
+        <View style={heroStyles.statsRow}>
+          {[
+            { num: `${displayCount.ea}+`, label: "EA源码", color: "#FBBF24", bgColor: "rgba(251,191,36,0.08)" },
+            { num: `${displayCount.studio}+`, label: "合作工作室", color: "#60A5FA", bgColor: "rgba(96,165,250,0.08)" },
+            { num: `${displayCount.exclusive}+`, label: "独家版", color: "#34D399", bgColor: "rgba(52,211,153,0.08)" },
+          ].map((stat, i) => (
+            <View key={i} style={[heroStyles.statItem, { backgroundColor: stat.bgColor }]}>
+              <Text style={[heroStyles.statNum, { color: stat.color }]}>{stat.num}</Text>
+              <Text style={heroStyles.statLabel}>{stat.label}</Text>
+              {/* 底部强调线 */}
+              <View style={[heroStyles.statAccent, { backgroundColor: stat.color + "30" }]} />
+            </View>
+          ))}
+        </View>
+
+        {/* ─── 底部装饰渐变线 ─── */}
+        <LinearGradient
+          colors={["transparent", "rgba(251,191,36,0.15)", "transparent"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={heroStyles.bottomLine}
+        />
+      </LinearGradient>
+    </Animated.View>
+  );
+
+  // ═══════════════════ 快捷入口 ═══════════════════
   const renderQuickEntries = () => (
     <View style={qeStyles.container}>
       {QUICK_ENTRIES.map((entry, i) => (
@@ -186,7 +282,7 @@ export default function HomeScreen() {
             style={qeStyles.entryTouchable}
           >
             {/* 外发光 */}
-            <View style={[qeStyles.entryGlow, { backgroundColor: entry.accentColor + "12" }]} />
+            <View style={[qeStyles.entryGlow, { backgroundColor: entry.glowColor }]} />
             <LinearGradient
               colors={entry.gradient}
               start={{ x: 0, y: 0 }}
@@ -194,16 +290,18 @@ export default function HomeScreen() {
               style={qeStyles.entryCard}
             >
               {/* 装饰光线 */}
-              <View style={[qeStyles.entryShine, { backgroundColor: entry.accentColor + "08" }]} />
+              <View style={[qeStyles.entryShine, { backgroundColor: entry.accentColor + "10" }]} />
+              {/* 角落装饰 */}
+              <View style={[qeStyles.cornerDecor, { borderColor: entry.accentColor + "20" }]} />
               {/* 图标 */}
               <View style={[qeStyles.iconWrap, { backgroundColor: entry.accentColor + "20", borderColor: entry.accentColor + "30" }]}>
                 <Text style={qeStyles.entryIcon}>{entry.icon}</Text>
               </View>
               {/* 文字 */}
-              <Text style={qeStyles.entryTitle}>{entry.title}</Text>
-              <Text style={[qeStyles.entrySubtitle, { color: entry.accentColor + "CC" }]}>{entry.subtitle}</Text>
+              <Text style={qeStyles.entryTitle} numberOfLines={1}>{entry.title}</Text>
+              <Text style={[qeStyles.entrySubtitle, { color: entry.accentColor + "BB" }]} numberOfLines={1}>{entry.subtitle}</Text>
               {/* 箭头 */}
-              <View style={[qeStyles.arrowWrap, { backgroundColor: entry.accentColor + "18" }]}>
+              <View style={[qeStyles.arrowWrap, { backgroundColor: entry.accentColor + "18", borderColor: entry.accentColor + "25" }]}>
                 <Text style={[qeStyles.arrowText, { color: entry.accentColor }]}>→</Text>
               </View>
             </LinearGradient>
@@ -211,52 +309,6 @@ export default function HomeScreen() {
         </Animated.View>
       ))}
     </View>
-  );
-
-  // ═══════════════════ 顶部 Hero 区域 ═══════════════════
-  const renderHero = () => (
-    <Animated.View style={[heroStyles.container, { opacity: heroFade, transform: [{ translateY: heroSlide }] }]}>
-      <LinearGradient
-        colors={["#0A0E1A", "#111827", "#0F172A"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={heroStyles.gradient}
-      >
-        {/* 装饰元素 */}
-        <View style={heroStyles.decorLine1} />
-        <View style={heroStyles.decorLine2} />
-        <View style={heroStyles.decorDot1} />
-        <View style={heroStyles.decorDot2} />
-
-        {/* 品牌标识 */}
-        <View style={heroStyles.brandRow}>
-          <View style={heroStyles.liveDot} />
-          <Text style={heroStyles.brandText}>量化军火库</Text>
-          <View style={heroStyles.brandDivider} />
-          <Text style={heroStyles.brandSub}>QUANT ARSENAL</Text>
-        </View>
-
-        {/* 主标题 */}
-        <Text style={heroStyles.title}>全网EA源头提货</Text>
-        <Text style={heroStyles.tagline}>
-          200+源码库 · 100%破解能力 · 独家调优
-        </Text>
-
-        {/* 数据指标 */}
-        <View style={heroStyles.statsRow}>
-          {[
-            { num: "200+", label: "EA源码", color: "#FBBF24" },
-            { num: "30+", label: "合作工作室", color: "#60A5FA" },
-            { num: "50+", label: "独家版", color: "#34D399" },
-          ].map((stat, i) => (
-            <View key={i} style={heroStyles.statItem}>
-              <Text style={[heroStyles.statNum, { color: stat.color }]}>{stat.num}</Text>
-              <Text style={heroStyles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
-        </View>
-      </LinearGradient>
-    </Animated.View>
   );
 
   // ═══════════════════ 筛选区域 ═══════════════════
@@ -290,7 +342,6 @@ export default function HomeScreen() {
 
       {/* 平台 + 排序 */}
       <View style={filterStyles.filterRow}>
-        {/* 平台筛选 */}
         <View style={filterStyles.filterGroup}>
           {[
             { label: "全部", value: undefined },
@@ -318,10 +369,8 @@ export default function HomeScreen() {
           })}
         </View>
 
-        {/* 分隔 */}
         <View style={[filterStyles.divider, { backgroundColor: colors.border }]} />
 
-        {/* 排序 */}
         <View style={filterStyles.filterGroup}>
           {[
             { label: "热度", value: "hot" as OrderBy },
@@ -409,6 +458,8 @@ export default function HomeScreen() {
           <Text style={{ color: colors.muted, fontSize: 12 }}>已展示全部策略</Text>
         </View>
       )}
+      {/* 底部常驻快捷导航 */}
+      <QuickNav />
     </View>
   );
 
@@ -479,82 +530,90 @@ const heroStyles = StyleSheet.create({
   },
   gradient: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    paddingTop: 24,
+    paddingBottom: 22,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     overflow: "hidden",
     position: "relative",
   },
-  decorLine1: {
+  // 网格线
+  gridLineV: {
     position: "absolute",
     top: 0,
-    right: 40,
     width: 1,
     height: "100%",
-    backgroundColor: "rgba(255,255,255,0.03)",
+    backgroundColor: "rgba(255,255,255,1)",
   },
-  decorLine2: {
+  gridLineH: {
     position: "absolute",
-    top: 0,
-    right: 100,
-    width: 1,
-    height: "100%",
-    backgroundColor: "rgba(255,255,255,0.02)",
+    left: 0,
+    width: "100%",
+    height: 1,
+    backgroundColor: "rgba(255,255,255,1)",
   },
-  decorDot1: {
+  // 脉冲光环
+  pulseRing: {
     position: "absolute",
-    top: 20,
-    right: 20,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(251,191,36,0.4)",
+    top: -60,
+    right: -60,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: "rgba(251,191,36,0.06)",
+    backgroundColor: "rgba(251,191,36,0.02)",
   },
-  decorDot2: {
+  // 粒子
+  particle: {
     position: "absolute",
-    bottom: 20,
-    right: 60,
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: "rgba(96,165,250,0.3)",
+    borderRadius: 10,
   },
+  // 品牌
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 14,
+  },
+  liveDotOuter: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "rgba(16,185,129,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
   },
   liveDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: "#10B981",
-    marginRight: 8,
   },
   brandText: {
     color: "#F1F5F9",
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 1.5,
   },
   brandDivider: {
     width: 1,
-    height: 12,
-    backgroundColor: "rgba(255,255,255,0.15)",
+    height: 14,
+    backgroundColor: "rgba(255,255,255,0.12)",
     marginHorizontal: 10,
   },
   brandSub: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 2,
+    color: "rgba(251,191,36,0.7)",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
+  // 标题
   title: {
     color: "#F1F5F9",
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "900",
-    letterSpacing: 1,
+    letterSpacing: 2,
     marginBottom: 6,
   },
   tagline: {
@@ -562,22 +621,23 @@ const heroStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     letterSpacing: 0.5,
-    marginBottom: 16,
+    marginBottom: 18,
   },
+  // 数据
   statsRow: {
     flexDirection: "row",
-    gap: 0,
+    gap: 8,
   },
   statItem: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    marginHorizontal: 3,
+    paddingVertical: 10,
+    borderRadius: 12,
+    position: "relative",
+    overflow: "hidden",
   },
   statNum: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
@@ -585,17 +645,33 @@ const heroStyles = StyleSheet.create({
     color: "rgba(255,255,255,0.45)",
     fontSize: 10,
     fontWeight: "600",
-    marginTop: 2,
+    marginTop: 3,
+  },
+  statAccent: {
+    position: "absolute",
+    bottom: 0,
+    left: "20%",
+    right: "20%",
+    height: 2,
+    borderRadius: 1,
+  },
+  // 底部装饰线
+  bottomLine: {
+    position: "absolute",
+    bottom: 0,
+    left: 20,
+    right: 20,
+    height: 1,
   },
 });
 
-// ═══════════════════ 快捷入口样式 - 3列横排 ═══════════════════
+// ═══════════════════ 快捷入口样式 ═══════════════════
 const qeStyles = StyleSheet.create({
   container: {
     flexDirection: "row",
     paddingHorizontal: 12,
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   entryWrap: {
     flex: 1,
@@ -608,13 +684,13 @@ const qeStyles = StyleSheet.create({
     top: 4,
     left: 4,
     right: 4,
-    bottom: -2,
-    borderRadius: 16,
+    bottom: -3,
+    borderRadius: 18,
   },
   entryCard: {
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 12,
-    minHeight: 110,
+    minHeight: 115,
     justifyContent: "space-between",
     overflow: "hidden",
     position: "relative",
@@ -623,11 +699,21 @@ const qeStyles = StyleSheet.create({
   },
   entryShine: {
     position: "absolute",
-    top: -20,
-    right: -20,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    top: -30,
+    right: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  cornerDecor: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 16,
+    height: 16,
+    borderTopWidth: 1,
+    borderRightWidth: 1,
+    borderTopRightRadius: 4,
   },
   iconWrap: {
     width: 36,
@@ -643,7 +729,7 @@ const qeStyles = StyleSheet.create({
   },
   entryTitle: {
     color: "#F1F5F9",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "800",
     letterSpacing: 0.3,
     marginBottom: 2,
@@ -661,6 +747,7 @@ const qeStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-end",
+    borderWidth: 1,
   },
   arrowText: {
     fontSize: 12,

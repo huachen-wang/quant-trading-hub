@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { ContactModal } from "@/components/contact-modal";
+import { QuickNav } from "@/components/quick-nav";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { LinearGradient } from "expo-linear-gradient";
@@ -498,6 +499,8 @@ export default function SubscribeScreen() {
             </FadeInView>
           )}
 
+          {/* 常驻快捷导航 */}
+          <QuickNav />
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
