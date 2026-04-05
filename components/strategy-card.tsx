@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Linking } from "react-native";
 import { Image } from "expo-image";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,6 +16,7 @@ export interface StrategyCardProps {
   totalReturn: string;
   winRate: string;
   price: string;
+  originalPrice?: string | null;
   isFree: boolean;
   downloadCount: number;
   virtualDownloads?: number;
@@ -24,6 +25,10 @@ export interface StrategyCardProps {
   pairs?: string;
   viewCount?: number;
   createdAt?: Date | string | null;
+  tags?: string | null;
+  productType?: string | null;
+  isFeatured?: boolean;
+  featuredLink?: string | null;
   onPress: () => void;
   onSubscribePress?: () => void;
 }
@@ -34,12 +39,17 @@ export function StrategyCard({
   totalReturn,
   winRate,
   price,
+  originalPrice,
   isFree,
   downloadCount,
   virtualDownloads = 0,
   coverImage,
   coverImageBlurhash,
   viewCount = 0,
+  tags,
+  productType,
+  isFeatured,
+  featuredLink,
   onPress,
   onSubscribePress,
 }: StrategyCardProps) {
@@ -67,16 +77,35 @@ export function StrategyCard({
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+    // 旗舰产品且有外部链接时，跳转外部
+    if (isFeatured && featuredLink) {
+      Linking.openURL(featuredLink);
+      return;
+    }
     onPress();
   };
 
   const gradientColors: readonly [string, string, ...string[]] =
-    platform === "MT4"
-      ? ["#1a365d", "#2563eb", "#60a5fa"]
-      : ["#4c1d95", "#7c3aed", "#a78bfa"];
+    isFeatured
+      ? ["#92400E", "#D97706", "#FCD34D"] // 金色渐变 - 旗舰产品
+      : platform === "MT4"
+        ? ["#1a365d", "#2563eb", "#60a5fa"]
+        : ["#4c1d95", "#7c3aed", "#a78bfa"];
 
   const returnValue = parseFloat(totalReturn);
   const isPositive = returnValue >= 0;
+
+  // 计算折扣率
+  const priceNum = parseFloat(price || "0");
+  const originalPriceNum = parseFloat(originalPrice || "0");
+  const hasDiscount = !isFree && originalPriceNum > 0 && originalPriceNum > priceNum;
+  const discountPercent = hasDiscount ? Math.round((1 - priceNum / originalPriceNum) * 100) : 0;
+
+  // 解析标签
+  const tagList = tags ? tags.split(",").map(t => t.trim()).filter(Boolean).slice(0, 2) : [];
+
+  // 产品类型标签
+  const productTypeLabel = productType === "indicator" ? "指标" : productType === "tool" ? "工具" : null;
 
   const gap = numColumns >= 4 ? 12 : numColumns >= 3 ? 10 : 8;
   const cardMargin = gap / 2;
@@ -112,10 +141,13 @@ export function StrategyCard({
           styles.card,
           {
             backgroundColor: colors.surface,
-            borderColor: colors.border,
+            borderColor: isFeatured ? "#D97706" : colors.border,
+            borderWidth: isFeatured ? 1.5 : 0.5,
             ...(Platform.OS === "web" ? {
               // @ts-ignore
-              boxShadow: "0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)",
+              boxShadow: isFeatured
+                ? "0 4px 16px rgba(217,119,6,0.2), 0 2px 6px rgba(217,119,6,0.1)"
+                : "0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)",
               transition: "box-shadow 0.3s ease, transform 0.3s ease",
             } : {}),
           },
@@ -142,19 +174,47 @@ export function StrategyCard({
               end={{ x: 1, y: 1 }}
               style={[styles.gradient, { height: coverHeight }]}
             >
-              <Text style={styles.coverEmoji}>📈</Text>
+              <Text style={styles.coverEmoji}>
+                {isFeatured ? "🏆" : productType === "indicator" ? "📊" : productType === "tool" ? "🔧" : "📈"}
+              </Text>
             </LinearGradient>
           )}
 
+          {/* 旗舰标签 */}
+          {isFeatured && (
+            <View style={styles.featuredBadge}>
+              <LinearGradient
+                colors={["#D97706", "#F59E0B"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.featuredGradient}
+              >
+                <Text style={styles.featuredText}>⭐ 官方旗舰</Text>
+              </LinearGradient>
+            </View>
+          )}
+
           {/* 平台标签 */}
-          <View style={[styles.platformBadge, { backgroundColor: `${colors.background}E6` }]}>
-            <Text style={[styles.platformText, { color: gradientColors[1] }]}>
+          <View style={[
+            styles.platformBadge,
+            { backgroundColor: `${colors.background}E6` },
+            isFeatured ? { top: 34 } : {},
+          ]}>
+            <Text style={[styles.platformText, { color: isFeatured ? "#D97706" : gradientColors[1] }]}>
               {platform}
+              {productTypeLabel ? ` · ${productTypeLabel}` : ""}
             </Text>
           </View>
 
+          {/* 折扣标签 */}
+          {hasDiscount && discountPercent > 0 && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>-{discountPercent}%</Text>
+            </View>
+          )}
+
           {/* 订阅按钮 */}
-          {onSubscribePress && (
+          {onSubscribePress && !isFeatured && (
             <TouchableOpacity
               onPress={(e) => {
                 e.stopPropagation();
@@ -179,11 +239,22 @@ export function StrategyCard({
         <View style={[styles.infoContainer, { paddingHorizontal: infoPadH, paddingTop: infoPadV, paddingBottom: infoPadV }]}>
           {/* 标题 */}
           <Text
-            style={[styles.title, { color: colors.foreground, fontSize: titleSize }]}
+            style={[styles.title, { color: isFeatured ? "#D97706" : colors.foreground, fontSize: titleSize }]}
             numberOfLines={1}
           >
             {title}
           </Text>
+
+          {/* 标签行 */}
+          {tagList.length > 0 && (
+            <View style={styles.tagRow}>
+              {tagList.map((tag, i) => (
+                <View key={i} style={[styles.tagChip, { backgroundColor: colors.primary + "15" }]}>
+                  <Text style={[styles.tagText, { color: colors.primary, fontSize: metaSize }]}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* 价格 + 胜率 + 下载量 一行 */}
           <View style={styles.bottomRow}>
@@ -191,7 +262,12 @@ export function StrategyCard({
               {isFree ? (
                 <Text style={[styles.freePrice, { color: colors.success, fontSize: priceSize }]}>免费</Text>
               ) : (
-                <Text style={[styles.price, { color: "#F59E0B", fontSize: priceSize }]}>¥{price}</Text>
+                <View style={styles.priceGroup}>
+                  <Text style={[styles.price, { color: "#F59E0B", fontSize: priceSize }]}>¥{price}</Text>
+                  {hasDiscount && (
+                    <Text style={[styles.originalPrice, { color: colors.muted, fontSize: metaSize }]}>¥{originalPrice}</Text>
+                  )}
+                </View>
               )}
               <Text style={[styles.winRateInline, { color: colors.muted, fontSize: isDesktop ? 11 : 10 }]}>
                 胜率 <Text style={{ color: colors.primary, fontWeight: "700" }}>{winRate}%</Text>
@@ -233,6 +309,23 @@ const styles = StyleSheet.create({
   coverEmoji: {
     fontSize: 48,
   },
+  // 旗舰标签
+  featuredBadge: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    borderBottomRightRadius: 10,
+    overflow: "hidden",
+  },
+  featuredGradient: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  featuredText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "800",
+  },
   platformBadge: {
     position: "absolute",
     top: 8,
@@ -243,6 +336,21 @@ const styles = StyleSheet.create({
   },
   platformText: {
     fontSize: 11,
+    fontWeight: "800",
+  },
+  // 折扣标签
+  discountBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  discountText: {
+    color: "#fff",
+    fontSize: 10,
     fontWeight: "800",
   },
   subscribeBtn: {
@@ -279,6 +387,21 @@ const styles = StyleSheet.create({
     marginBottom: 3,
     lineHeight: 18,
   },
+  // 标签行
+  tagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    marginBottom: 4,
+  },
+  tagChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  tagText: {
+    fontWeight: "600",
+  },
   bottomRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -294,11 +417,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
+  priceGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   freePrice: {
     fontWeight: "700",
   },
   price: {
     fontWeight: "700",
+  },
+  originalPrice: {
+    textDecorationLine: "line-through",
+    fontWeight: "400",
   },
   winRateInline: {},
   metaText: {

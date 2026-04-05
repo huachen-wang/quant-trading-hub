@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../drizzle/schema";
 
-const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings } = schema;
+const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings, backtestData: backtestDataTable } = schema;
 
 let pool: mysql.Pool | null = null;
 let db: any = null;
@@ -99,16 +99,22 @@ export async function upsertUser(data: Partial<typeof users.$inferInsert> & { op
 export async function getStrategies(params: {
   platform?: "MT4" | "MT5";
   orderBy?: "latest" | "popular" | "return" | "hot";
+  tag?: string;
+  productType?: string;
   limit?: number;
   offset?: number;
 }) {
   const db = await getDb();
   if (!db) return [];
 
-  const whereConditions = params.platform
-    ? and(eq(strategies.status, "published"), eq(strategies.platform, params.platform))
-    : eq(strategies.status, "published");
+  const conditions: any[] = [eq(strategies.status, "published")];
+  if (params.platform) conditions.push(eq(strategies.platform, params.platform));
+  if (params.tag) conditions.push(like(strategies.tags, `%${params.tag}%`));
+  if (params.productType) conditions.push(eq(strategies.productType, params.productType));
 
+  const whereConditions = and(...conditions);
+
+  // 旗舰产品置顶，然后按排序规则
   const orderByColumn =
     params.orderBy === "popular"
       ? desc(strategies.downloadCount)
@@ -122,7 +128,7 @@ export async function getStrategies(params: {
     .select()
     .from(strategies)
     .where(whereConditions)
-    .orderBy(orderByColumn)
+    .orderBy(desc(strategies.isFeatured), orderByColumn)
     .limit(params.limit || 20)
     .offset(params.offset || 0);
 

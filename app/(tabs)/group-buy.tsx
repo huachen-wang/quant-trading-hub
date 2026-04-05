@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Linking, StyleSheet, Platform, Animated, Easing } from "react-native";
+import { Image } from "expo-image";
 
 // 卡片入场动画组件
 function AnimatedListItem({ children, index, style }: { children: React.ReactNode; index: number; style?: any }) {
@@ -37,7 +38,6 @@ function AnimatedProgressBar({ progress, color, delay = 0 }: { progress: number;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // 进度条从0增长到目标值
     const timer = setTimeout(() => {
       Animated.timing(widthAnim, {
         toValue: progress,
@@ -47,7 +47,6 @@ function AnimatedProgressBar({ progress, color, delay = 0 }: { progress: number;
       }).start();
     }, delay);
 
-    // 光泽动画循环
     Animated.loop(
       Animated.timing(shimmerAnim, {
         toValue: 1,
@@ -96,6 +95,7 @@ function AnimatedProgressBar({ progress, color, delay = 0 }: { progress: number;
     </View>
   );
 }
+
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -109,6 +109,7 @@ interface GroupBuyItem {
   title: string;
   eaName: string;
   description?: string | null;
+  coverImage?: string | null;
   targetPrice: string;
   currentParticipants: number;
   targetParticipants: number;
@@ -166,14 +167,53 @@ export default function GroupBuyScreen() {
     return emojis[index % emojis.length];
   };
 
+  // 解析联系方式
+  const parseContactInfo = (contactInfo: string) => {
+    const contacts: { type: string; value: string; link?: string }[] = [];
+    // 尝试解析 contactInfo 字段
+    if (contactInfo) {
+      // 检查是否包含 Telegram
+      if (contactInfo.includes("t.me/") || contactInfo.startsWith("@")) {
+        const tgHandle = contactInfo.startsWith("@") ? contactInfo : contactInfo.split("t.me/")[1];
+        contacts.push({
+          type: "Telegram",
+          value: tgHandle || contactInfo,
+          link: contactInfo.startsWith("http") ? contactInfo : `https://t.me/${tgHandle?.replace("@", "")}`,
+        });
+      } else {
+        contacts.push({ type: "联系方式", value: contactInfo });
+      }
+    }
+    // 始终添加默认联系方式
+    if (!contacts.find(c => c.type === "Telegram")) {
+      contacts.push({ type: "Telegram", value: "@XAU9876", link: "https://t.me/XAU9876" });
+    }
+    contacts.push({ type: "QQ群", value: "1079091794" });
+    contacts.push({ type: "微信", value: "XAU9876" });
+    return contacts;
+  };
+
   // 桌面端3列，平板2列，手机1列
   const cardColumns = isDesktop ? 3 : isTablet ? 2 : numColumns >= 3 ? 2 : 1;
   const cardGap = isDesktop ? 20 : isTablet ? 16 : 10;
+
+  // 计算节省金额
+  const calcSavings = (item: GroupBuyItem) => {
+    const total = parseFloat(item.targetPrice);
+    const perPerson = parseFloat(item.pricePerPerson);
+    if (total > 0 && perPerson > 0) {
+      const savings = total - perPerson;
+      const savingsPercent = Math.round((savings / total) * 100);
+      return { savings: savings.toFixed(0), percent: savingsPercent };
+    }
+    return null;
+  };
 
   const renderCard = ({ item, index }: { item: GroupBuyItem; index: number }) => {
     const progress = getProgressPercentage(item.currentParticipants, item.targetParticipants);
     const gradientColors = getGradientColors(index);
     const emoji = getEmoji(index);
+    const savings = calcSavings(item);
 
     return (
       <AnimatedListItem
@@ -195,33 +235,69 @@ export default function GroupBuyScreen() {
               backgroundColor: colors.surface,
               borderColor: colors.border,
               ...(Platform.OS === "web"
-                ? { boxShadow: "0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)" } as any
+                ? { boxShadow: "0 2px 12px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.06)" } as any
                 : {}),
             },
           ]}
         >
-          <LinearGradient
-            colors={gradientColors}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradientCover}
-          >
-            <Text style={styles.coverEmoji}>{emoji}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
-              <Text style={styles.statusText}>
-                {progress >= 100 ? "已满员" : "招募中"}
-              </Text>
+          {/* 封面区域 - 支持封面图 */}
+          {(item as any).coverImage ? (
+            <View style={styles.coverContainer}>
+              <Image
+                source={{ uri: (item as any).coverImage }}
+                style={styles.coverImage}
+                contentFit="cover"
+                transition={300}
+                cachePolicy="memory-disk"
+              />
+              <View style={[styles.statusBadge, { backgroundColor: progress >= 100 ? "rgba(239,68,68,0.9)" : "rgba(16,185,129,0.9)" }]}>
+                <Text style={styles.statusText}>
+                  {progress >= 100 ? "已满员" : "招募中"}
+                </Text>
+              </View>
+              {savings && (
+                <View style={styles.savingsBadge}>
+                  <Text style={styles.savingsText}>省 {savings.percent}%</Text>
+                </View>
+              )}
             </View>
-          </LinearGradient>
+          ) : (
+            <LinearGradient
+              colors={gradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.gradientCover}
+            >
+              <Text style={styles.coverEmoji}>{emoji}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+                <Text style={styles.statusText}>
+                  {progress >= 100 ? "已满员" : "招募中"}
+                </Text>
+              </View>
+              {savings && (
+                <View style={styles.savingsBadge}>
+                  <Text style={styles.savingsText}>省 {savings.percent}%</Text>
+                </View>
+              )}
+            </LinearGradient>
+          )}
 
           <View style={styles.cardContent}>
             <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={2}>
               {item.title}
             </Text>
-            <Text style={[styles.eaName, { color: colors.muted }]} numberOfLines={2}>
+            <Text style={[styles.eaName, { color: colors.muted }]} numberOfLines={1}>
               EA: {item.eaName}
             </Text>
 
+            {/* 描述（如果有） */}
+            {item.description && (
+              <Text style={[styles.descText, { color: colors.muted }]} numberOfLines={2}>
+                {item.description}
+              </Text>
+            )}
+
+            {/* 进度条 */}
             <View style={styles.progressSection}>
               <View style={styles.progressHeader}>
                 <Text style={[styles.progressLabel, { color: colors.foreground }]}>
@@ -234,24 +310,24 @@ export default function GroupBuyScreen() {
               <AnimatedProgressBar progress={progress} color={gradientColors[1]} delay={Math.min(index * 80, 400) + 300} />
             </View>
 
-            <View style={[styles.priceRow, { borderTopColor: colors.border }]}>
-              <View>
-                <Text style={[styles.priceLabel, { color: colors.muted }]}>人均</Text>
-                <Text style={[styles.priceValue, { color: "#F59E0B" }]}>
-                  ¥{item.pricePerPerson}
-                </Text>
+            {/* 价格对比区 - 参考1mt5风格 */}
+            <View style={[styles.priceCompare, { borderTopColor: colors.border }]}>
+              <View style={styles.priceCompareLeft}>
+                <Text style={[styles.priceCompareLabel, { color: colors.muted }]}>原价</Text>
+                <Text style={[styles.priceCompareOriginal, { color: colors.muted }]}>¥{item.targetPrice}</Text>
               </View>
-              <View style={styles.priceRight}>
-                <Text style={[styles.priceLabel, { color: colors.muted }]}>目标总价</Text>
-                <Text style={[styles.targetPrice, { color: colors.foreground }]}>
-                  ¥{item.targetPrice}
-                </Text>
+              <View style={styles.priceCompareArrow}>
+                <Text style={{ color: colors.muted, fontSize: 16 }}>→</Text>
+              </View>
+              <View style={styles.priceCompareRight}>
+                <Text style={[styles.priceCompareLabel, { color: colors.muted }]}>合购价/人</Text>
+                <Text style={[styles.priceCompareValue, { color: "#F59E0B" }]}>¥{item.pricePerPerson}</Text>
               </View>
             </View>
 
             <View style={[styles.tapHint, { backgroundColor: gradientColors[1] + "10" }]}>
               <Text style={[styles.tapHintText, { color: gradientColors[1] }]}>
-                点击查看联系方式 →
+                点击参与合购 →
               </Text>
             </View>
           </View>
@@ -274,10 +350,30 @@ export default function GroupBuyScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.infoCard, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}>
-        <Text style={[styles.infoText, { color: colors.foreground }]}>
-          💡 合购是多人分摊EA费用的方式，降低单人成本。点击卡片查看联系方式加入合购。
-        </Text>
+      {/* 合购优势说明 - 参考1mt5 */}
+      <View style={[styles.advantageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={styles.advantageRow}>
+          <View style={styles.advantageItem}>
+            <Text style={styles.advantageEmoji}>💰</Text>
+            <Text style={[styles.advantageLabel, { color: colors.foreground }]}>低至1/10</Text>
+            <Text style={[styles.advantageDesc, { color: colors.muted }]}>人均费用</Text>
+          </View>
+          <View style={styles.advantageItem}>
+            <Text style={styles.advantageEmoji}>🔒</Text>
+            <Text style={[styles.advantageLabel, { color: colors.foreground }]}>正版授权</Text>
+            <Text style={[styles.advantageDesc, { color: colors.muted }]}>官方渠道</Text>
+          </View>
+          <View style={styles.advantageItem}>
+            <Text style={styles.advantageEmoji}>👥</Text>
+            <Text style={[styles.advantageLabel, { color: colors.foreground }]}>多人拼团</Text>
+            <Text style={[styles.advantageDesc, { color: colors.muted }]}>共享使用</Text>
+          </View>
+          <View style={styles.advantageItem}>
+            <Text style={styles.advantageEmoji}>🛡️</Text>
+            <Text style={[styles.advantageLabel, { color: colors.foreground }]}>平台担保</Text>
+            <Text style={[styles.advantageDesc, { color: colors.muted }]}>安全保障</Text>
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -300,11 +396,9 @@ export default function GroupBuyScreen() {
   const renderContactModal = () => {
     if (!selectedItem) return null;
 
-    const contacts: { type: string; value: string; link?: string }[] = [
-      { type: "Telegram", value: "@XAU9876", link: "https://t.me/XAU9876" },
-      { type: "QQ群", value: "1079091794" },
-      { type: "微信", value: "XAU9876" },
-    ];
+    const contacts = parseContactInfo(selectedItem.contactInfo);
+    const savings = calcSavings(selectedItem);
+    const progress = getProgressPercentage(selectedItem.currentParticipants, selectedItem.targetParticipants);
 
     return (
       <Modal
@@ -332,23 +426,40 @@ export default function GroupBuyScreen() {
               </Text>
             </View>
 
+            {/* 价格对比卡片 */}
             <View style={[styles.modalPriceCard, { backgroundColor: colors.surface }]}>
               <View style={styles.modalPriceRow}>
                 <View style={styles.modalPriceItem}>
-                  <Text style={[styles.modalPriceLabel, { color: colors.muted }]}>人均价格</Text>
+                  <Text style={[styles.modalPriceLabel, { color: colors.muted }]}>合购价/人</Text>
                   <Text style={[styles.modalPriceValue, { color: "#F59E0B" }]}>
                     ¥{selectedItem.pricePerPerson}
                   </Text>
                 </View>
                 <View style={[styles.modalPriceDivider, { backgroundColor: colors.border }]} />
                 <View style={styles.modalPriceItem}>
-                  <Text style={[styles.modalPriceLabel, { color: colors.muted }]}>参与人数</Text>
+                  <Text style={[styles.modalPriceLabel, { color: colors.muted }]}>参与进度</Text>
                   <Text style={[styles.modalPriceValue, { color: colors.primary }]}>
                     {selectedItem.currentParticipants}/{selectedItem.targetParticipants}
                   </Text>
                 </View>
               </View>
+              {savings && (
+                <View style={[styles.modalSavingsRow, { backgroundColor: colors.success + "10" }]}>
+                  <Text style={[styles.modalSavingsText, { color: colors.success }]}>
+                    比原价 ¥{selectedItem.targetPrice} 节省 {savings.percent}%，每人仅需 ¥{selectedItem.pricePerPerson}
+                  </Text>
+                </View>
+              )}
             </View>
+
+            {/* 描述 */}
+            {selectedItem.description && (
+              <View style={[styles.modalDescCard, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.modalDescText, { color: colors.foreground }]}>
+                  {selectedItem.description}
+                </Text>
+              </View>
+            )}
 
             <View style={styles.contactList}>
               <Text style={[styles.contactTitle, { color: colors.foreground }]}>📱 联系方式</Text>
@@ -377,7 +488,7 @@ export default function GroupBuyScreen() {
 
             <View style={[styles.modalHint, { backgroundColor: colors.primary + "08" }]}>
               <Text style={[styles.modalHintText, { color: colors.muted }]}>
-                请通过以上联系方式咨询合购详情。
+                请通过以上联系方式咨询合购详情，确认后付款参与。
               </Text>
             </View>
 
@@ -429,17 +540,27 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 26, fontWeight: "800" },
   createBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   createBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  infoCard: { borderRadius: 14, padding: 14, borderWidth: 1, marginBottom: 4 },
-  infoText: { fontSize: 13, lineHeight: 20 },
-  cardWrapper: {},
+  // 优势说明卡片
+  advantageCard: { borderRadius: 16, padding: 16, borderWidth: 0.5, marginBottom: 4 },
+  advantageRow: { flexDirection: "row", justifyContent: "space-around" },
+  advantageItem: { alignItems: "center", flex: 1 },
+  advantageEmoji: { fontSize: 24, marginBottom: 6 },
+  advantageLabel: { fontSize: 12, fontWeight: "700", marginBottom: 2 },
+  advantageDesc: { fontSize: 10 },
+  // 卡片
   card: { borderRadius: 14, overflow: "hidden", borderWidth: 0.5 },
+  coverContainer: { height: 100, position: "relative", overflow: "hidden" },
+  coverImage: { width: "100%", height: "100%" },
   gradientCover: { height: 80, alignItems: "center", justifyContent: "center", position: "relative" },
   coverEmoji: { fontSize: 36 },
   statusBadge: { position: "absolute", top: 8, right: 8, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
   statusText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  savingsBadge: { position: "absolute", top: 8, left: 8, backgroundColor: "#EF4444", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  savingsText: { color: "#fff", fontSize: 10, fontWeight: "800" },
   cardContent: { padding: 14 },
-  cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 6, lineHeight: 24 },
-  eaName: { fontSize: 13, marginBottom: 10, lineHeight: 20 },
+  cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 4, lineHeight: 24 },
+  eaName: { fontSize: 13, marginBottom: 4, lineHeight: 20 },
+  descText: { fontSize: 12, lineHeight: 18, marginBottom: 8 },
   progressSection: { marginBottom: 10 },
   progressHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
   progressLabel: { fontSize: 12, fontWeight: "600" },
@@ -447,11 +568,14 @@ const styles = StyleSheet.create({
   progressTrack: { height: 6, borderRadius: 3, overflow: "hidden", position: "relative" as any },
   progressFill: { height: "100%", borderRadius: 3 },
   progressShimmer: { position: "absolute" as any, top: 0, left: 0, height: "100%", borderRadius: 3, backgroundColor: "rgba(255,255,255,0.3)" },
-  priceRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, marginBottom: 8 },
-  priceLabel: { fontSize: 11, marginBottom: 2 },
-  priceValue: { fontSize: 18, fontWeight: "800" },
-  priceRight: { alignItems: "flex-end" },
-  targetPrice: { fontSize: 14, fontWeight: "600" },
+  // 价格对比区
+  priceCompare: { flexDirection: "row", alignItems: "center", paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, marginBottom: 8 },
+  priceCompareLeft: { flex: 1, alignItems: "center" },
+  priceCompareArrow: { paddingHorizontal: 8 },
+  priceCompareRight: { flex: 1, alignItems: "center" },
+  priceCompareLabel: { fontSize: 10, marginBottom: 2 },
+  priceCompareOriginal: { fontSize: 14, fontWeight: "600", textDecorationLine: "line-through" },
+  priceCompareValue: { fontSize: 18, fontWeight: "800" },
   tapHint: { borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, alignItems: "center" },
   tapHintText: { fontSize: 12, fontWeight: "600" },
   emptyContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 60 },
@@ -466,12 +590,16 @@ const styles = StyleSheet.create({
   modalHeader: { alignItems: "center", marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: "800", marginBottom: 6, textAlign: "center" },
   modalSubtitle: { fontSize: 14 },
-  modalPriceCard: { borderRadius: 16, padding: 16, marginBottom: 20 },
+  modalPriceCard: { borderRadius: 16, padding: 16, marginBottom: 16 },
   modalPriceRow: { flexDirection: "row", alignItems: "center" },
   modalPriceItem: { flex: 1, alignItems: "center" },
   modalPriceDivider: { width: 1, height: 40 },
   modalPriceLabel: { fontSize: 12, marginBottom: 4 },
   modalPriceValue: { fontSize: 22, fontWeight: "800" },
+  modalSavingsRow: { marginTop: 12, borderRadius: 10, padding: 10, alignItems: "center" },
+  modalSavingsText: { fontSize: 12, fontWeight: "600" },
+  modalDescCard: { borderRadius: 12, padding: 14, marginBottom: 16 },
+  modalDescText: { fontSize: 13, lineHeight: 20 },
   contactList: { marginBottom: 16 },
   contactTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12 },
   contactItem: { flexDirection: "row", alignItems: "center", borderRadius: 14, padding: 14, marginBottom: 10 },

@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Animated, StyleSheet } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Animated, StyleSheet, Linking, Platform, ScrollView, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
 import { ScreenContainer } from "@/components/screen-container";
 import { StrategyCard } from "@/components/strategy-card";
 import { ContactModal } from "@/components/contact-modal";
@@ -16,12 +17,25 @@ type OrderBy = "latest" | "return" | "hot";
 
 const PAGE_SIZE = 12;
 
+// 标签筛选选项
+const TAG_FILTERS = [
+  { label: "全部", value: "" },
+  { label: "黄金", value: "黄金" },
+  { label: "马丁", value: "马丁" },
+  { label: "对冲", value: "对冲" },
+  { label: "趋势", value: "趋势" },
+  { label: "剥头皮", value: "剥头皮" },
+  { label: "网格", value: "网格" },
+  { label: "多品种", value: "多品种" },
+];
+
 export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
   const { numColumns, isDesktop } = useResponsive();
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(undefined);
   const [orderBy, setOrderBy] = useState<OrderBy>("hot");
+  const [tagFilter, setTagFilter] = useState("");
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [selectedStrategyTitle, setSelectedStrategyTitle] = useState("");
@@ -31,6 +45,56 @@ export default function HomeScreen() {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Banner 自动轮播
+  const bannerScrollRef = useRef<ScrollView>(null);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const screenWidth = Dimensions.get("window").width;
+  const bannerWidth = Math.min(screenWidth - 24, 800); // 减去 padding
+
+  const banners = [
+    {
+      id: "ddxau",
+      title: "点金 DDXAU",
+      subtitle: "四维共振 × 订单流 × AI量化",
+      description: "$280,000+ 实盘验证，4年+ 稳定盈利",
+      gradient: ["#92400E", "#D97706", "#FCD34D"] as readonly [string, string, ...string[]],
+      emoji: "🏆",
+      link: "https://ddxau.com",
+    },
+    {
+      id: "cooperation",
+      title: "合作共赢",
+      subtitle: "EA开发者 · 经纪商 · KOL",
+      description: "铸造者计划 | IB返佣 | 联合推广",
+      gradient: ["#1E40AF", "#3B82F6", "#93C5FD"] as readonly [string, string, ...string[]],
+      emoji: "🤝",
+      link: "",
+      route: "/moments",
+    },
+    {
+      id: "groupbuy",
+      title: "EA合购专区",
+      subtitle: "拼团购买，低价获取正版EA",
+      description: "多人合购，人均低至原价1/10",
+      gradient: ["#065F46", "#10B981", "#6EE7B7"] as readonly [string, string, ...string[]],
+      emoji: "🛒",
+      link: "",
+      route: "/group-buy",
+    },
+  ];
+
+  // Banner 自动轮播
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBannerIndex((prev) => {
+        const next = (prev + 1) % banners.length;
+        bannerScrollRef.current?.scrollTo({ x: next * bannerWidth, animated: true });
+        return next;
+      });
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [bannerWidth]);
 
   // Header入场动画
   const headerFade = useRef(new Animated.Value(0)).current;
@@ -46,6 +110,7 @@ export default function HomeScreen() {
   const { data: initialData, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
     platform: platformFilter,
     orderBy,
+    tag: tagFilter || undefined,
     limit: PAGE_SIZE,
     offset: 0,
   });
@@ -64,6 +129,7 @@ export default function HomeScreen() {
     {
       platform: platformFilter,
       orderBy,
+      tag: tagFilter || undefined,
       limit: PAGE_SIZE,
       offset: offset,
     },
@@ -113,9 +179,83 @@ export default function HomeScreen() {
     router.push(`/strategy/${id}` as any);
   };
 
+  const handleBannerPress = (banner: typeof banners[0]) => {
+    if (banner.link) {
+      Linking.openURL(banner.link);
+    } else if (banner.route) {
+      router.push(banner.route as any);
+    }
+  };
+
+  const renderBanner = () => (
+    <View style={bannerStyles.container}>
+      <ScrollView
+        ref={bannerScrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={(e) => {
+          const idx = Math.round(e.nativeEvent.contentOffset.x / bannerWidth);
+          setBannerIndex(idx);
+        }}
+        style={{ width: bannerWidth }}
+      >
+        {banners.map((banner) => (
+          <TouchableOpacity
+            key={banner.id}
+            onPress={() => handleBannerPress(banner)}
+            activeOpacity={0.9}
+            style={{ width: bannerWidth }}
+          >
+            <LinearGradient
+              colors={banner.gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={bannerStyles.bannerCard}
+            >
+              <View style={bannerStyles.bannerContent}>
+                <View style={bannerStyles.bannerTextArea}>
+                  <Text style={bannerStyles.bannerTitle}>{banner.title}</Text>
+                  <Text style={bannerStyles.bannerSubtitle}>{banner.subtitle}</Text>
+                  <Text style={bannerStyles.bannerDesc}>{banner.description}</Text>
+                  {banner.link ? (
+                    <View style={bannerStyles.bannerCta}>
+                      <Text style={bannerStyles.bannerCtaText}>立即了解 →</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={bannerStyles.bannerEmoji}>{banner.emoji}</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+      {/* 指示器 */}
+      <View style={bannerStyles.indicatorRow}>
+        {banners.map((_, i) => (
+          <View
+            key={i}
+            style={[
+              bannerStyles.indicator,
+              {
+                backgroundColor: i === bannerIndex ? colors.primary : colors.muted + "40",
+                width: i === bannerIndex ? 20 : 6,
+              },
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+
   const renderHeader = () => (
     <Animated.View style={{ opacity: headerFade, transform: [{ translateY: headerSlide }] }} className="mb-3">
-      <View className="flex-row items-center justify-between mb-3">
+      {/* Banner 轮播 */}
+      {renderBanner()}
+
+      {/* 标题栏 */}
+      <View className="flex-row items-center justify-between mb-3 mt-4">
         <Text className="text-3xl font-bold text-foreground">📊 策略广场</Text>
         <View className="flex-row">
           <TouchableOpacity
@@ -136,6 +276,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* 平台 + 排序筛选 */}
       <View className="flex-row flex-wrap">
         <TouchableOpacity
           onPress={() => setPlatformFilter(undefined)}
@@ -180,6 +321,38 @@ export default function HomeScreen() {
           <Text className={`text-sm ${orderBy === "hot" ? "text-primary font-semibold" : "text-muted"}`}>热度</Text>
         </TouchableOpacity>
       </View>
+
+      {/* 标签筛选行 */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ marginBottom: 8 }}
+        contentContainerStyle={{ paddingRight: 12 }}
+      >
+        {TAG_FILTERS.map((tag) => (
+          <TouchableOpacity
+            key={tag.value}
+            onPress={() => setTagFilter(tag.value)}
+            style={[
+              tagStyles.chip,
+              {
+                backgroundColor: tagFilter === tag.value ? colors.primary + "20" : colors.surface,
+                borderColor: tagFilter === tag.value ? colors.primary : colors.border,
+              },
+            ]}
+            activeOpacity={0.7}
+          >
+            <Text
+              style={[
+                tagStyles.chipText,
+                { color: tagFilter === tag.value ? colors.primary : colors.muted },
+              ]}
+            >
+              {tag.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </Animated.View>
   );
 
@@ -270,6 +443,7 @@ export default function HomeScreen() {
             totalReturn={item.totalReturn || "0.00"}
             winRate={item.winRate || "0.00"}
             price={item.price || "0.00"}
+            originalPrice={item.originalPrice}
             isFree={item.isFree}
             downloadCount={item.downloadCount}
             virtualDownloads={item.virtualDownloads || 0}
@@ -277,6 +451,10 @@ export default function HomeScreen() {
             pairs={item.pairs}
             viewCount={item.viewCount}
             createdAt={item.createdAt}
+            tags={item.tags}
+            productType={item.productType}
+            isFeatured={item.isFeatured}
+            featuredLink={item.featuredLink}
             onPress={() => handleStrategyPress(item.id)}
             onSubscribePress={() => handleSubscribePress(item.title)}
           />
@@ -299,6 +477,86 @@ export default function HomeScreen() {
     </ScreenContainer>
   );
 }
+
+const bannerStyles = StyleSheet.create({
+  container: {
+    marginBottom: 4,
+  },
+  bannerCard: {
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 0,
+    minHeight: 130,
+    justifyContent: "center",
+  },
+  bannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  bannerTextArea: {
+    flex: 1,
+    paddingRight: 16,
+  },
+  bannerTitle: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "900",
+    marginBottom: 4,
+  },
+  bannerSubtitle: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  bannerDesc: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  bannerCta: {
+    marginTop: 10,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+  },
+  bannerCtaText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  bannerEmoji: {
+    fontSize: 52,
+  },
+  indicatorRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 4,
+  },
+  indicator: {
+    height: 4,
+    borderRadius: 2,
+  },
+});
+
+const tagStyles = StyleSheet.create({
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 14,
+    marginRight: 8,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+});
 
 const footerStyles = StyleSheet.create({
   bannerWrapper: {

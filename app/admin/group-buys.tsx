@@ -14,6 +14,7 @@ export default function AdminGroupBuys() {
     title: "",
     eaName: "",
     description: "",
+    coverImage: "",
     targetPrice: "",
     targetParticipants: "",
     pricePerPerson: "",
@@ -36,7 +37,7 @@ export default function AdminGroupBuys() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const resetForm = () => {
-    setForm({ title: "", eaName: "", description: "", targetPrice: "", targetParticipants: "", pricePerPerson: "", contactInfo: "", status: "active" });
+    setForm({ title: "", eaName: "", description: "", coverImage: "", targetPrice: "", targetParticipants: "", pricePerPerson: "", contactInfo: "", status: "active" });
     setEditingItem(null);
   };
 
@@ -51,6 +52,7 @@ export default function AdminGroupBuys() {
       title: item.title || "",
       eaName: item.eaName || "",
       description: item.description || "",
+      coverImage: item.coverImage || "",
       targetPrice: item.targetPrice || "",
       targetParticipants: String(item.targetParticipants || ""),
       pricePerPerson: item.pricePerPerson || "",
@@ -199,6 +201,15 @@ export default function AdminGroupBuys() {
                 placeholderTextColor={colors.muted}
                 multiline
                 numberOfLines={3}
+              />
+
+              <Text style={[styles.label, { color: colors.muted }]}>封面图片URL</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+                value={form.coverImage}
+                onChangeText={(v) => setForm({ ...form, coverImage: v })}
+                placeholder="合购封面图片地址（可选）"
+                placeholderTextColor={colors.muted}
               />
 
               <Text style={[styles.label, { color: colors.muted }]}>目标价格 *</Text>

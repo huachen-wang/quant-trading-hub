@@ -40,8 +40,20 @@ export const strategies = mysqlTable("strategies", {
   // 下载和付费
   downloadUrl: text("downloadUrl"), // 下载链接
   price: decimal("price", { precision: 10, scale: 2 }).default("0.00"), // 价格,0为免费
+  originalPrice: decimal("originalPrice", { precision: 10, scale: 2 }), // 原价（用于划线价展示）
   isFree: boolean("isFree").default(true).notNull(), // 是否免费
   downloadCount: int("downloadCount").default(0).notNull(),
+  
+  // 产品分类与标签
+  productType: varchar("productType", { length: 20 }).default("ea").notNull(), // ea | indicator | tool
+  tags: text("tags"), // 逗号分隔标签，如 "马丁,对冲,黄金"
+  
+  // 图片画廊（JSON数组，存储多张实盘/回测截图URL）
+  galleryImages: text("galleryImages"), // JSON数组字符串
+  
+  // 旗舰/置顶标记
+  isFeatured: boolean("isFeatured").default(false).notNull(), // 是否为旗舰推荐
+  featuredLink: text("featuredLink"), // 旗舰产品外部跳转链接（如 ddxau.com）
   
   // 联系方式
   telegramGroup: varchar("telegramGroup", { length: 255 }), // Telegram群组
@@ -199,6 +211,7 @@ export const groupBuys = mysqlTable("group_buys", {
   title: varchar("title", { length: 255 }).notNull(), // 合购标题
   eaName: varchar("eaName", { length: 255 }).notNull(), // EA名称
   description: text("description"), // 合购描述
+  coverImage: text("coverImage"), // 合购封面图
   targetPrice: decimal("targetPrice", { precision: 10, scale: 2 }).notNull(), // 目标价格
   currentParticipants: int("currentParticipants").default(0).notNull(), // 当前参与人数
   targetParticipants: int("targetParticipants").notNull(), // 目标参与人数

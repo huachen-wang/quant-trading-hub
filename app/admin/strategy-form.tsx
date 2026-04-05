@@ -27,12 +27,19 @@ export default function StrategyForm() {
     winRate: "0.00",
     downloadUrl: "",
     price: "0.00",
+    originalPrice: "",
     isFree: true,
     telegramGroup: "",
     qqGroup: "",
     virtualSubscribers: 0,
     virtualDownloads: 0,
     status: "published" as "draft" | "published" | "archived",
+    // 新增字段
+    productType: "ea" as "ea" | "indicator" | "tool",
+    tags: "",
+    galleryImages: "",
+    isFeatured: false,
+    featuredLink: "",
   });
 
   useEffect(() => {
@@ -54,12 +61,18 @@ export default function StrategyForm() {
               winRate: strategy.winRate || "0.00",
               downloadUrl: strategy.downloadUrl || "",
               price: strategy.price || "0.00",
+              originalPrice: strategy.originalPrice || "",
               isFree: strategy.isFree ?? true,
               telegramGroup: strategy.telegramGroup || "",
               qqGroup: strategy.qqGroup || "",
               virtualSubscribers: strategy.virtualSubscribers || 0,
               virtualDownloads: strategy.virtualDownloads || 0,
               status: strategy.status || "published",
+              productType: strategy.productType || "ea",
+              tags: strategy.tags || "",
+              galleryImages: strategy.galleryImages || "",
+              isFeatured: strategy.isFeatured ?? false,
+              featuredLink: strategy.featuredLink || "",
             });
           }
         })
@@ -127,11 +140,46 @@ export default function StrategyForm() {
           ))}
         </View>
 
+        {/* 产品类型 */}
+        <Text style={[s.label, { color: colors.foreground }]}>产品类型</Text>
+        <View style={s.row}>
+          {([
+            { label: "EA", value: "ea" },
+            { label: "指标", value: "indicator" },
+            { label: "工具", value: "tool" },
+          ] as const).map((opt) => (
+            <TouchableOpacity key={opt.value} onPress={() => setFormData({ ...formData, productType: opt.value })} style={[s.chip, { backgroundColor: formData.productType === opt.value ? colors.primary : colors.surface }]} activeOpacity={0.7}>
+              <Text style={{ color: formData.productType === opt.value ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={[s.label, { color: colors.foreground }]}>标签 (逗号分隔)</Text>
+        <TextInput value={formData.tags} onChangeText={(t) => setFormData({ ...formData, tags: t })} placeholder="马丁,对冲,趋势,剥头皮,黄金" placeholderTextColor={colors.muted} style={inputStyle} />
+
         <Text style={[s.label, { color: colors.foreground }]}>交易对 (逗号分隔)</Text>
         <TextInput value={formData.pairs} onChangeText={(t) => setFormData({ ...formData, pairs: t })} placeholder="EURUSD, GBPUSD" placeholderTextColor={colors.muted} style={inputStyle} />
 
         <Text style={[s.label, { color: colors.foreground }]}>时间周期</Text>
         <TextInput value={formData.timeframe} onChangeText={(t) => setFormData({ ...formData, timeframe: t })} placeholder="H1, H4, D1" placeholderTextColor={colors.muted} style={inputStyle} />
+
+        {/* 旗舰产品设置 */}
+        <Text style={[s.sectionTitle, { color: "#D97706" }]}>⭐ 旗舰产品设置</Text>
+        <Text style={[{ fontSize: 12, color: colors.muted, marginBottom: 8 }]}>旗舰产品将在首页置顶展示，并显示金色标签</Text>
+
+        <View style={[s.row, { alignItems: "center", justifyContent: "space-between", marginBottom: 12 }]}>
+          <Text style={[s.label, { color: colors.foreground, marginBottom: 0 }]}>标记为旗舰产品</Text>
+          <TouchableOpacity onPress={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })} style={[s.toggle, { backgroundColor: formData.isFeatured ? "#D97706" : colors.muted }]} activeOpacity={0.7}>
+            <View style={[s.toggleDot, { marginLeft: formData.isFeatured ? 22 : 2 }]} />
+          </TouchableOpacity>
+        </View>
+
+        {formData.isFeatured && (
+          <>
+            <Text style={[s.label, { color: colors.foreground }]}>旗舰跳转链接</Text>
+            <TextInput value={formData.featuredLink} onChangeText={(t) => setFormData({ ...formData, featuredLink: t })} placeholder="https://ddxau.com" placeholderTextColor={colors.muted} style={inputStyle} />
+          </>
+        )}
 
         {/* 实盘数据 */}
         <Text style={[s.sectionTitle, { color: colors.foreground }]}>实盘数据</Text>
@@ -164,6 +212,10 @@ export default function StrategyForm() {
         <Text style={[s.label, { color: colors.foreground }]}>封面图片URL</Text>
         <TextInput value={formData.coverImage} onChangeText={(t) => setFormData({ ...formData, coverImage: t })} placeholder="策略封面图片地址" placeholderTextColor={colors.muted} style={inputStyle} />
 
+        <Text style={[s.label, { color: colors.foreground }]}>画廊图片 (JSON数组)</Text>
+        <TextInput value={formData.galleryImages} onChangeText={(t) => setFormData({ ...formData, galleryImages: t })} placeholder='["https://img1.jpg","https://img2.jpg"]' placeholderTextColor={colors.muted} multiline numberOfLines={3} style={[...inputStyle, { minHeight: 70, textAlignVertical: "top" }]} />
+        <Text style={[{ fontSize: 11, color: colors.muted, marginBottom: 12, marginTop: -8 }]}>用于详情页图片画廊，格式为JSON数组</Text>
+
         <View style={[s.row, { alignItems: "center", justifyContent: "space-between", marginBottom: 12 }]}>
           <Text style={[s.label, { color: colors.foreground, marginBottom: 0 }]}>免费策略</Text>
           <TouchableOpacity onPress={() => setFormData({ ...formData, isFree: !formData.isFree })} style={[s.toggle, { backgroundColor: formData.isFree ? colors.success : colors.muted }]} activeOpacity={0.7}>
@@ -173,8 +225,23 @@ export default function StrategyForm() {
 
         {!formData.isFree && (
           <>
-            <Text style={[s.label, { color: colors.foreground }]}>价格</Text>
-            <TextInput value={formData.price} onChangeText={(t) => setFormData({ ...formData, price: t })} keyboardType="numeric" style={inputStyle} />
+            <View style={s.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.label, { color: colors.foreground }]}>现价</Text>
+                <TextInput value={formData.price} onChangeText={(t) => setFormData({ ...formData, price: t })} keyboardType="numeric" style={inputStyle} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.label, { color: colors.foreground }]}>原价 (划线价)</Text>
+                <TextInput value={formData.originalPrice} onChangeText={(t) => setFormData({ ...formData, originalPrice: t })} keyboardType="numeric" placeholder="留空则不显示折扣" placeholderTextColor={colors.muted} style={inputStyle} />
+              </View>
+            </View>
+            {formData.originalPrice && parseFloat(formData.originalPrice) > parseFloat(formData.price) && (
+              <View style={[s.discountPreview, { backgroundColor: "#EF4444" + "15" }]}>
+                <Text style={[s.discountPreviewText, { color: "#EF4444" }]}>
+                  折扣预览: 原价 ¥{formData.originalPrice} → 现价 ¥{formData.price}，优惠 {Math.round((1 - parseFloat(formData.price) / parseFloat(formData.originalPrice)) * 100)}%
+                </Text>
+              </View>
+            )}
           </>
         )}
 
@@ -232,4 +299,6 @@ const s = StyleSheet.create({
   toggleDot: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff" },
   submitBtn: { marginTop: 24, paddingVertical: 14, borderRadius: 14, alignItems: "center" },
   submitBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  discountPreview: { borderRadius: 10, padding: 10, marginBottom: 12, marginTop: -4 },
+  discountPreviewText: { fontSize: 12, fontWeight: "600", textAlign: "center" },
 });

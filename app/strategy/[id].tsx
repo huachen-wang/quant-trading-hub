@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Platform,
   useWindowDimensions,
   Modal,
+  Dimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -40,6 +41,10 @@ export default function StrategyDetailScreen() {
   const [reviewContent, setReviewContent] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [showReviewSuccess, setShowReviewSuccess] = useState(false);
+  // 图片画廊
+  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const galleryScrollRef = useRef<ScrollView>(null);
 
   const strategyId = parseInt(id || "0");
   const isDesktop = Platform.OS === "web" && width >= 768;
@@ -156,7 +161,9 @@ export default function StrategyDetailScreen() {
   }
 
   const gradientColors: readonly [string, string, ...string[]] =
-    strategy.platform === "MT4" ? ["#1E3A8A", "#3B82F6"] : ["#7C3AED", "#A78BFA"];
+    (strategy as any).isFeatured
+      ? ["#92400E", "#D97706"]
+      : strategy.platform === "MT4" ? ["#1E3A8A", "#3B82F6"] : ["#7C3AED", "#A78BFA"];
 
   const returnValue = parseFloat(strategy.totalReturn || "0");
   const isPositive = returnValue >= 0;
@@ -166,9 +173,43 @@ export default function StrategyDetailScreen() {
   const hasTelegram = !!strategy.telegramGroup;
   const hasQQ = !!strategy.qqGroup;
 
+  // 新字段（安全取值）
+  const originalPrice = (strategy as any).originalPrice;
+  const tags = (strategy as any).tags;
+  const productType = (strategy as any).productType;
+  const galleryImagesRaw = (strategy as any).galleryImages;
+  const isFeatured = (strategy as any).isFeatured;
+  const featuredLink = (strategy as any).featuredLink;
+
+  // 解析画廊图片
+  let galleryImages: string[] = [];
+  try {
+    if (galleryImagesRaw) {
+      galleryImages = JSON.parse(galleryImagesRaw);
+    }
+  } catch {}
+  // 如果有封面图，也加入画廊
+  const allImages = strategy.coverImage
+    ? [strategy.coverImage, ...galleryImages.filter(img => img !== strategy.coverImage)]
+    : galleryImages;
+
+  // 解析标签
+  const tagList = tags ? tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [];
+
+  // 价格锚点
+  const priceNum = parseFloat(strategy.price || "0");
+  const originalPriceNum = parseFloat(originalPrice || "0");
+  const hasDiscount = !strategy.isFree && originalPriceNum > 0 && originalPriceNum > priceNum;
+  const discountPercent = hasDiscount ? Math.round((1 - priceNum / originalPriceNum) * 100) : 0;
+
+  // 产品类型
+  const productTypeLabel = productType === "indicator" ? "指标" : productType === "tool" ? "工具" : "EA";
+
   // 用户评价最多显示3条
   const displayReviews = userReviews ? userReviews.slice(0, 3) : [];
   const hasMoreReviews = userReviews && userReviews.length > 3;
+
+  const galleryWidth = Math.min(width - 32, 688);
 
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
@@ -313,6 +354,41 @@ export default function StrategyDetailScreen() {
         </TouchableOpacity>
       </Modal>
 
+      {/* 图片画廊全屏弹窗 */}
+      <Modal
+        visible={showGalleryModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGalleryModal(false)}
+      >
+        <View style={styles.galleryModalOverlay}>
+          <TouchableOpacity
+            onPress={() => setShowGalleryModal(false)}
+            style={styles.galleryCloseBtn}
+          >
+            <Text style={styles.galleryCloseText}>✕</Text>
+          </TouchableOpacity>
+          <ScrollView
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            contentOffset={{ x: galleryIndex * width, y: 0 }}
+          >
+            {allImages.map((img, i) => (
+              <View key={i} style={{ width, justifyContent: "center", alignItems: "center" }}>
+                <Image
+                  source={{ uri: img }}
+                  style={{ width: width - 40, height: width - 40 }}
+                  contentFit="contain"
+                  transition={200}
+                />
+              </View>
+            ))}
+          </ScrollView>
+          <Text style={styles.galleryCounter}>{galleryIndex + 1} / {allImages.length}</Text>
+        </View>
+      </Modal>
+
       <ScrollView className="flex-1" contentContainerStyle={isDesktop ? styles.desktopContainer : undefined}>
         <View style={isDesktop ? [styles.desktopContent, { maxWidth: maxContentWidth }] : undefined}>
           {/* 顶部导航栏 */}
@@ -334,20 +410,91 @@ export default function StrategyDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* 封面 */}
-          {strategy.coverImage ? (
-            <View style={[styles.coverGradient, isDesktop && styles.coverDesktop, { overflow: 'hidden' }]}>
-              <Image
-                source={{ uri: strategy.coverImage }}
-                style={{ width: '100%', height: '100%' }}
-                placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
-                contentFit="cover"
-                transition={300}
-                cachePolicy="memory-disk"
-              />
-              <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
-                <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform}</Text>
+          {/* 封面 / 图片画廊 */}
+          {allImages.length > 1 ? (
+            <View style={[styles.galleryContainer, isDesktop && styles.coverDesktop]}>
+              <ScrollView
+                ref={galleryScrollRef}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onMomentumScrollEnd={(e) => {
+                  const idx = Math.round(e.nativeEvent.contentOffset.x / galleryWidth);
+                  setGalleryIndex(idx);
+                }}
+                style={{ width: galleryWidth }}
+              >
+                {allImages.map((img, i) => (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => { setGalleryIndex(i); setShowGalleryModal(true); }}
+                    activeOpacity={0.9}
+                    style={{ width: galleryWidth }}
+                  >
+                    <Image
+                      source={{ uri: img }}
+                      style={{ width: galleryWidth, height: isDesktop ? 220 : 180, borderRadius: 20 }}
+                      contentFit="cover"
+                      transition={300}
+                      cachePolicy="memory-disk"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              {/* 画廊指示器 */}
+              <View style={styles.galleryIndicatorRow}>
+                {allImages.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.galleryIndicator,
+                      {
+                        backgroundColor: i === galleryIndex ? "#fff" : "rgba(255,255,255,0.4)",
+                        width: i === galleryIndex ? 16 : 6,
+                      },
+                    ]}
+                  />
+                ))}
               </View>
+              {/* 平台标签 */}
+              <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
+                <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform} · {productTypeLabel}</Text>
+              </View>
+              {/* 旗舰标签 */}
+              {isFeatured && (
+                <View style={styles.featuredDetailBadge}>
+                  <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.featuredDetailGradient}>
+                    <Text style={styles.featuredDetailText}>⭐ 官方旗舰</Text>
+                  </LinearGradient>
+                </View>
+              )}
+            </View>
+          ) : strategy.coverImage ? (
+            <View style={[styles.coverGradient, isDesktop && styles.coverDesktop, { overflow: 'hidden' }]}>
+              <TouchableOpacity
+                onPress={() => { setGalleryIndex(0); setShowGalleryModal(true); }}
+                activeOpacity={0.9}
+                style={{ width: '100%', height: '100%' }}
+              >
+                <Image
+                  source={{ uri: strategy.coverImage }}
+                  style={{ width: '100%', height: '100%' }}
+                  placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
+                  contentFit="cover"
+                  transition={300}
+                  cachePolicy="memory-disk"
+                />
+              </TouchableOpacity>
+              <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
+                <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform} · {productTypeLabel}</Text>
+              </View>
+              {isFeatured && (
+                <View style={styles.featuredDetailBadge}>
+                  <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.featuredDetailGradient}>
+                    <Text style={styles.featuredDetailText}>⭐ 官方旗舰</Text>
+                  </LinearGradient>
+                </View>
+              )}
             </View>
           ) : (
             <LinearGradient
@@ -358,14 +505,26 @@ export default function StrategyDetailScreen() {
             >
               <Text style={styles.coverEmoji}>📈</Text>
               <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
-                <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform}</Text>
+                <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform} · {productTypeLabel}</Text>
               </View>
             </LinearGradient>
           )}
 
           {/* 标题和描述 */}
           <View style={styles.titleSection}>
-            <Text style={[styles.title, { color: colors.foreground }]}>{strategy.title}</Text>
+            <View style={styles.titleRow}>
+              <Text style={[styles.title, { color: isFeatured ? "#D97706" : colors.foreground, flex: 1 }]}>{strategy.title}</Text>
+            </View>
+            {/* 标签 */}
+            {tagList.length > 0 && (
+              <View style={styles.tagRow}>
+                {tagList.map((tag: string, i: number) => (
+                  <View key={i} style={[styles.tagChip, { backgroundColor: colors.primary + "15" }]}>
+                    <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
             <Text style={[styles.description, { color: colors.muted }]}>{strategy.description}</Text>
           </View>
 
@@ -411,7 +570,7 @@ export default function StrategyDetailScreen() {
             </View>
           </View>
 
-          {/* 价格和操作 - 按钮无数据时置灰 */}
+          {/* 价格和操作 */}
           <View style={styles.section}>
             <View style={[styles.actionCard, { backgroundColor: colors.surface }]}>
               <View style={styles.priceRow}>
@@ -420,7 +579,17 @@ export default function StrategyDetailScreen() {
                   {strategy.isFree ? (
                     <Text style={[styles.priceValue, { color: colors.success }]}>免费</Text>
                   ) : (
-                    <Text style={[styles.priceValue, { color: "#F59E0B" }]}>¥{strategy.price}</Text>
+                    <View style={styles.priceDisplayRow}>
+                      <Text style={[styles.priceValue, { color: "#F59E0B" }]}>¥{strategy.price}</Text>
+                      {hasDiscount && (
+                        <View style={styles.priceAnchor}>
+                          <Text style={[styles.originalPriceText, { color: colors.muted }]}>¥{originalPrice}</Text>
+                          <View style={styles.discountBadge}>
+                            <Text style={styles.discountText}>-{discountPercent}%</Text>
+                          </View>
+                        </View>
+                      )}
+                    </View>
                   )}
                 </View>
                 <View style={styles.priceRight}>
@@ -429,25 +598,35 @@ export default function StrategyDetailScreen() {
                 </View>
               </View>
 
-              {/* 下载按钮 - 无URL时置灰 */}
-              <TouchableOpacity
-                onPress={hasDownloadUrl ? handleDownload : undefined}
-                disabled={!hasDownloadUrl}
-                style={[
-                  styles.downloadBtn,
-                  { backgroundColor: hasDownloadUrl ? colors.primary : colors.muted + "40" },
-                ]}
-                activeOpacity={hasDownloadUrl ? 0.8 : 1}
-              >
-                <Text style={[
-                  styles.downloadBtnText,
-                  { color: hasDownloadUrl ? "#fff" : colors.muted },
-                ]}>
-                  {hasDownloadUrl ? "下载EA" : "暂无下载链接"}
-                </Text>
-              </TouchableOpacity>
+              {/* 旗舰产品跳转按钮 */}
+              {isFeatured && featuredLink ? (
+                <TouchableOpacity
+                  onPress={() => Linking.openURL(featuredLink)}
+                  style={[styles.downloadBtn, { backgroundColor: "#D97706" }]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.downloadBtnText}>⭐ 前往官网了解详情</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={hasDownloadUrl ? handleDownload : undefined}
+                  disabled={!hasDownloadUrl}
+                  style={[
+                    styles.downloadBtn,
+                    { backgroundColor: hasDownloadUrl ? colors.primary : colors.muted + "40" },
+                  ]}
+                  activeOpacity={hasDownloadUrl ? 0.8 : 1}
+                >
+                  <Text style={[
+                    styles.downloadBtnText,
+                    { color: hasDownloadUrl ? "#fff" : colors.muted },
+                  ]}>
+                    {hasDownloadUrl ? "下载EA" : "暂无下载链接"}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
-              {/* 联系按钮 - 无数据时置灰或隐藏 */}
+              {/* 联系按钮 */}
               <View style={styles.contactRow}>
                 <TouchableOpacity
                   onPress={hasTelegram ? () => handleContact("telegram") : undefined}
@@ -490,6 +669,37 @@ export default function StrategyDetailScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </View>
+
+          {/* 推荐经纪商 & VPS */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>推荐交易环境</Text>
+            <View style={styles.recommendRow}>
+              <TouchableOpacity
+                onPress={() => Linking.openURL("https://www.blueberrymarkets.com/?ref=quantarsenal")}
+                style={[styles.recommendCard, { backgroundColor: colors.surface }]}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.recommendEmoji}>🏦</Text>
+                <Text style={[styles.recommendTitle, { color: colors.foreground }]}>Blueberry Markets</Text>
+                <Text style={[styles.recommendDesc, { color: colors.muted }]}>推荐经纪商 · 低点差</Text>
+                <View style={[styles.recommendBadge, { backgroundColor: colors.success + "15" }]}>
+                  <Text style={[styles.recommendBadgeText, { color: colors.success }]}>官方合作</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => Linking.openURL("https://www.fxvm.net/?ref=quantarsenal")}
+                style={[styles.recommendCard, { backgroundColor: colors.surface }]}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.recommendEmoji}>🖥️</Text>
+                <Text style={[styles.recommendTitle, { color: colors.foreground }]}>FXVM</Text>
+                <Text style={[styles.recommendDesc, { color: colors.muted }]}>推荐VPS · 低延迟</Text>
+                <View style={[styles.recommendBadge, { backgroundColor: colors.primary + "15" }]}>
+                  <Text style={[styles.recommendBadgeText, { color: colors.primary }]}>稳定可靠</Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -553,7 +763,7 @@ export default function StrategyDetailScreen() {
             )}
           </View>
 
-          {/* 用户评价区 - 最多显示3条 + 查看更多 + 弹窗发表 */}
+          {/* 用户评价区 */}
           <View style={styles.section}>
             <View style={styles.reviewSectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>
@@ -601,7 +811,6 @@ export default function StrategyDetailScreen() {
                   </View>
                 ))}
 
-                {/* 查看全部评价按钮 */}
                 {hasMoreReviews && (
                   <TouchableOpacity
                     onPress={() => setShowAllComments(true)}
@@ -699,6 +908,77 @@ const styles = StyleSheet.create({
   coverEmoji: {
     fontSize: 48,
   },
+  // 画廊容器
+  galleryContainer: {
+    marginHorizontal: 16,
+    height: 180,
+    borderRadius: 20,
+    overflow: "hidden",
+    marginBottom: 16,
+    position: "relative",
+  },
+  galleryIndicatorRow: {
+    position: "absolute",
+    bottom: 10,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 4,
+  },
+  galleryIndicator: {
+    height: 4,
+    borderRadius: 2,
+  },
+  // 画廊全屏弹窗
+  galleryModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  galleryCloseBtn: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  galleryCloseText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  galleryCounter: {
+    position: "absolute",
+    bottom: 60,
+    alignSelf: "center",
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  // 旗舰标签
+  featuredDetailBadge: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    borderBottomRightRadius: 12,
+    overflow: "hidden",
+  },
+  featuredDetailGradient: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  featuredDetailText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
+  },
   platformBadge: {
     position: "absolute",
     top: 12,
@@ -715,11 +995,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
   title: {
     fontSize: 24,
     fontWeight: "800",
-    marginBottom: 6,
     lineHeight: 32,
+  },
+  tagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 8,
+  },
+  tagChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  tagText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   description: {
     fontSize: 14,
@@ -794,6 +1093,31 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
   },
+  priceDisplayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  priceAnchor: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  originalPriceText: {
+    fontSize: 14,
+    textDecorationLine: "line-through",
+  },
+  discountBadge: {
+    backgroundColor: "#EF4444",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  discountText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
+  },
   priceRight: {
     alignItems: "flex-end",
   },
@@ -813,6 +1137,7 @@ const styles = StyleSheet.create({
   downloadBtnText: {
     fontWeight: "700",
     fontSize: 16,
+    color: "#fff",
   },
   contactRow: {
     flexDirection: "row",
@@ -827,6 +1152,41 @@ const styles = StyleSheet.create({
   contactBtnText: {
     fontWeight: "600",
     fontSize: 14,
+  },
+  // 推荐交易环境
+  recommendRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  recommendCard: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+  },
+  recommendEmoji: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  recommendTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  recommendDesc: {
+    fontSize: 11,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  recommendBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  recommendBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
   },
   adminInput: {
     borderRadius: 16,
@@ -876,7 +1236,6 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
   },
-
   // 用户评价区
   reviewSectionHeader: {
     flexDirection: "row",
@@ -944,7 +1303,6 @@ const styles = StyleSheet.create({
     padding: 24,
     alignItems: "center",
   },
-
   // 弹窗
   modalOverlay: {
     flex: 1,
