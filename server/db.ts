@@ -107,32 +107,57 @@ export async function getStrategies(params: {
   const db = await getDb();
   if (!db) return [];
 
-  const conditions: any[] = [eq(strategies.status, "published")];
-  if (params.platform) conditions.push(eq(strategies.platform, params.platform));
-  if (params.tag) conditions.push(like(strategies.tags, `%${params.tag}%`));
-  if (params.productType) conditions.push(eq(strategies.productType, params.productType));
+  try {
+    // 尝试使用新字段查询（含标签筛选、产品类型筛选、旗舰置顶）
+    const conditions: any[] = [eq(strategies.status, "published")];
+    if (params.platform) conditions.push(eq(strategies.platform, params.platform));
+    if (params.tag) conditions.push(like(strategies.tags, `%${params.tag}%`));
+    if (params.productType) conditions.push(eq(strategies.productType, params.productType));
 
-  const whereConditions = and(...conditions);
+    const whereConditions = and(...conditions);
 
-  // 旗舰产品置顶，然后按排序规则
-  const orderByColumn =
-    params.orderBy === "popular"
-      ? desc(strategies.downloadCount)
-      : params.orderBy === "return"
-        ? desc(strategies.totalReturn)
-        : params.orderBy === "hot"
-          ? desc(sql`${strategies.viewCount} + ${strategies.virtualSubscribers} * 10`)
-          : desc(strategies.createdAt);
+    const orderByColumn =
+      params.orderBy === "popular"
+        ? desc(strategies.downloadCount)
+        : params.orderBy === "return"
+          ? desc(strategies.totalReturn)
+          : params.orderBy === "hot"
+            ? desc(sql`${strategies.viewCount} + ${strategies.virtualSubscribers} * 10`)
+            : desc(strategies.createdAt);
 
-  const query = db
-    .select()
-    .from(strategies)
-    .where(whereConditions)
-    .orderBy(desc(strategies.isFeatured), orderByColumn)
-    .limit(params.limit || 20)
-    .offset(params.offset || 0);
+    const query = db
+      .select()
+      .from(strategies)
+      .where(whereConditions)
+      .orderBy(desc(strategies.isFeatured), orderByColumn)
+      .limit(params.limit || 20)
+      .offset(params.offset || 0);
 
-  return query;
+    return await query;
+  } catch (error: any) {
+    // 如果新字段不存在（迁移尚未执行），回退到基础查询
+    console.warn("[getStrategies] New columns not available, falling back to basic query:", error?.message);
+    const conditions: any[] = [eq(strategies.status, "published")];
+    if (params.platform) conditions.push(eq(strategies.platform, params.platform));
+    const whereConditions = and(...conditions);
+
+    const orderByColumn =
+      params.orderBy === "popular"
+        ? desc(strategies.downloadCount)
+        : params.orderBy === "return"
+          ? desc(strategies.totalReturn)
+          : params.orderBy === "hot"
+            ? desc(sql`${strategies.viewCount} + ${strategies.virtualSubscribers} * 10`)
+            : desc(strategies.createdAt);
+
+    return db
+      .select()
+      .from(strategies)
+      .where(whereConditions)
+      .orderBy(orderByColumn)
+      .limit(params.limit || 20)
+      .offset(params.offset || 0);
+  }
 }
 
 export async function getStrategyById(id: number) {

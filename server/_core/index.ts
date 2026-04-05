@@ -9,6 +9,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import * as db from "../db";
+import { runMigrations } from "../migrate";
 
 // ES模块中获取__dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -145,6 +146,11 @@ function escapeHtml(str: string): string {
 }
 
 async function startServer() {
+  // 自动执行数据库迁移（安全的，可重复执行）
+  console.log("[startup] Running database migrations...");
+  await runMigrations();
+  console.log("[startup] Migrations complete, starting server...");
+
   const app = express();
   const server = createServer(app);
 
