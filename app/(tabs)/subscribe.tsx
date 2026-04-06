@@ -20,7 +20,6 @@ import { ContactModal } from "@/components/contact-modal";
 import { QuickNav } from "@/components/quick-nav";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
-import { LinearGradient } from "expo-linear-gradient";
 
 // 启用Android LayoutAnimation
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -81,7 +80,7 @@ function NotifCard({ item, colors }: { item: NotificationItem; colors: any }) {
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={toggleExpand}
-      style={[styles.notifCard, { backgroundColor: "rgba(255,255,255,0.03)", borderLeftColor: accentColor, borderColor: "rgba(255,255,255,0.06)" }]}
+      style={[styles.notifCard, { backgroundColor: colors.surface, borderLeftColor: accentColor, borderColor: colors.border }]}
     >
       <View style={styles.notifCardHeader}>
         <Text style={{ fontSize: 18 }}>{item.icon || "📌"}</Text>
@@ -99,7 +98,7 @@ function NotifCard({ item, colors }: { item: NotificationItem; colors: any }) {
             <TouchableOpacity
               onPress={() => Linking.openURL(item.link!)}
               activeOpacity={0.7}
-              style={[styles.notifLinkBtn, { backgroundColor: accentColor + "15" }]}
+              style={[styles.notifLinkBtn, { backgroundColor: accentColor + "20" }]}
             >
               <Text style={[styles.notifLinkText, { color: accentColor }]}>查看详情 →</Text>
             </TouchableOpacity>
@@ -302,7 +301,7 @@ export default function SubscribeScreen() {
         >
           {/* 通知栏 */}
           {notifications.length > 0 && (
-            <View style={[styles.notifBar, { backgroundColor: "rgba(59,130,246,0.06)", overflow: "hidden" }]}>
+            <View style={[styles.notifBar, { backgroundColor: colors.primary + "12", overflow: "hidden" }]}>
               <Text style={styles.notifBarIcon}>📢</Text>
               <View style={styles.notifBarTextBox}>
                 <Animated.View style={{ transform: [{ translateY: slideTranslateY }], opacity: slideOpacity }}>
@@ -320,7 +319,7 @@ export default function SubscribeScreen() {
                       key={i}
                       style={[
                         styles.notifDot,
-                        { backgroundColor: i === currentNotifIdx ? colors.primary : "rgba(255,255,255,0.15)" },
+                        { backgroundColor: i === currentNotifIdx ? colors.primary : colors.muted + "40" },
                       ]}
                     />
                   ))}
@@ -337,14 +336,9 @@ export default function SubscribeScreen() {
             </Text>
           </View>
 
-          {/* 核心订阅卡片 - 改为联系方式收集 */}
+          {/* 核心订阅卡片 - 联系方式收集 */}
           <FadeInView delay={50}>
-            <LinearGradient
-              colors={["rgba(59,130,246,0.08)", "rgba(59,130,246,0.02)", "rgba(59,130,246,0.05)"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.subscribeCard, { borderColor: "rgba(59,130,246,0.15)" }]}
-            >
+            <View style={[styles.subscribeCard, { backgroundColor: colors.surface, borderColor: colors.primary + "30" }]}>
               <View style={styles.subscribeHeader}>
                 <Text style={{ fontSize: 28 }}>🎁</Text>
                 <View style={styles.subscribeHeaderText}>
@@ -369,7 +363,7 @@ export default function SubscribeScreen() {
                   blurOnSubmit={false}
                   onFocus={() => { isInputFocused.current = true; }}
                   onBlur={() => { isInputFocused.current = false; }}
-                  style={[styles.emailInput, { backgroundColor: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)", color: colors.foreground }]}
+                  style={[styles.emailInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
                 />
                 <TouchableOpacity
                   onPress={handleSubscribe}
@@ -386,12 +380,12 @@ export default function SubscribeScreen() {
               </View>
 
               {/* 推荐微信提示 */}
-              <Text style={[styles.contactTip, { color: "rgba(59,130,246,0.7)" }]}>
+              <Text style={[styles.contactTip, { color: colors.primary + "90" }]}>
                 * 推荐留下微信号，我们的策略顾问将为您提供 1 对 1 的 EA 部署指导
               </Text>
 
               {subscribeMsg && (
-                <View style={[styles.msgBox, { backgroundColor: subscribeMsg.type === "success" ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)" }]}>
+                <View style={[styles.msgBox, { backgroundColor: subscribeMsg.type === "success" ? colors.success + "18" : colors.error + "18" }]}>
                   <Text style={{ color: subscribeMsg.type === "success" ? colors.success : colors.error, fontSize: 13 }}>
                     {subscribeMsg.type === "success" ? "✅ " : "❌ "}{subscribeMsg.text}
                   </Text>
@@ -403,7 +397,7 @@ export default function SubscribeScreen() {
                   已有 {subscriberCountQuery.data} 位用户领取
                 </Text>
               )}
-            </LinearGradient>
+            </View>
           </FadeInView>
 
           {/* 订阅权益 */}
@@ -412,19 +406,16 @@ export default function SubscribeScreen() {
               <Text style={[styles.dataSectionTitle, { color: colors.foreground }]}>领取权益</Text>
               <View style={styles.benefitsGrid}>
                 {SUBSCRIBE_BENEFITS.map((item, i) => (
-                  <LinearGradient
+                  <View
                     key={i}
-                    colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[styles.benefitCard, { borderColor: "rgba(255,255,255,0.06)" }]}
+                    style={[styles.benefitCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   >
                     <Text style={styles.benefitIcon}>{item.icon}</Text>
                     <View style={styles.benefitContent}>
                       <Text style={[styles.benefitTitle, { color: colors.foreground }]}>{item.title}</Text>
                       <Text style={[styles.benefitDesc, { color: colors.muted }]}>{item.desc}</Text>
                     </View>
-                  </LinearGradient>
+                  </View>
                 ))}
               </View>
             </View>
@@ -439,15 +430,12 @@ export default function SubscribeScreen() {
               </Text>
 
               {/* 亏损原因可视化 */}
-              <LinearGradient
-                colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"]}
-                style={[styles.dataCard, { borderColor: "rgba(255,255,255,0.06)" }]}
-              >
+              <View style={[styles.dataCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text style={[styles.dataCardTitle, { color: colors.foreground }]}>EA亏损原因分布</Text>
                 {EA_MARKET_DATA.map((item, i) => (
                   <View key={i} style={styles.barRow}>
                     <Text style={[styles.barLabel, { color: colors.foreground }]}>{item.label}</Text>
-                    <View style={styles.barTrack}>
+                    <View style={[styles.barTrack, { backgroundColor: colors.border }]}>
                       <View style={[styles.barFill, { width: `${item.pct}%` as any, backgroundColor: item.color }]} />
                     </View>
                     <Text style={[styles.barPct, { color: colors.muted }]}>{item.pct}%</Text>
@@ -456,7 +444,7 @@ export default function SubscribeScreen() {
                 <Text style={[styles.dataSource, { color: colors.muted }]}>
                   数据来源：量化军火库数据库 200+ EA策略分析
                 </Text>
-              </LinearGradient>
+              </View>
             </View>
           </FadeInView>
 
@@ -468,17 +456,16 @@ export default function SubscribeScreen() {
                 我们用严格的审核机制，为你过滤掉虚假宣传和高风险EA
               </Text>
               {SCREENING_CRITERIA.map((item, i) => (
-                <LinearGradient
+                <View
                   key={i}
-                  colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"]}
-                  style={[styles.criteriaCard, { borderColor: "rgba(255,255,255,0.06)" }]}
+                  style={[styles.criteriaCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
                   <Text style={styles.criteriaIcon}>{item.icon}</Text>
                   <View style={styles.criteriaContent}>
                     <Text style={[styles.criteriaLabel, { color: colors.foreground }]}>{item.label}</Text>
                     <Text style={[styles.criteriaDesc, { color: colors.muted }]}>{item.desc}</Text>
                   </View>
-                </LinearGradient>
+                </View>
               ))}
             </View>
           </FadeInView>
@@ -486,10 +473,7 @@ export default function SubscribeScreen() {
           {/* ===== 底部引导 - 软性 ===== */}
           <FadeInView delay={400}>
             <View style={styles.dataSection}>
-              <LinearGradient
-                colors={["rgba(59,130,246,0.06)", "rgba(59,130,246,0.02)"]}
-                style={[styles.cooperationGuide, { borderColor: "rgba(59,130,246,0.12)" }]}
-              >
+              <View style={[styles.cooperationGuide, { backgroundColor: colors.primary + "10", borderColor: colors.primary + "25" }]}>
                 <Text style={[styles.guideTitle, { color: colors.foreground }]}>好策略，配好平台</Text>
                 <Text style={[styles.guideDesc, { color: colors.muted }]}>
                   量化军火库不仅帮你筛选优质EA策略，还为你匹配最适合的合规交易平台。告诉我们你的需求，我们帮你做好功课。
@@ -497,11 +481,11 @@ export default function SubscribeScreen() {
                 <TouchableOpacity
                   onPress={handleConsult}
                   activeOpacity={0.8}
-                  style={styles.guideBtn}
+                  style={[styles.guideBtn, { backgroundColor: colors.primary }]}
                 >
                   <Text style={styles.guideBtnText}>免费咨询平台匹配方案 →</Text>
                 </TouchableOpacity>
-              </LinearGradient>
+              </View>
             </View>
           </FadeInView>
 
@@ -523,17 +507,16 @@ export default function SubscribeScreen() {
               <View>
                 <Text style={[styles.sectionTitleInner, { color: colors.foreground }]}>详细信息</Text>
                 {contents.map((item) => (
-                  <LinearGradient
+                  <View
                     key={item.id}
-                    colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"]}
-                    style={[styles.contentCard, { borderColor: "rgba(255,255,255,0.06)" }]}
+                    style={[styles.contentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   >
                     <View style={styles.contentCardHeader}>
                       <Text style={{ fontSize: 24 }}>{item.icon || "📄"}</Text>
                       <Text style={[styles.contentCardTitle, { color: colors.foreground }]}>{item.title}</Text>
                     </View>
                     <Text style={[styles.contentCardBody, { color: colors.muted }]}>{item.content}</Text>
-                  </LinearGradient>
+                  </View>
                 ))}
               </View>
             </FadeInView>
@@ -615,7 +598,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
-    borderWidth: 0.5,
+    borderWidth: 1,
     padding: 14,
     gap: 12,
   },
@@ -652,7 +635,7 @@ const styles = StyleSheet.create({
   },
   dataCard: {
     borderRadius: 14,
-    borderWidth: 0.5,
+    borderWidth: 1,
     padding: 16,
   },
   dataCardTitle: {
@@ -674,7 +657,6 @@ const styles = StyleSheet.create({
   barTrack: {
     flex: 1,
     height: 16,
-    backgroundColor: "rgba(100,116,139,0.15)",
     borderRadius: 8,
     overflow: "hidden",
   },
@@ -700,7 +682,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
-    borderWidth: 0.5,
+    borderWidth: 1,
     padding: 14,
     marginBottom: 8,
     gap: 12,
@@ -740,7 +722,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   guideBtn: {
-    backgroundColor: "#1e40af",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
@@ -761,7 +742,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
     borderLeftWidth: 4,
-    borderWidth: 0.5,
+    borderWidth: 1,
   },
   notifCardHeader: {
     flexDirection: "row",
@@ -785,7 +766,7 @@ const styles = StyleSheet.create({
   // Content card
   contentCard: {
     borderRadius: 14,
-    borderWidth: 0.5,
+    borderWidth: 1,
     padding: 18,
     marginBottom: 12,
     marginHorizontal: 16,
