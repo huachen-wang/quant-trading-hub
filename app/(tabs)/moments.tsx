@@ -75,9 +75,9 @@ const pricingTiers = [
   {
     id: "premium",
     name: "军火库·精选会员",
-    priceLabel: "¥59,800",
-    period: "/年",
-    description: "全部8款顶级策略 + 1对1部署 + 核心圈",
+    priceLabel: "免费试用一款",
+    period: "",
+    description: "先体验再决定 · 零风险入场",
     features: [
       "全部8款精选EA策略使用权",
       "策略参数配置方案（即插即用）",
@@ -314,9 +314,9 @@ export default function CooperationScreen() {
               <View style={styles.priceNote}>
                 <Text style={styles.priceNoteText}>
                   <Text style={{ color: GOLD, fontWeight: "600" }}>关于价格：</Text>
-                  我们测试117款EA花了¥280,000。精选会员¥59,800，相当于你用不到测试成本的
-                  <Text style={{ color: "rgba(255,255,255,0.8)", fontWeight: "700" }}> 1/4 </Text>
-                  的价格，直接拿到24个月实盘验证的结果。自己去测？光买EA就要花十几万，还不算爆仓的钱。
+                  我们测试117款EA花了¥280,000。现在你可以免费试用一款精选策略，亲身体验24个月实盘验证的结果。
+                  <Text style={{ color: "rgba(255,255,255,0.8)", fontWeight: "700" }}>零成本入场</Text>
+                  ，满意再谈合作。
                 </Text>
               </View>
             </View>
@@ -359,7 +359,7 @@ export default function CooperationScreen() {
                     <Text style={styles.freeCTAText}>立即免费领取全部</Text>
                   </LinearGradient>
                 </TouchableOpacity>
-                <Text style={styles.freeWechat}>添加微信 xau9876 即可领取 · 无需付费</Text>
+
               </View>
             </View>
           </FadeInView>
