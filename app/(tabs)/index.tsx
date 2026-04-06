@@ -19,16 +19,7 @@ type OrderBy = "latest" | "return" | "hot";
 const PAGE_SIZE = 12;
 const { width: SW } = Dimensions.get("window");
 
-const TAG_FILTERS = [
-  { label: "全部", value: "" },
-  { label: "黄金", value: "黄金" },
-  { label: "马丁", value: "马丁" },
-  { label: "对冲", value: "对冲" },
-  { label: "趋势", value: "趋势" },
-  { label: "剥头皮", value: "剥头皮" },
-  { label: "网格", value: "网格" },
-  { label: "多品种", value: "多品种" },
-];
+// 标签从策略数据中自动提取，无需手动维护
 
 // ─── 快捷入口（文字已修改） ───
 const QUICK_ENTRIES = [
@@ -82,6 +73,23 @@ export default function HomeScreen() {
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // 动态提取标签：从已加载的策略数据中自动生成筛选项
+  const dynamicTags = (() => {
+    const tagCountMap = new Map<string, number>();
+    allStrategies.forEach((s) => {
+      if (s.tags) {
+        s.tags.split(",").map((t: string) => t.trim()).filter(Boolean).forEach((t: string) => {
+          tagCountMap.set(t, (tagCountMap.get(t) || 0) + 1);
+        });
+      }
+    });
+    // 按出现次数排序，取前10个
+    return Array.from(tagCountMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([tag]) => ({ label: tag, value: tag }));
+  })();
 
   // ─── 动画 ───
   const heroFade = useRef(new Animated.Value(0)).current;
@@ -397,30 +405,46 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* 标签筛选 */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }} contentContainerStyle={{ paddingRight: 12 }}>
-        {TAG_FILTERS.map((tag) => {
-          const isActive = tagFilter === tag.value;
-          return (
-            <TouchableOpacity
-              key={tag.value}
-              onPress={() => setTagFilter(tag.value)}
-              style={[
-                filterStyles.tagChip,
-                {
-                  backgroundColor: isActive ? "#D9770615" : colors.surface,
-                  borderColor: isActive ? "#D97706" : colors.border,
-                },
-              ]}
-              activeOpacity={0.7}
-            >
-              <Text style={[filterStyles.tagChipText, { color: isActive ? "#D97706" : colors.muted }]}>
-                {tag.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      {/* 标签筛选（动态提取，无标签时不显示） */}
+      {dynamicTags.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }} contentContainerStyle={{ paddingRight: 12 }}>
+          {/* “全部”按钮 */}
+          <TouchableOpacity
+            onPress={() => setTagFilter("")}
+            style={[
+              filterStyles.tagChip,
+              {
+                backgroundColor: tagFilter === "" ? "#D9770615" : colors.surface,
+                borderColor: tagFilter === "" ? "#D97706" : colors.border,
+              },
+            ]}
+            activeOpacity={0.7}
+          >
+            <Text style={[filterStyles.tagChipText, { color: tagFilter === "" ? "#D97706" : colors.muted }]}>全部</Text>
+          </TouchableOpacity>
+          {dynamicTags.map((tag) => {
+            const isActive = tagFilter === tag.value;
+            return (
+              <TouchableOpacity
+                key={tag.value}
+                onPress={() => setTagFilter(tag.value)}
+                style={[
+                  filterStyles.tagChip,
+                  {
+                    backgroundColor: isActive ? "#D9770615" : colors.surface,
+                    borderColor: isActive ? "#D97706" : colors.border,
+                  },
+                ]}
+                activeOpacity={0.7}
+              >
+                <Text style={[filterStyles.tagChipText, { color: isActive ? "#D97706" : colors.muted }]}>
+                  {tag.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 
