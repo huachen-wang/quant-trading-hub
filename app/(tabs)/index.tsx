@@ -473,7 +473,7 @@ export default function HomeScreen() {
         {/* 左侧图标 */}
         <View style={customBannerStyles.iconWrap}>
           <LinearGradient colors={["#D97706", "#F59E0B"]} style={customBannerStyles.iconGradient}>
-            <Text style={{ fontSize: 22 }}>🛠️</Text>
+            <Text style={{ fontSize: 18 }}>🛠️</Text>
           </LinearGradient>
         </View>
 
@@ -488,23 +488,9 @@ export default function HomeScreen() {
             </View>
           </View>
           <Text style={customBannerStyles.title}>军火库 · 专属EA定制</Text>
-          <Text style={customBannerStyles.desc}>
-            为工作室量身打造专属EA策略，源头低价拿货、无限授权不受限。自定义策略名称与调优模式，版权与联系方式全部替换为工作室自有品牌。
+          <Text style={customBannerStyles.desc} numberOfLines={2}>
+            源头低价拿货 · 无限授权 · 专属品牌定制
           </Text>
-          <View style={customBannerStyles.features}>
-            <View style={customBannerStyles.featureItem}>
-              <Text style={customBannerStyles.featureDot}>◆</Text>
-              <Text style={customBannerStyles.featureText}>专属名称 & 调优模式</Text>
-            </View>
-            <View style={customBannerStyles.featureItem}>
-              <Text style={customBannerStyles.featureDot}>◆</Text>
-              <Text style={customBannerStyles.featureText}>无限授权 & 版权归属</Text>
-            </View>
-            <View style={customBannerStyles.featureItem}>
-              <Text style={customBannerStyles.featureDot}>◆</Text>
-              <Text style={customBannerStyles.featureText}>源头价 & 全流程透明</Text>
-            </View>
-          </View>
         </View>
 
         {/* 右侧箭头 */}
@@ -516,7 +502,7 @@ export default function HomeScreen() {
   );
 
   const renderHeader = () => (
-    <View style={{ marginBottom: 8 }}>
+    <View style={{ marginBottom: 4 }}>
       {renderHero()}
       {renderQuickEntries()}
       {renderCustomEABanner()}
@@ -617,14 +603,14 @@ export default function HomeScreen() {
 // ═══════════════════ Hero 样式 ═══════════════════
 const heroStyles = StyleSheet.create({
   container: {
-    marginBottom: 12,
+    marginBottom: 6,
   },
   gradient: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 22,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 12,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
     overflow: "hidden",
     position: "relative",
   },
@@ -664,7 +650,7 @@ const heroStyles = StyleSheet.create({
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 6,
   },
   liveDotOuter: {
     width: 12,
@@ -702,17 +688,17 @@ const heroStyles = StyleSheet.create({
   // 标题
   title: {
     color: "#F1F5F9",
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "900",
-    letterSpacing: 2,
-    marginBottom: 6,
+    letterSpacing: 1.5,
+    marginBottom: 3,
   },
   tagline: {
     color: "rgba(251,191,36,0.85)",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.5,
-    marginBottom: 18,
+    marginBottom: 10,
   },
   // 数据
   statsRow: {
@@ -722,13 +708,13 @@ const heroStyles = StyleSheet.create({
   statItem: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
     position: "relative",
     overflow: "hidden",
   },
   statNum: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
@@ -761,8 +747,8 @@ const qeStyles = StyleSheet.create({
   container: {
     flexDirection: "row",
     paddingHorizontal: 12,
-    gap: 8,
-    marginBottom: 14,
+    gap: 6,
+    marginBottom: 8,
   },
   entryWrap: {
     flex: 1,
@@ -779,9 +765,9 @@ const qeStyles = StyleSheet.create({
     borderRadius: 18,
   },
   entryCard: {
-    borderRadius: 16,
-    padding: 12,
-    minHeight: 115,
+    borderRadius: 14,
+    padding: 10,
+    minHeight: 80,
     justifyContent: "space-between",
     overflow: "hidden",
     position: "relative",
@@ -807,34 +793,34 @@ const qeStyles = StyleSheet.create({
     borderTopRightRadius: 4,
   },
   iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   entryIcon: {
-    fontSize: 18,
+    fontSize: 15,
   },
   entryTitle: {
     color: "#F1F5F9",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.3,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   entrySubtitle: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "600",
     letterSpacing: 0.3,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   arrowWrap: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "flex-end",
@@ -856,7 +842,7 @@ const filterStyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 6,
   },
   titleLeft: {
     flexDirection: "row",
@@ -951,9 +937,9 @@ const filterStyles = StyleSheet.create({
 const customBannerStyles = StyleSheet.create({
   outer: {
     marginHorizontal: 12,
-    marginTop: 16,
-    marginBottom: 8,
-    borderRadius: 16,
+    marginTop: 6,
+    marginBottom: 6,
+    borderRadius: 14,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(139,92,246,0.25)",
@@ -961,7 +947,7 @@ const customBannerStyles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    padding: 12,
     position: "relative",
     overflow: "hidden",
   },
@@ -1005,9 +991,9 @@ const customBannerStyles = StyleSheet.create({
     marginRight: 14,
   },
   iconGradient: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1018,7 +1004,7 @@ const customBannerStyles = StyleSheet.create({
   tagRow: {
     flexDirection: "row",
     gap: 6,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   tag: {
     backgroundColor: "rgba(139,92,246,0.15)",
@@ -1048,16 +1034,16 @@ const customBannerStyles = StyleSheet.create({
   },
   title: {
     color: "#F1F5F9",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "900",
-    marginBottom: 4,
+    marginBottom: 2,
     letterSpacing: 0.5,
   },
   desc: {
     color: "#94A3B8",
-    fontSize: 11,
-    lineHeight: 17,
-    marginBottom: 8,
+    fontSize: 10,
+    lineHeight: 15,
+    marginBottom: 4,
   },
   features: {
     flexDirection: "row",

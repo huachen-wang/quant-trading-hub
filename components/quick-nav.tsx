@@ -6,6 +6,7 @@ const QUICK_NAV_ITEMS = [
   {
     id: "cooperation",
     title: "工作室扶持合作",
+    subtitle: "深度扶持 · 源头直供",
     icon: "🤝",
     gradient: ["#0F172A", "#1E3A8A"] as readonly [string, string, ...string[]],
     type: "route" as const,
@@ -15,6 +16,7 @@ const QUICK_NAV_ITEMS = [
   {
     id: "promo",
     title: "EA限时促销",
+    subtitle: "源头价 · 限时特惠",
     icon: "⚡",
     gradient: ["#1A0000", "#7F1D1D"] as readonly [string, string, ...string[]],
     type: "route" as const,
@@ -24,6 +26,7 @@ const QUICK_NAV_ITEMS = [
   {
     id: "ddxau",
     title: "订单流独家策略",
+    subtitle: "四维共振 · 独家研发",
     icon: "🏆",
     gradient: ["#1A0E00", "#78350F"] as readonly [string, string, ...string[]],
     type: "link" as const,
@@ -47,11 +50,10 @@ export function QuickNav() {
     <View style={styles.container}>
       <View style={styles.divider} />
       <Text style={styles.sectionTitle}>快捷导航</Text>
-      <View style={styles.row}>
+      <View style={styles.column}>
         {QUICK_NAV_ITEMS.map((item) => (
           <TouchableOpacity
             key={item.id}
-            style={styles.item}
             onPress={() => handlePress(item)}
             activeOpacity={0.85}
           >
@@ -59,13 +61,18 @@ export function QuickNav() {
               colors={item.gradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={[styles.card, { borderColor: item.accent + "25" }]}
+              style={[styles.card, { borderColor: item.accent + "20" }]}
               // @ts-ignore - web-only className
               {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
             >
-              <Text style={styles.icon}>{item.icon}</Text>
-              <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-              <Text style={[styles.arrow, { color: item.accent }]}>→</Text>
+              <View style={[styles.iconWrap, { backgroundColor: item.accent + "18" }]}>
+                <Text style={styles.icon}>{item.icon}</Text>
+              </View>
+              <View style={styles.textArea}>
+                <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
+                <Text style={[styles.subtitle, { color: item.accent + "99" }]} numberOfLines={1}>{item.subtitle}</Text>
+              </View>
+              <Text style={[styles.arrow, { color: item.accent }]}>›</Text>
             </LinearGradient>
           </TouchableOpacity>
         ))}
@@ -77,13 +84,13 @@ export function QuickNav() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 14,
-    paddingTop: 16,
-    paddingBottom: 24,
+    paddingTop: 14,
+    paddingBottom: 20,
   },
   divider: {
     height: 1,
     backgroundColor: "rgba(148,163,184,0.08)",
-    marginBottom: 14,
+    marginBottom: 12,
   },
   sectionTitle: {
     color: "rgba(255,255,255,0.35)",
@@ -93,32 +100,44 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textTransform: "uppercase",
   },
-  row: {
-    flexDirection: "row",
+  column: {
     gap: 8,
-  },
-  item: {
-    flex: 1,
   },
   card: {
     borderRadius: 12,
-    padding: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    gap: 6,
+  },
+  iconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
   },
   icon: {
-    fontSize: 14,
+    fontSize: 16,
+  },
+  textArea: {
+    flex: 1,
   },
   title: {
     color: "#E2E8F0",
-    fontSize: 10,
+    fontSize: 13,
     fontWeight: "700",
-    flex: 1,
+  },
+  subtitle: {
+    fontSize: 10,
+    fontWeight: "500",
+    marginTop: 1,
   },
   arrow: {
-    fontSize: 12,
+    fontSize: 18,
     fontWeight: "700",
+    marginLeft: 8,
   },
 });

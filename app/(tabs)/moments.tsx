@@ -255,22 +255,22 @@ export default function CooperationScreen() {
               2. 选择方案（定价）
               ═══════════════════════════════════════════════════════════ */}
           <FadeInView delay={100}>
-            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 32 }]}>
+            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 20 }]}>
               <View style={styles.sectionTag}>
                 <Text style={styles.sectionTagText}>选择方案</Text>
               </View>
-              <Text style={[styles.heroTitle, { marginTop: 16 }]}>
+              <Text style={[styles.heroTitle, { marginTop: 10 }]}>
                 免费拿策略<Text style={{ color: "rgba(255,255,255,0.4)" }}> 或 </Text>
                 <Text style={{ color: GOLD }}>直接拿全部</Text>
               </Text>
               <Text style={[styles.heroSubtitle, { alignSelf: "center" }]}>
-                我们不做中间价位。要么免费送你EA，要么直接给你最好的。
+                要么免费送你EA，要么直接给你最好的。
               </Text>
             </View>
           </FadeInView>
 
           <FadeInView delay={150}>
-            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 28 }]}>
+            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 16 }]}>
               <View style={{ flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 14, alignItems: isMobile ? "stretch" : "flex-start", justifyContent: "center" }}>
                 {pricingTiers.map((tier) => (
                   <View
@@ -285,12 +285,12 @@ export default function CooperationScreen() {
                   >
                     {tier.popular && <View style={styles.popularBadge}><Text style={styles.popularBadgeText}>核心产品</Text></View>}
                     <Text style={[styles.pricingName, tier.highlight && { color: GOLD }]}>{tier.name}</Text>
-                    <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "center", marginTop: 12 }}>
-                      <Text style={[styles.pricingPrice, tier.highlight && { color: GOLD, fontSize: 40 }]}>{tier.priceLabel}</Text>
+                    <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "center", marginTop: 8 }}>
+                      <Text style={[styles.pricingPrice, tier.highlight && { color: GOLD, fontSize: 28 }]}>{tier.priceLabel}</Text>
                       {tier.period ? <Text style={styles.pricingPeriod}>{tier.period}</Text> : null}
                     </View>
                     <Text style={styles.pricingDesc}>{tier.description}</Text>
-                    <View style={{ marginTop: 20, gap: 10 }}>
+                    <View style={{ marginTop: 14, gap: 8 }}>
                       {tier.features.map((f, i) => (
                         <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
                           <Text style={{ color: tier.highlight ? GOLD : "rgba(245,158,11,0.7)", fontSize: 14, marginTop: 1 }}>✓</Text>
@@ -298,7 +298,7 @@ export default function CooperationScreen() {
                         </View>
                       ))}
                     </View>
-                    <TouchableOpacity onPress={handleConsult} activeOpacity={0.85} style={{ marginTop: 24 }}>
+                    <TouchableOpacity onPress={handleConsult} activeOpacity={0.85} style={{ marginTop: 16 }}>
                       {tier.highlight ? (
                         <LinearGradient colors={["#F59E0B", "#D97706"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.pricingCTAHighlight}>
                           <Text style={styles.pricingCTAHighlightText}>{tier.cta}</Text>
@@ -328,14 +328,13 @@ export default function CooperationScreen() {
               3. 免费引流
               ═══════════════════════════════════════════════════════════ */}
           <FadeInView delay={200}>
-            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 48 }]}>
+            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 32 }]}>
               <View style={styles.freeTag}>
                 <Text style={styles.freeTagText}>完全免费 · 直接送EA</Text>
               </View>
-              <Text style={[styles.heroTitle, { marginTop: 16 }]}>先别花钱</Text>
-              <Text style={[styles.heroTitle, { color: GOLD, marginBottom: 0, marginTop: -4 }]}>先拿3款EA跑起来</Text>
-              <Text style={[styles.heroSubtitle, { alignSelf: "center", marginTop: 16 }]}>
-                从117款中精选出来的3款EA策略，免费送你。装上就能跑，先赚着再说。
+              <Text style={[styles.heroTitle, { marginTop: 10 }]}>先拿3款EA跑起来</Text>
+              <Text style={[styles.heroSubtitle, { alignSelf: "center", marginTop: 8 }]}>
+                从117款中精选的3款EA策略，免费送你。
               </Text>
 
               <View style={{ flexDirection: isMobile ? "column" : "row", flexWrap: "wrap", gap: isMobile ? 12 : 14, marginTop: 28 }}>
@@ -370,7 +369,7 @@ export default function CooperationScreen() {
               3.5 专属EA定制服务
               ═══════════════════════════════════════════════════════ */}
           <FadeInView delay={250}>
-            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 48 }]}>
+            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 32 }]}>
               <View style={styles.customEABanner}>
                 <LinearGradient colors={["#1E1B4B", "#312E81", "#1E1B4B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.customEAInner}>
                   <View style={styles.customEAGlow} />
@@ -611,25 +610,25 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   heroTitle: {
-    fontSize: 32,
+    fontSize: 22,
     fontWeight: "900",
     color: "#ffffff",
     textAlign: "center",
-    marginBottom: 16,
+    marginBottom: 8,
     ...(Platform.OS === "web" ? { fontFamily: "system-ui, -apple-system, sans-serif" } : {}),
   },
   heroSubtitle: {
-    fontSize: 15,
+    fontSize: 13,
     color: TEXT_BODY,
     textAlign: "center",
-    lineHeight: 26,
+    lineHeight: 22,
     maxWidth: 480,
   },
 
   // ===== 定价卡片 =====
   pricingCard: {
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 14,
+    padding: 16,
     alignItems: "center",
   },
   pricingCardNormal: {
@@ -665,7 +664,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   pricingPrice: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: "900",
     color: "#ffffff",
     ...(Platform.OS === "web" ? { fontFamily: "ui-monospace, SFMono-Regular, monospace" } : {}),
@@ -689,9 +688,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pricingCTAHighlight: {
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: "center",
     ...(Platform.OS === "web" ? { boxShadow: "0 0 30px rgba(245,158,11,0.3)" } : {}),
   },
@@ -701,9 +700,9 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   pricingCTAFree: {
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: "center",
     backgroundColor: "rgba(245,158,11,0.15)",
     borderWidth: 1,
@@ -715,9 +714,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   pricingCTADefault: {
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
@@ -729,8 +728,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   priceNote: {
-    marginTop: 28,
-    padding: 18,
+    marginTop: 16,
+    padding: 14,
     backgroundColor: CARD_BG,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.06)",
