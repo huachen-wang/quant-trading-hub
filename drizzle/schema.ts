@@ -229,14 +229,17 @@ export const groupBuys = mysqlTable("group_buys", {
 export type GroupBuy = typeof groupBuys.$inferSelect;
 export type InsertGroupBuy = typeof groupBuys.$inferInsert;
 
-// 邮箱订阅表
+// 订阅/联系方式收集表（支持邮箱、微信、QQ等多种联系方式）
 export const emailSubscriptions = mysqlTable("email_subscriptions", {
   id: int("id").autoincrement().primaryKey(),
-  email: varchar("email", { length: 320 }).notNull().unique(),
+  email: varchar("email", { length: 320 }),  // 邮箱（可选）
+  contactInfo: varchar("contact_info", { length: 255 }), // 微信/QQ/Telegram等联系方式（可选）
+  contactType: varchar("contact_type", { length: 50 }).default("unknown"), // 联系方式类型: wechat/qq/telegram/email/unknown
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({
   emailIdx: index("email_idx").on(table.email),
+  contactInfoIdx: index("contact_info_idx").on(table.contactInfo),
 }));
 
 export type EmailSubscription = typeof emailSubscriptions.$inferSelect;

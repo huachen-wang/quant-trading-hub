@@ -4,7 +4,22 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { getSubscribers, adminQuery } from "@/lib/admin-api";
 
-type Subscriber = { id: number; email: string; isActive: boolean; createdAt: Date | string; };
+type Subscriber = {
+  id: number;
+  email: string | null;
+  contactInfo?: string | null;
+  contactType?: string | null;
+  isActive: boolean;
+  createdAt: Date | string;
+};
+
+const CONTACT_TYPE_LABELS: Record<string, string> = {
+  wechat: "微信",
+  qq: "QQ",
+  telegram: "TG",
+  email: "邮箱",
+  unknown: "未知",
+};
 
 export default function SubscribersAdmin() {
   const colors = useColors();
@@ -16,7 +31,6 @@ export default function SubscribersAdmin() {
     setIsLoading(true);
     try {
       const [subs, cnt] = await Promise.all([getSubscribers({ limit: 100 }), adminQuery("subscriptions.count")]);
-      // cnt might be a number or {count: number}
       setSubscribers(Array.isArray(subs) ? subs : []);
       setCount(typeof cnt === "number" ? cnt : null);
     } catch (err) { console.error(err); setSubscribers([]); }
@@ -32,10 +46,26 @@ export default function SubscribersAdmin() {
     } catch { return String(dateStr); }
   };
 
+  const getDisplayContact = (item: Subscriber) => {
+    const parts: string[] = [];
+    if (item.contactInfo) {
+      const typeLabel = CONTACT_TYPE_LABELS[item.contactType || "unknown"] || "联系方式";
+      parts.push(`[${typeLabel}] ${item.contactInfo}`);
+    }
+    if (item.email) {
+      parts.push(item.email);
+    }
+    return parts.join(" | ") || "无联系方式";
+  };
+
   const renderItem = ({ item, index }: { item: Subscriber; index: number }) => (
     <View style={[st.row, { backgroundColor: index % 2 === 0 ? colors.surface : colors.background, borderColor: colors.border }]}>
       <Text style={[st.indexCell, { color: colors.muted }]}>{index + 1}</Text>
-      <Text style={[st.emailCell, { color: colors.foreground }]}>{item.email}</Text>
+      <View style={st.contactCell}>
+        <Text style={[st.contactText, { color: colors.foreground }]} numberOfLines={1}>
+          {getDisplayContact(item)}
+        </Text>
+      </View>
       <View style={[st.statusBadge, { backgroundColor: item.isActive ? colors.success + "20" : colors.error + "20" }]}>
         <Text style={{ color: item.isActive ? colors.success : colors.error, fontSize: 12, fontWeight: "600" }}>{item.isActive ? "活跃" : "已取消"}</Text>
       </View>
@@ -52,7 +82,7 @@ export default function SubscribersAdmin() {
         contentContainerStyle={st.listContainer}
         ListHeaderComponent={
           <View style={st.header}>
-            <Text style={[st.pageTitle, { color: colors.foreground }]}>📧 订阅用户列表</Text>
+            <Text style={[st.pageTitle, { color: colors.foreground }]}>📋 订阅用户列表</Text>
             <View style={[st.countBadge, { backgroundColor: colors.primary + "15" }]}>
               <Text style={[st.countText, { color: colors.primary }]}>活跃订阅: {count ?? "..."}</Text>
             </View>
@@ -75,7 +105,8 @@ const st = StyleSheet.create({
   countText: { fontSize: 13, fontWeight: "700" },
   row: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 14, borderBottomWidth: 0.5, gap: 8 },
   indexCell: { width: 30, fontSize: 13, textAlign: "center" },
-  emailCell: { flex: 1, fontSize: 14 },
+  contactCell: { flex: 1 },
+  contactText: { fontSize: 14 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   dateCell: { width: 120, fontSize: 12, textAlign: "right" },
   emptyText: { textAlign: "center", marginTop: 40, fontSize: 14 },

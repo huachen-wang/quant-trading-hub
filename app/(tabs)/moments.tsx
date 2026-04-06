@@ -50,8 +50,8 @@ const CARD_BORDER = "rgba(255,255,255,0.08)";
 const TEXT_PRIMARY = "rgba(255,255,255,0.9)";
 const TEXT_SECONDARY = "rgba(255,255,255,0.45)";
 const TEXT_BODY = "rgba(255,255,255,0.6)";
-const DARK_BG = "#0a0f1a";
-const DARK_BG_MID = "#0d1225";
+const DARK_BG = "#0F172A";
+const DARK_BG_MID = "#0F172A";
 
 // ===== 数据 =====
 const pricingTiers = [

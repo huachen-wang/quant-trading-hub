@@ -18,6 +18,8 @@ export default function SearchScreen() {
   // 入场动画
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(-20)).current;
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
@@ -27,7 +29,8 @@ export default function SearchScreen() {
 
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
-    setTimeout(() => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => {
       setDebouncedQuery(text);
     }, 300);
   };

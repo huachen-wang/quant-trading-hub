@@ -166,7 +166,7 @@ export default function StrategyDetailScreen() {
       ? ["#92400E", "#D97706"]
       : strategy.platform === "MT4" ? ["#1E3A8A", "#3B82F6"] : ["#7C3AED", "#A78BFA"];
 
-  const returnValue = parseFloat(strategy.totalReturn || "0");
+  const returnValue = parseFloat(strategy.totalReturn) || 0;
   const isPositive = returnValue >= 0;
   const isAdmin = user?.role === "admin";
 
@@ -198,8 +198,8 @@ export default function StrategyDetailScreen() {
   const tagList = tags ? tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [];
 
   // 价格锚点
-  const priceNum = parseFloat(strategy.price || "0");
-  const originalPriceNum = parseFloat(originalPrice || "0");
+  const priceNum = parseFloat(strategy.price) || 0;
+  const originalPriceNum = parseFloat(originalPrice || "") || 0;
   const hasDiscount = !strategy.isFree && originalPriceNum > 0 && originalPriceNum > priceNum;
   const discountPercent = hasDiscount ? Math.round((1 - priceNum / originalPriceNum) * 100) : 0;
 

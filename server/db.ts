@@ -111,7 +111,10 @@ export async function getStrategies(params: {
     // 尝试使用新字段查询（含标签筛选、产品类型筛选、旗舰置顶）
     const conditions: any[] = [eq(strategies.status, "published")];
     if (params.platform) conditions.push(eq(strategies.platform, params.platform));
-    if (params.tag) conditions.push(like(strategies.tags, `%${params.tag}%`));
+    if (params.tag) {
+      // 精确匹配标签：使用 FIND_IN_SET 避免部分匹配（如"黄金"匹配"超级黄金"）
+      conditions.push(sql`FIND_IN_SET(${params.tag}, REPLACE(${strategies.tags}, ' ', '')) > 0`);
+    }
     if (params.productType) conditions.push(eq(strategies.productType, params.productType));
 
     const whereConditions = and(...conditions);
@@ -659,27 +662,62 @@ export async function updateGroupBuyParticipants(id: number, increment: number) 
 }
 
 
-// ========== 邮箱订阅相关 ==========
+// ========== 订阅/联系方式相关 ==========
 
-export async function createEmailSubscription(email: string) {
+// 智能识别联系方式类型
+function detectContactType(value: string): string {
+  const v = value.trim();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (emailRegex.test(v)) return "email";
+  if (/^\d{5,11}$/.test(v)) return "qq"; // QQ号通常是5-11位数字
+  if (/^@/.test(v) || /t\.me\//i.test(v)) return "telegram";
+  return "wechat"; // 默认为微信
+}
+
+export async function createEmailSubscription(input: { email?: string; contactInfo?: string }) {
   const db = await getDb();
   if (!db) return null;
 
   const { emailSubscriptions } = schema;
+  const email = input.email?.trim() || null;
+  const contactInfo = input.contactInfo?.trim() || null;
   
-  // 检查是否已存在
-  const existing = await db.select().from(emailSubscriptions).where(eq(emailSubscriptions.email, email)).limit(1);
-  if (existing.length > 0) {
-    // 如果已存在但已取消，重新激活
-    if (!existing[0].isActive) {
-      await db.update(emailSubscriptions).set({ isActive: true }).where(eq(emailSubscriptions.id, existing[0].id));
-      return { success: true, message: "已重新订阅" };
-    }
-    return { success: false, message: "该邮箱已订阅" };
+  if (!email && !contactInfo) {
+    return { success: false, message: "请至少填写一种联系方式" };
   }
 
-  await db.insert(emailSubscriptions).values({ email });
-  return { success: true, message: "订阅成功" };
+  // 检查是否已存在（按邮箱或联系方式查重）
+  const conditions = [];
+  if (email) conditions.push(eq(emailSubscriptions.email, email));
+  if (contactInfo) conditions.push(eq(emailSubscriptions.contactInfo, contactInfo));
+  
+  const existing = await db.select().from(emailSubscriptions)
+    .where(conditions.length > 1 ? or(...conditions) : conditions[0])
+    .limit(1);
+    
+  if (existing.length > 0) {
+    if (!existing[0].isActive) {
+      // 重新激活并更新信息
+      const updateData: any = { isActive: true };
+      if (email) updateData.email = email;
+      if (contactInfo) {
+        updateData.contactInfo = contactInfo;
+        updateData.contactType = detectContactType(contactInfo);
+      }
+      await db.update(emailSubscriptions).set(updateData).where(eq(emailSubscriptions.id, existing[0].id));
+      return { success: true, message: "已重新订阅" };
+    }
+    return { success: false, message: "该联系方式已订阅" };
+  }
+
+  // 新增订阅
+  const contactType = contactInfo ? detectContactType(contactInfo) : (email ? "email" : "unknown");
+  await db.insert(emailSubscriptions).values({ 
+    email, 
+    contactInfo,
+    contactType,
+  });
+  return { success: true, message: "提交成功，我们将尽快与您联系！" };
 }
 
 export async function getEmailSubscriptions(limit = 100, offset = 0) {

@@ -375,13 +375,13 @@ export default function PromoPage() {
                   <View style={s.cardPriceArea}>
                     <View style={s.cardPriceLeft}>
                       <Text style={s.cardPromoPrice}>${product.promoPrice}</Text>
-                      {product.originalPrice && parseFloat(product.originalPrice) > parseFloat(product.promoPrice) && (
+                      {product.originalPrice && (parseFloat(product.originalPrice) || 0) > (parseFloat(product.promoPrice) || 0) && (
                         <Text style={s.cardOriginalPrice}>${product.originalPrice}</Text>
                       )}
                     </View>
                     {discount > 0 && (
                       <View style={s.cardSaveBadge}>
-                        <Text style={s.cardSaveText}>省 ${(parseFloat(product.originalPrice) - parseFloat(product.promoPrice)).toFixed(0)}</Text>
+                        <Text style={s.cardSaveText}>省 ${((parseFloat(product.originalPrice) || 0) - (parseFloat(product.promoPrice) || 0)).toFixed(0)}</Text>
                       </View>
                     )}
                   </View>
@@ -492,7 +492,7 @@ export default function PromoPage() {
       </ScrollView>
 
       {/* ==================== 产品详情弹窗 ==================== */}
-      <Modal visible={!!selectedProduct} animationType="slide" transparent>
+      {selectedProduct && <Modal visible={!!selectedProduct} animationType="slide" transparent>
         <View style={s.modalOverlay}>
           <View style={s.modalContent}>
             <View style={s.modalHeader}>
@@ -519,12 +519,12 @@ export default function PromoPage() {
               <LinearGradient colors={["#7F1D1D", "#991B1B"]} style={s.modalPriceBox}>
                 <View style={s.modalPriceRow}>
                   <Text style={s.modalPromoPrice}>${selectedProduct?.promoPrice}</Text>
-                  {selectedProduct?.originalPrice && parseFloat(selectedProduct.originalPrice) > parseFloat(selectedProduct.promoPrice) && (
+                  {selectedProduct?.originalPrice && (parseFloat(selectedProduct.originalPrice) || 0) > (parseFloat(selectedProduct.promoPrice) || 0) && (
                     <>
                       <Text style={s.modalOriginalPrice}>${selectedProduct?.originalPrice}</Text>
                       <View style={s.modalSaveBadge}>
                         <Text style={s.modalSaveText}>
-                          省${(parseFloat(selectedProduct.originalPrice) - parseFloat(selectedProduct.promoPrice)).toFixed(0)}
+                          省${((parseFloat(selectedProduct.originalPrice) || 0) - (parseFloat(selectedProduct.promoPrice) || 0)).toFixed(0)}
                         </Text>
                       </View>
                     </>
@@ -611,7 +611,7 @@ export default function PromoPage() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </Modal>}
 
       {/* ==================== 联系方式弹窗 ==================== */}
       <Modal visible={showContact} animationType="fade" transparent>

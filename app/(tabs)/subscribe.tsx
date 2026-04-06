@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -81,7 +81,7 @@ function NotifCard({ item, colors }: { item: NotificationItem; colors: any }) {
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={toggleExpand}
-      style={[styles.notifCard, { backgroundColor: colors.surface, borderLeftColor: accentColor }]}
+      style={[styles.notifCard, { backgroundColor: "rgba(255,255,255,0.03)", borderLeftColor: accentColor, borderColor: "rgba(255,255,255,0.06)" }]}
     >
       <View style={styles.notifCardHeader}>
         <Text style={{ fontSize: 18 }}>{item.icon || "📌"}</Text>
@@ -151,23 +151,23 @@ const SCREENING_CRITERIA = [
   { icon: "💰", label: "盈利因子>1.5", desc: "总盈利至少是总亏损的1.5倍" },
 ];
 
-// 订阅权益
+// 订阅权益 - 突出EA领取
 const SUBSCRIBE_BENEFITS = [
+  { icon: "🎯", title: "免费获得实战EA", desc: "提交即可获得一款经过实盘验证的精选EA策略" },
   { icon: "🔔", title: "新策略上架通知", desc: "第一时间获取通过审核的优质EA策略" },
   { icon: "📈", title: "行业数据报告", desc: "定期推送EA市场分析和趋势洞察" },
-  { icon: "🎁", title: "合作动态", desc: "最新合作活动、行业资源对接等信息" },
-  { icon: "💡", title: "量化交易干货", desc: "EA避坑指南、风控技巧、实战经验" },
+  { icon: "💡", title: "1对1部署指导", desc: "专属策略顾问协助您完成EA安装与参数配置" },
 ];
 
 export default function SubscribeScreen() {
   const colors = useColors();
-  const [email, setEmail] = useState("");
+  const [contactInput, setContactInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [subscribeMsg, setSubscribeMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
-  const emailInputRef = useRef<TextInput>(null);
-  const isEmailFocused = useRef(false);
+  const inputRef = useRef<TextInput>(null);
+  const isInputFocused = useRef(false);
 
   // 轮播动画状态
   const [currentNotifIdx, setCurrentNotifIdx] = useState(0);
@@ -187,7 +187,7 @@ export default function SubscribeScreen() {
   useEffect(() => {
     if (notifications.length <= 1) return;
     const interval = setInterval(() => {
-      if (isEmailFocused.current || isAnimating.current) return;
+      if (isInputFocused.current || isAnimating.current) return;
       isAnimating.current = true;
 
       Animated.timing(slideAnim, {
@@ -219,27 +219,38 @@ export default function SubscribeScreen() {
     setRefreshing(false);
   }, []);
 
+  // 智能识别输入类型
+  const detectInputType = (value: string): { email?: string; contactInfo?: string } => {
+    const v = value.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (emailRegex.test(v)) {
+      return { email: v };
+    }
+    return { contactInfo: v };
+  };
+
   const handleSubscribe = async () => {
-    if (!email.trim()) {
-      setSubscribeMsg({ type: "error", text: "请输入邮箱地址" });
+    const trimmed = contactInput.trim();
+    if (!trimmed) {
+      setSubscribeMsg({ type: "error", text: "请输入您的联系方式" });
       return;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      setSubscribeMsg({ type: "error", text: "请输入有效的邮箱地址" });
+    if (trimmed.length < 3) {
+      setSubscribeMsg({ type: "error", text: "请输入有效的联系方式（至少3个字符）" });
       return;
     }
 
     setIsSubmitting(true);
     setSubscribeMsg(null);
     try {
-      const result = await subscribeMutation.mutateAsync({ email: email.trim() });
+      const payload = detectInputType(trimmed);
+      const result = await subscribeMutation.mutateAsync(payload);
       if (result?.success) {
-        setSubscribeMsg({ type: "success", text: result.message || "订阅成功！" });
-        setEmail("");
+        setSubscribeMsg({ type: "success", text: result.message || "提交成功！我们将尽快与您联系" });
+        setContactInput("");
         subscriberCountQuery.refetch();
       } else {
-        setSubscribeMsg({ type: "error", text: result?.message || "订阅失败" });
+        setSubscribeMsg({ type: "error", text: result?.message || "提交失败" });
       }
     } catch (error: any) {
       setSubscribeMsg({ type: "error", text: "网络错误，请稍后重试" });
@@ -291,7 +302,7 @@ export default function SubscribeScreen() {
         >
           {/* 通知栏 */}
           {notifications.length > 0 && (
-            <View style={[styles.notifBar, { backgroundColor: colors.primary + "10", overflow: "hidden" }]}>
+            <View style={[styles.notifBar, { backgroundColor: "rgba(59,130,246,0.06)", overflow: "hidden" }]}>
               <Text style={styles.notifBarIcon}>📢</Text>
               <View style={styles.notifBarTextBox}>
                 <Animated.View style={{ transform: [{ translateY: slideTranslateY }], opacity: slideOpacity }}>
@@ -309,7 +320,7 @@ export default function SubscribeScreen() {
                       key={i}
                       style={[
                         styles.notifDot,
-                        { backgroundColor: i === currentNotifIdx ? colors.primary : colors.muted + "40" },
+                        { backgroundColor: i === currentNotifIdx ? colors.primary : "rgba(255,255,255,0.15)" },
                       ]}
                     />
                   ))}
@@ -318,43 +329,47 @@ export default function SubscribeScreen() {
             </View>
           )}
 
-          {/* 页面标题 */}
+          {/* 页面标题 - 突出EA领取利益点 */}
           <View style={styles.headerSection}>
-            <Text style={[styles.pageTitle, { color: colors.foreground }]}>订阅中心</Text>
+            <Text style={[styles.pageTitle, { color: colors.foreground }]}>免费领取实战 EA</Text>
             <Text style={[styles.pageSubtitle, { color: colors.muted }]}>
-              订阅获取最新策略更新、行业资讯和合作动态
+              留下您的联系方式，系统将自动为您发送一款经过实盘验证的精选 EA 策略
             </Text>
           </View>
 
-          {/* 邮箱订阅卡片 */}
+          {/* 核心订阅卡片 - 改为联系方式收集 */}
           <FadeInView delay={50}>
-            <View style={[styles.subscribeCard, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}>
+            <LinearGradient
+              colors={["rgba(59,130,246,0.08)", "rgba(59,130,246,0.02)", "rgba(59,130,246,0.05)"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.subscribeCard, { borderColor: "rgba(59,130,246,0.15)" }]}
+            >
               <View style={styles.subscribeHeader}>
-                <Text style={{ fontSize: 28 }}>📧</Text>
+                <Text style={{ fontSize: 28 }}>🎁</Text>
                 <View style={styles.subscribeHeaderText}>
-                  <Text style={[styles.subscribeTitle, { color: colors.foreground }]}>邮箱订阅</Text>
+                  <Text style={[styles.subscribeTitle, { color: colors.foreground }]}>立即领取 EA 策略</Text>
                   <Text style={[styles.subscribeDesc, { color: colors.muted }]}>
-                    订阅后将收到最新策略上架、激励活动、行业分析等通知
+                    提交联系方式后，我们将为您发送精选EA并提供部署指导
                   </Text>
                 </View>
               </View>
 
               <View style={styles.emailInputRow}>
                 <TextInput
-                  ref={emailInputRef}
-                  value={email}
-                  onChangeText={(t) => { setEmail(t); setSubscribeMsg(null); }}
-                  placeholder="请输入您的邮箱地址"
+                  ref={inputRef}
+                  value={contactInput}
+                  onChangeText={(t) => { setContactInput(t); setSubscribeMsg(null); }}
+                  placeholder="请输入微信号 / QQ / 邮箱"
                   placeholderTextColor={colors.muted}
-                  keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
                   returnKeyType="done"
                   onSubmitEditing={handleSubscribe}
                   blurOnSubmit={false}
-                  onFocus={() => { isEmailFocused.current = true; }}
-                  onBlur={() => { isEmailFocused.current = false; }}
-                  style={[styles.emailInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
+                  onFocus={() => { isInputFocused.current = true; }}
+                  onBlur={() => { isInputFocused.current = false; }}
+                  style={[styles.emailInput, { backgroundColor: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)", color: colors.foreground }]}
                 />
                 <TouchableOpacity
                   onPress={handleSubscribe}
@@ -365,13 +380,18 @@ export default function SubscribeScreen() {
                   {isSubmitting ? (
                     <ActivityIndicator color="#fff" size="small" />
                   ) : (
-                    <Text style={styles.subscribeBtnText}>订阅</Text>
+                    <Text style={styles.subscribeBtnText}>立即领取</Text>
                   )}
                 </TouchableOpacity>
               </View>
 
+              {/* 推荐微信提示 */}
+              <Text style={[styles.contactTip, { color: "rgba(59,130,246,0.7)" }]}>
+                * 推荐留下微信号，我们的策略顾问将为您提供 1 对 1 的 EA 部署指导
+              </Text>
+
               {subscribeMsg && (
-                <View style={[styles.msgBox, { backgroundColor: subscribeMsg.type === "success" ? colors.success + "15" : colors.error + "15" }]}>
+                <View style={[styles.msgBox, { backgroundColor: subscribeMsg.type === "success" ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)" }]}>
                   <Text style={{ color: subscribeMsg.type === "success" ? colors.success : colors.error, fontSize: 13 }}>
                     {subscribeMsg.type === "success" ? "✅ " : "❌ "}{subscribeMsg.text}
                   </Text>
@@ -380,25 +400,31 @@ export default function SubscribeScreen() {
 
               {subscriberCountQuery.data != null && (
                 <Text style={[styles.subscriberCount, { color: colors.muted }]}>
-                  已有 {subscriberCountQuery.data} 位用户订阅
+                  已有 {subscriberCountQuery.data} 位用户领取
                 </Text>
               )}
-            </View>
+            </LinearGradient>
           </FadeInView>
 
           {/* 订阅权益 */}
           <FadeInView delay={100}>
             <View style={styles.dataSection}>
-              <Text style={[styles.dataSectionTitle, { color: colors.foreground }]}>订阅权益</Text>
+              <Text style={[styles.dataSectionTitle, { color: colors.foreground }]}>领取权益</Text>
               <View style={styles.benefitsGrid}>
                 {SUBSCRIBE_BENEFITS.map((item, i) => (
-                  <View key={i} style={[styles.benefitCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <LinearGradient
+                    key={i}
+                    colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={[styles.benefitCard, { borderColor: "rgba(255,255,255,0.06)" }]}
+                  >
                     <Text style={styles.benefitIcon}>{item.icon}</Text>
                     <View style={styles.benefitContent}>
                       <Text style={[styles.benefitTitle, { color: colors.foreground }]}>{item.title}</Text>
                       <Text style={[styles.benefitDesc, { color: colors.muted }]}>{item.desc}</Text>
                     </View>
-                  </View>
+                  </LinearGradient>
                 ))}
               </View>
             </View>
@@ -413,7 +439,10 @@ export default function SubscribeScreen() {
               </Text>
 
               {/* 亏损原因可视化 */}
-              <View style={[styles.dataCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <LinearGradient
+                colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"]}
+                style={[styles.dataCard, { borderColor: "rgba(255,255,255,0.06)" }]}
+              >
                 <Text style={[styles.dataCardTitle, { color: colors.foreground }]}>EA亏损原因分布</Text>
                 {EA_MARKET_DATA.map((item, i) => (
                   <View key={i} style={styles.barRow}>
@@ -427,7 +456,7 @@ export default function SubscribeScreen() {
                 <Text style={[styles.dataSource, { color: colors.muted }]}>
                   数据来源：量化军火库数据库 200+ EA策略分析
                 </Text>
-              </View>
+              </LinearGradient>
             </View>
           </FadeInView>
 
@@ -439,13 +468,17 @@ export default function SubscribeScreen() {
                 我们用严格的审核机制，为你过滤掉虚假宣传和高风险EA
               </Text>
               {SCREENING_CRITERIA.map((item, i) => (
-                <View key={i} style={[styles.criteriaCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <LinearGradient
+                  key={i}
+                  colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"]}
+                  style={[styles.criteriaCard, { borderColor: "rgba(255,255,255,0.06)" }]}
+                >
                   <Text style={styles.criteriaIcon}>{item.icon}</Text>
                   <View style={styles.criteriaContent}>
                     <Text style={[styles.criteriaLabel, { color: colors.foreground }]}>{item.label}</Text>
                     <Text style={[styles.criteriaDesc, { color: colors.muted }]}>{item.desc}</Text>
                   </View>
-                </View>
+                </LinearGradient>
               ))}
             </View>
           </FadeInView>
@@ -453,7 +486,10 @@ export default function SubscribeScreen() {
           {/* ===== 底部引导 - 软性 ===== */}
           <FadeInView delay={400}>
             <View style={styles.dataSection}>
-              <View style={[styles.cooperationGuide, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}>
+              <LinearGradient
+                colors={["rgba(59,130,246,0.06)", "rgba(59,130,246,0.02)"]}
+                style={[styles.cooperationGuide, { borderColor: "rgba(59,130,246,0.12)" }]}
+              >
                 <Text style={[styles.guideTitle, { color: colors.foreground }]}>好策略，配好平台</Text>
                 <Text style={[styles.guideDesc, { color: colors.muted }]}>
                   量化军火库不仅帮你筛选优质EA策略，还为你匹配最适合的合规交易平台。告诉我们你的需求，我们帮你做好功课。
@@ -465,7 +501,7 @@ export default function SubscribeScreen() {
                 >
                   <Text style={styles.guideBtnText}>免费咨询平台匹配方案 →</Text>
                 </TouchableOpacity>
-              </View>
+              </LinearGradient>
             </View>
           </FadeInView>
 
@@ -487,13 +523,17 @@ export default function SubscribeScreen() {
               <View>
                 <Text style={[styles.sectionTitleInner, { color: colors.foreground }]}>详细信息</Text>
                 {contents.map((item) => (
-                  <View key={item.id} style={[styles.contentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <LinearGradient
+                    key={item.id}
+                    colors={["rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"]}
+                    style={[styles.contentCard, { borderColor: "rgba(255,255,255,0.06)" }]}
+                  >
                     <View style={styles.contentCardHeader}>
                       <Text style={{ fontSize: 24 }}>{item.icon || "📄"}</Text>
                       <Text style={[styles.contentCardTitle, { color: colors.foreground }]}>{item.title}</Text>
                     </View>
                     <Text style={[styles.contentCardBody, { color: colors.muted }]}>{item.content}</Text>
-                  </View>
+                  </LinearGradient>
                 ))}
               </View>
             </FadeInView>
@@ -563,6 +603,7 @@ const styles = StyleSheet.create({
   },
   subscribeBtn: { borderRadius: 10, paddingHorizontal: 20, justifyContent: "center", alignItems: "center" },
   subscribeBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  contactTip: { fontSize: 12, marginTop: 10, fontStyle: "italic", lineHeight: 18 },
   msgBox: { marginTop: 10, padding: 10, borderRadius: 8 },
   subscriberCount: { marginTop: 10, fontSize: 12, textAlign: "center" },
 
@@ -720,6 +761,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
     borderLeftWidth: 4,
+    borderWidth: 0.5,
   },
   notifCardHeader: {
     flexDirection: "row",
@@ -743,7 +785,7 @@ const styles = StyleSheet.create({
   // Content card
   contentCard: {
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 0.5,
     padding: 18,
     marginBottom: 12,
     marginHorizontal: 16,

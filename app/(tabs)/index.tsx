@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Animated, StyleSheet, Linking, Platform, ScrollView, Dimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -74,8 +74,8 @@ export default function HomeScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // 动态提取标签：从已加载的策略数据中自动生成筛选项
-  const dynamicTags = (() => {
+  // 动态提取标签：从已加载的策略数据中自动生成筛选项（使用 useMemo 避免每次渲染重新计算）
+  const dynamicTags = useMemo(() => {
     const tagCountMap = new Map<string, number>();
     allStrategies.forEach((s) => {
       if (s.tags) {
@@ -89,7 +89,7 @@ export default function HomeScreen() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([tag]) => ({ label: tag, value: tag }));
-  })();
+  }, [allStrategies]);
 
   // ─── 动画 ───
   const heroFade = useRef(new Animated.Value(0)).current;
@@ -173,8 +173,8 @@ export default function HomeScreen() {
       } else {
         setHasMore(false);
       }
-    } catch (error) {
-      console.error("Load more failed:", error);
+    } catch {
+      // Load more failed silently
     } finally {
       setIsLoadingMore(false);
     }

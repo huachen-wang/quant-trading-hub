@@ -208,10 +208,40 @@ async function runMigrations() {
     console.log("[migrate] Updated cooperation card cover images");
     migrationsRun++;
 
+    // ==================== 确保 email_subscriptions 表包含新字段 ====================
+    try {
+      const [emailSubCols] = await connection.query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'email_subscriptions'"
+      ) as any[];
+      const emailSubColumnNames = new Set(emailSubCols.map((c: any) => c.COLUMN_NAME));
+
+      const emailSubNewColumns: Record<string, string> = {
+        contact_info: "ALTER TABLE `email_subscriptions` ADD COLUMN `contact_info` varchar(255) DEFAULT NULL AFTER `email`",
+        contact_type: "ALTER TABLE `email_subscriptions` ADD COLUMN `contact_type` varchar(50) DEFAULT 'unknown' AFTER `contact_info`",
+      };
+
+      for (const [colName, alterSql] of Object.entries(emailSubNewColumns)) {
+        if (!emailSubColumnNames.has(colName)) {
+          await connection.query(alterSql);
+          migrationsRun++;
+        }
+      }
+
+      // 添加索引（如果不存在）
+      try {
+        await connection.query("CREATE INDEX `contact_info_idx` ON `email_subscriptions` (`contact_info`)");
+        migrationsRun++;
+      } catch {
+        // 索引已存在，忽略
+      }
+    } catch {
+      // email_subscriptions 表可能不存在，由 drizzle 自动创建
+    }
+
     if (migrationsRun > 0) {
-      console.log(`[migrate] ✓ ${migrationsRun} migration(s) applied successfully`);
+      console.log(`[migrate] \u2713 ${migrationsRun} migration(s) applied successfully`);
     } else {
-      console.log("[migrate] ✓ Database schema is up to date");
+      console.log("[migrate] \u2713 Database schema is up to date");
     }
   } catch (error) {
     console.error("[migrate] Migration error:", error);

@@ -32,8 +32,6 @@ async function adminFetch(path: string, options: FetchOptions = {}) {
   const baseUrl = getApiBaseUrl();
   const url = `${baseUrl}/api/trpc/${path}`;
   
-  console.log("[admin-api] Fetching:", url);
-  
   // 获取admin token并添加到请求头
   const token = await getAdminToken();
   const headers: Record<string, string> = {
@@ -57,29 +55,22 @@ async function adminFetch(path: string, options: FetchOptions = {}) {
 
   try {
     const res = await fetch(url, fetchOptions);
-    console.log("[admin-api] Response status:", res.status);
-    
     if (!res.ok) {
-      console.error("[admin-api] HTTP error:", res.status, res.statusText);
       throw new Error(`HTTP ${res.status}: ${res.statusText}`);
     }
     
     const data = await res.json();
-    console.log("[admin-api] Response data:", data);
-    
     if (data.error) {
       // tRPC with superjson wraps errors in {json: {message, code, data}}
       const errorMsg = data.error?.json?.message || data.error?.message || "API Error";
-      console.error("[admin-api] API error:", errorMsg);
       throw new Error(errorMsg);
     }
     
     // tRPC with superjson wraps data in {json: ..., meta: ...}
     const resultData = data.result?.data;
     return resultData?.json !== undefined ? resultData.json : resultData;
-  } catch (error) {
-    console.error("[admin-api] Fetch failed:", error);
-    throw error;
+  } catch (err) {
+    throw err;
   }
 }
 

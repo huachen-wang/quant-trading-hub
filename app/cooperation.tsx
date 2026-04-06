@@ -414,7 +414,7 @@ export default function CooperationPage() {
       </ScrollView>
 
       {/* ═══════════════════ 策略详情弹窗 ═══════════════════ */}
-      <Modal visible={!!selectedCard} animationType="slide" transparent>
+      {selectedCard && <Modal visible={!!selectedCard} animationType="slide" transparent>
         <View style={s.modalOverlay}>
           <View style={s.modalSheet}>
             <View style={s.modalHandle} />
@@ -482,7 +482,7 @@ export default function CooperationPage() {
             </ScrollView>
           </View>
         </View>
-      </Modal>
+      </Modal>}
 
       {/* ═══════════════════ 联系方式弹窗 ═══════════════════ */}
       <Modal visible={showContact} animationType="fade" transparent>
@@ -552,8 +552,8 @@ export default function CooperationPage() {
 const COVER_SIZE = isDesktop ? 180 : 130;
 
 const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#0A0E1A" },
-  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0A0E1A" },
+  page: { flex: 1, backgroundColor: "#0F172A" },
+  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0F172A" },
   backBtn: { position: "absolute", top: 16, left: 16, zIndex: 10, padding: 8, backgroundColor: "rgba(10,14,26,0.7)", borderRadius: 20 },
 
   // Hero

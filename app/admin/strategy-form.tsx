@@ -235,10 +235,10 @@ export default function StrategyForm() {
                 <TextInput value={formData.originalPrice} onChangeText={(t) => setFormData({ ...formData, originalPrice: t })} keyboardType="numeric" placeholder="留空则不显示折扣" placeholderTextColor={colors.muted} style={inputStyle} />
               </View>
             </View>
-            {formData.originalPrice && parseFloat(formData.originalPrice) > parseFloat(formData.price) && (
+            {formData.originalPrice && (parseFloat(formData.originalPrice) || 0) > (parseFloat(formData.price) || 0) && (parseFloat(formData.originalPrice) || 0) > 0 && (
               <View style={[s.discountPreview, { backgroundColor: "#EF4444" + "15" }]}>
                 <Text style={[s.discountPreviewText, { color: "#EF4444" }]}>
-                  折扣预览: 原价 ¥{formData.originalPrice} → 现价 ¥{formData.price}，优惠 {Math.round((1 - parseFloat(formData.price) / parseFloat(formData.originalPrice)) * 100)}%
+                  折扣预览: 原价 ¥{formData.originalPrice} → 现价 ¥{formData.price}，优惠 {Math.round((1 - (parseFloat(formData.price) || 0) / (parseFloat(formData.originalPrice) || 1)) * 100)}%
                 </Text>
               </View>
             )}

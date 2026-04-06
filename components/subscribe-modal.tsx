@@ -32,23 +32,37 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
   const subscribeMutation = trpc.subscriptions.subscribe.useMutation();
 
   const handleSubmit = async () => {
-    if (!email.trim() && !contact.trim()) {
+    const trimmedEmail = email.trim();
+    const trimmedContact = contact.trim();
+
+    if (!trimmedEmail && !trimmedContact) {
       Alert.alert("提示", "请至少填写邮箱或联系方式");
       return;
     }
 
+    // 如果填了邮箱，校验格式
+    if (trimmedEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        Alert.alert("提示", "请输入有效的邮箱地址");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
-      // 如果填了邮箱就订阅
-      if (email.trim()) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email.trim())) {
-          Alert.alert("提示", "请输入有效的邮箱地址");
-          setIsSubmitting(false);
-          return;
-        }
-        await subscribeMutation.mutateAsync({ email: email.trim() });
+      // 构建提交数据 - 确保所有联系方式都会被持久化
+      const payload: { email?: string; contactInfo?: string } = {};
+      if (trimmedEmail) payload.email = trimmedEmail;
+      if (trimmedContact) payload.contactInfo = trimmedContact;
+      
+      // 如果只填了联系方式没填邮箱，也作为 contactInfo 提交
+      if (!trimmedEmail && trimmedContact) {
+        payload.contactInfo = trimmedContact;
       }
+
+      await subscribeMutation.mutateAsync(payload);
+      
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -57,7 +71,7 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
         onClose();
       }, 2000);
     } catch (error: any) {
-      Alert.alert("提交失败", "网络错误，请稍后重试");
+      Alert.alert("提交失败", error?.message || "网络错误，请稍后重试");
     } finally {
       setIsSubmitting(false);
     }
@@ -117,28 +131,28 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
               {/* 输入区 */}
               <View style={styles.inputSection}>
                 <TextInput
+                  value={contact}
+                  onChangeText={setContact}
+                  placeholder="微信号 / QQ / Telegram（推荐）"
+                  placeholderTextColor={colors.muted}
+                  style={[styles.input, { backgroundColor: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)", color: colors.foreground }]}
+                />
+                <TextInput
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="邮箱地址"
+                  placeholder="邮箱地址（可选）"
                   placeholderTextColor={colors.muted}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-                />
-                <TextInput
-                  value={contact}
-                  onChangeText={setContact}
-                  placeholder="微信/QQ/Telegram（可选）"
-                  placeholderTextColor={colors.muted}
-                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
+                  style={[styles.input, { backgroundColor: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)", color: colors.foreground }]}
                 />
               </View>
 
               {/* 提示 */}
-              <View style={[styles.tipBox, { backgroundColor: colors.primary + "08" }]}>
+              <View style={[styles.tipBox, { backgroundColor: "rgba(59,130,246,0.06)" }]}>
                 <Text style={[styles.tipText, { color: colors.muted }]}>
-                  💡 填写邮箱将自动订阅策略更新通知，我们会通过您留下的联系方式提供一对一技术支持
+                  💡 推荐留下微信号，我们的策略顾问将为您提供一对一技术支持和EA部署指导
                 </Text>
               </View>
 
@@ -171,7 +185,7 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
@@ -181,6 +195,8 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: 24,
     padding: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
   },
   headerSection: { alignItems: "center", marginBottom: 20 },
   modalTitle: { fontSize: 22, fontWeight: "800", marginTop: 8, marginBottom: 6 },

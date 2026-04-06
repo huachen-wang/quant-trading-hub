@@ -22,12 +22,12 @@ export function EquityCurveChart({ data }: EquityCurveChartProps) {
   // Web端暂时使用简化展示,移动端可以使用victory-native
   if (Platform.OS === "web") {
     // 计算统计数据
-    const startEquity = parseFloat(data[0].equity);
-    const endEquity = parseFloat(data[data.length - 1].equity);
-    const totalReturn = ((endEquity - startEquity) / startEquity) * 100;
-    const maxEquity = Math.max(...data.map(d => parseFloat(d.equity)));
-    const minEquity = Math.min(...data.map(d => parseFloat(d.equity)));
-    const maxDrawdown = ((maxEquity - minEquity) / maxEquity) * 100;
+    const startEquity = parseFloat(data[0].equity) || 0;
+    const endEquity = parseFloat(data[data.length - 1].equity) || 0;
+    const totalReturn = startEquity !== 0 ? ((endEquity - startEquity) / startEquity) * 100 : 0;
+    const maxEquity = Math.max(...data.map(d => parseFloat(d.equity) || 0));
+    const minEquity = Math.min(...data.map(d => parseFloat(d.equity) || 0));
+    const maxDrawdown = maxEquity !== 0 ? ((maxEquity - minEquity) / maxEquity) * 100 : 0;
 
     return (
       <View className="bg-surface rounded-xl p-4">

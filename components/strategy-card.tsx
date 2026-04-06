@@ -92,12 +92,12 @@ export function StrategyCard({
         ? ["#1a365d", "#2563eb", "#60a5fa"]
         : ["#4c1d95", "#7c3aed", "#a78bfa"];
 
-  const returnValue = parseFloat(totalReturn);
+  const returnValue = parseFloat(totalReturn) || 0;
   const isPositive = returnValue >= 0;
 
   // 计算折扣率
-  const priceNum = parseFloat(price || "0");
-  const originalPriceNum = parseFloat(originalPrice || "0");
+  const priceNum = parseFloat(price) || 0;
+  const originalPriceNum = parseFloat(originalPrice || "") || 0;
   const hasDiscount = !isFree && originalPriceNum > 0 && originalPriceNum > priceNum;
   const discountPercent = hasDiscount ? Math.round((1 - priceNum / originalPriceNum) * 100) : 0;
 

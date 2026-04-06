@@ -465,11 +465,21 @@ export const appRouter = router({
       .mutation(({ input }) => db.deleteGroupBuy(input.id)),
   }),
 
-  // 邮箱订阅
+  // 订阅/联系方式收集
   subscriptions: router({
     subscribe: publicProcedure
-      .input(z.object({ email: z.string().email() }))
-      .mutation(({ input }) => db.createEmailSubscription(input.email)),
+      .input(
+        z.object({
+          email: z.string().optional(),
+          contactInfo: z.string().optional(),
+        }).refine(data => (data.email && data.email.trim()) || (data.contactInfo && data.contactInfo.trim()), {
+          message: "请至少填写一种联系方式",
+        })
+      )
+      .mutation(({ input }) => db.createEmailSubscription({
+        email: input.email?.trim() || undefined,
+        contactInfo: input.contactInfo?.trim() || undefined,
+      })),
 
     list: adminProcedure
       .input(z.object({ limit: z.number().optional(), offset: z.number().optional() }))

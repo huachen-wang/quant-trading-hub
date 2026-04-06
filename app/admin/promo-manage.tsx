@@ -134,8 +134,10 @@ export default function PromoManage() {
         {/* 商品列表 */}
         {products.map((product) => {
           const statusInfo = STATUSES.find(s => s.key === product.status) || STATUSES[0];
-          const discount = product.originalPrice && product.promoPrice
-            ? Math.round((1 - parseFloat(product.promoPrice) / parseFloat(product.originalPrice)) * 100)
+          const origPrice = parseFloat(product.originalPrice) || 0;
+          const promoPrice = parseFloat(product.promoPrice) || 0;
+          const discount = origPrice > 0 && promoPrice > 0
+            ? Math.round((1 - promoPrice / origPrice) * 100)
             : 0;
           return (
             <View key={product.id} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10 }}>
