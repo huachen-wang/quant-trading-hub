@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   View, Text, ScrollView, Image, TouchableOpacity, StyleSheet,
-  Dimensions, Modal, Linking, ActivityIndicator, Animated,
+  Dimensions, Modal, Linking, ActivityIndicator, Animated, Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -288,7 +288,10 @@ export default function CooperationPage() {
               { icon: "cash", title: "源头直供", desc: "成本直降80%，比市面任何渠道都便宜。发我对比给你更优价", color: "#F59E0B" },
               { icon: "infinite", title: "无限授权", desc: "有效期内不限窗口、不限账户，一个价格覆盖所有需求", color: "#06B6D4" },
             ].map((item, i) => (
-              <View key={i} style={s.supportCard}>
+              <View key={i} style={s.supportCard}
+              // @ts-ignore
+              {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
+            >
                 <View style={[s.supportIconWrap, { backgroundColor: `${item.color}15` }]}>
                   <Ionicons name={item.icon as any} size={22} color={item.color} />
                 </View>
@@ -363,7 +366,10 @@ export default function CooperationPage() {
             ]).map((plan: any, idx: number) => {
               const isMain = idx === 1 || plan.badge === "推荐";
               return (
-                <View key={plan.id} style={[s.planCard, isMain && s.planCardMain]}>
+                <View key={plan.id} style={[s.planCard, isMain && s.planCardMain]}
+                  // @ts-ignore
+                  {...(Platform.OS === "web" ? { className: isMain ? "glass-strong" : "glass-medium" } : {})}
+                >
                   {isMain && (
                     <LinearGradient colors={["#D97706", "#F59E0B"]} style={s.planRibbon}>
                       <Text style={s.planRibbonText}>推荐</Text>
@@ -764,14 +770,14 @@ const s = StyleSheet.create({
 
   // Support Grid
   supportGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 16 },
-  supportCard: { width: isDesktop ? "31%" : "47%", flexGrow: 1, backgroundColor: "#111827", borderRadius: 14, padding: 18, borderWidth: 1, borderColor: "#1E293B" },
+  supportCard: { width: isDesktop ? "31%" : "47%", flexGrow: 1, backgroundColor: "rgba(30,41,59,0.5)", borderRadius: 14, padding: 18, borderWidth: 1, borderColor: "rgba(148,163,184,0.08)" },
   supportIconWrap: { width: 42, height: 42, borderRadius: 12, justifyContent: "center", alignItems: "center", marginBottom: 12 },
   supportTitle: { color: "#F1F5F9", fontSize: 15, fontWeight: "800", marginBottom: 6 },
   supportDesc: { color: "#94A3B8", fontSize: 12, lineHeight: 18 },
 
   // Plans
   plansRow: { flexDirection: isDesktop ? "row" : "column", gap: 12, marginBottom: 20 },
-  planCard: { flex: isDesktop ? 1 : undefined, backgroundColor: "#111827", borderRadius: 16, padding: 24, borderWidth: 1, borderColor: "#1E293B" },
+  planCard: { flex: isDesktop ? 1 : undefined, backgroundColor: "rgba(30,41,59,0.55)", borderRadius: 16, padding: 24, borderWidth: 1, borderColor: "rgba(148,163,184,0.1)" },
   planCardMain: { borderColor: "#D97706", borderWidth: 2, position: "relative" },
   planRibbon: { position: "absolute", top: 0, right: 24, paddingHorizontal: 14, paddingVertical: 4, borderBottomLeftRadius: 8, borderBottomRightRadius: 8 },
   planRibbonText: { color: "#0A0E1A", fontSize: 12, fontWeight: "800" },
@@ -783,7 +789,7 @@ const s = StyleSheet.create({
   planDivider: { height: 1, backgroundColor: "#1E293B", marginVertical: 14 },
   planFeatureRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
   planFeatureText: { color: "#CBD5E1", fontSize: 13, flex: 1 },
-  planCTA: { marginTop: 16, backgroundColor: "#1E293B", borderRadius: 10, paddingVertical: 12, alignItems: "center" },
+  planCTA: { marginTop: 16, backgroundColor: "rgba(30,41,59,0.7)", borderRadius: 10, paddingVertical: 12, alignItems: "center" },
   planCTAMain: { backgroundColor: "#D97706" },
   planCTAText: { color: "#F1F5F9", fontSize: 14, fontWeight: "700" },
 
@@ -805,7 +811,7 @@ const s = StyleSheet.create({
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "flex-end" },
-  modalSheet: { maxHeight: "92%", backgroundColor: "#111827", borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+  modalSheet: { maxHeight: "92%", backgroundColor: "rgba(17,24,39,0.95)", borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   modalHandle: { width: 40, height: 4, backgroundColor: "#334155", borderRadius: 2, alignSelf: "center", marginTop: 12 },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: "#1E293B" },
   modalTitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "900", flex: 1, marginRight: 12 },

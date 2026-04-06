@@ -68,6 +68,8 @@ function FloatingConsultButton() {
           onPressOut={handlePressOut}
           activeOpacity={0.9}
           style={[styles.floatingBtn, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
+          // @ts-ignore
+          {...(Platform.OS === "web" ? { className: "glass-btn" } : {})}
         >
           <Text style={styles.floatingBtnEmoji}>💬</Text>
           <Text style={styles.floatingBtnText}>咨询</Text>
@@ -97,9 +99,14 @@ export default function TabLayout() {
             paddingTop: 2,
             paddingBottom: bottomPadding,
             height: tabBarHeight,
-            backgroundColor: colors.background,
-            borderTopColor: colors.border,
+            backgroundColor: Platform.OS === "web" ? "rgba(15,23,42,0.75)" : colors.background,
+            borderTopColor: "rgba(148,163,184,0.08)",
             borderTopWidth: StyleSheet.hairlineWidth,
+            ...(Platform.OS === "web" ? {
+              // @ts-ignore - web-only CSS properties
+              backdropFilter: "blur(20px) saturate(150%)",
+              WebkitBackdropFilter: "blur(20px) saturate(150%)",
+            } : {}),
           },
         }}
       >

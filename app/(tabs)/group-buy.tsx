@@ -237,11 +237,10 @@ export default function GroupBuyScreen() {
             {
               backgroundColor: colors.surface,
               borderColor: colors.border,
-              ...(Platform.OS === "web"
-                ? { boxShadow: "0 2px 12px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.06)" } as any
-                : {}),
             },
           ]}
+          // @ts-ignore
+          {...(Platform.OS === "web" ? { className: "glass-medium" } : {})}
         >
           {/* 封面区域 - 支持封面图 */}
           {(item as any).coverImage ? (
@@ -354,7 +353,11 @@ export default function GroupBuyScreen() {
       </View>
 
       {/* 合购优势说明 - 参考1mt5 */}
-      <View style={[styles.advantageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View
+        style={[styles.advantageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        // @ts-ignore
+        {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
+      >
         <View style={styles.advantageRow}>
           <View style={styles.advantageItem}>
             <Text style={styles.advantageEmoji}>💰</Text>

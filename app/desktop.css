@@ -1,19 +1,133 @@
-/* 桌面端专属样式 */
+/* ============================================
+   量化军火库 - 全局样式 & 玻璃拟态系统
+   ============================================ */
 
 /* 全局过渡动画 */
 * {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 策略卡片hover效果 */
+/* ============================================
+   玻璃拟态 (Glassmorphism) 样式系统
+   三种强度等级，适配暗夜模式
+   ============================================ */
+
+/* 轻微玻璃感 - 列表项、小卡片 */
+.glass-subtle {
+  background: rgba(30, 41, 59, 0.5) !important;
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
+  border: 1px solid rgba(148, 163, 184, 0.08) !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-subtle:hover {
+  background: rgba(30, 41, 59, 0.6) !important;
+  border-color: rgba(148, 163, 184, 0.12) !important;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* 标准玻璃感 - 内容卡片、表单区域 */
+.glass-medium {
+  background: rgba(30, 41, 59, 0.55) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(148, 163, 184, 0.1) !important;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 1px 3px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-medium:hover {
+  background: rgba(30, 41, 59, 0.65) !important;
+  border-color: rgba(148, 163, 184, 0.15) !important;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.25),
+    0 2px 6px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+/* 强玻璃感 - 模态框、重点CTA区域 */
+.glass-strong {
+  background: rgba(30, 41, 59, 0.7) !important;
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-strong:hover {
+  background: rgba(30, 41, 59, 0.75) !important;
+  border-color: rgba(148, 163, 184, 0.18) !important;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.35),
+    0 4px 12px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transform: translateY(-2px);
+}
+
+/* 玻璃拟态输入框 */
+.glass-input {
+  background: rgba(15, 23, 42, 0.6) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(148, 163, 184, 0.12) !important;
+  transition: all 0.25s ease;
+}
+
+.glass-input:focus {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 0 20px rgba(59, 130, 246, 0.05);
+}
+
+/* 玻璃拟态按钮 */
+.glass-btn {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.25s ease;
+}
+
+.glass-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+}
+
+/* 玻璃拟态导航栏 */
+.glass-nav {
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+}
+
+/* ============================================
+   策略卡片 hover 效果（增强版）
+   ============================================ */
 @media (hover: hover) {
   .strategy-card-hover {
-    transition: box-shadow 0.3s ease, transform 0.3s ease !important;
+    transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease !important;
   }
-  
+
   .strategy-card-hover:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08) !important;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.25),
+      0 4px 12px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
     transform: translateY(-4px) !important;
+    border-color: rgba(148, 163, 184, 0.15) !important;
   }
 
   button:hover,
@@ -23,28 +137,25 @@
   }
 }
 
-/* 只在宽屏设备上应用 */
+/* ============================================
+   桌面端布局适配
+   ============================================ */
 @media (min-width: 1024px) {
-  /* 限制内容最大宽度并居中 */
   body {
-    background-color: #f5f5f5;
+    background-color: #080d19;
   }
-  
-  /* 主容器居中 */
+
   #root > div {
     max-width: 1280px;
     margin: 0 auto;
-    background-color: white;
     min-height: 100vh;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.3);
   }
-  
-  /* 优化顶部导航间距 */
+
   header {
     padding: 16px 24px !important;
   }
-  
-  /* 优化底部导航 - 桌面端隐藏,改用侧边栏 */
+
   [data-bottom-nav] {
     display: none;
   }
@@ -71,7 +182,9 @@
   }
 }
 
-/* 订阅页面通知栏滑动动画 */
+/* ============================================
+   订阅页面通知栏滑动动画
+   ============================================ */
 @keyframes slideInUp {
   from {
     transform: translateY(100%);
@@ -100,4 +213,35 @@
 
 .notif-slide-exit {
   animation: slideOutUp 0.4s ease forwards;
+}
+
+/* ============================================
+   全局微光动画（用于重点区域背景）
+   ============================================ */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.glass-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 8s ease-in-out infinite;
+  pointer-events: none;
 }

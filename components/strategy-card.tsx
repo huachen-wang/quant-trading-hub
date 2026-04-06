@@ -143,17 +143,10 @@ export function StrategyCard({
             backgroundColor: colors.surface,
             borderColor: isFeatured ? "#D97706" : colors.border,
             borderWidth: isFeatured ? 1.5 : 0.5,
-            ...(Platform.OS === "web" ? {
-              // @ts-ignore
-              boxShadow: isFeatured
-                ? "0 4px 16px rgba(217,119,6,0.2), 0 2px 6px rgba(217,119,6,0.1)"
-                : "0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)",
-              transition: "box-shadow 0.3s ease, transform 0.3s ease",
-            } : {}),
           },
         ]}
         // @ts-ignore
-        className={Platform.OS === "web" ? "strategy-card-hover" : undefined}
+        className={Platform.OS === "web" ? `strategy-card-hover ${isFeatured ? "glass-strong" : "glass-subtle"}` : undefined}
       >
         {/* 封面区域 */}
         <View style={[styles.coverContainer, { height: coverHeight }]}>

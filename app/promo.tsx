@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   View, Text, ScrollView, Image, TouchableOpacity, StyleSheet,
-  Dimensions, Modal, Linking, ActivityIndicator, Animated,
+  Dimensions, Modal, Linking, ActivityIndicator, Animated, Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -327,6 +327,8 @@ export default function PromoPage() {
                 style={s.productCard}
                 onPress={() => setSelectedProduct(product)}
                 activeOpacity={0.92}
+                // @ts-ignore
+                {...(Platform.OS === "web" ? { className: "glass-medium" } : {})}
               >
                 {/* 卡片顶部 - 渐变色彩区 */}
                 <LinearGradient
@@ -748,7 +750,7 @@ const s = StyleSheet.create({
 
   // Product List
   productList: { paddingHorizontal: 20, gap: 16, ...(isDesktop ? { flexDirection: "row" as any, flexWrap: "wrap" as any, justifyContent: "center" as any } : {}) },
-  productCard: { width: isDesktop ? CARD_WIDTH : "100%", backgroundColor: "#1E293B", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "#334155" },
+  productCard: { width: isDesktop ? CARD_WIDTH : "100%", backgroundColor: "rgba(30,41,59,0.55)", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(148,163,184,0.1)" },
 
   // Card Header
   cardHeader: { padding: 16, position: "relative" },

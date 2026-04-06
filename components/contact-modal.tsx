@@ -1,5 +1,5 @@
 import { useRef, useEffect } from "react";
-import { View, Text, Modal, TouchableOpacity, Linking, ActivityIndicator, StyleSheet, Animated } from "react-native";
+import { View, Text, Modal, TouchableOpacity, Linking, ActivityIndicator, StyleSheet, Animated, Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "./ui/icon-symbol";
 import { trpc } from "@/lib/trpc";
@@ -78,8 +78,10 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
         <Animated.View
           style={[
             styles.modalContent,
-            { backgroundColor: colors.background, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+            { backgroundColor: Platform.OS === "web" ? "rgba(15,23,42,0.85)" : colors.background, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
           ]}
+          // @ts-ignore
+          {...(Platform.OS === "web" ? { className: "glass-strong" } : {})}
         >
         <TouchableOpacity
           activeOpacity={1}
@@ -104,7 +106,9 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
                   <TouchableOpacity
                     key={index}
                     onPress={() => handlePress(method.link)}
-                    style={[styles.contactItem, { backgroundColor: colors.surface }]}
+                    style={[styles.contactItem, { backgroundColor: Platform.OS === "web" ? "rgba(30,41,59,0.5)" : colors.surface }]}
+                    // @ts-ignore
+                    {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
                     activeOpacity={0.7}
                   >
                     <View style={[styles.contactIcon, { backgroundColor: colors.primary + "15" }]}>

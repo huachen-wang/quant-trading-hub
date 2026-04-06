@@ -18,6 +18,7 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import { ContactModal } from "@/components/contact-modal";
 import { QuickNav } from "@/components/quick-nav";
+import { GlassCard } from "@/components/glass-card";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
@@ -77,39 +78,37 @@ function NotifCard({ item, colors }: { item: NotificationItem; colors: any }) {
   });
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      onPress={toggleExpand}
-      style={[styles.notifCard, { backgroundColor: colors.surface, borderLeftColor: accentColor, borderColor: colors.border }]}
-    >
-      <View style={styles.notifCardHeader}>
-        <Text style={{ fontSize: 18 }}>{item.icon || "📌"}</Text>
-        <Text style={[styles.notifCardTitle, { color: colors.foreground }]} numberOfLines={expanded ? undefined : 1}>
-          {item.title}
-        </Text>
-        <Animated.Text style={[styles.expandArrow, { color: colors.muted, transform: [{ rotate: rotation }] }]}>
-          ▼
-        </Animated.Text>
-      </View>
-      {expanded && (
-        <View>
-          <Text style={[styles.notifCardContent, { color: colors.muted }]}>{item.content}</Text>
-          {item.link && (
-            <TouchableOpacity
-              onPress={() => Linking.openURL(item.link!)}
-              activeOpacity={0.7}
-              style={[styles.notifLinkBtn, { backgroundColor: accentColor + "20" }]}
-            >
-              <Text style={[styles.notifLinkText, { color: accentColor }]}>查看详情 →</Text>
-            </TouchableOpacity>
-          )}
+    <TouchableOpacity activeOpacity={0.8} onPress={toggleExpand}>
+      <GlassCard intensity="subtle" accentColor={accentColor} style={[styles.notifCard, { borderLeftWidth: 3, borderLeftColor: accentColor }]}>
+        <View style={styles.notifCardHeader}>
+          <Text style={{ fontSize: 18 }}>{item.icon || "📌"}</Text>
+          <Text style={[styles.notifCardTitle, { color: colors.foreground }]} numberOfLines={expanded ? undefined : 1}>
+            {item.title}
+          </Text>
+          <Animated.Text style={[styles.expandArrow, { color: colors.muted, transform: [{ rotate: rotation }] }]}>
+            ▼
+          </Animated.Text>
         </View>
-      )}
-      {!expanded && (
-        <Text style={[styles.notifCardPreview, { color: colors.muted }]} numberOfLines={1}>
-          {item.content}
-        </Text>
-      )}
+        {expanded && (
+          <View>
+            <Text style={[styles.notifCardContent, { color: colors.muted }]}>{item.content}</Text>
+            {item.link && (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(item.link!)}
+                activeOpacity={0.7}
+                style={[styles.notifLinkBtn, { backgroundColor: accentColor + "20" }]}
+              >
+                <Text style={[styles.notifLinkText, { color: accentColor }]}>查看详情 →</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        {!expanded && (
+          <Text style={[styles.notifCardPreview, { color: colors.muted }]} numberOfLines={1}>
+            {item.content}
+          </Text>
+        )}
+      </GlassCard>
     </TouchableOpacity>
   );
 }
@@ -282,6 +281,11 @@ export default function SubscribeScreen() {
     outputRange: [0, 0.5, 1, 0.5, 0],
   });
 
+  // 输入框样式 - Web端使用glass-input className
+  const inputProps = Platform.OS === "web"
+    ? { className: "glass-input" }
+    : {};
+
   return (
     <ScreenContainer>
       <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
@@ -301,7 +305,7 @@ export default function SubscribeScreen() {
         >
           {/* 通知栏 */}
           {notifications.length > 0 && (
-            <View style={[styles.notifBar, { backgroundColor: colors.primary + "12", overflow: "hidden" }]}>
+            <View style={[styles.notifBar, { backgroundColor: colors.primary + "10", overflow: "hidden" }]}>
               <Text style={styles.notifBarIcon}>📢</Text>
               <View style={styles.notifBarTextBox}>
                 <Animated.View style={{ transform: [{ translateY: slideTranslateY }], opacity: slideOpacity }}>
@@ -328,7 +332,7 @@ export default function SubscribeScreen() {
             </View>
           )}
 
-          {/* 页面标题 - 突出EA领取利益点 */}
+          {/* 页面标题 */}
           <View style={styles.headerSection}>
             <Text style={[styles.pageTitle, { color: colors.foreground }]}>免费领取实战 EA</Text>
             <Text style={[styles.pageSubtitle, { color: colors.muted }]}>
@@ -336,67 +340,73 @@ export default function SubscribeScreen() {
             </Text>
           </View>
 
-          {/* 核心订阅卡片 - 联系方式收集 */}
+          {/* 核心订阅卡片 - 玻璃拟态 */}
           <FadeInView delay={50}>
-            <View style={[styles.subscribeCard, { backgroundColor: colors.surface, borderColor: colors.primary + "30" }]}>
-              <View style={styles.subscribeHeader}>
-                <Text style={{ fontSize: 28 }}>🎁</Text>
-                <View style={styles.subscribeHeaderText}>
-                  <Text style={[styles.subscribeTitle, { color: colors.foreground }]}>立即领取 EA 策略</Text>
-                  <Text style={[styles.subscribeDesc, { color: colors.muted }]}>
-                    提交联系方式后，我们将为您发送精选EA并提供部署指导
-                  </Text>
+            <View style={styles.cardWrapper}>
+              <GlassCard intensity="strong" accentColor={colors.primary} highlight style={styles.subscribeCardInner}>
+                <View style={styles.subscribeHeader}>
+                  <Text style={{ fontSize: 28 }}>🎁</Text>
+                  <View style={styles.subscribeHeaderText}>
+                    <Text style={[styles.subscribeTitle, { color: colors.foreground }]}>立即领取 EA 策略</Text>
+                    <Text style={[styles.subscribeDesc, { color: colors.muted }]}>
+                      提交联系方式后，我们将为您发送精选EA并提供部署指导
+                    </Text>
+                  </View>
                 </View>
-              </View>
 
-              <View style={styles.emailInputRow}>
-                <TextInput
-                  ref={inputRef}
-                  value={contactInput}
-                  onChangeText={(t) => { setContactInput(t); setSubscribeMsg(null); }}
-                  placeholder="请输入微信号 / QQ / 邮箱"
-                  placeholderTextColor={colors.muted}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={handleSubscribe}
-                  blurOnSubmit={false}
-                  onFocus={() => { isInputFocused.current = true; }}
-                  onBlur={() => { isInputFocused.current = false; }}
-                  style={[styles.emailInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.foreground }]}
-                />
-                <TouchableOpacity
-                  onPress={handleSubscribe}
-                  disabled={isSubmitting}
-                  activeOpacity={0.8}
-                  style={[styles.subscribeBtn, { backgroundColor: colors.primary, opacity: isSubmitting ? 0.7 : 1 }]}
-                >
-                  {isSubmitting ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.subscribeBtnText}>立即领取</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {/* 推荐微信提示 */}
-              <Text style={[styles.contactTip, { color: colors.primary + "90" }]}>
-                * 推荐留下微信号，我们的策略顾问将为您提供 1 对 1 的 EA 部署指导
-              </Text>
-
-              {subscribeMsg && (
-                <View style={[styles.msgBox, { backgroundColor: subscribeMsg.type === "success" ? colors.success + "18" : colors.error + "18" }]}>
-                  <Text style={{ color: subscribeMsg.type === "success" ? colors.success : colors.error, fontSize: 13 }}>
-                    {subscribeMsg.type === "success" ? "✅ " : "❌ "}{subscribeMsg.text}
-                  </Text>
+                <View style={styles.emailInputRow}>
+                  <TextInput
+                    ref={inputRef}
+                    value={contactInput}
+                    onChangeText={(t) => { setContactInput(t); setSubscribeMsg(null); }}
+                    placeholder="请输入微信号 / QQ / 邮箱"
+                    placeholderTextColor={colors.muted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSubscribe}
+                    blurOnSubmit={false}
+                    onFocus={() => { isInputFocused.current = true; }}
+                    onBlur={() => { isInputFocused.current = false; }}
+                    style={[styles.emailInput, { backgroundColor: colors.background + "90", borderColor: colors.border, color: colors.foreground }]}
+                    // @ts-ignore
+                    {...inputProps}
+                  />
+                  <TouchableOpacity
+                    onPress={handleSubscribe}
+                    disabled={isSubmitting}
+                    activeOpacity={0.8}
+                    style={[styles.subscribeBtn, { backgroundColor: colors.primary, opacity: isSubmitting ? 0.7 : 1 }]}
+                    // @ts-ignore
+                    {...(Platform.OS === "web" ? { className: "glass-btn" } : {})}
+                  >
+                    {isSubmitting ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.subscribeBtnText}>立即领取</Text>
+                    )}
+                  </TouchableOpacity>
                 </View>
-              )}
 
-              {subscriberCountQuery.data != null && (
-                <Text style={[styles.subscriberCount, { color: colors.muted }]}>
-                  已有 {subscriberCountQuery.data} 位用户领取
+                {/* 推荐微信提示 */}
+                <Text style={[styles.contactTip, { color: colors.primary + "90" }]}>
+                  * 推荐留下微信号，我们的策略顾问将为您提供 1 对 1 的 EA 部署指导
                 </Text>
-              )}
+
+                {subscribeMsg && (
+                  <View style={[styles.msgBox, { backgroundColor: subscribeMsg.type === "success" ? colors.success + "18" : colors.error + "18" }]}>
+                    <Text style={{ color: subscribeMsg.type === "success" ? colors.success : colors.error, fontSize: 13 }}>
+                      {subscribeMsg.type === "success" ? "✅ " : "❌ "}{subscribeMsg.text}
+                    </Text>
+                  </View>
+                )}
+
+                {subscriberCountQuery.data != null && (
+                  <Text style={[styles.subscriberCount, { color: colors.muted }]}>
+                    已有 {subscriberCountQuery.data} 位用户领取
+                  </Text>
+                )}
+              </GlassCard>
             </View>
           </FadeInView>
 
@@ -406,16 +416,13 @@ export default function SubscribeScreen() {
               <Text style={[styles.dataSectionTitle, { color: colors.foreground }]}>领取权益</Text>
               <View style={styles.benefitsGrid}>
                 {SUBSCRIBE_BENEFITS.map((item, i) => (
-                  <View
-                    key={i}
-                    style={[styles.benefitCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  >
+                  <GlassCard key={i} intensity="subtle" style={styles.benefitCardInner}>
                     <Text style={styles.benefitIcon}>{item.icon}</Text>
                     <View style={styles.benefitContent}>
                       <Text style={[styles.benefitTitle, { color: colors.foreground }]}>{item.title}</Text>
                       <Text style={[styles.benefitDesc, { color: colors.muted }]}>{item.desc}</Text>
                     </View>
-                  </View>
+                  </GlassCard>
                 ))}
               </View>
             </View>
@@ -429,8 +436,7 @@ export default function SubscribeScreen() {
                 为什么90%的EA都会亏钱？数据告诉你答案
               </Text>
 
-              {/* 亏损原因可视化 */}
-              <View style={[styles.dataCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <GlassCard intensity="medium" style={styles.dataCardInner}>
                 <Text style={[styles.dataCardTitle, { color: colors.foreground }]}>EA亏损原因分布</Text>
                 {EA_MARKET_DATA.map((item, i) => (
                   <View key={i} style={styles.barRow}>
@@ -444,7 +450,7 @@ export default function SubscribeScreen() {
                 <Text style={[styles.dataSource, { color: colors.muted }]}>
                   数据来源：量化军火库数据库 200+ EA策略分析
                 </Text>
-              </View>
+              </GlassCard>
             </View>
           </FadeInView>
 
@@ -456,24 +462,21 @@ export default function SubscribeScreen() {
                 我们用严格的审核机制，为你过滤掉虚假宣传和高风险EA
               </Text>
               {SCREENING_CRITERIA.map((item, i) => (
-                <View
-                  key={i}
-                  style={[styles.criteriaCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                >
+                <GlassCard key={i} intensity="subtle" style={styles.criteriaCardInner}>
                   <Text style={styles.criteriaIcon}>{item.icon}</Text>
                   <View style={styles.criteriaContent}>
                     <Text style={[styles.criteriaLabel, { color: colors.foreground }]}>{item.label}</Text>
                     <Text style={[styles.criteriaDesc, { color: colors.muted }]}>{item.desc}</Text>
                   </View>
-                </View>
+                </GlassCard>
               ))}
             </View>
           </FadeInView>
 
-          {/* ===== 底部引导 - 软性 ===== */}
+          {/* ===== 底部引导 ===== */}
           <FadeInView delay={400}>
             <View style={styles.dataSection}>
-              <View style={[styles.cooperationGuide, { backgroundColor: colors.primary + "10", borderColor: colors.primary + "25" }]}>
+              <GlassCard intensity="medium" accentColor={colors.primary} highlight style={styles.guideInner}>
                 <Text style={[styles.guideTitle, { color: colors.foreground }]}>好策略，配好平台</Text>
                 <Text style={[styles.guideDesc, { color: colors.muted }]}>
                   量化军火库不仅帮你筛选优质EA策略，还为你匹配最适合的合规交易平台。告诉我们你的需求，我们帮你做好功课。
@@ -482,10 +485,12 @@ export default function SubscribeScreen() {
                   onPress={handleConsult}
                   activeOpacity={0.8}
                   style={[styles.guideBtn, { backgroundColor: colors.primary }]}
+                  // @ts-ignore
+                  {...(Platform.OS === "web" ? { className: "glass-btn" } : {})}
                 >
                   <Text style={styles.guideBtnText}>免费咨询平台匹配方案 →</Text>
                 </TouchableOpacity>
-              </View>
+              </GlassCard>
             </View>
           </FadeInView>
 
@@ -507,15 +512,14 @@ export default function SubscribeScreen() {
               <View>
                 <Text style={[styles.sectionTitleInner, { color: colors.foreground }]}>详细信息</Text>
                 {contents.map((item) => (
-                  <View
-                    key={item.id}
-                    style={[styles.contentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  >
-                    <View style={styles.contentCardHeader}>
-                      <Text style={{ fontSize: 24 }}>{item.icon || "📄"}</Text>
-                      <Text style={[styles.contentCardTitle, { color: colors.foreground }]}>{item.title}</Text>
-                    </View>
-                    <Text style={[styles.contentCardBody, { color: colors.muted }]}>{item.content}</Text>
+                  <View key={item.id} style={styles.cardWrapper}>
+                    <GlassCard intensity="subtle" style={styles.contentCardInner}>
+                      <View style={styles.contentCardHeader}>
+                        <Text style={{ fontSize: 24 }}>{item.icon || "📄"}</Text>
+                        <Text style={[styles.contentCardTitle, { color: colors.foreground }]}>{item.title}</Text>
+                      </View>
+                      <Text style={[styles.contentCardBody, { color: colors.muted }]}>{item.content}</Text>
+                    </GlassCard>
                   </View>
                 ))}
               </View>
@@ -547,30 +551,19 @@ const styles = StyleSheet.create({
   notifBarIcon: { fontSize: 16, marginRight: 8 },
   notifBarTextBox: { flex: 1, overflow: "hidden", height: 20 },
   notifBarText: { fontSize: 13 },
-  notifDots: {
-    flexDirection: "row",
-    gap: 4,
-    marginLeft: 8,
-  },
-  notifDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
+  notifDots: { flexDirection: "row", gap: 4, marginLeft: 8 },
+  notifDot: { width: 5, height: 5, borderRadius: 2.5 },
 
   // Header
   headerSection: { paddingHorizontal: 16, marginTop: 12, marginBottom: 16 },
   pageTitle: { fontSize: 26, fontWeight: "800", marginBottom: 6 },
   pageSubtitle: { fontSize: 14, lineHeight: 20 },
 
-  // Subscribe card
-  subscribeCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 20,
-    marginHorizontal: 16,
-    marginBottom: 20,
-  },
+  // Card wrapper
+  cardWrapper: { marginHorizontal: 16, marginBottom: 16 },
+
+  // Subscribe card inner
+  subscribeCardInner: { padding: 20 },
   subscribeHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 12 },
   subscribeHeaderText: { flex: 1 },
   subscribeTitle: { fontSize: 18, fontWeight: "700", marginBottom: 4 },
@@ -591,186 +584,67 @@ const styles = StyleSheet.create({
   subscriberCount: { marginTop: 10, fontSize: 12, textAlign: "center" },
 
   // Benefits
-  benefitsGrid: {
-    gap: 8,
-  },
-  benefitCard: {
+  benefitsGrid: { gap: 8 },
+  benefitCardInner: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
     padding: 14,
     gap: 12,
   },
-  benefitIcon: {
-    fontSize: 24,
-  },
-  benefitContent: {
-    flex: 1,
-  },
-  benefitTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  benefitDesc: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
+  benefitIcon: { fontSize: 24 },
+  benefitContent: { flex: 1 },
+  benefitTitle: { fontSize: 14, fontWeight: "700", marginBottom: 2 },
+  benefitDesc: { fontSize: 12, lineHeight: 18 },
 
   // Data section
-  dataSection: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  dataSectionTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  dataSectionSub: {
-    fontSize: 13,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  dataCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 16,
-  },
-  dataCardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 12,
-  },
-  barRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    gap: 8,
-  },
-  barLabel: {
-    width: 80,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  barTrack: {
-    flex: 1,
-    height: 16,
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  barFill: {
-    height: "100%",
-    borderRadius: 8,
-  },
-  barPct: {
-    width: 35,
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "right",
-  },
-  dataSource: {
-    fontSize: 10,
-    marginTop: 8,
-    textAlign: "right",
-    fontStyle: "italic",
-  },
+  dataSection: { paddingHorizontal: 16, marginBottom: 20 },
+  dataSectionTitle: { fontSize: 18, fontWeight: "800", marginBottom: 4 },
+  dataSectionSub: { fontSize: 13, marginBottom: 12, lineHeight: 20 },
+  dataCardInner: { padding: 16 },
+  dataCardTitle: { fontSize: 15, fontWeight: "700", marginBottom: 12 },
+  barRow: { flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 8 },
+  barLabel: { width: 80, fontSize: 12, fontWeight: "600" },
+  barTrack: { flex: 1, height: 16, borderRadius: 8, overflow: "hidden" },
+  barFill: { height: "100%", borderRadius: 8 },
+  barPct: { width: 35, fontSize: 12, fontWeight: "700", textAlign: "right" },
+  dataSource: { fontSize: 10, marginTop: 8, textAlign: "right", fontStyle: "italic" },
 
   // Screening criteria
-  criteriaCard: {
+  criteriaCardInner: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
     padding: 14,
     marginBottom: 8,
     gap: 12,
   },
-  criteriaIcon: {
-    fontSize: 24,
-  },
-  criteriaContent: {
-    flex: 1,
-  },
-  criteriaLabel: {
-    fontSize: 14,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  criteriaDesc: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
+  criteriaIcon: { fontSize: 24 },
+  criteriaContent: { flex: 1 },
+  criteriaLabel: { fontSize: 14, fontWeight: "700", marginBottom: 2 },
+  criteriaDesc: { fontSize: 12, lineHeight: 18 },
 
   // Cooperation guide
-  cooperationGuide: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 20,
-    alignItems: "center",
-  },
-  guideTitle: {
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 8,
-  },
-  guideDesc: {
-    fontSize: 13,
-    lineHeight: 22,
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  guideBtn: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  guideBtnText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "700",
-  },
+  guideInner: { padding: 20, alignItems: "center" },
+  guideTitle: { fontSize: 17, fontWeight: "800", marginBottom: 8 },
+  guideDesc: { fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 16 },
+  guideBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 },
+  guideBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
 
   // Section
   section: { paddingHorizontal: 16, marginBottom: 24 },
   sectionTitleInner: { fontSize: 18, fontWeight: "800", marginBottom: 12, paddingHorizontal: 16 },
 
   // Notification card
-  notifCard: {
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-    borderLeftWidth: 4,
-    borderWidth: 1,
-  },
-  notifCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
+  notifCard: { padding: 14, marginBottom: 10 },
+  notifCardHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   notifCardTitle: { fontSize: 15, fontWeight: "700", flex: 1 },
   expandArrow: { fontSize: 10 },
   notifCardPreview: { fontSize: 13, marginTop: 4, marginLeft: 26 },
   notifCardContent: { fontSize: 14, lineHeight: 22, marginTop: 10, marginLeft: 26 },
-  notifLinkBtn: {
-    marginTop: 10,
-    marginLeft: 26,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-  },
+  notifLinkBtn: { marginTop: 10, marginLeft: 26, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, alignSelf: "flex-start" },
   notifLinkText: { fontSize: 13, fontWeight: "700" },
 
   // Content card
-  contentCard: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 18,
-    marginBottom: 12,
-    marginHorizontal: 16,
-  },
+  contentCardInner: { padding: 18 },
   contentCardHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
   contentCardTitle: { fontSize: 17, fontWeight: "700", flex: 1 },
   contentCardBody: { fontSize: 14, lineHeight: 22 },

@@ -532,7 +532,11 @@ export default function StrategyDetailScreen() {
           {/* 核心数据 */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>实盘数据</Text>
-            <View style={[styles.statsCard, { backgroundColor: colors.surface }]}>
+            <View
+              style={[styles.statsCard, { backgroundColor: colors.surface }]}
+              // @ts-ignore
+              {...(Platform.OS === "web" ? { className: "glass-medium" } : {})}
+            >
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Text style={[styles.statLabel, { color: colors.muted }]}>总收益率</Text>
@@ -557,7 +561,11 @@ export default function StrategyDetailScreen() {
           {/* 交易信息 */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>交易信息</Text>
-            <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+            <View
+              style={[styles.infoCard, { backgroundColor: colors.surface }]}
+              // @ts-ignore
+              {...(Platform.OS === "web" ? { className: "glass-medium" } : {})}
+            >
               <View style={styles.infoRow}>
                 <View style={styles.infoItem}>
                   <Text style={[styles.infoLabel, { color: colors.muted }]}>交易对</Text>
@@ -573,7 +581,11 @@ export default function StrategyDetailScreen() {
 
           {/* 价格和操作 */}
           <View style={styles.section}>
-            <View style={[styles.actionCard, { backgroundColor: colors.surface }]}>
+            <View
+              style={[styles.actionCard, { backgroundColor: colors.surface }]}
+              // @ts-ignore
+              {...(Platform.OS === "web" ? { className: "glass-strong" } : {})}
+            >
               <View style={styles.priceRow}>
                 <View>
                   <Text style={[styles.priceLabel, { color: colors.muted }]}>价格</Text>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, Modal, TouchableOpacity, TextInput, ActivityIndicator, StyleSheet, Alert, Animated } from "react-native";
+import { View, Text, Modal, TouchableOpacity, TextInput, ActivityIndicator, StyleSheet, Alert, Animated, Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
@@ -99,8 +99,10 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
         <Animated.View
           style={[
             styles.modalContent,
-            { backgroundColor: colors.background, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+            { backgroundColor: Platform.OS === "web" ? "rgba(15,23,42,0.85)" : colors.background, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
           ]}
+          // @ts-ignore
+          {...(Platform.OS === "web" ? { className: "glass-strong" } : {})}
         >
         <TouchableOpacity
           activeOpacity={1}
@@ -135,7 +137,9 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
                   onChangeText={setContact}
                   placeholder="微信号 / QQ / Telegram（推荐）"
                   placeholderTextColor={colors.muted}
-                  style={[styles.input, { backgroundColor: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)", color: colors.foreground }]}
+                  style={[styles.input, { backgroundColor: "rgba(15,23,42,0.6)", borderColor: "rgba(148,163,184,0.12)", color: colors.foreground }]}
+                  // @ts-ignore
+                  {...(Platform.OS === "web" ? { className: "glass-input" } : {})}
                 />
                 <TextInput
                   value={email}
@@ -145,7 +149,9 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  style={[styles.input, { backgroundColor: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.1)", color: colors.foreground }]}
+                  style={[styles.input, { backgroundColor: "rgba(15,23,42,0.6)", borderColor: "rgba(148,163,184,0.12)", color: colors.foreground }]}
+                  // @ts-ignore
+                  {...(Platform.OS === "web" ? { className: "glass-input" } : {})}
                 />
               </View>
 

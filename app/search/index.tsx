@@ -57,7 +57,11 @@ export default function SearchScreen() {
             <IconSymbol name="chevron.left" size={20} color={colors.foreground} />
           </TouchableOpacity>
           
-          <View style={[styles.searchInputBox, { backgroundColor: colors.surface }]}>
+          <View
+            style={[styles.searchInputBox, { backgroundColor: colors.surface }]}
+            // @ts-ignore
+            {...(Platform.OS === "web" ? { className: "glass-medium" } : {})}
+          >
             <IconSymbol name="magnifyingglass" size={18} color={colors.muted} />
             <TextInput
               value={searchQuery}
@@ -94,6 +98,8 @@ export default function SearchScreen() {
                   key={i}
                   onPress={() => { setSearchQuery(tag); setDebouncedQuery(tag); }}
                   style={[styles.hotTag, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  // @ts-ignore
+                  {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.hotTagText, { color: colors.foreground }]}>{tag}</Text>

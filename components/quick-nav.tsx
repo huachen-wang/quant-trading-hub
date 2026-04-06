@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, Linking } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Linking, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -59,7 +59,9 @@ export function QuickNav() {
               colors={item.gradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={[styles.card, { borderColor: item.accent + "20" }]}
+              style={[styles.card, { borderColor: item.accent + "25" }]}
+              // @ts-ignore - web-only className
+              {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
             >
               <Text style={styles.icon}>{item.icon}</Text>
               <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
@@ -80,7 +82,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(148,163,184,0.08)",
     marginBottom: 14,
   },
   sectionTitle: {

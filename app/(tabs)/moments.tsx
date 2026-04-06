@@ -45,8 +45,8 @@ const GOLD = "#F59E0B";
 const GOLD_DIM = "rgba(245,158,11,0.6)";
 const GOLD_BG = "rgba(245,158,11,0.1)";
 const GOLD_BORDER = "rgba(245,158,11,0.2)";
-const CARD_BG = "rgba(255,255,255,0.03)";
-const CARD_BORDER = "rgba(255,255,255,0.08)";
+const CARD_BG = "rgba(30,41,59,0.5)";
+const CARD_BORDER = "rgba(148,163,184,0.08)";
 const TEXT_PRIMARY = "rgba(255,255,255,0.9)";
 const TEXT_SECONDARY = "rgba(255,255,255,0.45)";
 const TEXT_BODY = "rgba(255,255,255,0.6)";
@@ -280,6 +280,8 @@ export default function CooperationScreen() {
                       tier.highlight ? styles.pricingCardHighlight : styles.pricingCardNormal,
                       { width: isMobile ? "100%" : "31%", ...(tier.highlight && !isMobile ? Platform.OS === "web" ? { transform: [{ scale: 1.03 }] } : {} : {}) },
                     ]}
+                    // @ts-ignore
+                    {...(Platform.OS === "web" ? { className: tier.highlight ? "glass-strong" : "glass-medium" } : {})}
                   >
                     {tier.popular && <View style={styles.popularBadge}><Text style={styles.popularBadgeText}>核心产品</Text></View>}
                     <Text style={[styles.pricingName, tier.highlight && { color: GOLD }]}>{tier.name}</Text>

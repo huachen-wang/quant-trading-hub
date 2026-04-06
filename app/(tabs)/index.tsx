@@ -342,6 +342,8 @@ export default function HomeScreen() {
             onPress={() => router.push("/search" as any)}
             style={[filterStyles.searchBtn, { backgroundColor: colors.surface }]}
             activeOpacity={0.7}
+            // @ts-ignore
+            {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
           >
             <IconSymbol name="magnifyingglass" size={18} color={colors.muted} />
           </TouchableOpacity>
