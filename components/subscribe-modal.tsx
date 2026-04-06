@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { View, Text, Modal, TouchableOpacity, TextInput, ActivityIndicator, StyleSheet, Alert, Animated, Platform } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
+import { glassStyle } from "@/lib/glass-styles";
 
 interface SubscribeModalProps {
   visible: boolean;
@@ -100,9 +101,8 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
           style={[
             styles.modalContent,
             { backgroundColor: Platform.OS === "web" ? "rgba(15,23,42,0.85)" : colors.background, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+            glassStyle("strong") as any,
           ]}
-          // @ts-ignore
-          {...(Platform.OS === "web" ? { className: "glass-strong" } : {})}
         >
         <TouchableOpacity
           activeOpacity={1}
@@ -138,8 +138,6 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
                   placeholder="微信号 / QQ / Telegram（推荐）"
                   placeholderTextColor={colors.muted}
                   style={[styles.input, { backgroundColor: "rgba(15,23,42,0.6)", borderColor: "rgba(148,163,184,0.12)", color: colors.foreground }]}
-                  // @ts-ignore
-                  {...(Platform.OS === "web" ? { className: "glass-input" } : {})}
                 />
                 <TextInput
                   value={email}
@@ -150,8 +148,6 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
                   autoCapitalize="none"
                   autoCorrect={false}
                   style={[styles.input, { backgroundColor: "rgba(15,23,42,0.6)", borderColor: "rgba(148,163,184,0.12)", color: colors.foreground }]}
-                  // @ts-ignore
-                  {...(Platform.OS === "web" ? { className: "glass-input" } : {})}
                 />
               </View>
 

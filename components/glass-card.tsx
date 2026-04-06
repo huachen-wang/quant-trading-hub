@@ -1,15 +1,16 @@
 /**
  * GlassCard - 玻璃拟态卡片组件
  *
- * 在 Web 端使用 CSS backdrop-filter 实现毛玻璃效果，
- * 在 Native 端使用半透明背景 + 边框模拟类似质感。
+ * 完全通过 React Native style 属性实现毛玻璃效果。
+ * React Native Web 原生支持 backdropFilter 并自动添加 -webkit- 前缀。
+ * 不依赖任何 CSS className，确保跨平台一致性。
  *
  * 三种强度等级：
  * - "subtle"  : 最轻微的玻璃感，适合列表项、小卡片
  * - "medium"  : 标准玻璃感，适合内容卡片、表单区域
  * - "strong"  : 最强玻璃感，适合模态框、重点CTA区域
  */
-import { View, Platform, StyleSheet, type ViewStyle, type StyleProp } from "react-native";
+import { View, StyleSheet, type ViewStyle, type StyleProp } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 
 type GlassIntensity = "subtle" | "medium" | "strong";
@@ -24,11 +25,39 @@ interface GlassCardProps {
   highlight?: boolean;
 }
 
-// Web 端 CSS className 映射
-const WEB_CLASS_MAP: Record<GlassIntensity, string> = {
-  subtle: "glass-subtle",
-  medium: "glass-medium",
-  strong: "glass-strong",
+// 玻璃拟态样式配置 - 纯 inline style，不依赖 CSS className
+const GLASS_STYLES: Record<GlassIntensity, ViewStyle> = {
+  subtle: {
+    backgroundColor: "rgba(30, 41, 59, 0.50)",
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.08)",
+  },
+  medium: {
+    backgroundColor: "rgba(30, 41, 59, 0.55)",
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.10)",
+  },
+  strong: {
+    backgroundColor: "rgba(30, 41, 59, 0.70)",
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.12)",
+  },
+};
+
+// Web 端额外的 backdrop-filter 样式（React Native Web 支持）
+const WEB_BLUR: Record<GlassIntensity, any> = {
+  subtle: {
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+  },
+  medium: {
+    backdropFilter: "blur(16px)",
+    WebkitBackdropFilter: "blur(16px)",
+  },
+  strong: {
+    backdropFilter: "blur(24px)",
+    WebkitBackdropFilter: "blur(24px)",
+  },
 };
 
 export function GlassCard({
@@ -40,49 +69,30 @@ export function GlassCard({
 }: GlassCardProps) {
   const colors = useColors();
 
-  // Native 端降级样式
-  const nativeStyles: Record<GlassIntensity, ViewStyle> = {
-    subtle: {
-      backgroundColor: colors.surface + "CC", // 80% opacity
-      borderWidth: 1,
-      borderColor: colors.border + "80",
-    },
-    medium: {
-      backgroundColor: colors.surface + "E6", // 90% opacity
-      borderWidth: 1,
-      borderColor: colors.border + "99",
-    },
-    strong: {
-      backgroundColor: colors.surface + "F2", // 95% opacity
-      borderWidth: 1,
-      borderColor: colors.border + "B3",
-    },
-  };
+  const glassStyle = GLASS_STYLES[intensity];
+  const webBlur = WEB_BLUR[intensity];
 
   const accentBorder = accentColor
     ? { borderColor: accentColor + "40", borderWidth: 1 }
     : {};
 
-  if (Platform.OS === "web") {
-    return (
-      <View
-        // @ts-ignore - web-only className prop
-        className={WEB_CLASS_MAP[intensity]}
-        style={[styles.base, accentBorder, style]}
-      >
-        {highlight && (
-          <View style={[styles.highlightLine, { backgroundColor: (accentColor || colors.primary) + "30" }]} />
-        )}
-        {children}
-      </View>
-    );
-  }
-
-  // Native fallback
   return (
-    <View style={[styles.base, nativeStyles[intensity], accentBorder, style]}>
+    <View
+      style={[
+        styles.base,
+        glassStyle,
+        webBlur,
+        accentBorder,
+        style,
+      ]}
+    >
       {highlight && (
-        <View style={[styles.highlightLine, { backgroundColor: (accentColor || colors.primary) + "30" }]} />
+        <View
+          style={[
+            styles.highlightLine,
+            { backgroundColor: (accentColor || colors.primary) + "30" },
+          ]}
+        />
       )}
       {children}
     </View>

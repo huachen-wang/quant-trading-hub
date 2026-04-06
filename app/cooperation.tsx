@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
+import { glassStyle } from "@/lib/glass-styles";
 
 const { width: SW } = Dimensions.get("window");
 const isDesktop = SW >= 768;
@@ -288,9 +289,7 @@ export default function CooperationPage() {
               { icon: "cash", title: "源头直供", desc: "成本直降80%，比市面任何渠道都便宜。发我对比给你更优价", color: "#F59E0B" },
               { icon: "infinite", title: "无限授权", desc: "有效期内不限窗口、不限账户，一个价格覆盖所有需求", color: "#06B6D4" },
             ].map((item, i) => (
-              <View key={i} style={s.supportCard}
-              // @ts-ignore
-              {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
+              <View key={i} style={[s.supportCard, glassStyle("subtle") as any]}
             >
                 <View style={[s.supportIconWrap, { backgroundColor: `${item.color}15` }]}>
                   <Ionicons name={item.icon as any} size={22} color={item.color} />
@@ -366,9 +365,7 @@ export default function CooperationPage() {
             ]).map((plan: any, idx: number) => {
               const isMain = idx === 1 || plan.badge === "推荐";
               return (
-                <View key={plan.id} style={[s.planCard, isMain && s.planCardMain]}
-                  // @ts-ignore
-                  {...(Platform.OS === "web" ? { className: isMain ? "glass-strong" : "glass-medium" } : {})}
+                <View key={plan.id} style={[s.planCard, isMain && s.planCardMain, glassStyle(isMain ? "strong" : "medium") as any]}
                 >
                   {isMain && (
                     <LinearGradient colors={["#D97706", "#F59E0B"]} style={s.planRibbon}>

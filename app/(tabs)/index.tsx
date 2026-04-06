@@ -12,6 +12,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
+import { glassStyle } from "@/lib/glass-styles";
 
 type PlatformFilter = "MT4" | "MT5" | undefined;
 type OrderBy = "latest" | "return" | "hot";
@@ -340,10 +341,8 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push("/search" as any)}
-            style={[filterStyles.searchBtn, { backgroundColor: colors.surface }]}
+            style={[filterStyles.searchBtn, { backgroundColor: colors.surface }, glassStyle("subtle") as any]}
             activeOpacity={0.7}
-            // @ts-ignore
-            {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
           >
             <IconSymbol name="magnifyingglass" size={18} color={colors.muted} />
           </TouchableOpacity>

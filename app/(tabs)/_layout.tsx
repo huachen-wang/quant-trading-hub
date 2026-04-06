@@ -6,6 +6,7 @@ import { View, Text, StyleSheet, Platform, TouchableOpacity, Animated } from "re
 import { HapticTab } from "@/components/haptic-tab";
 import { ContactModal } from "@/components/contact-modal";
 import { useColors } from "@/hooks/use-colors";
+import { glassStyle } from "@/lib/glass-styles";
 
 // 自定义Tab图标组件 - 支持高亮和置灰
 function TabIcon({ emoji, label, focused, activeColor, inactiveColor }: {
@@ -67,9 +68,8 @@ function FloatingConsultButton() {
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={0.9}
-          style={[styles.floatingBtn, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
-          // @ts-ignore
-          {...(Platform.OS === "web" ? { className: "glass-btn" } : {})}
+          style={[styles.floatingBtn, { backgroundColor: colors.primary, shadowColor: colors.primary }, glassStyle("btn") as any]}
+
         >
           <Text style={styles.floatingBtnEmoji}>💬</Text>
           <Text style={styles.floatingBtnText}>咨询</Text>

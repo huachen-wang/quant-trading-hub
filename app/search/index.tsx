@@ -7,6 +7,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
+import { glassStyle } from "@/lib/glass-styles";
 
 export default function SearchScreen() {
   const colors = useColors();
@@ -58,9 +59,7 @@ export default function SearchScreen() {
           </TouchableOpacity>
           
           <View
-            style={[styles.searchInputBox, { backgroundColor: colors.surface }]}
-            // @ts-ignore
-            {...(Platform.OS === "web" ? { className: "glass-medium" } : {})}
+            style={[styles.searchInputBox, { backgroundColor: colors.surface }, glassStyle("medium") as any]}
           >
             <IconSymbol name="magnifyingglass" size={18} color={colors.muted} />
             <TextInput
@@ -97,9 +96,7 @@ export default function SearchScreen() {
                 <TouchableOpacity
                   key={i}
                   onPress={() => { setSearchQuery(tag); setDebouncedQuery(tag); }}
-                  style={[styles.hotTag, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                  // @ts-ignore
-                  {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
+                  style={[styles.hotTag, { backgroundColor: colors.surface, borderColor: colors.border }, glassStyle("subtle") as any]}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.hotTagText, { color: colors.foreground }]}>{tag}</Text>

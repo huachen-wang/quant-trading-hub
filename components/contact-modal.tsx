@@ -3,6 +3,7 @@ import { View, Text, Modal, TouchableOpacity, Linking, ActivityIndicator, StyleS
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "./ui/icon-symbol";
 import { trpc } from "@/lib/trpc";
+import { glassStyle } from "@/lib/glass-styles";
 
 interface ContactModalProps {
   visible: boolean;
@@ -79,9 +80,8 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
           style={[
             styles.modalContent,
             { backgroundColor: Platform.OS === "web" ? "rgba(15,23,42,0.85)" : colors.background, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+            glassStyle("strong") as any,
           ]}
-          // @ts-ignore
-          {...(Platform.OS === "web" ? { className: "glass-strong" } : {})}
         >
         <TouchableOpacity
           activeOpacity={1}
@@ -106,9 +106,7 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
                   <TouchableOpacity
                     key={index}
                     onPress={() => handlePress(method.link)}
-                    style={[styles.contactItem, { backgroundColor: Platform.OS === "web" ? "rgba(30,41,59,0.5)" : colors.surface }]}
-                    // @ts-ignore
-                    {...(Platform.OS === "web" ? { className: "glass-subtle" } : {})}
+                    style={[styles.contactItem, { backgroundColor: Platform.OS === "web" ? "rgba(30,41,59,0.5)" : colors.surface }, glassStyle("subtle") as any]}
                     activeOpacity={0.7}
                   >
                     <View style={[styles.contactIcon, { backgroundColor: colors.primary + "15" }]}>

@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
+import { glassStyle } from "@/lib/glass-styles";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const isDesktop = SCREEN_WIDTH >= 768;
@@ -324,11 +325,10 @@ export default function PromoPage() {
             return (
               <TouchableOpacity
                 key={product.id}
-                style={s.productCard}
+                style={[s.productCard, glassStyle("medium") as any]}
                 onPress={() => setSelectedProduct(product)}
                 activeOpacity={0.92}
-                // @ts-ignore
-                {...(Platform.OS === "web" ? { className: "glass-medium" } : {})}
+
               >
                 {/* 卡片顶部 - 渐变色彩区 */}
                 <LinearGradient

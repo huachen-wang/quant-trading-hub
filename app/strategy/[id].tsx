@@ -24,6 +24,7 @@ import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 import { SubscribeModal } from "@/components/subscribe-modal";
+import { glassStyle } from "@/lib/glass-styles";
 
 export default function StrategyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -533,9 +534,7 @@ export default function StrategyDetailScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>实盘数据</Text>
             <View
-              style={[styles.statsCard, { backgroundColor: colors.surface }]}
-              // @ts-ignore
-              {...(Platform.OS === "web" ? { className: "glass-medium" } : {})}
+              style={[styles.statsCard, { backgroundColor: colors.surface }, glassStyle("medium") as any]}
             >
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
@@ -562,9 +561,7 @@ export default function StrategyDetailScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>交易信息</Text>
             <View
-              style={[styles.infoCard, { backgroundColor: colors.surface }]}
-              // @ts-ignore
-              {...(Platform.OS === "web" ? { className: "glass-medium" } : {})}
+              style={[styles.infoCard, { backgroundColor: colors.surface }, glassStyle("medium") as any]}
             >
               <View style={styles.infoRow}>
                 <View style={styles.infoItem}>
@@ -582,9 +579,7 @@ export default function StrategyDetailScreen() {
           {/* 价格和操作 */}
           <View style={styles.section}>
             <View
-              style={[styles.actionCard, { backgroundColor: colors.surface }]}
-              // @ts-ignore
-              {...(Platform.OS === "web" ? { className: "glass-strong" } : {})}
+              style={[styles.actionCard, { backgroundColor: colors.surface }, glassStyle("strong") as any]}
             >
               <View style={styles.priceRow}>
                 <View>
