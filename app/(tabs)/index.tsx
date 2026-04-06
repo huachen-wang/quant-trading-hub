@@ -449,10 +449,75 @@ export default function HomeScreen() {
   );
 
   // ═══════════════════ 完整 Header ═══════════════════
+  // ═══════════════════ 定制EA横幅 ═══════════════════
+  const renderCustomEABanner = () => (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => setShowContactModal(true)}
+      style={customBannerStyles.outer}
+    >
+      <LinearGradient
+        colors={["#0F172A", "#1E1B4B", "#312E81"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={customBannerStyles.container}
+      >
+        {/* 装饰元素 */}
+        <View style={customBannerStyles.glowOrb} />
+        <View style={customBannerStyles.glowOrb2} />
+        <View style={customBannerStyles.gridLine1} />
+        <View style={customBannerStyles.gridLine2} />
+
+        {/* 左侧图标 */}
+        <View style={customBannerStyles.iconWrap}>
+          <LinearGradient colors={["#D97706", "#F59E0B"]} style={customBannerStyles.iconGradient}>
+            <Text style={{ fontSize: 22 }}>🛠️</Text>
+          </LinearGradient>
+        </View>
+
+        {/* 右侧内容 */}
+        <View style={customBannerStyles.content}>
+          <View style={customBannerStyles.tagRow}>
+            <View style={customBannerStyles.tag}>
+              <Text style={customBannerStyles.tagText}>核心服务</Text>
+            </View>
+            <View style={customBannerStyles.tagHot}>
+              <Text style={customBannerStyles.tagHotText}>热门</Text>
+            </View>
+          </View>
+          <Text style={customBannerStyles.title}>军火库 · 专属EA定制</Text>
+          <Text style={customBannerStyles.desc}>
+            为工作室量身打造专属EA策略，源头低价拿货、无限授权不受限。自定义策略名称与调优模式，版权与联系方式全部替换为工作室自有品牌。
+          </Text>
+          <View style={customBannerStyles.features}>
+            <View style={customBannerStyles.featureItem}>
+              <Text style={customBannerStyles.featureDot}>◆</Text>
+              <Text style={customBannerStyles.featureText}>专属名称 & 调优模式</Text>
+            </View>
+            <View style={customBannerStyles.featureItem}>
+              <Text style={customBannerStyles.featureDot}>◆</Text>
+              <Text style={customBannerStyles.featureText}>无限授权 & 版权归属</Text>
+            </View>
+            <View style={customBannerStyles.featureItem}>
+              <Text style={customBannerStyles.featureDot}>◆</Text>
+              <Text style={customBannerStyles.featureText}>源头价 & 全流程透明</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* 右侧箭头 */}
+        <View style={customBannerStyles.arrow}>
+          <Text style={{ color: "#D97706", fontSize: 18, fontWeight: "900" }}>›</Text>
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+
   const renderHeader = () => (
     <View style={{ marginBottom: 8 }}>
       {renderHero()}
       {renderQuickEntries()}
+      {renderCustomEABanner()}
       {renderFilters()}
     </View>
   );
@@ -877,5 +942,148 @@ const filterStyles = StyleSheet.create({
   tagChipText: {
     fontSize: 12,
     fontWeight: "600",
+  },
+});
+
+// ═══════════════════ 定制EA横幅样式 ═══════════════════
+const customBannerStyles = StyleSheet.create({
+  outer: {
+    marginHorizontal: 12,
+    marginTop: 16,
+    marginBottom: 8,
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.25)",
+  },
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    position: "relative",
+    overflow: "hidden",
+  },
+  // 装饰元素
+  glowOrb: {
+    position: "absolute",
+    top: -30,
+    right: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "rgba(139,92,246,0.08)",
+  },
+  glowOrb2: {
+    position: "absolute",
+    bottom: -20,
+    left: -20,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(217,119,6,0.06)",
+  },
+  gridLine1: {
+    position: "absolute",
+    top: 0,
+    left: "30%",
+    width: 1,
+    height: "100%",
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  gridLine2: {
+    position: "absolute",
+    top: "50%",
+    left: 0,
+    width: "100%",
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  // 图标
+  iconWrap: {
+    marginRight: 14,
+  },
+  iconGradient: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  // 内容
+  content: {
+    flex: 1,
+  },
+  tagRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: 6,
+  },
+  tag: {
+    backgroundColor: "rgba(139,92,246,0.15)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.3)",
+  },
+  tagText: {
+    color: "#A78BFA",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  tagHot: {
+    backgroundColor: "rgba(239,68,68,0.15)",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.3)",
+  },
+  tagHotText: {
+    color: "#F87171",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  title: {
+    color: "#F1F5F9",
+    fontSize: 16,
+    fontWeight: "900",
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  desc: {
+    color: "#94A3B8",
+    fontSize: 11,
+    lineHeight: 17,
+    marginBottom: 8,
+  },
+  features: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  featureItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  featureDot: {
+    color: "#D97706",
+    fontSize: 6,
+  },
+  featureText: {
+    color: "#CBD5E1",
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  // 箭头
+  arrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(217,119,6,0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
   },
 });

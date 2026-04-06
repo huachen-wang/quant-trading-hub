@@ -460,7 +460,7 @@ export default function PromoPage() {
               { icon: "diamond", title: "源头直供", desc: "持有全网主流EA源码\n非二手倒卖", color: "#D97706" },
               { icon: "shield-checkmark", title: "正版保障", desc: "官方授权或源码编译\n杜绝后门木马", color: "#22C55E" },
               { icon: "rocket", title: "极速发货", desc: "付款后即时交付\n紧急需求可加急", color: "#3B82F6" },
-              { icon: "build", title: "独家调优", desc: "可根据需求定制参数\n深度性能优化", color: "#8B5CF6" },
+              { icon: "build", title: "专属EA定制", desc: "自定义名称与调优模式\n无限授权 · 版权归属工作室", color: "#8B5CF6" },
               { icon: "headset", title: "终身售后", desc: "免费更新迭代\n技术问题随时响应", color: "#EC4899" },
               { icon: "cash", title: "全网最低", desc: "源头价格\n比任何渠道都便宜", color: "#EF4444" },
             ].map((item, i) => (
@@ -480,7 +480,7 @@ export default function PromoPage() {
           <LinearGradient colors={["#1E293B", "#0F172A"]} style={s.bottomCtaInner}>
             <Ionicons name="search" size={32} color="#D97706" />
             <Text style={s.bottomCtaTitle}>没找到想要的EA？</Text>
-            <Text style={s.bottomCtaDesc}>告诉我们名字，全网EA我们都能搞到源码{"\n"}支持定制开发和参数优化</Text>
+            <Text style={s.bottomCtaDesc}>告诉我们名字，全网EA我们都能搞到源码{"\n"}支持专属EA定制：自定义策略名称与调优模式{"\n"}无限授权不受限 · 版权与联系方式替换为工作室品牌</Text>
             <TouchableOpacity style={s.bottomCtaBtn} onPress={() => setShowContact(true)}>
               <Ionicons name="chatbubbles" size={18} color="#0F172A" />
               <Text style={s.bottomCtaBtnText}>联系客服定制</Text>

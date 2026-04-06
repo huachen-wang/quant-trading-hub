@@ -299,6 +299,53 @@ export default function CooperationPage() {
           </View>
         </View>
 
+        {/* ═══════════════════ 专属EA定制服务 ═══════════════════ */}
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <View style={s.sectionLine} />
+            <Text style={s.sectionLabel}>CUSTOM EA SERVICE</Text>
+            <Text style={s.sectionTitle}>专属EA定制服务</Text>
+            <Text style={s.sectionSubtitle}>你的策略，你的品牌 · 从源码到版权全部归你</Text>
+          </View>
+
+          <View style={[s.customEABlock]}>
+            <LinearGradient colors={["#1E293B", "#0F172A"]} style={s.customEAInner}>
+              <View style={s.customEABadge}>
+                <Ionicons name="code-slash" size={16} color="#D97706" />
+                <Text style={s.customEABadgeText}>核心服务</Text>
+              </View>
+              <Text style={s.customEATitle}>为工作室量身打造专属EA</Text>
+              <Text style={s.customEADesc}>
+                我们提供从策略开发到品牌包装的一站式定制服务。将成熟策略改造成工作室的专属产品，完全属于你的品牌。
+              </Text>
+
+              <View style={s.customEAFeatures}>
+                {[
+                  { icon: "brush", text: "自定义策略名称，打造工作室专属品牌形象" },
+                  { icon: "options", text: "专属调优模式，根据平台环境深度优化参数" },
+                  { icon: "infinite", text: "无限授权不受限，不限账户、不限终端、不限客户" },
+                  { icon: "shield-checkmark", text: "版权信息替换为工作室自有品牌与联系方式" },
+                  { icon: "rocket", text: "从源码编译到最终交付，全流程透明可控" },
+                ].map((f, i) => (
+                  <View key={i} style={s.customEAFeatureRow}>
+                    <View style={s.customEAFeatureIcon}>
+                      <Ionicons name={f.icon as any} size={16} color="#D97706" />
+                    </View>
+                    <Text style={s.customEAFeatureText}>{f.text}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <TouchableOpacity style={s.customEACTA} onPress={() => setShowContact(true)}>
+                <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.customEACTAInner}>
+                  <Ionicons name="chatbubbles" size={18} color="#0A0E1A" />
+                  <Text style={s.customEACTAText}>咨询定制方案</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        </View>
+
         {/* ═══════════════════ 合作方案 ═══════════════════ */}
         <View style={s.section}>
           <View style={s.sectionHeader}>
@@ -796,4 +843,19 @@ const s = StyleSheet.create({
   galleryFull: { width: SW - 40, height: SW - 40, borderRadius: 8 },
   galleryNav: { flexDirection: "row", alignItems: "center", gap: 24, marginTop: 20 },
   galleryCounter: { color: "#fff", fontSize: 14 },
+
+  // 专属EA定制服务
+  customEABlock: { marginHorizontal: 4, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(217,119,6,0.2)" },
+  customEAInner: { padding: 24, alignItems: "center" },
+  customEABadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: 16, marginBottom: 16, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
+  customEABadgeText: { color: "#D97706", fontSize: 12, fontWeight: "700" },
+  customEATitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "900", marginBottom: 10, textAlign: "center" },
+  customEADesc: { color: "#94A3B8", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20 },
+  customEAFeatures: { width: "100%", gap: 12, marginBottom: 24 },
+  customEAFeatureRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  customEAFeatureIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: "rgba(217,119,6,0.1)", justifyContent: "center", alignItems: "center" },
+  customEAFeatureText: { color: "#CBD5E1", fontSize: 13, lineHeight: 20, flex: 1 },
+  customEACTA: { borderRadius: 24, overflow: "hidden" },
+  customEACTAInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 12 },
+  customEACTAText: { color: "#0A0E1A", fontSize: 14, fontWeight: "800" },
 });

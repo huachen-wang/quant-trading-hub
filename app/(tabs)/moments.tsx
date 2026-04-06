@@ -100,11 +100,11 @@ const pricingTiers = [
     description: "资管团队 / 家族办公室 / 基金",
     features: [
       "精选会员全部权益",
-      "定制化策略组合方案",
-      "独立服务器部署",
-      "API对接支持",
-      "风控系统搭建咨询",
-      "合规架构建议",
+      "专属EA定制 · 自定义策略名称与调优模式",
+      "无限授权 · 不限账户、不限终端、不限客户",
+      "版权与联系方式替换为工作室自有品牌",
+      "独立服务器部署 + API对接",
+      "风控系统搭建 + 合规架构建议",
     ],
     cta: "联系我们",
     popular: false,
@@ -364,9 +364,45 @@ export default function CooperationScreen() {
             </View>
           </FadeInView>
 
-          {/* ═══════════════════════════════════════════════════════════
+          {/* ═══════════════════════════════════════════════════════
+              3.5 专属EA定制服务
+              ═══════════════════════════════════════════════════════ */}
+          <FadeInView delay={250}>
+            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 48 }]}>
+              <View style={styles.customEABanner}>
+                <LinearGradient colors={["#1E1B4B", "#312E81", "#1E1B4B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.customEAInner}>
+                  <View style={styles.customEAGlow} />
+                  <View style={styles.customEABadge}>
+                    <Text style={{ fontSize: 14 }}>🛠️</Text>
+                    <Text style={styles.customEABadgeText}>专属EA定制服务</Text>
+                  </View>
+                  <Text style={styles.customEATitle}>你的策略，你的品牌</Text>
+                  <Text style={styles.customEADesc}>
+                    为工作室量身打造专属EA策略。源头低价拿货，自定义策略名称与调优模式，无限授权不受限，版权与联系方式全部替换为工作室自有品牌。
+                  </Text>
+                  <View style={styles.customEAFeatures}>
+                    {[
+                      "♦ 自定义策略名称 & 调优模式",
+                      "♦ 无限授权：不限账户、不限终端、不限客户",
+                      "♦ 版权信息 & 联系方式替换为工作室品牌",
+                      "♦ 从源码编译到最终交付，全流程透明",
+                    ].map((text, i) => (
+                      <Text key={i} style={styles.customEAFeatureText}>{text}</Text>
+                    ))}
+                  </View>
+                  <TouchableOpacity onPress={handleConsult} activeOpacity={0.85} style={styles.customEACTA}>
+                    <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.customEACTAGradient}>
+                      <Text style={styles.customEACTAText}>咨询定制方案</Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </LinearGradient>
+              </View>
+            </View>
+          </FadeInView>
+
+          {/* ═══════════════════════════════════════════════════════
               4. 底部CTA
-              ═══════════════════════════════════════════════════════════ */}
+              ═══════════════════════════════════════════════════════ */}
           <FadeInView delay={300}>
             <View style={[styles.ctaWrapper, { maxWidth: maxContentWidth }]}>
               <TouchableOpacity onPress={handleConsult} activeOpacity={0.85} style={styles.ctaPrimary}>
@@ -840,5 +876,85 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     fontSize: 15,
     fontWeight: "600",
+  },
+
+  // 专属EA定制服务
+  customEABanner: {
+    borderRadius: 16,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.25)",
+  },
+  customEAInner: {
+    padding: 24,
+    alignItems: "center",
+    position: "relative",
+    overflow: "hidden",
+  },
+  customEAGlow: {
+    position: "absolute",
+    top: -40,
+    right: -40,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(139,92,246,0.1)",
+  },
+  customEABadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(139,92,246,0.15)",
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.3)",
+  },
+  customEABadgeText: {
+    color: "#A78BFA",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  customEATitle: {
+    color: "#F1F5F9",
+    fontSize: 22,
+    fontWeight: "900",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  customEADesc: {
+    color: "#94A3B8",
+    fontSize: 13,
+    lineHeight: 22,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  customEAFeatures: {
+    width: "100%",
+    gap: 8,
+    marginBottom: 24,
+    alignItems: "flex-start",
+  },
+  customEAFeatureText: {
+    color: "#CBD5E1",
+    fontSize: 13,
+    lineHeight: 22,
+  },
+  customEACTA: {
+    borderRadius: 24,
+    overflow: "hidden",
+  },
+  customEACTAGradient: {
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  customEACTAText: {
+    color: "#0A0E1A",
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
   },
 });
