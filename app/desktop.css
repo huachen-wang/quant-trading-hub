@@ -15,6 +15,7 @@
 /* 轻微玻璃感 - 列表项、小卡片 */
 .glass-subtle {
   background: rgba(30, 41, 59, 0.5) !important;
+  color: #F1F5F9 !important;
   backdrop-filter: blur(8px) saturate(120%);
   -webkit-backdrop-filter: blur(8px) saturate(120%);
   border: 1px solid rgba(148, 163, 184, 0.08) !important;
@@ -35,6 +36,7 @@
 /* 标准玻璃感 - 内容卡片、表单区域 */
 .glass-medium {
   background: rgba(30, 41, 59, 0.55) !important;
+  color: #F1F5F9 !important;
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
   border: 1px solid rgba(148, 163, 184, 0.1) !important;
@@ -58,6 +60,7 @@
 /* 强玻璃感 - 模态框、重点CTA区域 */
 .glass-strong {
   background: rgba(30, 41, 59, 0.7) !important;
+  color: #F1F5F9 !important;
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
   border: 1px solid rgba(148, 163, 184, 0.12) !important;
@@ -81,6 +84,7 @@
 /* 玻璃拟态输入框 */
 .glass-input {
   background: rgba(15, 23, 42, 0.6) !important;
+  color: #F1F5F9 !important;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(148, 163, 184, 0.12) !important;
