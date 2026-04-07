@@ -227,6 +227,15 @@ async function runMigrations() {
         }
       }
 
+      // 确保 email 列允许 NULL（旧表可能是 NOT NULL）
+      try {
+        await connection.query("ALTER TABLE `email_subscriptions` MODIFY COLUMN `email` varchar(320) DEFAULT NULL");
+        console.log("[migrate] Updated email column to allow NULL");
+        migrationsRun++;
+      } catch {
+        // 已经是 nullable 或表不存在，忽略
+      }
+
       // 添加索引（如果不存在）
       try {
         await connection.query("CREATE INDEX `contact_info_idx` ON `email_subscriptions` (`contact_info`)");
