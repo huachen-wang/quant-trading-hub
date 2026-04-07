@@ -9,7 +9,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
-import { glassStyle } from "@/lib/glass-styles";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const isDesktop = SCREEN_WIDTH >= 768;
@@ -325,7 +324,7 @@ export default function PromoPage() {
             return (
               <TouchableOpacity
                 key={product.id}
-                style={[s.productCard, glassStyle("medium") as any]}
+                style={[s.productCard]}
                 onPress={() => setSelectedProduct(product)}
                 activeOpacity={0.92}
 
@@ -725,7 +724,7 @@ const s = StyleSheet.create({
 
   // Hero Stats
   heroStats: { flexDirection: "row", gap: 4, marginBottom: 16, width: "100%", maxWidth: 500 },
-  heroStatItem: { flex: 1, alignItems: "center", backgroundColor: "rgba(30,41,59,0.6)", paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: "#334155", gap: 4 },
+  heroStatItem: { flex: 1, alignItems: "center", backgroundColor: "#1E293B", paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: "#334155", gap: 4 },
   heroStatNum: { color: "#F1F5F9", fontSize: 18, fontWeight: "900" },
   heroStatLabel: { color: "#64748B", fontSize: 10 },
 
@@ -750,7 +749,7 @@ const s = StyleSheet.create({
 
   // Product List
   productList: { paddingHorizontal: 20, gap: 16, ...(isDesktop ? { flexDirection: "row" as any, flexWrap: "wrap" as any, justifyContent: "center" as any } : {}) },
-  productCard: { width: isDesktop ? CARD_WIDTH : "100%", backgroundColor: "rgba(30,41,59,0.55)", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(148,163,184,0.1)" },
+  productCard: { width: isDesktop ? CARD_WIDTH : "100%", backgroundColor: "#1E293B", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(148,163,184,0.12)" },
 
   // Card Header
   cardHeader: { padding: 16, position: "relative" },

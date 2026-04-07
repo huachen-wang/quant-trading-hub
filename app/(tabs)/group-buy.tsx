@@ -104,7 +104,6 @@ import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import { glassStyle } from "@/lib/glass-styles";
 
 interface GroupBuyItem {
   id: number;
@@ -239,7 +238,6 @@ export default function GroupBuyScreen() {
               backgroundColor: colors.surface,
               borderColor: colors.border,
             },
-            glassStyle("medium") as any,
           ]}
 
         >
@@ -355,7 +353,7 @@ export default function GroupBuyScreen() {
 
       {/* 合购优势说明 - 参考1mt5 */}
       <View
-        style={[styles.advantageCard, { backgroundColor: colors.surface, borderColor: colors.border }, glassStyle("subtle") as any]}
+        style={[styles.advantageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
 
       >
         <View style={styles.advantageRow}>

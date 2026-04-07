@@ -5,7 +5,6 @@ import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { useResponsive } from "@/hooks/use-responsive";
 import * as Haptics from "expo-haptics";
-import { glassStyle } from "@/lib/glass-styles";
 
 // 默认 blurhash 占位符 - 深色渐变风格，适合金融/交易类封面
 const DEFAULT_BLURHASH = "L6PZfSi_.AyE_3t7t7R**0o#DgR4";
@@ -145,7 +144,7 @@ export function StrategyCard({
             borderColor: isFeatured ? "#D97706" : colors.border,
             borderWidth: isFeatured ? 1.5 : 0.5,
           },
-        , glassStyle(isFeatured ? "strong" : "subtle") as any]}
+        ]}
       >
         {/* 封面区域 */}
         <View style={[styles.coverContainer, { height: coverHeight }]}>

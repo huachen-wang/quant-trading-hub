@@ -282,9 +282,7 @@ export default function SubscribeScreen() {
   });
 
   // 输入框样式 - Web端使用glass-input className
-  const inputProps = Platform.OS === "web"
-    ? glassStyle("input")
-    : {};
+  const inputProps = {};
 
   return (
     <ScreenContainer>
@@ -486,7 +484,7 @@ export default function SubscribeScreen() {
                   activeOpacity={0.8}
                   style={[styles.guideBtn, { backgroundColor: colors.primary }]}
                   // @ts-ignore
-                  {...(Platform.OS === "web" ? glassStyle("btn") : {})}
+                  
                 >
                   <Text style={styles.guideBtnText}>免费咨询平台匹配方案 →</Text>
                 </TouchableOpacity>

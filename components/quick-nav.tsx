@@ -1,7 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { glassStyle } from "@/lib/glass-styles";
 
 const QUICK_NAV_ITEMS = [
   {
@@ -62,7 +61,7 @@ export function QuickNav() {
               colors={item.gradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={[styles.card, { borderColor: item.accent + "20" }, glassStyle("subtle") as any]}
+              style={[styles.card, { borderColor: item.accent + "20" }]}
               // @ts-ignore - web-only className
 
             >

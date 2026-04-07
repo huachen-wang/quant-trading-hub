@@ -24,7 +24,6 @@ import { QuickNav } from "@/components/quick-nav";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
-import { glassStyle } from "@/lib/glass-styles";
 
 const { width: SW } = Dimensions.get("window");
 
@@ -46,8 +45,8 @@ const GOLD = "#F59E0B";
 const GOLD_DIM = "rgba(245,158,11,0.6)";
 const GOLD_BG = "rgba(245,158,11,0.1)";
 const GOLD_BORDER = "rgba(245,158,11,0.2)";
-const CARD_BG = "rgba(30,41,59,0.5)";
-const CARD_BORDER = "rgba(148,163,184,0.08)";
+const CARD_BG = "#1E293B";
+const CARD_BORDER = "rgba(148,163,184,0.10)";
 const TEXT_PRIMARY = "rgba(255,255,255,0.9)";
 const TEXT_SECONDARY = "rgba(255,255,255,0.45)";
 const TEXT_BODY = "rgba(255,255,255,0.6)";
@@ -280,7 +279,6 @@ export default function CooperationScreen() {
                       styles.pricingCard,
                       tier.highlight ? styles.pricingCardHighlight : styles.pricingCardNormal,
                       { width: isMobile ? "100%" : "31%", ...(tier.highlight && !isMobile ? Platform.OS === "web" ? { transform: [{ scale: 1.03 }] } : {} : {}) },
-                      glassStyle(tier.highlight ? "strong" : "medium") as any,
                     ]}
                   >
                     {tier.popular && <View style={styles.popularBadge}><Text style={styles.popularBadgeText}>核心产品</Text></View>}

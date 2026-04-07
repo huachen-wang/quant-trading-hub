@@ -12,7 +12,6 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
-import { glassStyle } from "@/lib/glass-styles";
 
 type PlatformFilter = "MT4" | "MT5" | undefined;
 type OrderBy = "latest" | "return" | "hot";
@@ -341,7 +340,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push("/search" as any)}
-            style={[filterStyles.searchBtn, { backgroundColor: colors.surface }, glassStyle("subtle") as any]}
+            style={[filterStyles.searchBtn, { backgroundColor: colors.surface }]}
             activeOpacity={0.7}
           >
             <IconSymbol name="magnifyingglass" size={18} color={colors.muted} />
@@ -766,7 +765,7 @@ const qeStyles = StyleSheet.create({
   entryCard: {
     borderRadius: 14,
     padding: 10,
-    minHeight: 80,
+    height: 110,
     justifyContent: "space-between",
     overflow: "hidden",
     position: "relative",

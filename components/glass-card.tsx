@@ -1,14 +1,13 @@
 /**
- * GlassCard - 玻璃拟态卡片组件
+ * GlassCard - 暗色卡片组件
  *
- * 完全通过 React Native style 属性实现毛玻璃效果。
- * React Native Web 原生支持 backdropFilter 并自动添加 -webkit- 前缀。
- * 不依赖任何 CSS className，确保跨平台一致性。
+ * 使用纯色半透明暗色背景 + 微妙边框，不使用 backdrop-filter blur。
+ * 避免在深色实心背景上叠加 blur 导致的"灰蒙蒙"视觉效果。
  *
  * 三种强度等级：
- * - "subtle"  : 最轻微的玻璃感，适合列表项、小卡片
- * - "medium"  : 标准玻璃感，适合内容卡片、表单区域
- * - "strong"  : 最强玻璃感，适合模态框、重点CTA区域
+ * - "subtle"  : 最轻微，适合列表项、小卡片
+ * - "medium"  : 标准，适合内容卡片、表单区域
+ * - "strong"  : 最强，适合重点CTA区域
  */
 import { View, StyleSheet, type ViewStyle, type StyleProp } from "react-native";
 import { useColors } from "@/hooks/use-colors";
@@ -25,38 +24,22 @@ interface GlassCardProps {
   highlight?: boolean;
 }
 
-// 玻璃拟态样式配置 - 纯 inline style，不依赖 CSS className
-const GLASS_STYLES: Record<GlassIntensity, ViewStyle> = {
+// 纯色暗色背景 - 不使用 backdrop-filter，避免灰蒙蒙效果
+const CARD_STYLES: Record<GlassIntensity, ViewStyle> = {
   subtle: {
-    backgroundColor: "rgba(30, 41, 59, 0.50)",
-    borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.08)",
-  },
-  medium: {
-    backgroundColor: "rgba(30, 41, 59, 0.55)",
+    backgroundColor: "#1E293B",
     borderWidth: 1,
     borderColor: "rgba(148, 163, 184, 0.10)",
   },
-  strong: {
-    backgroundColor: "rgba(30, 41, 59, 0.70)",
+  medium: {
+    backgroundColor: "#1E293B",
     borderWidth: 1,
     borderColor: "rgba(148, 163, 184, 0.12)",
   },
-};
-
-// Web 端额外的 backdrop-filter 样式（React Native Web 支持）
-const WEB_BLUR: Record<GlassIntensity, any> = {
-  subtle: {
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
-  },
-  medium: {
-    backdropFilter: "blur(16px)",
-    WebkitBackdropFilter: "blur(16px)",
-  },
   strong: {
-    backdropFilter: "blur(24px)",
-    WebkitBackdropFilter: "blur(24px)",
+    backgroundColor: "rgba(30, 41, 59, 0.95)",
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.15)",
   },
 };
 
@@ -69,8 +52,7 @@ export function GlassCard({
 }: GlassCardProps) {
   const colors = useColors();
 
-  const glassStyle = GLASS_STYLES[intensity];
-  const webBlur = WEB_BLUR[intensity];
+  const cardStyle = CARD_STYLES[intensity];
 
   const accentBorder = accentColor
     ? { borderColor: accentColor + "40", borderWidth: 1 }
@@ -80,8 +62,7 @@ export function GlassCard({
     <View
       style={[
         styles.base,
-        glassStyle,
-        webBlur,
+        cardStyle,
         accentBorder,
         style,
       ]}
