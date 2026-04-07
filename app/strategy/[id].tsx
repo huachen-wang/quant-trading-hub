@@ -35,6 +35,7 @@ export default function StrategyDetailScreen() {
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showVpsModal, setShowVpsModal] = useState(false);
+  const [showBrokerModal, setShowBrokerModal] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
   // 用户评价弹窗
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -684,7 +685,7 @@ export default function StrategyDetailScreen() {
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>推荐交易环境</Text>
             <View style={styles.recommendRow}>
               <TouchableOpacity
-                onPress={() => Linking.openURL("https://www.blueberrymarkets.com/?ref=quantarsenal")}
+                onPress={() => setShowBrokerModal(true)}
                 style={[styles.recommendCard, { backgroundColor: colors.surface }]}
                 activeOpacity={0.8}
               >
@@ -863,6 +864,71 @@ export default function StrategyDetailScreen() {
         </View>
       </ScrollView>
       <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
+
+      {/* Blueberry Markets 经纪商弹窗 */}
+      <Modal
+        visible={showBrokerModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowBrokerModal(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setShowBrokerModal(false)}
+          style={styles.modalOverlay}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={[styles.modalContent, { backgroundColor: colors.background, maxWidth: 420 }]}
+          >
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>🫐 Blueberry Markets</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.muted, marginBottom: 16 }]}>澳洲 ASIC 全牌照监管 · 官方合作经纪商</Text>
+
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 10 }}>🛡️ 平台核心优势</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {[
+                  { icon: "🔒", title: "资金安全", desc: "不碰客户本金，审计严格" },
+                  { icon: "🏛️", title: "ASIC全牌照", desc: "澳洲政府颁发MM牌照" },
+                  { icon: "💰", title: "大资金出入", desc: "月交易量2500亿美金+" },
+                  { icon: "⚡", title: "极速出金", desc: "2-5小时到账" },
+                ].map((item, i) => (
+                  <View key={i} style={{ width: "48%", backgroundColor: colors.background, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+                    <Text style={{ fontSize: 20, marginBottom: 4 }}>{item.icon}</Text>
+                    <Text style={{ color: colors.foreground, fontSize: 13, fontWeight: "600", marginBottom: 2 }}>{item.title}</Text>
+                    <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 16 }}>{item.desc}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>📊 账户与交易成本</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>{"标准账户：点差约29，最高返佣20\n直接账户（ECN）：点差约7\n支持美金账户 & 美分账户\n最低入金：50U"}</Text>
+            </View>
+
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>🏆 监管与资质</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>{"澳洲ASIC MM全牌照（政府颁发）\n2019-2025年仅5-6家获得此牌照\n牌照市场价值约600万美金\n盈利正常出金，从不拖延"}</Text>
+            </View>
+
+            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
+              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>📞 开户咨询</Text>
+              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>{"微信1号：oooiniooo0624\n微信2号：xau6000\nQQ1号：1226426670\nQQ2号：3832001817\nTelegram：@xau6000\n\n添加客服即可获取专属开户链接与返佣方案"}</Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setShowBrokerModal(false)}
+              style={{ backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: "center" }}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>我知道了</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {/* VPS 推荐弹窗 */}
       <Modal
