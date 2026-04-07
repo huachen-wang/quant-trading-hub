@@ -292,7 +292,7 @@ export default function PromoPage() {
                   onPress={() => setActiveCategory(cat.key)}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name={cat.icon as any} size={15} color={isActive ? "#0F172A" : "#94A3B8"} />
+                  <Ionicons name={cat.icon as any} size={15} color={isActive ? "#0F172A" : "#B0BEC5"} />
                   <Text style={[s.categoryChipText, isActive && s.categoryChipTextActive]}>{cat.label}</Text>
                 </TouchableOpacity>
               );
@@ -499,7 +499,7 @@ export default function PromoPage() {
             <View style={s.modalHeader}>
               <Text style={s.modalTitle} numberOfLines={1}>{selectedProduct?.title}</Text>
               <TouchableOpacity onPress={() => setSelectedProduct(null)}>
-                <Ionicons name="close-circle" size={28} color="#94A3B8" />
+                <Ionicons name="close-circle" size={28} color="#B0BEC5" />
               </TouchableOpacity>
             </View>
 
@@ -546,7 +546,7 @@ export default function PromoPage() {
                   </View>
                 )}
                 {selectedProduct?.category && (
-                  <View style={[s.modalTag, { backgroundColor: "#334155" }]}>
+                  <View style={[s.modalTag, { backgroundColor: "#475569" }]}>
                     <Text style={s.modalTagText}>{CATEGORIES.find(c => c.key === selectedProduct.category)?.label?.replace(/[^\u4e00-\u9fa5A-Za-z]/g, "") || selectedProduct.category}</Text>
                   </View>
                 )}
@@ -606,7 +606,7 @@ export default function PromoPage() {
               </TouchableOpacity>
 
               <View style={s.safetyNote}>
-                <Ionicons name="shield-checkmark" size={14} color="#64748B" />
+                <Ionicons name="shield-checkmark" size={14} color="#B0BEC5" />
                 <Text style={s.safetyNoteText}>源头直供 · 正版授权 · 终身售后</Text>
               </View>
             </ScrollView>
@@ -705,7 +705,7 @@ export default function PromoPage() {
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#0F172A" },
   loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0F172A" },
-  backBtn: { position: "absolute", top: 16, left: 16, zIndex: 10, padding: 8, backgroundColor: "rgba(15,23,42,0.8)", borderRadius: 20, borderWidth: 1, borderColor: "#334155" },
+  backBtn: { position: "absolute", top: 16, left: 16, zIndex: 10, padding: 8, backgroundColor: "rgba(15,23,42,0.8)", borderRadius: 20, borderWidth: 1, borderColor: "#475569" },
 
   // Hero
   hero: { paddingTop: 70, paddingBottom: 28, paddingHorizontal: 20, alignItems: "center" },
@@ -720,13 +720,13 @@ const s = StyleSheet.create({
   heroTitle: { color: "#F1F5F9", fontSize: 34, fontWeight: "900", textAlign: "center", letterSpacing: 4 },
   heroTitleLine: { width: 60, height: 3, backgroundColor: "#D97706", borderRadius: 2, marginVertical: 12 },
   heroSubtitle: { color: "#D97706", fontSize: 13, fontWeight: "700", letterSpacing: 6, marginBottom: 16, textAlign: "center" },
-  heroDesc: { color: "#94A3B8", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20, maxWidth: 440 },
+  heroDesc: { color: "#B0BEC5", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20, maxWidth: 440 },
 
   // Hero Stats
   heroStats: { flexDirection: "row", gap: 4, marginBottom: 16, width: "100%", maxWidth: 500 },
-  heroStatItem: { flex: 1, alignItems: "center", backgroundColor: "#1E293B", paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: "#334155", gap: 4 },
+  heroStatItem: { flex: 1, alignItems: "center", backgroundColor: "#1E293B", paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: "#475569", gap: 4 },
   heroStatNum: { color: "#F1F5F9", fontSize: 18, fontWeight: "900" },
-  heroStatLabel: { color: "#64748B", fontSize: 10 },
+  heroStatLabel: { color: "#B0BEC5", fontSize: 10 },
 
   // Authority Strip
   authorityStrip: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 },
@@ -736,14 +736,14 @@ const s = StyleSheet.create({
   // Category
   categorySection: { paddingVertical: 14, backgroundColor: "#0F172A", borderBottomWidth: 1, borderBottomColor: "#1E293B" },
   categoryScroll: { paddingHorizontal: 16, gap: 8 },
-  categoryChip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 24, backgroundColor: "#1E293B", borderWidth: 1, borderColor: "#334155" },
+  categoryChip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 24, backgroundColor: "#1E293B", borderWidth: 1, borderColor: "#475569" },
   categoryChipActive: { backgroundColor: "#D97706", borderColor: "#D97706" },
-  categoryChipText: { color: "#94A3B8", fontSize: 13, fontWeight: "600" },
+  categoryChipText: { color: "#B0BEC5", fontSize: 13, fontWeight: "600" },
   categoryChipTextActive: { color: "#0F172A", fontWeight: "800" },
 
   // Result
   resultBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14 },
-  resultCount: { color: "#94A3B8", fontSize: 13 },
+  resultCount: { color: "#B0BEC5", fontSize: 13 },
   resultTip: { flexDirection: "row", alignItems: "center", gap: 4 },
   resultTipText: { color: "#10B981", fontSize: 12, fontWeight: "700" },
 
@@ -775,13 +775,13 @@ const s = StyleSheet.create({
 
   // Card Body
   cardBody: { padding: 16 },
-  cardDesc: { color: "#94A3B8", fontSize: 12, lineHeight: 18, marginBottom: 12 },
+  cardDesc: { color: "#B0BEC5", fontSize: 12, lineHeight: 18, marginBottom: 12 },
 
   // Metrics
   metricsRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  metricItem: { flex: 1, backgroundColor: "#0F172A", borderRadius: 8, padding: 8, alignItems: "center", borderWidth: 1, borderColor: "#334155" },
+  metricItem: { flex: 1, backgroundColor: "#0F172A", borderRadius: 8, padding: 8, alignItems: "center", borderWidth: 1, borderColor: "#475569" },
   metricValue: { fontSize: 15, fontWeight: "900", marginBottom: 2 },
-  metricLabel: { color: "#64748B", fontSize: 10 },
+  metricLabel: { color: "#B0BEC5", fontSize: 10 },
 
   // Card Footer
   cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
@@ -789,17 +789,17 @@ const s = StyleSheet.create({
 
   // Stock
   stockInfo: { alignItems: "flex-end" },
-  stockBarOuter: { width: 80, height: 4, backgroundColor: "#334155", borderRadius: 2, overflow: "hidden", marginBottom: 3 },
+  stockBarOuter: { width: 80, height: 4, backgroundColor: "#475569", borderRadius: 2, overflow: "hidden", marginBottom: 3 },
   stockBarInner: { height: "100%", borderRadius: 2 },
-  stockText: { color: "#94A3B8", fontSize: 10, fontWeight: "600" },
+  stockText: { color: "#B0BEC5", fontSize: 10, fontWeight: "600" },
 
   // Countdown
   countdownRow: { flexDirection: "row", alignItems: "center", gap: 3 },
-  countdownBlock: { backgroundColor: "#0F172A", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4, borderWidth: 1, borderColor: "#334155", minWidth: 26, alignItems: "center" },
+  countdownBlock: { backgroundColor: "#0F172A", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4, borderWidth: 1, borderColor: "#475569", minWidth: 26, alignItems: "center" },
   countdownBlockLg: { paddingHorizontal: 8, paddingVertical: 5, minWidth: 32 },
   countdownNum: { color: "#EF4444", fontSize: 12, fontWeight: "900", fontVariant: ["tabular-nums"] },
   countdownSep: { color: "#EF4444", fontSize: 12, fontWeight: "700" },
-  countdownEnded: { color: "#64748B", fontSize: 12, fontWeight: "600" },
+  countdownEnded: { color: "#B0BEC5", fontSize: 12, fontWeight: "600" },
 
   // Card Buy Button
   cardBuyBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 10 },
@@ -807,30 +807,30 @@ const s = StyleSheet.create({
 
   // Empty
   emptyState: { alignItems: "center", paddingVertical: 60 },
-  emptyText: { color: "#94A3B8", fontSize: 16, fontWeight: "600", marginTop: 12 },
-  emptySubtext: { color: "#64748B", fontSize: 13, marginTop: 4 },
+  emptyText: { color: "#B0BEC5", fontSize: 16, fontWeight: "600", marginTop: 12 },
+  emptySubtext: { color: "#B0BEC5", fontSize: 13, marginTop: 4 },
 
   // Why Section
   whySection: { marginTop: 32, paddingHorizontal: 20, paddingVertical: 28, borderTopWidth: 1, borderTopColor: "#1E293B" },
   whySectionTitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "900", textAlign: "center", marginBottom: 20 },
   whyGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  whyItem: { width: isDesktop ? "31%" : "47%", flexGrow: 1, backgroundColor: "#1E293B", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#334155", alignItems: "center" },
+  whyItem: { width: isDesktop ? "31%" : "47%", flexGrow: 1, backgroundColor: "#1E293B", borderRadius: 14, padding: 16, borderWidth: 1, borderColor: "#475569", alignItems: "center" },
   whyIconWrap: { width: 44, height: 44, borderRadius: 22, justifyContent: "center", alignItems: "center", marginBottom: 10 },
   whyItemTitle: { color: "#F1F5F9", fontSize: 14, fontWeight: "800", marginBottom: 6, textAlign: "center" },
-  whyItemDesc: { color: "#94A3B8", fontSize: 11, lineHeight: 16, textAlign: "center" },
+  whyItemDesc: { color: "#B0BEC5", fontSize: 11, lineHeight: 16, textAlign: "center" },
 
   // Bottom CTA
   bottomCta: { marginHorizontal: 20, marginTop: 24, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "#D97706" },
   bottomCtaInner: { padding: 28, alignItems: "center" },
   bottomCtaTitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "900", marginTop: 12, marginBottom: 6 },
-  bottomCtaDesc: { color: "#94A3B8", fontSize: 13, marginBottom: 20, textAlign: "center", lineHeight: 20 },
+  bottomCtaDesc: { color: "#B0BEC5", fontSize: 13, marginBottom: 20, textAlign: "center", lineHeight: 20 },
   bottomCtaBtn: { backgroundColor: "#D97706", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 24 },
   bottomCtaBtnText: { color: "#0F172A", fontSize: 15, fontWeight: "800" },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "flex-end" },
   modalContent: { maxHeight: "92%", backgroundColor: "#1E293B", borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: "#334155" },
+  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: "#475569" },
   modalTitle: { color: "#F1F5F9", fontSize: 18, fontWeight: "800", flex: 1, marginRight: 12 },
   modalBody: { padding: 20 },
   modalCover: { width: "100%", height: 200, borderRadius: 12, marginBottom: 16 },
@@ -850,7 +850,7 @@ const s = StyleSheet.create({
 
   modalDetailSection: { marginBottom: 16 },
   modalSectionTitle: { color: "#F1F5F9", fontSize: 16, fontWeight: "800", marginBottom: 10 },
-  modalDetailContent: { color: "#94A3B8", fontSize: 13, lineHeight: 22 },
+  modalDetailContent: { color: "#B0BEC5", fontSize: 13, lineHeight: 22 },
 
   modalGallerySection: { marginBottom: 16 },
   galleryThumb: { width: 120, height: 80, borderRadius: 8, marginRight: 10 },
@@ -866,7 +866,7 @@ const s = StyleSheet.create({
   buyBtnText: { color: "#fff", fontSize: 17, fontWeight: "900" },
 
   safetyNote: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12 },
-  safetyNoteText: { color: "#64748B", fontSize: 12 },
+  safetyNoteText: { color: "#B0BEC5", fontSize: 12 },
 
   // Contact Modal
   contactModal: { marginHorizontal: 20, borderRadius: 20, overflow: "hidden" },
@@ -874,18 +874,18 @@ const s = StyleSheet.create({
   contactHeader: { alignItems: "center", marginBottom: 20 },
   contactIconWrap: { width: 56, height: 56, borderRadius: 28, backgroundColor: "rgba(217,119,6,0.15)", justifyContent: "center", alignItems: "center", marginBottom: 12 },
   contactTitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "800", marginBottom: 6 },
-  contactDesc: { color: "#94A3B8", fontSize: 13, textAlign: "center" },
+  contactDesc: { color: "#B0BEC5", fontSize: 13, textAlign: "center" },
   contactMethods: { gap: 10, marginBottom: 16 },
   contactMethod: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 12 },
   contactMethodLabel: { color: "rgba(255,255,255,0.7)", fontSize: 12 },
   contactMethodValue: { color: "#fff", fontSize: 16, fontWeight: "700" },
   payMethods: { marginBottom: 16 },
-  payMethodsTitle: { color: "#94A3B8", fontSize: 12, marginBottom: 8, textAlign: "center" },
+  payMethodsTitle: { color: "#B0BEC5", fontSize: 12, marginBottom: 8, textAlign: "center" },
   payMethodsRow: { flexDirection: "row", justifyContent: "center", gap: 8 },
-  payMethodChip: { backgroundColor: "#334155", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
+  payMethodChip: { backgroundColor: "#475569", paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
   payMethodChipText: { color: "#F1F5F9", fontSize: 12, fontWeight: "600" },
   contactCloseBtn: { alignItems: "center", paddingVertical: 12 },
-  contactCloseBtnText: { color: "#94A3B8", fontSize: 14 },
+  contactCloseBtnText: { color: "#B0BEC5", fontSize: 14 },
 
   // Gallery Modal
   galleryModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },

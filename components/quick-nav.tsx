@@ -89,11 +89,11 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: "rgba(148,163,184,0.08)",
+    backgroundColor: "rgba(148,163,184,0.18)",
     marginBottom: 12,
   },
   sectionTitle: {
-    color: "rgba(255,255,255,0.35)",
+    color: "rgba(255,255,255,0.6)",
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 1,

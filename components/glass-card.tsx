@@ -1,11 +1,11 @@
 /**
  * GlassCard - 暗色卡片组件
  *
- * 使用纯色半透明暗色背景 + 微妙边框，不使用 backdrop-filter blur。
- * 避免在深色实心背景上叠加 blur 导致的"灰蒙蒙"视觉效果。
+ * 使用比页面背景(#0F172A)明显更亮的背景色 + 清晰可见的边框。
+ * 不使用 backdrop-filter blur，避免灰蒙蒙效果。
  *
  * 三种强度等级：
- * - "subtle"  : 最轻微，适合列表项、小卡片
+ * - "subtle"  : 适合列表项、小卡片
  * - "medium"  : 标准，适合内容卡片、表单区域
  * - "strong"  : 最强，适合重点CTA区域
  */
@@ -24,22 +24,23 @@ interface GlassCardProps {
   highlight?: boolean;
 }
 
-// 纯色暗色背景 - 不使用 backdrop-filter，避免灰蒙蒙效果
+// 使用明显区别于页面背景(#0F172A)的卡片背景色
+// 边框使用更高透明度，确保卡片边界清晰可见
 const CARD_STYLES: Record<GlassIntensity, ViewStyle> = {
   subtle: {
     backgroundColor: "#1E293B",
     borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.10)",
+    borderColor: "rgba(148, 163, 184, 0.20)",
   },
   medium: {
     backgroundColor: "#1E293B",
     borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.12)",
+    borderColor: "rgba(148, 163, 184, 0.25)",
   },
   strong: {
-    backgroundColor: "rgba(30, 41, 59, 0.95)",
+    backgroundColor: "#243247",
     borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.15)",
+    borderColor: "rgba(148, 163, 184, 0.30)",
   },
 };
 
@@ -55,7 +56,7 @@ export function GlassCard({
   const cardStyle = CARD_STYLES[intensity];
 
   const accentBorder = accentColor
-    ? { borderColor: accentColor + "40", borderWidth: 1 }
+    ? { borderColor: accentColor + "60", borderWidth: 1.5 }
     : {};
 
   return (
@@ -71,7 +72,7 @@ export function GlassCard({
         <View
           style={[
             styles.highlightLine,
-            { backgroundColor: (accentColor || colors.primary) + "30" },
+            { backgroundColor: (accentColor || colors.primary) + "50" },
           ]}
         />
       )}
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 16,
     right: 16,
-    height: 1,
+    height: 2,
     borderRadius: 1,
   },
 });

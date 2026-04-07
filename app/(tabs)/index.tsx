@@ -717,7 +717,7 @@ const heroStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   statLabel: {
-    color: "rgba(255,255,255,0.45)",
+    color: "rgba(255,255,255,0.65)",
     fontSize: 10,
     fontWeight: "600",
     marginTop: 3,
@@ -770,7 +770,7 @@ const qeStyles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.15)",
   },
   entryShine: {
     position: "absolute",
@@ -1038,7 +1038,7 @@ const customBannerStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   desc: {
-    color: "#94A3B8",
+    color: "#B0BEC5",
     fontSize: 10,
     lineHeight: 15,
     marginBottom: 4,

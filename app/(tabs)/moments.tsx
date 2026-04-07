@@ -46,10 +46,10 @@ const GOLD_DIM = "rgba(245,158,11,0.6)";
 const GOLD_BG = "rgba(245,158,11,0.1)";
 const GOLD_BORDER = "rgba(245,158,11,0.2)";
 const CARD_BG = "#1E293B";
-const CARD_BORDER = "rgba(148,163,184,0.10)";
+const CARD_BORDER = "rgba(148,163,184,0.22)";
 const TEXT_PRIMARY = "rgba(255,255,255,0.9)";
-const TEXT_SECONDARY = "rgba(255,255,255,0.45)";
-const TEXT_BODY = "rgba(255,255,255,0.6)";
+const TEXT_SECONDARY = "rgba(255,255,255,0.65)";
+const TEXT_BODY = "rgba(255,255,255,0.75)";
 const DARK_BG = "#0F172A";
 const DARK_BG_MID = "#0F172A";
 
@@ -260,7 +260,7 @@ export default function CooperationScreen() {
                 <Text style={styles.sectionTagText}>选择方案</Text>
               </View>
               <Text style={[styles.heroTitle, { marginTop: 10 }]}>
-                免费拿策略<Text style={{ color: "rgba(255,255,255,0.4)" }}> 或 </Text>
+                免费拿策略<Text style={{ color: "rgba(255,255,255,0.65)" }}> 或 </Text>
                 <Text style={{ color: GOLD }}>直接拿全部</Text>
               </Text>
               <Text style={[styles.heroSubtitle, { alignSelf: "center" }]}>
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
   },
   bannerStatLabel: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.4)",
+    color: "rgba(255,255,255,0.65)",
     marginTop: 1,
   },
   bannerArrowWrap: {
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(255,255,255,0.2)",
   },
   pricingCTADefaultText: {
     color: "rgba(255,255,255,0.7)",
@@ -730,7 +730,7 @@ const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: CARD_BG,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.15)",
     borderRadius: 14,
     width: "100%",
     maxWidth: 640,
@@ -800,7 +800,7 @@ const styles = StyleSheet.create({
   },
   freeItemTag: {
     fontSize: 11,
-    color: "rgba(255,255,255,0.35)",
+    color: "rgba(255,255,255,0.6)",
     marginTop: 6,
     ...(Platform.OS === "web" ? { fontFamily: "ui-monospace, SFMono-Regular, monospace" } : {}),
   },
@@ -821,7 +821,7 @@ const styles = StyleSheet.create({
   freeWechat: {
     marginTop: 10,
     fontSize: 13,
-    color: "rgba(255,255,255,0.35)",
+    color: "rgba(255,255,255,0.6)",
   },
 
   // ===== CTA =====
@@ -924,7 +924,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   customEADesc: {
-    color: "#94A3B8",
+    color: "#B0BEC5",
     fontSize: 13,
     lineHeight: 22,
     textAlign: "center",
