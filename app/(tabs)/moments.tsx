@@ -48,8 +48,8 @@ const GOLD_BORDER = "rgba(245,158,11,0.2)";
 const CARD_BG = "#1E293B";
 const CARD_BORDER = "rgba(148,163,184,0.22)";
 const TEXT_PRIMARY = "rgba(255,255,255,0.9)";
-const TEXT_SECONDARY = "rgba(255,255,255,0.65)";
-const TEXT_BODY = "rgba(255,255,255,0.75)";
+const TEXT_SECONDARY = "rgba(255,255,255,0.9)";
+const TEXT_BODY = "rgba(255,255,255,0.95)";
 const DARK_BG = "#0F172A";
 const DARK_BG_MID = "#0F172A";
 
@@ -260,7 +260,7 @@ export default function CooperationScreen() {
                 <Text style={styles.sectionTagText}>选择方案</Text>
               </View>
               <Text style={[styles.heroTitle, { marginTop: 10 }]}>
-                免费拿策略<Text style={{ color: "rgba(255,255,255,0.65)" }}> 或 </Text>
+                免费拿策略<Text style={{ color: "rgba(255,255,255,0.9)" }}> 或 </Text>
                 <Text style={{ color: GOLD }}>直接拿全部</Text>
               </Text>
               <Text style={[styles.heroSubtitle, { alignSelf: "center" }]}>
@@ -315,7 +315,7 @@ export default function CooperationScreen() {
                 <Text style={styles.priceNoteText}>
                   <Text style={{ color: GOLD, fontWeight: "600" }}>关于价格：</Text>
                   我们测试117款EA花了¥280,000。现在你可以免费试用一款精选策略，亲身体验24个月实盘验证的结果。
-                  <Text style={{ color: "rgba(255,255,255,0.8)", fontWeight: "700" }}>零成本入场</Text>
+                  <Text style={{ color: "rgba(255,255,255,0.95)", fontWeight: "700" }}>零成本入场</Text>
                   ，满意再谈合作。
                 </Text>
               </View>
@@ -541,13 +541,13 @@ const styles = StyleSheet.create({
   bannerTitle: {
     fontSize: 20,
     fontWeight: "900",
-    color: "#F1F5F9",
+    color: "#FFFFFF",
     marginBottom: 4,
     ...(Platform.OS === "web" ? { fontFamily: "system-ui, -apple-system, sans-serif" } : {}),
   },
   bannerSubtitle: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.9)",
     marginBottom: 10,
   },
   bannerStats: {
@@ -564,7 +564,7 @@ const styles = StyleSheet.create({
   },
   bannerStatLabel: {
     fontSize: 10,
-    color: "rgba(255,255,255,0.65)",
+    color: "rgba(255,255,255,0.9)",
     marginTop: 1,
   },
   bannerArrowWrap: {
@@ -674,7 +674,7 @@ const styles = StyleSheet.create({
   },
   pricingDesc: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.9)",
     textAlign: "center",
     marginTop: 8,
     lineHeight: 20,
@@ -718,7 +718,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(255,255,255,0.4)",
   },
   pricingCTADefaultText: {
     color: "rgba(255,255,255,0.7)",
@@ -730,14 +730,14 @@ const styles = StyleSheet.create({
     padding: 14,
     backgroundColor: CARD_BG,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(255,255,255,0.35)",
     borderRadius: 14,
     width: "100%",
     maxWidth: 640,
   },
   priceNoteText: {
     fontSize: 13,
-    color: "rgba(255,255,255,0.5)",
+    color: "rgba(255,255,255,0.9)",
     lineHeight: 22,
     textAlign: "center",
   },
@@ -795,12 +795,12 @@ const styles = StyleSheet.create({
   },
   freeItemDesc: {
     fontSize: 12,
-    color: "rgba(255,255,255,0.55)",
+    color: "rgba(255,255,255,0.9)",
     lineHeight: 18,
   },
   freeItemTag: {
     fontSize: 11,
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.9)",
     marginTop: 6,
     ...(Platform.OS === "web" ? { fontFamily: "ui-monospace, SFMono-Regular, monospace" } : {}),
   },
@@ -821,7 +821,7 @@ const styles = StyleSheet.create({
   freeWechat: {
     marginTop: 10,
     fontSize: 13,
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.9)",
   },
 
   // ===== CTA =====
@@ -862,7 +862,7 @@ const styles = StyleSheet.create({
   },
   ctaSecondary: {
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(255,255,255,0.35)",
     backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 14,
     paddingHorizontal: 28,
@@ -872,7 +872,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   ctaSecondaryText: {
-    color: "rgba(255,255,255,0.8)",
+    color: "rgba(255,255,255,0.95)",
     fontSize: 15,
     fontWeight: "600",
   },
@@ -917,14 +917,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   customEATitle: {
-    color: "#F1F5F9",
+    color: "#FFFFFF",
     fontSize: 22,
     fontWeight: "900",
     marginBottom: 10,
     textAlign: "center",
   },
   customEADesc: {
-    color: "#B0BEC5",
+    color: "#E2E8F0",
     fontSize: 13,
     lineHeight: 22,
     textAlign: "center",

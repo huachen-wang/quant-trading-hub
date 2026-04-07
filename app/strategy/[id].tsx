@@ -1012,7 +1012,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 60,
     alignSelf: "center",
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.95)",
     fontSize: 14,
     fontWeight: "600",
   },

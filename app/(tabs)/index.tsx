@@ -666,7 +666,7 @@ const heroStyles = StyleSheet.create({
     backgroundColor: "#10B981",
   },
   brandText: {
-    color: "#F1F5F9",
+    color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -685,7 +685,7 @@ const heroStyles = StyleSheet.create({
   },
   // 标题
   title: {
-    color: "#F1F5F9",
+    color: "#FFFFFF",
     fontSize: 22,
     fontWeight: "900",
     letterSpacing: 1.5,
@@ -717,7 +717,7 @@ const heroStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   statLabel: {
-    color: "rgba(255,255,255,0.65)",
+    color: "rgba(255,255,255,0.9)",
     fontSize: 10,
     fontWeight: "600",
     marginTop: 3,
@@ -770,7 +770,7 @@ const qeStyles = StyleSheet.create({
     overflow: "hidden",
     position: "relative",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(255,255,255,0.35)",
   },
   entryShine: {
     position: "absolute",
@@ -803,7 +803,7 @@ const qeStyles = StyleSheet.create({
     fontSize: 15,
   },
   entryTitle: {
-    color: "#F1F5F9",
+    color: "#FFFFFF",
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.3,
@@ -1031,14 +1031,14 @@ const customBannerStyles = StyleSheet.create({
     fontWeight: "700",
   },
   title: {
-    color: "#F1F5F9",
+    color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 2,
     letterSpacing: 0.5,
   },
   desc: {
-    color: "#B0BEC5",
+    color: "#E2E8F0",
     fontSize: 10,
     lineHeight: 15,
     marginBottom: 4,

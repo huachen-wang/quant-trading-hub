@@ -114,7 +114,7 @@ export default function CooperationPage() {
       <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
         {/* 返回按钮 */}
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#F1F5F9" />
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
         {/* ═══════════════════ HERO ═══════════════════ */}
@@ -254,7 +254,7 @@ export default function CooperationPage() {
                   {/* 底部操作栏 */}
                   <View style={s.cardBottom}>
                     <View style={s.cardBottomLeft}>
-                      <Ionicons name="eye-outline" size={14} color="#B0BEC5" />
+                      <Ionicons name="eye-outline" size={14} color="#E2E8F0" />
                       <Text style={s.cardObserveText}>
                         {gallery.length > 0 ? `${gallery.length}张观摩截图` : "可获取观摩账户"}
                       </Text>
@@ -423,7 +423,7 @@ export default function CooperationPage() {
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>{selectedCard?.title}</Text>
               <TouchableOpacity onPress={() => setSelectedCard(null)}>
-                <Ionicons name="close-circle" size={28} color="#B0BEC5" />
+                <Ionicons name="close-circle" size={28} color="#E2E8F0" />
               </TouchableOpacity>
             </View>
             <ScrollView style={s.modalBody} showsVerticalScrollIndicator={false}>
@@ -435,8 +435,8 @@ export default function CooperationPage() {
                   colors={[...(getTheme(Math.max(0, cards.indexOf(selectedCard)))?.gradient || ["#1E293B", "#334155", "#475569"])]}
                   style={[s.modalCover, { justifyContent: "center", alignItems: "center" }]}
                 >
-                  <Ionicons name="trending-up" size={48} color="rgba(255,255,255,0.2)" />
-                  <Text style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 8 }}>暂无封面 · 后台可上传</Text>
+                  <Ionicons name="trending-up" size={48} color="rgba(255,255,255,0.6)" />
+                  <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, marginTop: 8 }}>暂无封面 · 后台可上传</Text>
                 </LinearGradient>
               )}
 
@@ -564,13 +564,13 @@ const s = StyleSheet.create({
   heroBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginBottom: 20, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706", marginRight: 8 },
   heroBadgeText: { color: "#D97706", fontSize: 12, fontWeight: "700", letterSpacing: 1 },
-  heroTitle: { color: "#F1F5F9", fontSize: 32, fontWeight: "900", marginBottom: 8, textAlign: "center", letterSpacing: 1 },
+  heroTitle: { color: "#FFFFFF", fontSize: 32, fontWeight: "900", marginBottom: 8, textAlign: "center", letterSpacing: 1 },
   heroTagline: { color: "#D97706", fontSize: 14, fontWeight: "700", marginBottom: 16, letterSpacing: 2 },
-  heroDesc: { color: "#B0BEC5", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 28 },
+  heroDesc: { color: "#E2E8F0", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 28 },
   statsRow: { flexDirection: "row", gap: 0, marginBottom: 28, width: "100%", maxWidth: 500 },
   statItem: { flex: 1, alignItems: "center", borderRightWidth: 1, borderRightColor: "#1E293B" },
-  statNum: { color: "#F1F5F9", fontSize: 22, fontWeight: "900", marginBottom: 2 },
-  statLabel: { color: "#B0BEC5", fontSize: 11 },
+  statNum: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", marginBottom: 2 },
+  statLabel: { color: "#E2E8F0", fontSize: 11 },
   heroCTA: { borderRadius: 28, overflow: "hidden" },
   heroCTAInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14 },
   heroCTAText: { color: "#0A0E1A", fontSize: 15, fontWeight: "800" },
@@ -579,9 +579,9 @@ const s = StyleSheet.create({
   section: { marginTop: 12, paddingHorizontal: 16 },
   sectionHeader: { alignItems: "center", marginBottom: 24, paddingTop: 20 },
   sectionLine: { width: 40, height: 2, backgroundColor: "#D97706", borderRadius: 1, marginBottom: 16 },
-  sectionLabel: { color: "#B0BEC5", fontSize: 11, fontWeight: "700", letterSpacing: 3, marginBottom: 8 },
-  sectionTitle: { color: "#F1F5F9", fontSize: 24, fontWeight: "900", marginBottom: 6 },
-  sectionSubtitle: { color: "#B0BEC5", fontSize: 13 },
+  sectionLabel: { color: "#E2E8F0", fontSize: 11, fontWeight: "700", letterSpacing: 3, marginBottom: 8 },
+  sectionTitle: { color: "#FFFFFF", fontSize: 24, fontWeight: "900", marginBottom: 6 },
+  sectionSubtitle: { color: "#E2E8F0", fontSize: 13 },
 
   // ═══ 全新策略卡片样式 ═══
   cardOuter: {
@@ -600,7 +600,7 @@ const s = StyleSheet.create({
     padding: 0,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(255,255,255,0.35)",
   },
   cardWatermark: {
     position: "absolute",
@@ -645,7 +645,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
+    borderColor: "rgba(255,255,255,0.35)",
   },
   coverIconRing: {
     width: 56,
@@ -709,7 +709,7 @@ const s = StyleSheet.create({
     fontWeight: "700",
   },
   cardTitle: {
-    color: "#F1F5F9",
+    color: "#FFFFFF",
     fontSize: isDesktop ? 20 : 17,
     fontWeight: "900",
     marginBottom: 4,
@@ -747,7 +747,7 @@ const s = StyleSheet.create({
     gap: 6,
   },
   cardObserveText: {
-    color: "#B0BEC5",
+    color: "#E2E8F0",
     fontSize: 12,
   },
   cardViewBtn: {
@@ -768,8 +768,8 @@ const s = StyleSheet.create({
   supportGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 16 },
   supportCard: { width: isDesktop ? "31%" : "47%", flexGrow: 1, backgroundColor: "#1E293B", borderRadius: 14, padding: 18, borderWidth: 1, borderColor: "rgba(148,163,184,0.10)" },
   supportIconWrap: { width: 42, height: 42, borderRadius: 12, justifyContent: "center", alignItems: "center", marginBottom: 12 },
-  supportTitle: { color: "#F1F5F9", fontSize: 15, fontWeight: "800", marginBottom: 6 },
-  supportDesc: { color: "#B0BEC5", fontSize: 12, lineHeight: 18 },
+  supportTitle: { color: "#FFFFFF", fontSize: 15, fontWeight: "800", marginBottom: 6 },
+  supportDesc: { color: "#E2E8F0", fontSize: 12, lineHeight: 18 },
 
   // Plans
   plansRow: { flexDirection: isDesktop ? "row" : "column", gap: 12, marginBottom: 20 },
@@ -777,23 +777,23 @@ const s = StyleSheet.create({
   planCardMain: { borderColor: "#D97706", borderWidth: 2, position: "relative" },
   planRibbon: { position: "absolute", top: 0, right: 24, paddingHorizontal: 14, paddingVertical: 4, borderBottomLeftRadius: 8, borderBottomRightRadius: 8 },
   planRibbonText: { color: "#0A0E1A", fontSize: 12, fontWeight: "800" },
-  planTitle: { color: "#F1F5F9", fontSize: 18, fontWeight: "800", marginBottom: 6 },
+  planTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800", marginBottom: 6 },
   planBadge: { backgroundColor: "rgba(217,119,6,0.15)", alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, marginBottom: 8 },
   planBadgeText: { color: "#D97706", fontSize: 11, fontWeight: "700" },
-  planPrice: { color: "#F1F5F9", fontSize: 28, fontWeight: "900", marginBottom: 2 },
-  planPriceNote: { color: "#B0BEC5", fontSize: 13, marginBottom: 12 },
+  planPrice: { color: "#FFFFFF", fontSize: 28, fontWeight: "900", marginBottom: 2 },
+  planPriceNote: { color: "#E2E8F0", fontSize: 13, marginBottom: 12 },
   planDivider: { height: 1, backgroundColor: "#1E293B", marginVertical: 14 },
   planFeatureRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
   planFeatureText: { color: "#CBD5E1", fontSize: 13, flex: 1 },
   planCTA: { marginTop: 16, backgroundColor: "#1E293B", borderRadius: 10, paddingVertical: 12, alignItems: "center" },
   planCTAMain: { backgroundColor: "#D97706" },
-  planCTAText: { color: "#F1F5F9", fontSize: 14, fontWeight: "700" },
+  planCTAText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
 
   // Bottom CTA
   bottomCTA: { margin: 16 },
   bottomCTAInner: { borderRadius: 16, padding: 28, alignItems: "center", borderWidth: 1, borderColor: "#D97706" },
-  bottomCTATitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "900", marginBottom: 8 },
-  bottomCTADesc: { color: "#B0BEC5", fontSize: 13, marginBottom: 20, textAlign: "center" },
+  bottomCTATitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginBottom: 8 },
+  bottomCTADesc: { color: "#E2E8F0", fontSize: 13, marginBottom: 20, textAlign: "center" },
   bottomCTABtnWrap: { borderRadius: 28, overflow: "hidden" },
   bottomCTABtnInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14 },
   bottomCTABtnText: { color: "#0A0E1A", fontSize: 15, fontWeight: "800" },
@@ -802,7 +802,7 @@ const s = StyleSheet.create({
   footer: { paddingVertical: 32, paddingHorizontal: 20, alignItems: "center", borderTopWidth: 1, borderTopColor: "#1E293B" },
   footerBrand: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   footerBrandText: { color: "#D97706", fontSize: 16, fontWeight: "700", marginLeft: 6 },
-  footerSlogan: { color: "#B0BEC5", fontSize: 13, marginBottom: 16 },
+  footerSlogan: { color: "#E2E8F0", fontSize: 13, marginBottom: 16 },
   footerDisclaimer: { color: "#475569", fontSize: 11, textAlign: "center", lineHeight: 18 },
 
   // Modal
@@ -810,15 +810,15 @@ const s = StyleSheet.create({
   modalSheet: { maxHeight: "92%", backgroundColor: "rgba(17,24,39,0.95)", borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   modalHandle: { width: 40, height: 4, backgroundColor: "#475569", borderRadius: 2, alignSelf: "center", marginTop: 12 },
   modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, borderBottomWidth: 1, borderBottomColor: "#1E293B" },
-  modalTitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "900", flex: 1, marginRight: 12 },
+  modalTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", flex: 1, marginRight: 12 },
   modalBody: { padding: 20 },
   modalCover: { width: "100%", height: 220, borderRadius: 12, marginBottom: 16 },
   modalSubtitle: { color: "#D97706", fontSize: 15, fontWeight: "700", marginBottom: 12 },
   modalTags: { flexDirection: "row", gap: 8, marginBottom: 16, flexWrap: "wrap" },
   modalTag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: "#475569" },
-  modalTagText: { color: "#F1F5F9", fontSize: 12, fontWeight: "700" },
+  modalTagText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
   modalDesc: { color: "#CBD5E1", fontSize: 14, lineHeight: 22, marginBottom: 16 },
-  modalSectionTitle: { color: "#F1F5F9", fontSize: 16, fontWeight: "800", marginBottom: 10 },
+  modalSectionTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "800", marginBottom: 10 },
   modalGallery: { marginBottom: 16 },
   galleryThumb: { width: 160, height: 110, borderRadius: 8, marginRight: 10, backgroundColor: "#475569" },
   modalObserve: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 10, gap: 10, marginBottom: 20, backgroundColor: "rgba(217,119,6,0.1)", borderWidth: 1, borderColor: "rgba(217,119,6,0.3)" },
@@ -831,13 +831,13 @@ const s = StyleSheet.create({
   contactSheet: { marginHorizontal: 20, borderRadius: 20, overflow: "hidden" },
   contactInner: { padding: 24, alignItems: "center" },
   contactIconWrap: { width: 56, height: 56, borderRadius: 28, backgroundColor: "rgba(217,119,6,0.15)", justifyContent: "center", alignItems: "center", marginBottom: 12 },
-  contactTitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "800", marginBottom: 6 },
-  contactDesc: { color: "#B0BEC5", fontSize: 13, textAlign: "center", marginBottom: 20 },
+  contactTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "800", marginBottom: 6 },
+  contactDesc: { color: "#E2E8F0", fontSize: 13, textAlign: "center", marginBottom: 20 },
   contactBtn: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 12, width: "100%", marginBottom: 10 },
   contactBtnLabel: { color: "rgba(255,255,255,0.7)", fontSize: 12 },
   contactBtnValue: { color: "#fff", fontSize: 16, fontWeight: "700" },
   contactCloseBtn: { alignItems: "center", paddingVertical: 12, backgroundColor: "#475569", borderRadius: 10, width: "100%", marginTop: 6 },
-  contactCloseBtnText: { color: "#F1F5F9", fontSize: 14, fontWeight: "600" },
+  contactCloseBtnText: { color: "#FFFFFF", fontSize: 14, fontWeight: "600" },
 
   // Gallery
   galleryModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", justifyContent: "center", alignItems: "center" },
@@ -851,8 +851,8 @@ const s = StyleSheet.create({
   customEAInner: { padding: 24, alignItems: "center" },
   customEABadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: 16, marginBottom: 16, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
   customEABadgeText: { color: "#D97706", fontSize: 12, fontWeight: "700" },
-  customEATitle: { color: "#F1F5F9", fontSize: 20, fontWeight: "900", marginBottom: 10, textAlign: "center" },
-  customEADesc: { color: "#B0BEC5", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20 },
+  customEATitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginBottom: 10, textAlign: "center" },
+  customEADesc: { color: "#E2E8F0", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20 },
   customEAFeatures: { width: "100%", gap: 12, marginBottom: 24 },
   customEAFeatureRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   customEAFeatureIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: "rgba(217,119,6,0.1)", justifyContent: "center", alignItems: "center" },

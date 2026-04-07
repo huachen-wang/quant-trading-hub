@@ -24,23 +24,22 @@ interface GlassCardProps {
   highlight?: boolean;
 }
 
-// 使用明显区别于页面背景(#0F172A)的卡片背景色
-// 边框使用更高透明度，确保卡片边界清晰可见
+// 使用更亮的背景和更明显的边框，确保移动端清晰可见
 const CARD_STYLES: Record<GlassIntensity, ViewStyle> = {
   subtle: {
     backgroundColor: "#1E293B",
     borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.20)",
+    borderColor: "rgba(148, 163, 184, 0.35)",
   },
   medium: {
-    backgroundColor: "#1E293B",
-    borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.25)",
-  },
-  strong: {
     backgroundColor: "#243247",
     borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.30)",
+    borderColor: "rgba(148, 163, 184, 0.40)",
+  },
+  strong: {
+    backgroundColor: "#2A3A52",
+    borderWidth: 1.5,
+    borderColor: "rgba(148, 163, 184, 0.45)",
   },
 };
 
@@ -56,7 +55,7 @@ export function GlassCard({
   const cardStyle = CARD_STYLES[intensity];
 
   const accentBorder = accentColor
-    ? { borderColor: accentColor + "60", borderWidth: 1.5 }
+    ? { borderColor: accentColor + "70", borderWidth: 1.5 }
     : {};
 
   return (
@@ -72,7 +71,7 @@ export function GlassCard({
         <View
           style={[
             styles.highlightLine,
-            { backgroundColor: (accentColor || colors.primary) + "50" },
+            { backgroundColor: (accentColor || colors.primary) + "60" },
           ]}
         />
       )}

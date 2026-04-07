@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    color: "rgba(255,255,255,0.6)",
+    color: "rgba(255,255,255,0.9)",
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 1,

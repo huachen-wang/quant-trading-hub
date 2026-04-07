@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.25)",
   },
   headerSection: { alignItems: "center", marginBottom: 20 },
   modalTitle: { fontSize: 22, fontWeight: "800", marginTop: 8, marginBottom: 6 },
