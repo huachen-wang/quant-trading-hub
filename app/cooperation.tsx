@@ -254,7 +254,7 @@ export default function CooperationPage() {
                   {/* 底部操作栏 */}
                   <View style={s.cardBottom}>
                     <View style={s.cardBottomLeft}>
-                      <Ionicons name="eye-outline" size={14} color="#E2E8F0" />
+                      <Ionicons name="eye-outline" size={14} color="#F1F5F9" />
                       <Text style={s.cardObserveText}>
                         {gallery.length > 0 ? `${gallery.length}张观摩截图` : "可获取观摩账户"}
                       </Text>
@@ -423,7 +423,7 @@ export default function CooperationPage() {
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>{selectedCard?.title}</Text>
               <TouchableOpacity onPress={() => setSelectedCard(null)}>
-                <Ionicons name="close-circle" size={28} color="#E2E8F0" />
+                <Ionicons name="close-circle" size={28} color="#F1F5F9" />
               </TouchableOpacity>
             </View>
             <ScrollView style={s.modalBody} showsVerticalScrollIndicator={false}>
@@ -566,11 +566,11 @@ const s = StyleSheet.create({
   heroBadgeText: { color: "#D97706", fontSize: 12, fontWeight: "700", letterSpacing: 1 },
   heroTitle: { color: "#FFFFFF", fontSize: 32, fontWeight: "900", marginBottom: 8, textAlign: "center", letterSpacing: 1 },
   heroTagline: { color: "#D97706", fontSize: 14, fontWeight: "700", marginBottom: 16, letterSpacing: 2 },
-  heroDesc: { color: "#E2E8F0", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 28 },
+  heroDesc: { color: "#F1F5F9", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 28 },
   statsRow: { flexDirection: "row", gap: 0, marginBottom: 28, width: "100%", maxWidth: 500 },
   statItem: { flex: 1, alignItems: "center", borderRightWidth: 1, borderRightColor: "#1E293B" },
   statNum: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", marginBottom: 2 },
-  statLabel: { color: "#E2E8F0", fontSize: 11 },
+  statLabel: { color: "#F1F5F9", fontSize: 11 },
   heroCTA: { borderRadius: 28, overflow: "hidden" },
   heroCTAInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14 },
   heroCTAText: { color: "#0A0E1A", fontSize: 15, fontWeight: "800" },
@@ -579,9 +579,9 @@ const s = StyleSheet.create({
   section: { marginTop: 12, paddingHorizontal: 16 },
   sectionHeader: { alignItems: "center", marginBottom: 24, paddingTop: 20 },
   sectionLine: { width: 40, height: 2, backgroundColor: "#D97706", borderRadius: 1, marginBottom: 16 },
-  sectionLabel: { color: "#E2E8F0", fontSize: 11, fontWeight: "700", letterSpacing: 3, marginBottom: 8 },
+  sectionLabel: { color: "#F1F5F9", fontSize: 11, fontWeight: "700", letterSpacing: 3, marginBottom: 8 },
   sectionTitle: { color: "#FFFFFF", fontSize: 24, fontWeight: "900", marginBottom: 6 },
-  sectionSubtitle: { color: "#E2E8F0", fontSize: 13 },
+  sectionSubtitle: { color: "#F1F5F9", fontSize: 13 },
 
   // ═══ 全新策略卡片样式 ═══
   cardOuter: {
@@ -678,7 +678,7 @@ const s = StyleSheet.create({
     borderRadius: 4,
   },
   coverPlatformText: {
-    color: "#E2E8F0",
+    color: "#F1F5F9",
     fontSize: 10,
     fontWeight: "700",
   },
@@ -747,7 +747,7 @@ const s = StyleSheet.create({
     gap: 6,
   },
   cardObserveText: {
-    color: "#E2E8F0",
+    color: "#F1F5F9",
     fontSize: 12,
   },
   cardViewBtn: {
@@ -769,7 +769,7 @@ const s = StyleSheet.create({
   supportCard: { width: isDesktop ? "31%" : "47%", flexGrow: 1, backgroundColor: "#1E293B", borderRadius: 14, padding: 18, borderWidth: 1, borderColor: "rgba(148,163,184,0.10)" },
   supportIconWrap: { width: 42, height: 42, borderRadius: 12, justifyContent: "center", alignItems: "center", marginBottom: 12 },
   supportTitle: { color: "#FFFFFF", fontSize: 15, fontWeight: "800", marginBottom: 6 },
-  supportDesc: { color: "#E2E8F0", fontSize: 12, lineHeight: 18 },
+  supportDesc: { color: "#F1F5F9", fontSize: 12, lineHeight: 18 },
 
   // Plans
   plansRow: { flexDirection: isDesktop ? "row" : "column", gap: 12, marginBottom: 20 },
@@ -781,7 +781,7 @@ const s = StyleSheet.create({
   planBadge: { backgroundColor: "rgba(217,119,6,0.15)", alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, marginBottom: 8 },
   planBadgeText: { color: "#D97706", fontSize: 11, fontWeight: "700" },
   planPrice: { color: "#FFFFFF", fontSize: 28, fontWeight: "900", marginBottom: 2 },
-  planPriceNote: { color: "#E2E8F0", fontSize: 13, marginBottom: 12 },
+  planPriceNote: { color: "#F1F5F9", fontSize: 13, marginBottom: 12 },
   planDivider: { height: 1, backgroundColor: "#1E293B", marginVertical: 14 },
   planFeatureRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
   planFeatureText: { color: "#CBD5E1", fontSize: 13, flex: 1 },
@@ -793,7 +793,7 @@ const s = StyleSheet.create({
   bottomCTA: { margin: 16 },
   bottomCTAInner: { borderRadius: 16, padding: 28, alignItems: "center", borderWidth: 1, borderColor: "#D97706" },
   bottomCTATitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginBottom: 8 },
-  bottomCTADesc: { color: "#E2E8F0", fontSize: 13, marginBottom: 20, textAlign: "center" },
+  bottomCTADesc: { color: "#F1F5F9", fontSize: 13, marginBottom: 20, textAlign: "center" },
   bottomCTABtnWrap: { borderRadius: 28, overflow: "hidden" },
   bottomCTABtnInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14 },
   bottomCTABtnText: { color: "#0A0E1A", fontSize: 15, fontWeight: "800" },
@@ -802,7 +802,7 @@ const s = StyleSheet.create({
   footer: { paddingVertical: 32, paddingHorizontal: 20, alignItems: "center", borderTopWidth: 1, borderTopColor: "#1E293B" },
   footerBrand: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   footerBrandText: { color: "#D97706", fontSize: 16, fontWeight: "700", marginLeft: 6 },
-  footerSlogan: { color: "#E2E8F0", fontSize: 13, marginBottom: 16 },
+  footerSlogan: { color: "#F1F5F9", fontSize: 13, marginBottom: 16 },
   footerDisclaimer: { color: "#475569", fontSize: 11, textAlign: "center", lineHeight: 18 },
 
   // Modal
@@ -832,7 +832,7 @@ const s = StyleSheet.create({
   contactInner: { padding: 24, alignItems: "center" },
   contactIconWrap: { width: 56, height: 56, borderRadius: 28, backgroundColor: "rgba(217,119,6,0.15)", justifyContent: "center", alignItems: "center", marginBottom: 12 },
   contactTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "800", marginBottom: 6 },
-  contactDesc: { color: "#E2E8F0", fontSize: 13, textAlign: "center", marginBottom: 20 },
+  contactDesc: { color: "#F1F5F9", fontSize: 13, textAlign: "center", marginBottom: 20 },
   contactBtn: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 12, width: "100%", marginBottom: 10 },
   contactBtnLabel: { color: "rgba(255,255,255,0.7)", fontSize: 12 },
   contactBtnValue: { color: "#fff", fontSize: 16, fontWeight: "700" },
@@ -852,7 +852,7 @@ const s = StyleSheet.create({
   customEABadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: 16, marginBottom: 16, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
   customEABadgeText: { color: "#D97706", fontSize: 12, fontWeight: "700" },
   customEATitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginBottom: 10, textAlign: "center" },
-  customEADesc: { color: "#E2E8F0", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20 },
+  customEADesc: { color: "#F1F5F9", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20 },
   customEAFeatures: { width: "100%", gap: 12, marginBottom: 24 },
   customEAFeatureRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   customEAFeatureIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: "rgba(217,119,6,0.1)", justifyContent: "center", alignItems: "center" },

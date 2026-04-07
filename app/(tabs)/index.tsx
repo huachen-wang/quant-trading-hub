@@ -753,6 +753,7 @@ const qeStyles = StyleSheet.create({
   },
   entryTouchable: {
     position: "relative",
+    height: 116,
   },
   entryGlow: {
     position: "absolute",
@@ -766,6 +767,7 @@ const qeStyles = StyleSheet.create({
     borderRadius: 14,
     padding: 10,
     height: 110,
+    flex: 1,
     justifyContent: "space-between",
     overflow: "hidden",
     position: "relative",
@@ -1038,7 +1040,7 @@ const customBannerStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   desc: {
-    color: "#E2E8F0",
+    color: "#F1F5F9",
     fontSize: 10,
     lineHeight: 15,
     marginBottom: 4,

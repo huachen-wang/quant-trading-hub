@@ -924,7 +924,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   customEADesc: {
-    color: "#E2E8F0",
+    color: "#F1F5F9",
     fontSize: 13,
     lineHeight: 22,
     textAlign: "center",

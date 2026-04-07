@@ -4,7 +4,7 @@ const themeColors = {
   background: { light: '#ffffff', dark: '#0F172A' }, // 白/深蓝灰
   surface: { light: '#F8FAFC', dark: '#1E293B' }, // 浅灰/中蓝灰
   foreground: { light: '#0F172A', dark: '#FFFFFF' }, // 深蓝灰/纯白 - 确保主文字最亮
-  muted: { light: '#64748B', dark: '#E2E8F0' }, // 中灰/slate-200 - 次要文字也要清晰
+  muted: { light: '#64748B', dark: '#F1F5F9' }, // 中灰/slate-100 - 次要文字接近纯白确保手机可读
   border: { light: '#E2E8F0', dark: '#64748B' }, // 浅灰/slate-500 - 边框更明显
   success: { light: '#10B981', dark: '#34D399' }, // 绿色 - 盈利
   warning: { light: '#F59E0B', dark: '#FBBF24' }, // 橙色 - 警告
