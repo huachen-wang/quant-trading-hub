@@ -40,6 +40,9 @@ export default function StrategyForm() {
     galleryImages: "",
     isFeatured: false,
     featuredLink: "",
+    // A.2 新增
+    saleMode: "inquiry" as "direct" | "inquiry",
+    richDescription: "",
   });
 
   useEffect(() => {
@@ -73,6 +76,9 @@ export default function StrategyForm() {
               galleryImages: strategy.galleryImages || "",
               isFeatured: strategy.isFeatured ?? false,
               featuredLink: strategy.featuredLink || "",
+              // A.2
+              saleMode: strategy.saleMode || "inquiry",
+              richDescription: strategy.richDescription || "",
             });
           }
         })
@@ -130,6 +136,17 @@ export default function StrategyForm() {
 
         <Text style={[s.label, { color: colors.foreground }]}>策略描述</Text>
         <TextInput value={formData.description} onChangeText={(t) => setFormData({ ...formData, description: t })} placeholder="详细描述策略特点" placeholderTextColor={colors.muted} multiline numberOfLines={4} style={[...inputStyle, { minHeight: 100, textAlignVertical: "top" }]} />
+        {/* A.2: 富文本介绍 */}
+        <Text style={[s.label, { color: colors.foreground, marginTop: 8 }]}>详细介绍（富文本 HTML）</Text>
+        <TextInput
+          value={formData.richDescription}
+          onChangeText={(t) => setFormData({ ...formData, richDescription: t })}
+          placeholder={"<h2>核心策略原理</h2>\n<p>本 EA 基于 <strong>多重技术面共振</strong>...</p>"}
+          placeholderTextColor={colors.muted}
+          multiline
+          numberOfLines={10}
+          style={[...inputStyle, { minHeight: 200, textAlignVertical: "top", fontSize: 13 }]}
+        />
 
         <Text style={[s.label, { color: colors.foreground }]}>平台</Text>
         <View style={s.row}>
@@ -154,6 +171,23 @@ export default function StrategyForm() {
           ))}
         </View>
 
+        {/* A.2: 销售模式 */}
+        <Text style={[s.label, { color: colors.foreground, marginTop: 12 }]}>销售模式</Text>
+        <View style={s.row}>
+          {([
+            { label: "🤝 私聊授权", value: "inquiry" },
+            { label: "💰 直接购买", value: "direct" },
+          ] as const).map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              onPress={() => setFormData({ ...formData, saleMode: opt.value })}
+              style={[s.chip, { backgroundColor: formData.saleMode === opt.value ? "#D97706" : colors.surface }]}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: formData.saleMode === opt.value ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
         <Text style={[s.label, { color: colors.foreground }]}>标签 (逗号分隔)</Text>
         <TextInput value={formData.tags} onChangeText={(t) => setFormData({ ...formData, tags: t })} placeholder="马丁,对冲,趋势,剥头皮,黄金" placeholderTextColor={colors.muted} style={inputStyle} />
 

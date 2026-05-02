@@ -247,6 +247,209 @@ async function runMigrations() {
       // email_subscriptions 表可能不存在，由 drizzle 自动创建
     }
 
+    // ════════════════════════════════════════════════════════════════
+    // Phase 1：用户系统、订单、支付、收藏、分类
+    // ════════════════════════════════════════════════════════════════
+
+    // ─── users 表新增字段：phone + phoneVerified ───
+    try {
+      const [userCols] = await connection.query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'"
+      ) as any[];
+      const userColumnNames = new Set(userCols.map((c: any) => c.COLUMN_NAME));
+
+      const userMigrations: [string, string][] = [
+        ["phone", "ALTER TABLE `users` ADD COLUMN `phone` varchar(20) DEFAULT NULL"],
+        ["phoneVerified", "ALTER TABLE `users` ADD COLUMN `phoneVerified` boolean NOT NULL DEFAULT false"],
+      ];
+      for (const [colName, sql] of userMigrations) {
+        if (!userColumnNames.has(colName)) {
+          console.log(`[migrate] Adding column users.${colName}...`);
+          await connection.query(sql);
+          migrationsRun++;
+        }
+      }
+      // 手机号索引
+      try {
+        await connection.query("CREATE INDEX `phone_idx` ON `users` (`phone`)");
+        migrationsRun++;
+      } catch {
+        // 索引已存在，忽略
+      }
+    } catch (e) {
+      console.error("[migrate] users phone migration failed:", e);
+    }
+
+    // ─── strategies 表新增字段：saleMode + richDescription ───
+    const strategyPhase1Migrations: [string, string][] = [
+      ["saleMode", "ALTER TABLE `strategies` ADD COLUMN `saleMode` enum('direct','inquiry') NOT NULL DEFAULT 'inquiry'"],
+      ["richDescription", "ALTER TABLE `strategies` ADD COLUMN `richDescription` text DEFAULT NULL"],
+    ];
+    for (const [colName, sql] of strategyPhase1Migrations) {
+      if (!strategyColumnNames.has(colName)) {
+        console.log(`[migrate] Adding column strategies.${colName}...`);
+        await connection.query(sql);
+        migrationsRun++;
+      }
+    }
+
+    // 自动回填：免费商品（isFree=true）默认改为 direct（直购）
+    // 付费商品保持 inquiry（私聊授权），符合现状
+    if (!strategyColumnNames.has("saleMode")) {
+      try {
+        await connection.query(
+          "UPDATE `strategies` SET `saleMode` = 'direct' WHERE `isFree` = true"
+        );
+        console.log("[migrate] Backfilled saleMode='direct' for free strategies");
+        migrationsRun++;
+      } catch {
+        // 忽略
+      }
+    }
+
+    // ─── 新表：verification_codes ───
+    const createVerificationCodes = `
+      CREATE TABLE IF NOT EXISTS \`verification_codes\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`target\` varchar(255) NOT NULL,
+        \`targetType\` enum('phone','email') NOT NULL,
+        \`code\` varchar(10) NOT NULL,
+        \`purpose\` varchar(50) NOT NULL,
+        \`used\` boolean NOT NULL DEFAULT false,
+        \`expiresAt\` timestamp NOT NULL,
+        \`ip\` varchar(45) DEFAULT NULL,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX \`target_purpose_idx\` (\`target\`, \`purpose\`),
+        INDEX \`expiresAt_idx\` (\`expiresAt\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+    console.log("[migrate] Ensuring verification_codes table exists...");
+    await connection.query(createVerificationCodes);
+
+    // ─── 新表：categories ───
+    const createCategories = `
+      CREATE TABLE IF NOT EXISTS \`categories\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`name\` varchar(100) NOT NULL,
+        \`slug\` varchar(100) NOT NULL UNIQUE,
+        \`parentId\` int DEFAULT NULL,
+        \`icon\` varchar(50) DEFAULT NULL,
+        \`description\` text DEFAULT NULL,
+        \`sortOrder\` int NOT NULL DEFAULT 0,
+        \`isVisible\` boolean NOT NULL DEFAULT true,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX \`parentId_idx\` (\`parentId\`),
+        INDEX \`slug_idx\` (\`slug\`),
+        INDEX \`sortOrder_idx\` (\`sortOrder\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+    console.log("[migrate] Ensuring categories table exists...");
+    await connection.query(createCategories);
+
+    // 默认分类数据（如果表为空）
+    const [categoryRows] = await connection.query("SELECT COUNT(*) as cnt FROM `categories`") as any[];
+    if (categoryRows[0].cnt === 0) {
+      console.log("[migrate] Seeding default categories...");
+      // 一级分类
+      await connection.query(`
+        INSERT INTO \`categories\` (\`name\`, \`slug\`, \`parentId\`, \`icon\`, \`sortOrder\`) VALUES
+        ('MT4 智能交易', 'mt4', NULL, '📈', 1),
+        ('MT5 智能交易', 'mt5', NULL, '📊', 2),
+        ('指标工具', 'indicator', NULL, '📐', 3),
+        ('辅助工具', 'tool', NULL, '🔧', 4),
+        ('实战教程', 'course', NULL, '📚', 5)
+      `);
+      // 二级分类（策略类型，独立于一级，前端按 platform + type 组合筛选）
+      await connection.query(`
+        INSERT INTO \`categories\` (\`name\`, \`slug\`, \`parentId\`, \`icon\`, \`sortOrder\`) VALUES
+        ('马丁策略', 'martin', NULL, '♻️', 11),
+        ('趋势策略', 'trend', NULL, '📈', 12),
+        ('网格策略', 'grid', NULL, '🔲', 13),
+        ('对冲策略', 'hedge', NULL, '⚖️', 14),
+        ('剥头皮', 'scalping', NULL, '⚡', 15),
+        ('订单流', 'orderflow', NULL, '🌊', 16),
+        ('套利策略', 'arbitrage', NULL, '🔄', 17),
+        ('AI 量化', 'ai', NULL, '🤖', 18)
+      `);
+      migrationsRun++;
+    }
+
+    // ─── 新表：orders ───
+    const createOrders = `
+      CREATE TABLE IF NOT EXISTS \`orders\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`orderNo\` varchar(64) NOT NULL UNIQUE,
+        \`userId\` int NOT NULL,
+        \`productKind\` varchar(20) NOT NULL,
+        \`productId\` int NOT NULL,
+        \`productTitle\` varchar(255) NOT NULL,
+        \`productCover\` text DEFAULT NULL,
+        \`amount\` decimal(10,2) NOT NULL,
+        \`originalAmount\` decimal(10,2) DEFAULT NULL,
+        \`currency\` varchar(10) NOT NULL DEFAULT 'CNY',
+        \`status\` enum('pending','paid','cancelled','refunded','expired') NOT NULL DEFAULT 'pending',
+        \`paymentMethod\` varchar(50) DEFAULT NULL,
+        \`paymentGateway\` varchar(50) DEFAULT NULL,
+        \`paidAt\` timestamp NULL DEFAULT NULL,
+        \`expiresAt\` timestamp NULL DEFAULT NULL,
+        \`metadata\` text DEFAULT NULL,
+        \`remark\` text DEFAULT NULL,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX \`orderNo_idx\` (\`orderNo\`),
+        INDEX \`userId_idx\` (\`userId\`),
+        INDEX \`status_idx\` (\`status\`),
+        INDEX \`product_idx\` (\`productKind\`, \`productId\`),
+        INDEX \`createdAt_idx\` (\`createdAt\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+    console.log("[migrate] Ensuring orders table exists...");
+    await connection.query(createOrders);
+
+    // ─── 新表：payments ───
+    const createPayments = `
+      CREATE TABLE IF NOT EXISTS \`payments\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`orderId\` int NOT NULL,
+        \`orderNo\` varchar(64) NOT NULL,
+        \`gateway\` varchar(50) NOT NULL,
+        \`gatewayOrderNo\` varchar(255) DEFAULT NULL,
+        \`method\` varchar(50) NOT NULL,
+        \`amount\` decimal(10,2) NOT NULL,
+        \`currency\` varchar(10) NOT NULL DEFAULT 'CNY',
+        \`status\` enum('pending','success','failed','refunded') NOT NULL DEFAULT 'pending',
+        \`callbackRaw\` text DEFAULT NULL,
+        \`callbackVerified\` boolean NOT NULL DEFAULT false,
+        \`errorMessage\` text DEFAULT NULL,
+        \`paidAt\` timestamp NULL DEFAULT NULL,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX \`orderId_idx\` (\`orderId\`),
+        INDEX \`orderNo_idx\` (\`orderNo\`),
+        INDEX \`gatewayOrderNo_idx\` (\`gatewayOrderNo\`),
+        INDEX \`status_idx\` (\`status\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+    console.log("[migrate] Ensuring payments table exists...");
+    await connection.query(createPayments);
+
+    // ─── 新表：user_favorites ───
+    const createUserFavorites = `
+      CREATE TABLE IF NOT EXISTS \`user_favorites\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`userId\` int NOT NULL,
+        \`productKind\` varchar(20) NOT NULL,
+        \`productId\` int NOT NULL,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX \`userId_idx\` (\`userId\`),
+        INDEX \`product_idx\` (\`productKind\`, \`productId\`),
+        UNIQUE INDEX \`uniq_user_product\` (\`userId\`, \`productKind\`, \`productId\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `;
+    console.log("[migrate] Ensuring user_favorites table exists...");
+    await connection.query(createUserFavorites);
+
     if (migrationsRun > 0) {
       console.log(`[migrate] \u2713 ${migrationsRun} migration(s) applied successfully`);
     } else {

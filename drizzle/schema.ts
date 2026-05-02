@@ -13,10 +13,16 @@ export const users = mysqlTable("users", {
   bio: text("bio"),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  // ─── Phase 1 新增：手机号注册支持 ───
+  phone: varchar("phone", { length: 20 }), // 手机号（带国际区号，如 +86138...），可选
+  phoneVerified: boolean("phoneVerified").default(false).notNull(), // 手机号是否已验证
+  // ───────────────────────────────────
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
+}, (table) => ({
+  phoneIdx: index("phone_idx").on(table.phone),
+}));
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -47,6 +53,13 @@ export const strategies = mysqlTable("strategies", {
   // 产品分类与标签
   productType: varchar("productType", { length: 20 }).default("ea").notNull(), // ea | indicator | tool
   tags: text("tags"), // 逗号分隔标签，如 "马丁,对冲,黄金"
+
+  // ─── Phase 1 新增：销售模式（直购 / 私聊授权）+ 富文本介绍 ───
+  saleMode: mysqlEnum("saleMode", ["direct", "inquiry"]).default("inquiry").notNull(),
+  // direct  = 人民币直接购买，购买后立即解锁下载
+  // inquiry = 商务咨询授权，私聊客服洽谈（现状大部分商品是这种）
+  richDescription: text("richDescription"), // 富文本HTML（tiptap生成），为空时回退到 description 纯文本
+  // ──────────────────────────────────────────────────
   
   // 图片画廊（JSON数组，存储多张实盘/回测截图URL）
   galleryImages: text("galleryImages"), // JSON数组字符串
@@ -369,3 +382,146 @@ export const promoProducts = mysqlTable("promo_products", {
 
 export type PromoProduct = typeof promoProducts.$inferSelect;
 export type InsertPromoProduct = typeof promoProducts.$inferInsert;
+
+// ════════════════════════════════════════════════════════════════════
+// Phase 1 新增表：用户系统、订单、支付、收藏、分类
+// ════════════════════════════════════════════════════════════════════
+
+// 验证码表（短信/邮箱验证码，一次性使用）
+export const verificationCodes = mysqlTable("verification_codes", {
+  id: int("id").autoincrement().primaryKey(),
+  target: varchar("target", { length: 255 }).notNull(), // 手机号或邮箱
+  targetType: mysqlEnum("targetType", ["phone", "email"]).notNull(),
+  code: varchar("code", { length: 10 }).notNull(), // 6位验证码
+  purpose: varchar("purpose", { length: 50 }).notNull(), // register | login | reset_password | bind_phone
+  used: boolean("used").default(false).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(), // 过期时间（一般 5-10 分钟）
+  ip: varchar("ip", { length: 45 }), // 请求 IP（用于风控）
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  targetPurposeIdx: index("target_purpose_idx").on(table.target, table.purpose),
+  expiresAtIdx: index("expiresAt_idx").on(table.expiresAt),
+}));
+
+export type VerificationCode = typeof verificationCodes.$inferSelect;
+export type InsertVerificationCode = typeof verificationCodes.$inferInsert;
+
+// 商品分类表（一级 + 二级，支持树状结构）
+// 默认 seed:
+//   一级: MT4 | MT5 | 指标 | 工具 | 课程
+//   二级（共用，可在 admin 后台为每个一级单独配置）:
+//     马丁 | 趋势 | 网格 | 对冲 | 剥头皮 | 订单流 | 套利 | AI
+export const categories = mysqlTable("categories", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // 显示名，如 "马丁策略"
+  slug: varchar("slug", { length: 100 }).notNull().unique(), // URL 友好，如 "martin"
+  parentId: int("parentId"), // 父分类 id，NULL 即为一级分类
+  icon: varchar("icon", { length: 50 }), // emoji 或图标名
+  description: text("description"), // 分类介绍
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  parentIdIdx: index("parentId_idx").on(table.parentId),
+  slugIdx: index("slug_idx").on(table.slug),
+  sortOrderIdx: index("sortOrder_idx").on(table.sortOrder),
+}));
+
+export type Category = typeof categories.$inferSelect;
+export type InsertCategory = typeof categories.$inferInsert;
+
+// 订单表（覆盖直购流程，私聊类商品不走订单）
+export const orders = mysqlTable("orders", {
+  id: int("id").autoincrement().primaryKey(),
+  orderNo: varchar("orderNo", { length: 64 }).notNull().unique(), // 订单号 EX20260503xxxxxxxx
+  userId: int("userId").notNull(),
+
+  // 商品信息（冗余存储，避免商品改名/下架后订单丢失上下文）
+  productKind: varchar("productKind", { length: 20 }).notNull(), // strategy | promo
+  productId: int("productId").notNull(), // 关联 strategies.id 或 promo_products.id
+  productTitle: varchar("productTitle", { length: 255 }).notNull(),
+  productCover: text("productCover"),
+
+  // 金额
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // 实付金额
+  originalAmount: decimal("originalAmount", { precision: 10, scale: 2 }), // 原价（用于对账）
+  currency: varchar("currency", { length: 10 }).default("CNY").notNull(),
+
+  // 状态
+  status: mysqlEnum("status", ["pending", "paid", "cancelled", "refunded", "expired"])
+    .default("pending").notNull(),
+
+  // 支付信息
+  paymentMethod: varchar("paymentMethod", { length: 50 }), // alipay | wechat | usdt
+  paymentGateway: varchar("paymentGateway", { length: 50 }), // caihong | epay | direct
+  paidAt: timestamp("paidAt"),
+  expiresAt: timestamp("expiresAt"), // 订单过期时间（默认 30 分钟）
+
+  // 元数据
+  metadata: text("metadata"), // JSON：渠道、来源、备注等
+  remark: text("remark"), // 用户备注
+
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  orderNoIdx: index("orderNo_idx").on(table.orderNo),
+  userIdIdx: index("userId_idx").on(table.userId),
+  statusIdx: index("status_idx").on(table.status),
+  productIdx: index("product_idx").on(table.productKind, table.productId),
+  createdAtIdx: index("createdAt_idx").on(table.createdAt),
+}));
+
+export type Order = typeof orders.$inferSelect;
+export type InsertOrder = typeof orders.$inferInsert;
+
+// 支付流水表（每笔支付尝试都记一条，含回调原始数据用于对账）
+export const payments = mysqlTable("payments", {
+  id: int("id").autoincrement().primaryKey(),
+  orderId: int("orderId").notNull(),
+  orderNo: varchar("orderNo", { length: 64 }).notNull(), // 冗余存订单号方便查询
+
+  gateway: varchar("gateway", { length: 50 }).notNull(), // caihong | epay | alipay_direct | wechat_direct
+  gatewayOrderNo: varchar("gatewayOrderNo", { length: 255 }), // 第三方订单号 / trade_no
+  method: varchar("method", { length: 50 }).notNull(), // alipay | wechat | usdt | qq | unionpay
+
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 10 }).default("CNY").notNull(),
+
+  status: mysqlEnum("status", ["pending", "success", "failed", "refunded"])
+    .default("pending").notNull(),
+
+  // 回调与对账
+  callbackRaw: text("callbackRaw"), // 网关回调原始 payload（JSON 字符串）
+  callbackVerified: boolean("callbackVerified").default(false).notNull(), // 签名是否已验证
+  errorMessage: text("errorMessage"),
+
+  paidAt: timestamp("paidAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  orderIdIdx: index("orderId_idx").on(table.orderId),
+  orderNoIdx: index("orderNo_idx").on(table.orderNo),
+  gatewayOrderNoIdx: index("gatewayOrderNo_idx").on(table.gatewayOrderNo),
+  statusIdx: index("status_idx").on(table.status),
+}));
+
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = typeof payments.$inferInsert;
+
+// 用户云端收藏表（替代当前的本地 AsyncStorage 收藏）
+export const userFavorites = mysqlTable("user_favorites", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  productKind: varchar("productKind", { length: 20 }).notNull(), // strategy | promo
+  productId: int("productId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("userId_idx").on(table.userId),
+  productIdx: index("product_idx").on(table.productKind, table.productId),
+  // 数据库层去重，防止重复收藏
+  uniqUserProduct: index("uniq_user_product").on(table.userId, table.productKind, table.productId),
+}));
+
+export type UserFavorite = typeof userFavorites.$inferSelect;
+export type InsertUserFavorite = typeof userFavorites.$inferInsert;

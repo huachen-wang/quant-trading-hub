@@ -65,6 +65,8 @@ export default function HomeScreen() {
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(undefined);
   const [orderBy, setOrderBy] = useState<OrderBy>("hot");
   const [tagFilter, setTagFilter] = useState("");
+  const [saleModeFilter, setSaleModeFilter] = useState<"all" | "direct" | "inquiry">("all");
+  const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [selectedStrategyTitle, setSelectedStrategyTitle] = useState("");
@@ -136,6 +138,7 @@ export default function HomeScreen() {
     return () => countAnim.removeListener(listener);
   }, []);
 
+  const { data: categoriesData } = trpc.categories.list.useQuery();
   const { data: initialData, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
     platform: platformFilter,
     orderBy,
@@ -405,6 +408,51 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* A.2: 销售模式筛选 */}
+      <View style={[filterStyles.filterRow, { marginTop: 8 }]}>
+        <View style={filterStyles.filterGroup}>
+          {([
+            { label: "全部", value: "all" },
+            { label: "💰 直购", value: "direct" },
+            { label: "🤝 商务授权", value: "inquiry" },
+          ] as const).map((item) => {
+            const isActive = saleModeFilter === item.value;
+            return (
+              <TouchableOpacity
+                key={item.value}
+                onPress={() => setSaleModeFilter(item.value)}
+                style={[
+                  filterStyles.filterChip,
+                  isActive
+                    ? { backgroundColor: "#D97706", borderColor: "#D97706" }
+                    : { backgroundColor: colors.surface, borderColor: colors.border },
+                ]}
+                activeOpacity={0.7}
+              >
+                <Text style={[filterStyles.filterChipText, { color: isActive ? "#fff" : colors.muted }]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+      {/* A.2: 分类筛选 */}
+      {(categoriesData || []).length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 6 }} style={{ marginTop: 4 }}>
+          <TouchableOpacity onPress={() => setCategoryFilter(undefined)} style={[filterStyles.filterChip, !categoryFilter ? { backgroundColor: "#D97706", borderColor: "#D97706" } : { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.7}>
+            <Text style={[filterStyles.filterChipText, { color: !categoryFilter ? "#fff" : colors.muted }]}>全部分类</Text>
+          </TouchableOpacity>
+          {(categoriesData || []).filter((c: any) => c.parentId === null).map((c: any) => {
+            const isActive = categoryFilter === c.slug;
+            return (
+              <TouchableOpacity key={c.slug} onPress={() => setCategoryFilter(c.slug)} style={[filterStyles.filterChip, isActive ? { backgroundColor: "#D97706", borderColor: "#D97706" } : { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.7}>
+                <Text style={[filterStyles.filterChipText, { color: isActive ? "#fff" : colors.muted }]}>{c.icon ? `${c.icon} ` : ""}{c.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
       {/* 标签筛选（动态提取，无标签时不显示） */}
       {dynamicTags.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }} contentContainerStyle={{ paddingRight: 12 }}>

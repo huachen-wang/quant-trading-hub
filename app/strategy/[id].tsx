@@ -18,6 +18,8 @@ import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { ScreenContainer } from "@/components/screen-container";
+import { PurchaseActions } from "@/components/purchase-actions";
+import { RichTextRenderer } from "@/components/rich-text-renderer";
 import { ContactModal } from "@/components/contact-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
@@ -527,7 +529,10 @@ export default function StrategyDetailScreen() {
                 ))}
               </View>
             )}
-            <Text style={[styles.description, { color: colors.muted }]}>{strategy.description}</Text>
+            <RichTextRenderer
+              html={(strategy as any).richDescription}
+              fallback={strategy.description}
+            />
           </View>
 
           {/* 核心数据 */}
@@ -606,77 +611,29 @@ export default function StrategyDetailScreen() {
                 </View>
               </View>
 
-              {/* 旗舰产品跳转按钮 */}
-              {isFeatured && featuredLink ? (
+              {/* A.2: saleMode 双分支 */}
+              {(strategy as any).saleMode === "direct" && strategy.isFree && hasDownloadUrl ? (
                 <TouchableOpacity
-                  onPress={() => Linking.openURL(featuredLink)}
-                  style={[styles.downloadBtn, { backgroundColor: "#D97706" }]}
+                  onPress={handleDownload}
+                  style={[styles.downloadBtn, { backgroundColor: colors.primary }]}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.downloadBtnText}>⭐ 前往官网了解详情</Text>
+                  <Text style={[styles.downloadBtnText, { color: "#fff" }]}>⚡ 立即下载</Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity
-                  onPress={hasDownloadUrl ? handleDownload : undefined}
-                  disabled={!hasDownloadUrl}
-                  style={[
-                    styles.downloadBtn,
-                    { backgroundColor: hasDownloadUrl ? colors.primary : colors.muted + "40" },
-                  ]}
-                  activeOpacity={hasDownloadUrl ? 0.8 : 1}
-                >
-                  <Text style={[
-                    styles.downloadBtnText,
-                    { color: hasDownloadUrl ? "#fff" : colors.muted },
-                  ]}>
-                    {hasDownloadUrl ? "下载EA" : "暂无下载链接"}
-                  </Text>
-                </TouchableOpacity>
+                <PurchaseActions
+                  saleMode={(strategy as any).saleMode || "inquiry"}
+                  productId={strategy.id}
+                  productKind="strategy"
+                  price={strategy.price}
+                  originalPrice={(strategy as any).originalPrice}
+                  isFree={strategy.isFree}
+                  telegramGroup={strategy.telegramGroup}
+                  qqGroup={strategy.qqGroup}
+                  featuredLink={isFeatured ? featuredLink : null}
+                  hasDownloadUrl={hasDownloadUrl}
+                />
               )}
-
-              {/* 联系按钮 */}
-              <View style={styles.contactRow}>
-                <TouchableOpacity
-                  onPress={hasTelegram ? () => handleContact("telegram") : undefined}
-                  disabled={!hasTelegram}
-                  style={[
-                    styles.contactBtn,
-                    {
-                      backgroundColor: hasTelegram ? colors.primary + "12" : colors.muted + "10",
-                      borderWidth: hasTelegram ? 0 : 0.5,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  activeOpacity={hasTelegram ? 0.7 : 1}
-                >
-                  <Text style={[
-                    styles.contactBtnText,
-                    { color: hasTelegram ? colors.primary : colors.muted },
-                  ]}>
-                    {hasTelegram ? "Telegram" : "Telegram —"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={hasQQ ? () => handleContact("qq") : undefined}
-                  disabled={!hasQQ}
-                  style={[
-                    styles.contactBtn,
-                    {
-                      backgroundColor: hasQQ ? colors.primary + "12" : colors.muted + "10",
-                      borderWidth: hasQQ ? 0 : 0.5,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  activeOpacity={hasQQ ? 0.7 : 1}
-                >
-                  <Text style={[
-                    styles.contactBtnText,
-                    { color: hasQQ ? colors.primary : colors.muted },
-                  ]}>
-                    {hasQQ ? "QQ群" : "QQ群 —"}
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
 

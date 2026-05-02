@@ -7,6 +7,9 @@ import { HapticTab } from "@/components/haptic-tab";
 import { ContactModal } from "@/components/contact-modal";
 import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
+import { PcTopNav } from "@/components/pc-top-nav";
+import { PcFooter } from "@/components/pc-footer";
+import { useResponsive } from "@/hooks/use-responsive";
 
 // 自定义Tab图标组件 - 支持高亮和置灰
 function TabIcon({ emoji, label, focused, activeColor, inactiveColor }: {
@@ -82,11 +85,15 @@ function FloatingConsultButton() {
 export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { isDesktop } = useResponsive();
+  const isDesktopWeb = Platform.OS === "web" && isDesktop;
   const bottomPadding = Platform.OS === "web" ? 4 : Math.max(insets.bottom, 4);
   const tabBarHeight = (Platform.OS === "web" ? 72 : 56) + bottomPadding;
 
   return (
     <View style={{ flex: 1 }}>
+      {/* B: PC 顶部导航 */}
+      <PcTopNav />
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: colors.primary,
@@ -95,19 +102,21 @@ export default function TabLayout() {
           tabBarButton: HapticTab,
           tabBarShowLabel: false,
           tabBarIconStyle: Platform.OS === "web" ? { height: 52 } : undefined,
-          tabBarStyle: {
-            paddingTop: 2,
-            paddingBottom: bottomPadding,
-            height: tabBarHeight,
-            backgroundColor: Platform.OS === "web" ? "rgba(15,23,42,0.75)" : colors.background,
-            borderTopColor: "rgba(148,163,184,0.08)",
-            borderTopWidth: StyleSheet.hairlineWidth,
-            ...(Platform.OS === "web" ? {
-              // @ts-ignore - web-only CSS properties
-              backdropFilter: "blur(20px) saturate(150%)",
-              WebkitBackdropFilter: "blur(20px) saturate(150%)",
-            } : {}),
-          },
+          tabBarStyle: isDesktopWeb
+            ? { display: "none" }
+            : {
+                paddingTop: 2,
+                paddingBottom: bottomPadding,
+                height: tabBarHeight,
+                backgroundColor: Platform.OS === "web" ? "rgba(15,23,42,0.75)" : colors.background,
+                borderTopColor: "rgba(148,163,184,0.08)",
+                borderTopWidth: StyleSheet.hairlineWidth,
+                ...(Platform.OS === "web" ? {
+                  // @ts-ignore - web-only CSS properties
+                  backdropFilter: "blur(20px) saturate(150%)",
+                  WebkitBackdropFilter: "blur(20px) saturate(150%)",
+                } : {}),
+              },
         }}
       >
         <Tabs.Screen
@@ -150,7 +159,9 @@ export default function TabLayout() {
         <Tabs.Screen name="favorites" options={{ href: null }} />
         <Tabs.Screen name="profile" options={{ href: null }} />
       </Tabs>
-      {/* 全局悬浮咨询按钮 */}
+      {/* B: PC 底部 Footer */}
+      <PcFooter />
+      {/* 全局悬浮咋询按钮 */}
       <FloatingConsultButton />
     </View>
   );

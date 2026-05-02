@@ -10,6 +10,9 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import * as db from "../db";
 import { runMigrations } from "../migrate";
+import { registerPaymentRoutes } from "./payment-callback";
+import { registerSecureDownloadRoute } from "./secure-download";
+import { startCron } from "./cron";
 
 // ES模块中获取__dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -150,6 +153,7 @@ async function startServer() {
   console.log("[startup] Running database migrations...");
   await runMigrations();
   console.log("[startup] Migrations complete, starting server...");
+  startCron();
 
   const app = express();
   const server = createServer(app);
@@ -179,6 +183,8 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   registerOAuthRoutes(app);
+  registerPaymentRoutes(app);
+  registerSecureDownloadRoute(app);
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });

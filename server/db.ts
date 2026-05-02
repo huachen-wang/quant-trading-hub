@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../drizzle/schema";
 
-const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings, backtestData: backtestDataTable, cooperationCards, cooperationPlans, promoProducts } = schema;
+const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings, backtestData: backtestDataTable, cooperationCards, cooperationPlans, promoProducts, verificationCodes, userFavorites, categories, orders, payments } = schema;
 
 let pool: mysql.Pool | null = null;
 let db: any = null;
@@ -1052,4 +1052,435 @@ export async function deletePromoProduct(id: number) {
   if (!db) return null;
   await db.delete(promoProducts).where(eq(promoProducts.id, id));
   return { success: true };
+}
+
+// ==================== Bundle A.1: 用户手机号查找 + 邮箱验证 + 云端收藏 ====================
+
+export async function getUserByPhone(phone: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+  return result[0] || null;
+}
+
+export async function getUserFavorites(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(userFavorites)
+    .where(eq(userFavorites.userId, userId))
+    .orderBy(desc(userFavorites.createdAt));
+}
+
+export async function isFavorited(userId: number, productKind: string, productId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select()
+    .from(userFavorites)
+    .where(
+      and(
+        eq(userFavorites.userId, userId),
+        eq(userFavorites.productKind, productKind),
+        eq(userFavorites.productId, productId),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+export async function addFavorite(userId: number, productKind: string, productId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    await db.insert(userFavorites).values({ userId, productKind, productId });
+  } catch (e: any) {
+    if (e?.code !== "ER_DUP_ENTRY") throw e;
+  }
+  return { ok: true };
+}
+
+export async function removeFavorite(userId: number, productKind: string, productId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  await db
+    .delete(userFavorites)
+    .where(
+      and(
+        eq(userFavorites.userId, userId),
+        eq(userFavorites.productKind, productKind),
+        eq(userFavorites.productId, productId),
+      ),
+    );
+  return { ok: true };
+}
+
+export async function isUserEmailVerified(email: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db
+    .select()
+    .from(verificationCodes)
+    .where(
+      and(
+        eq(verificationCodes.target, email),
+        eq(verificationCodes.purpose, "verify_email"),
+        eq(verificationCodes.used, true),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+// ==================== Bundle A.2: 分类 CRUD ====================
+
+export async function listCategories() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(categories)
+    .where(eq(categories.isVisible, true))
+    .orderBy(categories.sortOrder);
+}
+
+export async function getCategoryBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.slug, slug))
+    .limit(1);
+  return rows[0] || null;
+}
+
+export async function getCategoryById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(categories)
+    .where(eq(categories.id, id))
+    .limit(1);
+  return rows[0] || null;
+}
+
+export async function createCategory(data: typeof categories.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(categories).values(data);
+  return result;
+}
+
+export async function updateCategory(id: number, data: Partial<typeof categories.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(categories).set(data).where(eq(categories.id, id));
+}
+
+export async function deleteCategory(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.delete(categories).where(eq(categories.id, id));
+}
+
+
+// ==================== Bundle A.3: 订单 CRUD ====================
+
+export async function createOrder(data: typeof orders.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(orders).values(data);
+  return getOrderByOrderNo(data.orderNo);
+}
+
+export async function getOrderById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+  return rows[0] || null;
+}
+
+export async function getOrderByOrderNo(orderNo: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(orders).where(eq(orders.orderNo, orderNo)).limit(1);
+  return rows[0] || null;
+}
+
+export async function getUserOrders(userId: number, opts?: { limit?: number; status?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [eq(orders.userId, userId)];
+  if (opts?.status) conditions.push(eq(orders.status, opts.status as any));
+  return db
+    .select()
+    .from(orders)
+    .where(and(...conditions))
+    .orderBy(desc(orders.createdAt))
+    .limit(opts?.limit || 50);
+}
+
+export async function listAllOrders(opts?: { limit?: number; status?: string }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (opts?.status) conditions.push(eq(orders.status, opts.status as any));
+  const query = db.select().from(orders);
+  const finalQuery = conditions.length > 0 ? query.where(and(...conditions)) : query;
+  return finalQuery.orderBy(desc(orders.createdAt)).limit(opts?.limit || 100);
+}
+
+export async function markOrderPaid(
+  orderId: number,
+  opts: { paymentMethod?: string | null; paymentGateway?: string | null }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db
+    .update(orders)
+    .set({
+      status: "paid",
+      paidAt: new Date(),
+      paymentMethod: opts.paymentMethod || null,
+      paymentGateway: opts.paymentGateway || null,
+    })
+    .where(eq(orders.id, orderId));
+}
+
+export async function cancelOrder(orderId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(orders).set({ status: "cancelled" }).where(eq(orders.id, orderId));
+}
+
+export async function expireStaleOrders(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const now = new Date();
+  const result = await db
+    .update(orders)
+    .set({ status: "expired" })
+    .where(
+      and(
+        eq(orders.status, "pending"),
+        sql`${orders.expiresAt} < ${now}`
+      )
+    );
+  return (result as any).rowsAffected || 0;
+}
+
+// ==================== Bundle A.3: 支付记录 CRUD ====================
+
+export async function createPayment(data: typeof payments.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.insert(payments).values(data);
+}
+
+export async function updatePayment(id: number, data: Partial<typeof payments.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(payments).set(data).where(eq(payments.id, id));
+}
+
+export async function getPaymentById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(payments).where(eq(payments.id, id)).limit(1);
+  return rows[0] || null;
+}
+
+export async function getPaymentsByOrderId(orderId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(payments)
+    .where(eq(payments.orderId, orderId))
+    .orderBy(desc(payments.createdAt));
+}
+
+export async function getActivePaymentByOrderId(orderId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(payments)
+    .where(eq(payments.orderId, orderId))
+    .orderBy(desc(payments.createdAt))
+    .limit(1);
+  return rows[0] || null;
+}
+
+export async function listPendingUsdtPayments() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(payments)
+    .where(
+      and(
+        eq(payments.gateway, "usdt-manual"),
+        eq(payments.status, "pending")
+      )
+    )
+    .orderBy(desc(payments.createdAt));
+}
+
+// ==================== Bundle B: 购买权限 / 下载记录 / Profile 编辑 ====================
+
+export async function hasUserPurchased(userId: number, strategyId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const paidOrders = await db
+    .select()
+    .from(orders)
+    .where(
+      and(
+        eq(orders.userId, userId),
+        eq(orders.productKind, "strategy"),
+        eq(orders.productId, strategyId),
+        eq(orders.status, "paid")
+      )
+    )
+    .limit(1);
+  if (paidOrders.length > 0) return true;
+  const purchaseRows = await db
+    .select()
+    .from(purchases)
+    .where(and(eq(purchases.userId, userId), eq(purchases.strategyId, strategyId)))
+    .limit(1);
+  return purchaseRows.length > 0;
+}
+
+export async function recordDownload(userId: number, strategyId: number) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db
+    .select()
+    .from(downloads)
+    .where(and(eq(downloads.userId, userId), eq(downloads.strategyId, strategyId)))
+    .limit(1);
+  if (existing.length === 0) {
+    await db.insert(downloads).values({ userId, strategyId, downloadedAt: new Date() });
+    const strategy = await getStrategyById(strategyId);
+    if (strategy) {
+      await db
+        .update(strategies)
+        .set({ downloadCount: (strategy.downloadCount || 0) + 1 })
+        .where(eq(strategies.id, strategyId));
+    }
+  }
+}
+
+export async function updateUserProfile(
+  userId: number,
+  data: { name?: string; avatar?: string; bio?: string }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const update: any = {};
+  if (data.name !== undefined) update.name = data.name;
+  if (data.avatar !== undefined) update.avatar = data.avatar;
+  if (data.bio !== undefined) update.bio = data.bio;
+  if (Object.keys(update).length === 0) return;
+  await db.update(users).set(update).where(eq(users.id, userId));
+}
+
+export async function updateUserPassword(userId: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+}
+
+
+
+// ==================== Bundle B additions ====================
+export async function hasUserPurchased(userId: number, strategyId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  // 检查新订单系统
+  const paidOrders = await db
+    .select()
+    .from(orders)
+    .where(
+      and(
+        eq(orders.userId, userId),
+        eq(orders.productKind, "strategy"),
+        eq(orders.productId, strategyId),
+        eq(orders.status, "paid")
+      )
+    )
+    .limit(1);
+  if (paidOrders.length > 0) return true;
+
+  // 检查旧 purchases 表（向后兼容）
+  const purchaseRows = await db
+    .select()
+    .from(purchases)
+    .where(and(eq(purchases.userId, userId), eq(purchases.strategyId, strategyId)))
+    .limit(1);
+  return purchaseRows.length > 0;
+}
+
+/**
+ * 记录下载（用于统计）
+ *
+ * 写入 downloads 表 + 更新 strategies.downloadCount。
+ * 已存在的下载记录（同用户同策略）不重复增加 count。
+ */
+export async function recordDownload(userId: number, strategyId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  // 检查是否已记录过下载
+  const existing = await db
+    .select()
+    .from(downloads)
+    .where(and(eq(downloads.userId, userId), eq(downloads.strategyId, strategyId)))
+    .limit(1);
+
+  if (existing.length === 0) {
+    // 首次下载：写记录 + 增加计数
+    await db.insert(downloads).values({
+      userId,
+      strategyId,
+      downloadedAt: new Date(),
+    });
+
+    // 更新 strategies.downloadCount + 1
+    const strategy = await getStrategyById(strategyId);
+    if (strategy) {
+      await db
+        .update(strategies)
+        .set({ downloadCount: (strategy.downloadCount || 0) + 1 })
+        .where(eq(strategies.id, strategyId));
+    }
+  }
+}
+
+// ==================== Profile 编辑 ====================
+
+export async function updateUserProfile(
+  userId: number,
+  data: { name?: string; avatar?: string; bio?: string }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const update: any = {};
+  if (data.name !== undefined) update.name = data.name;
+  if (data.avatar !== undefined) update.avatar = data.avatar;
+  if (data.bio !== undefined) update.bio = data.bio;
+  if (Object.keys(update).length === 0) return;
+  await db.update(users).set(update).where(eq(users.id, userId));
+}
+
+export async function updateUserPassword(userId: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
 }
