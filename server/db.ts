@@ -1484,3 +1484,16 @@ export async function updateUserPassword(userId: number, passwordHash: string) {
   if (!db) throw new Error("DB not available");
   await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
 }
+
+// ==================== Bundle A.1: Verification Code wrapper ====================
+// Re-export from _core/verification so routers.ts can import from db if needed
+// (actual implementation is in server/_core/verification.ts)
+export async function createVerificationCode(opts: {
+  target: string;
+  targetType: string;
+  purpose: string;
+  ip?: string;
+}): Promise<{ ok: boolean; code?: string; error?: string }> {
+  const { createVerificationCode: _create } = await import("./_core/verification");
+  return _create(opts);
+}
