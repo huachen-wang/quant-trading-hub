@@ -21,42 +21,6 @@ const { width: SW } = Dimensions.get("window");
 
 // 标签从策略数据中自动提取，无需手动维护
 
-// ─── 快捷入口（文字已修改） ───
-const QUICK_ENTRIES = [
-  {
-    id: "cooperation",
-    title: "工作室扶持合作",
-    subtitle: "深度扶持 · 源头直供",
-    icon: "🤝",
-    gradient: ["#0A1628", "#1E3A8A", "#2563EB"] as readonly [string, string, ...string[]],
-    type: "route" as const,
-    target: "/cooperation",
-    accentColor: "#60A5FA",
-    glowColor: "rgba(96,165,250,0.15)",
-  },
-  {
-    id: "promo",
-    title: "EA限时促销",
-    subtitle: "源头价 · 限时特惠",
-    icon: "⚡",
-    gradient: ["#1A0000", "#7F1D1D", "#DC2626"] as readonly [string, string, ...string[]],
-    type: "route" as const,
-    target: "/promo",
-    accentColor: "#F87171",
-    glowColor: "rgba(248,113,113,0.15)",
-  },
-  {
-    id: "ddxau",
-    title: "订单流独家策略",
-    subtitle: "四维共振 · 独家研发",
-    icon: "🏆",
-    gradient: ["#1A0E00", "#78350F", "#A8895A"] as readonly [string, string, ...string[]],
-    type: "link" as const,
-    target: "https://ddxau.com",
-    accentColor: "#D8BC83",
-    glowColor: "rgba(251,191,36,0.15)",
-  },
-];
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -107,8 +71,6 @@ export default function HomeScreen() {
   // ─── 动画 ───
   const heroFade = useRef(new Animated.Value(0)).current;
   const heroSlide = useRef(new Animated.Value(20)).current;
-  const entryAnims = useRef(QUICK_ENTRIES.map(() => new Animated.Value(0))).current;
-  const entrySlides = useRef(QUICK_ENTRIES.map(() => new Animated.Value(30))).current;
   // 脉冲动画
   const pulseAnim = useRef(new Animated.Value(1)).current;
   // 数据计数动画
@@ -121,15 +83,6 @@ export default function HomeScreen() {
       Animated.timing(heroFade, { toValue: 1, duration: 800, useNativeDriver: true }),
       Animated.timing(heroSlide, { toValue: 0, duration: 800, useNativeDriver: true }),
     ]).start();
-    // 入口卡片依次入场
-    QUICK_ENTRIES.forEach((_, i) => {
-      setTimeout(() => {
-        Animated.parallel([
-          Animated.spring(entryAnims[i], { toValue: 1, tension: 80, friction: 12, useNativeDriver: true }),
-          Animated.spring(entrySlides[i], { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
-        ]).start();
-      }, 300 + i * 150);
-    });
     // 脉冲光环
     Animated.loop(
       Animated.sequence([
@@ -209,128 +162,37 @@ export default function HomeScreen() {
     router.push(`/strategy/${id}` as any);
   };
 
-  const handleEntryPress = (entry: typeof QUICK_ENTRIES[0]) => {
-    if (entry.type === "link") {
-      Linking.openURL(entry.target);
-    } else {
-      router.push(entry.target as any);
-    }
-  };
-
-  // ═══════════════════ 炫酷 Hero 区域 ═══════════════════
+  // ═══════════════════ Hero（极简版）═══════════════════
   const renderHero = () => (
-    <Animated.View style={[heroStyles.container, { opacity: heroFade, transform: [{ translateY: heroSlide }] }]}>
-      <LinearGradient
-        colors={["#050810", "#0A0E1A", "#0D1525", "#0A0E1A"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={heroStyles.gradient}
-      >
-        {/* ─── 装饰网格线 ─── */}
-        {[...Array(5)].map((_, i) => (
-          <View key={`vl${i}`} style={[heroStyles.gridLineV, { right: 30 + i * 60, opacity: 0.03 - i * 0.004 }]} />
-        ))}
-        {[...Array(3)].map((_, i) => (
-          <View key={`hl${i}`} style={[heroStyles.gridLineH, { top: 20 + i * 40, opacity: 0.03 - i * 0.005 }]} />
-        ))}
+    <Animated.View
+      style={[
+        heroStyles.container,
+        { opacity: heroFade, transform: [{ translateY: heroSlide }] },
+      ]}
+    >
+      {/* 主标题 */}
+      <Text style={heroStyles.title}>全网 EA 源头提货</Text>
 
-        {/* ─── 脉冲光环 ─── */}
-        <Animated.View style={[heroStyles.pulseRing, { transform: [{ scale: pulseAnim }] }]} />
-
-        {/* ─── 装饰粒子 ─── */}
-        <View style={[heroStyles.particle, { top: 15, right: 25, width: 3, height: 3, backgroundColor: "rgba(251,191,36,0.5)" }]} />
-        <View style={[heroStyles.particle, { top: 45, right: 80, width: 2, height: 2, backgroundColor: "rgba(96,165,250,0.4)" }]} />
-        <View style={[heroStyles.particle, { bottom: 30, right: 40, width: 2, height: 2, backgroundColor: "rgba(52,211,153,0.4)" }]} />
-        <View style={[heroStyles.particle, { top: 60, right: 140, width: 2, height: 2, backgroundColor: "rgba(251,191,36,0.3)" }]} />
-        <View style={[heroStyles.particle, { bottom: 50, left: 30, width: 2, height: 2, backgroundColor: "rgba(248,113,113,0.3)" }]} />
-
-        {/* ─── 品牌标识 ─── */}
-        <View style={heroStyles.brandRow}>
-          <View style={heroStyles.liveDotOuter}>
-            <View style={heroStyles.liveDot} />
-          </View>
-          <Text style={heroStyles.brandText}>量化军火库</Text>
-          <View style={heroStyles.brandDivider} />
-          <Text style={heroStyles.brandSub}>eaxau.com</Text>
+      {/* 副标题 + 数字 一行胶囊（合并） */}
+      <View style={heroStyles.metaRow}>
+        <Text style={heroStyles.tagline}>实盘可查 · 独家调优</Text>
+        <View style={heroStyles.statDot} />
+        <View style={heroStyles.statChip}>
+          <Text style={heroStyles.statNumGold}>{displayCount.ea}+</Text>
+          <Text style={heroStyles.statLabel}> EA</Text>
         </View>
-
-        {/* ─── 主标题 ─── */}
-        <Text style={heroStyles.title}>全网EA源头提货</Text>
-        <Text style={heroStyles.tagline}>
-          200+源码库 · 100%破解能力 · 独家调优
-        </Text>
-
-        {/* ─── 数据指标（带计数动画） ─── */}
-        <View style={heroStyles.statsRow}>
-          {[
-            { num: `${displayCount.ea}+`, label: "EA源码", color: "#D8BC83", bgColor: "rgba(251,191,36,0.08)" },
-            { num: `${displayCount.studio}+`, label: "合作工作室", color: "#60A5FA", bgColor: "rgba(96,165,250,0.08)" },
-            { num: `${displayCount.exclusive}+`, label: "独家版", color: "#34D399", bgColor: "rgba(52,211,153,0.08)" },
-          ].map((stat, i) => (
-            <View key={i} style={[heroStyles.statItem, { backgroundColor: stat.bgColor }]}>
-              <Text style={[heroStyles.statNum, { color: stat.color }]}>{stat.num}</Text>
-              <Text style={heroStyles.statLabel}>{stat.label}</Text>
-              {/* 底部强调线 */}
-              <View style={[heroStyles.statAccent, { backgroundColor: stat.color + "30" }]} />
-            </View>
-          ))}
+        <View style={heroStyles.statDot} />
+        <View style={heroStyles.statChip}>
+          <Text style={heroStyles.statNumBlue}>{displayCount.studio}+</Text>
+          <Text style={heroStyles.statLabel}> 工作室</Text>
         </View>
-
-        {/* ─── 底部装饰渐变线 ─── */}
-        <LinearGradient
-          colors={["transparent", "rgba(251,191,36,0.15)", "transparent"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={heroStyles.bottomLine}
-        />
-      </LinearGradient>
+        <View style={heroStyles.statDot} />
+        <View style={heroStyles.statChip}>
+          <Text style={heroStyles.statNumGreen}>{displayCount.exclusive}+</Text>
+          <Text style={heroStyles.statLabel}> 独家</Text>
+        </View>
+      </View>
     </Animated.View>
-  );
-
-  // ═══════════════════ 快捷入口 ═══════════════════
-  const renderQuickEntries = () => (
-    <View style={qeStyles.container}>
-      {QUICK_ENTRIES.map((entry, i) => (
-        <Animated.View
-          key={entry.id}
-          style={[
-            qeStyles.entryWrap,
-            { opacity: entryAnims[i], transform: [{ translateY: entrySlides[i] }] },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={() => handleEntryPress(entry)}
-            activeOpacity={0.85}
-            style={qeStyles.entryTouchable}
-          >
-            {/* 外发光 */}
-            <View style={[qeStyles.entryGlow, { backgroundColor: entry.glowColor }]} />
-            <LinearGradient
-              colors={entry.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={qeStyles.entryCard}
-            >
-              {/* 装饰光线 */}
-              <View style={[qeStyles.entryShine, { backgroundColor: entry.accentColor + "10" }]} />
-              {/* 角落装饰 */}
-              <View style={[qeStyles.cornerDecor, { borderColor: entry.accentColor + "20" }]} />
-              {/* 图标 */}
-              <View style={[qeStyles.iconWrap, { backgroundColor: entry.accentColor + "20", borderColor: entry.accentColor + "30" }]}>
-                <Text style={qeStyles.entryIcon}>{entry.icon}</Text>
-              </View>
-              {/* 文字 */}
-              <Text style={qeStyles.entryTitle} numberOfLines={1}>{entry.title}</Text>
-              <Text style={[qeStyles.entrySubtitle, { color: entry.accentColor + "BB" }]} numberOfLines={1}>{entry.subtitle}</Text>
-              {/* 箭头 */}
-              <View style={[qeStyles.arrowWrap, { backgroundColor: entry.accentColor + "18", borderColor: entry.accentColor + "25" }]}>
-                <Text style={[qeStyles.arrowText, { color: entry.accentColor }]}>→</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-      ))}
-    </View>
   );
 
   // ═══════════════════ 筛选区域 ═══════════════════
@@ -480,7 +342,7 @@ export default function HomeScreen() {
           activeOpacity={0.7}
         >
           <Text style={[filterStyles.advancedToggleText, { color: showAdvancedFilters ? "#C9A96E" : colors.muted }]}>
-            {showAdvancedFilters ? "▲ 收起" : "▾ 高级筛选"}
+            {showAdvancedFilters ? "▲ 收起" : "▾ 筛选"}
           </Text>
           {(categoryFilter || tagFilter) && !showAdvancedFilters && (
             <View style={filterStyles.advancedDot} />
@@ -584,60 +446,31 @@ export default function HomeScreen() {
   );
 
   // ═══════════════════ 完整 Header ═══════════════════
-  // ═══════════════════ 定制EA横幅 ═══════════════════
+  // ═══════════════════ EA 破解网入口 ═══════════════════
   const renderCustomEABanner = () => (
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={() => setShowContactModal(true)}
-      style={customBannerStyles.outer}
+      style={crackBannerStyles.outer}
     >
-      <LinearGradient
-        colors={["#0A1628", "#1E1B4B", "#312E81"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={customBannerStyles.container}
-      >
-        {/* 装饰元素 */}
-        <View style={customBannerStyles.glowOrb} />
-        <View style={customBannerStyles.glowOrb2} />
-        <View style={customBannerStyles.gridLine1} />
-        <View style={customBannerStyles.gridLine2} />
+      <View style={crackBannerStyles.container}>
+        {/* emoji 裸图标，不加框 */}
+        <Text style={crackBannerStyles.icon}>🔓</Text>
 
-        {/* 左侧图标 */}
-        <View style={customBannerStyles.iconWrap}>
-          <LinearGradient colors={["#A8895A", "#C9A96E"]} style={customBannerStyles.iconGradient}>
-            <Text style={{ fontSize: 18 }}>🛠️</Text>
-          </LinearGradient>
+        {/* 中间内容 */}
+        <View style={crackBannerStyles.content}>
+          <Text style={crackBannerStyles.title}>EA 破解网 · 专属 EA 破解</Text>
+          <Text style={crackBannerStyles.desc}>联系定制 · 专业团队</Text>
         </View>
 
-        {/* 右侧内容 */}
-        <View style={customBannerStyles.content}>
-          <View style={customBannerStyles.tagRow}>
-            <View style={customBannerStyles.tag}>
-              <Text style={customBannerStyles.tagText}>核心服务</Text>
-            </View>
-            <View style={customBannerStyles.tagHot}>
-              <Text style={customBannerStyles.tagHotText}>热门</Text>
-            </View>
-          </View>
-          <Text style={customBannerStyles.title}>军火库 · 专属EA定制</Text>
-          <Text style={customBannerStyles.desc} numberOfLines={2}>
-            源头低价拿货 · 无限授权 · 专属品牌定制
-          </Text>
-        </View>
-
-        {/* 右侧箭头 */}
-        <View style={customBannerStyles.arrow}>
-          <Text style={{ color: "#A8895A", fontSize: 18, fontWeight: "900" }}>›</Text>
-        </View>
-      </LinearGradient>
+        <Text style={crackBannerStyles.arrow}>›</Text>
+      </View>
     </TouchableOpacity>
   );
 
   const renderHeader = () => (
     <View style={{ marginBottom: 4 }}>
       {renderHero()}
-      {renderQuickEntries()}
       {renderCustomEABanner()}
       {renderFilters()}
     </View>
@@ -733,237 +566,62 @@ export default function HomeScreen() {
   );
 }
 
-// ═══════════════════ Hero 样式 ═══════════════════
+// ═══════════════════ Hero 样式（极简）═══════════════════
 const heroStyles = StyleSheet.create({
   container: {
-    marginBottom: 6,
+    paddingHorizontal: 16,
+    paddingTop: 28,
+    paddingBottom: 22,
   },
-  gradient: {
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 12,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    overflow: "hidden",
-    position: "relative",
+  title: {
+    color: "#F4F6FB",
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    lineHeight: 36,
   },
-  // 网格线
-  gridLineV: {
-    position: "absolute",
-    top: 0,
-    width: 1,
-    height: "100%",
-    backgroundColor: "rgba(255,255,255,1)",
-  },
-  gridLineH: {
-    position: "absolute",
-    left: 0,
-    width: "100%",
-    height: 1,
-    backgroundColor: "rgba(255,255,255,1)",
-  },
-  // 脉冲光环
-  pulseRing: {
-    position: "absolute",
-    top: -60,
-    right: -60,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.06)",
-    backgroundColor: "rgba(251,191,36,0.02)",
-  },
-  // 粒子
-  particle: {
-    position: "absolute",
-    borderRadius: 10,
-  },
-  // 品牌
-  brandRow: {
+  metaRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
-  },
-  liveDotOuter: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "rgba(16,185,129,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#10B981",
-  },
-  brandText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-  brandDivider: {
-    width: 1,
-    height: 14,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    marginHorizontal: 10,
-  },
-  brandSub: {
-    color: "rgba(251,191,36,0.7)",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  // 标题
-  title: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: 1.5,
-    marginBottom: 3,
+    flexWrap: "wrap",
+    marginTop: 12,
   },
   tagline: {
-    color: "rgba(251,191,36,0.85)",
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    marginBottom: 10,
+    color: "#A8B3C7",
+    fontSize: 12,
+    fontWeight: "500",
+    marginRight: 4,
   },
-  // 数据
-  statsRow: {
+  statDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "rgba(168,179,199,0.4)",
+    marginHorizontal: 6,
+  },
+  statChip: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "baseline",
   },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 6,
-    borderRadius: 10,
-    position: "relative",
-    overflow: "hidden",
+  statNumGold: {
+    color: "#C9A96E",
+    fontSize: 13,
+    fontWeight: "700",
   },
-  statNum: {
-    fontSize: 18,
-    fontWeight: "900",
-    letterSpacing: 0.5,
+  statNumBlue: {
+    color: "#60A5FA",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  statNumGreen: {
+    color: "#34D399",
+    fontSize: 13,
+    fontWeight: "700",
   },
   statLabel: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 10,
-    fontWeight: "600",
-    marginTop: 3,
-  },
-  statAccent: {
-    position: "absolute",
-    bottom: 0,
-    left: "20%",
-    right: "20%",
-    height: 2,
-    borderRadius: 1,
-  },
-  // 底部装饰线
-  bottomLine: {
-    position: "absolute",
-    bottom: 0,
-    left: 20,
-    right: 20,
-    height: 1,
-  },
-});
-
-// ═══════════════════ 快捷入口样式 ═══════════════════
-const qeStyles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    paddingHorizontal: 12,
-    gap: 6,
-    marginBottom: 8,
-  },
-  entryWrap: {
-    flex: 1,
-  },
-  entryTouchable: {
-    position: "relative",
-    height: 116,
-  },
-  entryGlow: {
-    position: "absolute",
-    top: 4,
-    left: 4,
-    right: 4,
-    bottom: -3,
-    borderRadius: 18,
-  },
-  entryCard: {
-    borderRadius: 14,
-    padding: 10,
-    height: 110,
-    flex: 1,
-    justifyContent: "space-between",
-    overflow: "hidden",
-    position: "relative",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
-  },
-  entryShine: {
-    position: "absolute",
-    top: -30,
-    right: -30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  cornerDecor: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 16,
-    height: 16,
-    borderTopWidth: 1,
-    borderRightWidth: 1,
-    borderTopRightRadius: 4,
-  },
-  iconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    marginBottom: 4,
-  },
-  entryIcon: {
-    fontSize: 15,
-  },
-  entryTitle: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-    marginBottom: 1,
-  },
-  entrySubtitle: {
-    fontSize: 8,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-    marginBottom: 4,
-  },
-  arrowWrap: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-end",
-    borderWidth: 1,
-  },
-  arrowText: {
+    color: "#A8B3C7",
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "500",
   },
 });
 
@@ -1145,145 +803,45 @@ const filterStyles = StyleSheet.create({
   },
 });
 
-// ═══════════════════ 定制EA横幅样式 ═══════════════════
-const customBannerStyles = StyleSheet.create({
+// ═══════════════════ EA 破解网入口样式（古金、无框）═══════════════════
+const crackBannerStyles = StyleSheet.create({
   outer: {
-    marginHorizontal: 12,
-    marginTop: 6,
-    marginBottom: 6,
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(139,92,246,0.25)",
+    marginHorizontal: 14,
+    marginBottom: 12,
   },
   container: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    position: "relative",
-    overflow: "hidden",
-  },
-  // 装饰元素
-  glowOrb: {
-    position: "absolute",
-    top: -30,
-    right: -30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(139,92,246,0.08)",
-  },
-  glowOrb2: {
-    position: "absolute",
-    bottom: -20,
-    left: -20,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(217,119,6,0.06)",
-  },
-  gridLine1: {
-    position: "absolute",
-    top: 0,
-    left: "30%",
-    width: 1,
-    height: "100%",
-    backgroundColor: "rgba(255,255,255,0.03)",
-  },
-  gridLine2: {
-    position: "absolute",
-    top: "50%",
-    left: 0,
-    width: "100%",
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.03)",
-  },
-  // 图标
-  iconWrap: {
-    marginRight: 14,
-  },
-  iconGradient: {
-    width: 40,
-    height: 40,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "rgba(201,169,110,0.05)",
+    borderWidth: 1,
+    borderColor: "rgba(201,169,110,0.28)",
   },
-  // 内容
+  icon: {
+    fontSize: 28,
+    marginRight: 16,
+  },
   content: {
     flex: 1,
   },
-  tagRow: {
-    flexDirection: "row",
-    gap: 6,
-    marginBottom: 4,
-  },
-  tag: {
-    backgroundColor: "rgba(139,92,246,0.15)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(139,92,246,0.3)",
-  },
-  tagText: {
-    color: "#A78BFA",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  tagHot: {
-    backgroundColor: "rgba(239,68,68,0.15)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.3)",
-  },
-  tagHotText: {
-    color: "#F87171",
-    fontSize: 10,
-    fontWeight: "700",
-  },
   title: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 2,
-    letterSpacing: 0.5,
+    color: "#F4F6FB",
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 19,
   },
   desc: {
-    color: "#F1F5F9",
-    fontSize: 10,
-    lineHeight: 15,
-    marginBottom: 4,
+    color: "#A8B3C7",
+    fontSize: 11,
+    marginTop: 4,
+    lineHeight: 13,
   },
-  features: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  featureItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  featureDot: {
-    color: "#A8895A",
-    fontSize: 6,
-  },
-  featureText: {
-    color: "#CBD5E1",
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  // 箭头
   arrow: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(217,119,6,0.12)",
-    justifyContent: "center",
-    alignItems: "center",
+    color: "#C9A96E",
+    fontSize: 22,
+    fontWeight: "900",
     marginLeft: 8,
   },
 });
