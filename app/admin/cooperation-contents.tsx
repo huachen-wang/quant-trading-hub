@@ -147,7 +147,7 @@ export default function CooperationContentsAdmin() {
       case "compliance": return "#3b82f6";
       case "technology": return "#7c3aed";
       case "business": return "#16a34a";
-      default: return "#f59e0b";
+      default: return "#c9a96e";
     }
   };
 

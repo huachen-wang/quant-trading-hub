@@ -65,7 +65,7 @@ export function PurchaseActions({
         style={styles.cta}
         activeOpacity={0.85}
       >
-        <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
+        <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
           <Text style={styles.ctaText}>⭐ 前往官网了解详情</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -123,7 +123,7 @@ export function PurchaseActions({
 
         <TouchableOpacity onPress={buy} style={styles.cta} activeOpacity={0.85}>
           <LinearGradient
-            colors={["#D97706", "#F59E0B"]}
+            colors={["#A8895A", "#C9A96E"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.ctaInner}
@@ -149,7 +149,7 @@ export function PurchaseActions({
       <View style={[styles.inquiryBanner, { borderColor: "rgba(245,158,11,0.3)" }]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <Text style={{ fontSize: 16 }}>🤝</Text>
-          <Text style={[styles.inquiryTitle, { color: "#FBBF24" }]}>商务授权合作</Text>
+          <Text style={[styles.inquiryTitle, { color: "#D8BC83" }]}>商务授权合作</Text>
         </View>
         <Text style={[styles.inquiryDesc, { color: colors.muted }]}>
           此商品采用工作室授权模式。请联系客服洽谈合作方案、试用账户、定价细节。
@@ -162,7 +162,7 @@ export function PurchaseActions({
         activeOpacity={0.85}
       >
         <LinearGradient
-          colors={["#D97706", "#F59E0B"]}
+          colors={["#A8895A", "#C9A96E"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.ctaInner}
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 32,
     fontWeight: "900",
-    color: "#FBBF24",
+    color: "#D8BC83",
     letterSpacing: -0.5,
   },
   priceOrig: {
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   ctaText: {
-    color: "#0F172A",
+    color: "#0A1628",
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: 0.5,

@@ -67,7 +67,7 @@ export default function CheckoutSuccessScreen() {
   if (isLoading || !order) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FBBF24" />
+        <ActivityIndicator size="large" color="#D8BC83" />
         <Text style={{ color: colors.muted, marginTop: 16 }}>加载订单中...</Text>
       </View>
     );
@@ -77,7 +77,7 @@ export default function CheckoutSuccessScreen() {
   if (order.status === "pending") {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FBBF24" />
+        <ActivityIndicator size="large" color="#D8BC83" />
         <Text style={[styles.title, { color: colors.foreground, marginTop: 24 }]}>
           支付确认中...
         </Text>
@@ -99,7 +99,7 @@ export default function CheckoutSuccessScreen() {
         <Text style={[styles.subtitle, { color: colors.muted }]}>请重新下单</Text>
         <TouchableOpacity onPress={() => router.replace("/(tabs)" as any)} style={styles.cta}>
           <LinearGradient
-            colors={["#D97706", "#F59E0B"]}
+            colors={["#A8895A", "#C9A96E"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.ctaInner}
@@ -156,7 +156,7 @@ export default function CheckoutSuccessScreen() {
           </View>
           <View style={styles.infoRow}>
             <Text style={[styles.infoLabel, { color: colors.muted }]}>支付金额</Text>
-            <Text style={[styles.infoValue, { color: "#FBBF24", fontWeight: "800" }]}>
+            <Text style={[styles.infoValue, { color: "#D8BC83", fontWeight: "800" }]}>
               ¥ {order.amount}
             </Text>
           </View>
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   ctaText: {
-    color: "#0F172A",
+    color: "#0A1628",
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: 0.5,

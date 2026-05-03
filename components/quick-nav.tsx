@@ -8,7 +8,7 @@ const QUICK_NAV_ITEMS = [
     title: "工作室扶持合作",
     subtitle: "深度扶持 · 源头直供",
     icon: "🤝",
-    gradient: ["#0F172A", "#1E3A8A"] as readonly [string, string, ...string[]],
+    gradient: ["#0A1628", "#1E3A8A"] as readonly [string, string, ...string[]],
     type: "route" as const,
     target: "/cooperation",
     accent: "#60A5FA",
@@ -31,7 +31,7 @@ const QUICK_NAV_ITEMS = [
     gradient: ["#1A0E00", "#78350F"] as readonly [string, string, ...string[]],
     type: "link" as const,
     target: "https://ddxau.com",
-    accent: "#FBBF24",
+    accent: "#D8BC83",
   },
 ];
 

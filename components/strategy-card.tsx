@@ -87,7 +87,7 @@ export function StrategyCard({
 
   const gradientColors: readonly [string, string, ...string[]] =
     isFeatured
-      ? ["#92400E", "#D97706", "#FCD34D"] // 金色渐变 - 旗舰产品
+      ? ["#92400E", "#A8895A", "#E8CC97"] // 金色渐变 - 旗舰产品
       : platform === "MT4"
         ? ["#1a365d", "#2563eb", "#60a5fa"]
         : ["#4c1d95", "#7c3aed", "#a78bfa"];
@@ -141,7 +141,7 @@ export function StrategyCard({
           styles.card,
           {
             backgroundColor: colors.surface,
-            borderColor: isFeatured ? "#D97706" : colors.border,
+            borderColor: isFeatured ? "#A8895A" : colors.border,
             borderWidth: isFeatured ? 1.5 : 0.5,
           },
         ]}
@@ -175,7 +175,7 @@ export function StrategyCard({
           {isFeatured && (
             <View style={styles.featuredBadge}>
               <LinearGradient
-                colors={["#D97706", "#F59E0B"]}
+                colors={["#A8895A", "#C9A96E"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.featuredGradient}
@@ -191,7 +191,7 @@ export function StrategyCard({
             { backgroundColor: `${colors.background}E6` },
             isFeatured ? { top: 34 } : {},
           ]}>
-            <Text style={[styles.platformText, { color: isFeatured ? "#D97706" : gradientColors[1] }]}>
+            <Text style={[styles.platformText, { color: isFeatured ? "#A8895A" : gradientColors[1] }]}>
               {platform}
               {productTypeLabel ? ` · ${productTypeLabel}` : ""}
             </Text>
@@ -230,7 +230,7 @@ export function StrategyCard({
         <View style={[styles.infoContainer, { paddingHorizontal: infoPadH, paddingTop: infoPadV, paddingBottom: infoPadV }]}>
           {/* 标题 */}
           <Text
-            style={[styles.title, { color: isFeatured ? "#D97706" : colors.foreground, fontSize: titleSize }]}
+            style={[styles.title, { color: isFeatured ? "#A8895A" : colors.foreground, fontSize: titleSize }]}
             numberOfLines={1}
           >
             {title}
@@ -254,7 +254,7 @@ export function StrategyCard({
                 <Text style={[styles.freePrice, { color: colors.success, fontSize: priceSize }]}>免费</Text>
               ) : (
                 <View style={styles.priceGroup}>
-                  <Text style={[styles.price, { color: "#F59E0B", fontSize: priceSize }]}>¥{price}</Text>
+                  <Text style={[styles.price, { color: "#C9A96E", fontSize: priceSize }]}>¥{price}</Text>
                   {hasDiscount && (
                     <Text style={[styles.originalPrice, { color: colors.muted, fontSize: metaSize }]}>¥{originalPrice}</Text>
                   )}

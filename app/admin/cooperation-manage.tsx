@@ -155,7 +155,7 @@ export default function CooperationManage() {
                 <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>{card.title}</Text>
                 {card.subtitle && <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>{card.subtitle}</Text>}
                 <View style={{ flexDirection: "row", gap: 6, marginTop: 6 }}>
-                  {card.badge && <View style={{ backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}><Text style={{ fontSize: 10, color: "#D97706" }}>{card.badge}</Text></View>}
+                  {card.badge && <View style={{ backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}><Text style={{ fontSize: 10, color: "#A8895A" }}>{card.badge}</Text></View>}
                   {card.platform && <View style={{ backgroundColor: colors.border, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}><Text style={{ fontSize: 10, color: colors.muted }}>{card.platform}</Text></View>}
                   <Text style={{ fontSize: 10, color: card.isVisible ? colors.success : colors.error }}>{card.isVisible ? "可见" : "隐藏"}</Text>
                 </View>
@@ -178,7 +178,7 @@ export default function CooperationManage() {
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>{plan.title}</Text>
                 {plan.price && <Text style={{ fontSize: 14, color: colors.primary, fontWeight: "600", marginTop: 2 }}>{plan.price}</Text>}
-                {plan.badge && <View style={{ backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: "flex-start", marginTop: 4 }}><Text style={{ fontSize: 10, color: "#D97706" }}>{plan.badge}</Text></View>}
+                {plan.badge && <View style={{ backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: "flex-start", marginTop: 4 }}><Text style={{ fontSize: 10, color: "#A8895A" }}>{plan.badge}</Text></View>}
               </View>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <TouchableOpacity onPress={() => openEdit(plan)} style={{ backgroundColor: colors.primary + "20", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>

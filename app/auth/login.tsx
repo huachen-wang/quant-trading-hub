@@ -277,13 +277,13 @@ export default function UserLoginScreen() {
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={["#D97706", "#F59E0B"]}
+              colors={["#A8895A", "#C9A96E"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.ctaInner}
             >
               {busy ? (
-                <ActivityIndicator color="#0F172A" />
+                <ActivityIndicator color="#0A1628" />
               ) : (
                 <Text style={styles.ctaText}>登录</Text>
               )}
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   ctaText: {
-    color: "#0F172A",
+    color: "#0A1628",
     fontSize: 15,
     fontWeight: "800",
     letterSpacing: 0.5,

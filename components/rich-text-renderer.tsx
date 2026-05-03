@@ -70,7 +70,7 @@ function wrapWithStyleScope(html: string, colors: any): string {
       .eaxau-rich-content h1 { font-size: 22px; }
       .eaxau-rich-content h2 { font-size: 19px; }
       .eaxau-rich-content h3 { font-size: 17px; }
-      .eaxau-rich-content strong, .eaxau-rich-content b { color: #FBBF24; font-weight: 700; }
+      .eaxau-rich-content strong, .eaxau-rich-content b { color: #D8BC83; font-weight: 700; }
       .eaxau-rich-content em, .eaxau-rich-content i { color: ${colors.muted}; font-style: italic; }
       .eaxau-rich-content a {
         color: #60A5FA; text-decoration: underline; text-underline-offset: 3px;
@@ -80,7 +80,7 @@ function wrapWithStyleScope(html: string, colors: any): string {
       .eaxau-rich-content ul, .eaxau-rich-content ol { margin: 0 0 12px; padding-left: 20px; }
       .eaxau-rich-content li { margin-bottom: 6px; line-height: 1.7; color: ${colors.foreground}; }
       .eaxau-rich-content blockquote {
-        border-left: 3px solid #D97706; margin: 12px 0; padding: 8px 14px;
+        border-left: 3px solid #A8895A; margin: 12px 0; padding: 8px 14px;
         background: rgba(245, 158, 11, 0.06); color: ${colors.muted}; font-style: italic;
         border-radius: 6px;
       }
@@ -108,7 +108,7 @@ function wrapWithStyleScope(html: string, colors: any): string {
         padding: 8px 12px; border: 1px solid rgba(148, 163, 184, 0.12); text-align: left;
       }
       .eaxau-rich-content th {
-        background: rgba(245, 158, 11, 0.08); color: #FBBF24; font-weight: 700;
+        background: rgba(245, 158, 11, 0.08); color: #D8BC83; font-weight: 700;
       }
       .eaxau-rich-content td { color: ${colors.foreground}; }
     </style>
@@ -144,7 +144,7 @@ function MobileRichText({ html, colors }: { html: string; colors: any }) {
             <Text
               key={j}
               style={[
-                part.bold && { color: "#FBBF24", fontWeight: "700" as any },
+                part.bold && { color: "#D8BC83", fontWeight: "700" as any },
                 part.italic && { fontStyle: "italic", color: colors.muted },
                 part.code && {
                   fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",

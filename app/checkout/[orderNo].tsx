@@ -43,7 +43,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#FBBF24",
+  pending: "#D8BC83",
   paid: "#34D399",
   cancelled: "#94A3B8",
   refunded: "#60A5FA",
@@ -183,7 +183,7 @@ export default function CheckoutOrderScreen() {
   if (isLoading || !order) {
     return (
       <View style={styles.centerFull}>
-        <ActivityIndicator size="large" color="#FBBF24" />
+        <ActivityIndicator size="large" color="#D8BC83" />
       </View>
     );
   }
@@ -289,7 +289,7 @@ export default function CheckoutOrderScreen() {
                     }}
                     style={styles.zpayReopen}
                   >
-                    <Text style={{ color: "#FBBF24", fontWeight: "700" }}>重新打开支付页 →</Text>
+                    <Text style={{ color: "#D8BC83", fontWeight: "700" }}>重新打开支付页 →</Text>
                   </TouchableOpacity>
                   <Text style={[styles.zpayWaitHint, { color: colors.muted }]}>
                     支付完成后页面会自动跳转。如未跳转，请刷新本页面。
@@ -310,8 +310,8 @@ export default function CheckoutOrderScreen() {
                   🪙 USDT 转账（{payState.chain}）
                 </Text>
                 <Text style={[styles.usdtHint, { color: colors.muted }]}>
-                  请使用 USDT 钱包通过 <Text style={{ color: "#FBBF24", fontWeight: "700" }}>{payState.chain}</Text> 网络转账{" "}
-                  <Text style={{ color: "#FBBF24", fontWeight: "700" }}>¥{order.amount} 等值的 USDT</Text> 至下方地址：
+                  请使用 USDT 钱包通过 <Text style={{ color: "#D8BC83", fontWeight: "700" }}>{payState.chain}</Text> 网络转账{" "}
+                  <Text style={{ color: "#D8BC83", fontWeight: "700" }}>¥{order.amount} 等值的 USDT</Text> 至下方地址：
                 </Text>
 
                 <View style={styles.usdtAddrCard}>
@@ -320,7 +320,7 @@ export default function CheckoutOrderScreen() {
                     {payState.address}
                   </Text>
                   <TouchableOpacity onPress={() => handleCopy(payState.address)} style={styles.copyBtn}>
-                    <Text style={{ color: "#FBBF24", fontWeight: "700", fontSize: 12 }}>复制地址</Text>
+                    <Text style={{ color: "#D8BC83", fontWeight: "700", fontSize: 12 }}>复制地址</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -336,8 +336,8 @@ export default function CheckoutOrderScreen() {
                     ⚠️ 重要提示
                   </Text>
                   <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 20 }}>
-                    1. 请务必使用 <Text style={{ color: "#FBBF24" }}>{payState.chain}</Text> 网络（其他网络无法到账，资金可能丢失）{"\n"}
-                    2. 转账完成后请<Text style={{ color: "#FBBF24" }}>联系客服 Telegram 提供截图</Text>，我们会在 30 分钟内确认到账{"\n"}
+                    1. 请务必使用 <Text style={{ color: "#D8BC83" }}>{payState.chain}</Text> 网络（其他网络无法到账，资金可能丢失）{"\n"}
+                    2. 转账完成后请<Text style={{ color: "#D8BC83" }}>联系客服 Telegram 提供截图</Text>，我们会在 30 分钟内确认到账{"\n"}
                     3. 确认到账后您的订单状态会自动变更为已支付
                   </Text>
                 </View>
@@ -350,13 +350,13 @@ export default function CheckoutOrderScreen() {
                     activeOpacity={0.85}
                   >
                     <LinearGradient
-                      colors={["#D97706", "#F59E0B"]}
+                      colors={["#A8895A", "#C9A96E"]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.usdtSubmitInner}
                     >
                       {busy ? (
-                        <ActivityIndicator color="#0F172A" />
+                        <ActivityIndicator color="#0A1628" />
                       ) : (
                         <Text style={styles.usdtSubmitText}>✓ 我已转账，请确认</Text>
                       )}
@@ -400,7 +400,7 @@ export default function CheckoutOrderScreen() {
                 style={[styles.usdtSubmitBtn, { marginTop: 16 }]}
               >
                 <LinearGradient
-                  colors={["#D97706", "#F59E0B"]}
+                  colors={["#A8895A", "#C9A96E"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.usdtSubmitInner}
@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   },
   brandText: {
     fontSize: 12,
-    color: "#FBBF24",
+    color: "#D8BC83",
     fontWeight: "700",
     letterSpacing: 1.6,
   },
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
   orderCover: {
     width: 110,
     height: "100%",
-    backgroundColor: "#0F172A",
+    backgroundColor: "#0A1628",
   },
   orderTitle: {
     fontSize: 16,
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 28,
     fontWeight: "900",
-    color: "#FBBF24",
+    color: "#D8BC83",
     letterSpacing: -0.5,
   },
   amountOrig: {
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   usdtSubmitText: {
-    color: "#0F172A",
+    color: "#0A1628",
     fontSize: 15,
     fontWeight: "800",
   },

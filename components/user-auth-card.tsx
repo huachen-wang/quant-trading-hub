@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   },
   brandText: {
     fontSize: 11,
-    color: "#FBBF24",
+    color: "#D8BC83",
     letterSpacing: 0.16 * 11,
     fontWeight: "700",
   },

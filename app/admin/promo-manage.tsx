@@ -40,7 +40,7 @@ const CATEGORIES = [
 
 const STATUSES = [
   { key: "active", label: "活跃", color: "#10B981" },
-  { key: "expired", label: "已过期", color: "#F59E0B" },
+  { key: "expired", label: "已过期", color: "#C9A96E" },
   { key: "soldout", label: "已售罄", color: "#EF4444" },
 ];
 
@@ -171,7 +171,7 @@ export default function PromoManage() {
                     )}
                     {product.promoLabel && (
                       <View style={{ backgroundColor: "#FEF3C7", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                        <Text style={{ fontSize: 10, color: "#D97706" }}>{product.promoLabel}</Text>
+                        <Text style={{ fontSize: 10, color: "#A8895A" }}>{product.promoLabel}</Text>
                       </View>
                     )}
                     <Text style={{ fontSize: 10, color: colors.muted }}>库存: {(product.stock || 0) - (product.soldCount || 0)}/{product.stock || 0}</Text>

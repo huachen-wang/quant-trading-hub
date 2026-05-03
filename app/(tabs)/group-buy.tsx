@@ -322,7 +322,7 @@ export default function GroupBuyScreen() {
               </View>
               <View style={styles.priceCompareRight}>
                 <Text style={[styles.priceCompareLabel, { color: colors.muted }]}>合购价/人</Text>
-                <Text style={[styles.priceCompareValue, { color: "#F59E0B" }]}>¥{item.pricePerPerson}</Text>
+                <Text style={[styles.priceCompareValue, { color: "#C9A96E" }]}>¥{item.pricePerPerson}</Text>
               </View>
             </View>
 
@@ -435,7 +435,7 @@ export default function GroupBuyScreen() {
               <View style={styles.modalPriceRow}>
                 <View style={styles.modalPriceItem}>
                   <Text style={[styles.modalPriceLabel, { color: colors.muted }]}>合购价/人</Text>
-                  <Text style={[styles.modalPriceValue, { color: "#F59E0B" }]}>
+                  <Text style={[styles.modalPriceValue, { color: "#C9A96E" }]}>
                     ¥{selectedItem.pricePerPerson}
                   </Text>
                 </View>

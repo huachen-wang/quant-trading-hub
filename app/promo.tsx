@@ -205,7 +205,7 @@ export default function PromoPage() {
   const getCardTheme = (index: number) => {
     const themes = [
       { gradient: ["#7F1D1D", "#991B1B", "#B91C1C"] as const, accent: "#FCA5A5", badge: "#DC2626" },
-      { gradient: ["#78350F", "#92400E", "#B45309"] as const, accent: "#FCD34D", badge: "#D97706" },
+      { gradient: ["#78350F", "#92400E", "#B45309"] as const, accent: "#E8CC97", badge: "#A8895A" },
       { gradient: ["#1E3A5F", "#1E40AF", "#2563EB"] as const, accent: "#93C5FD", badge: "#3B82F6" },
       { gradient: ["#14532D", "#166534", "#15803D"] as const, accent: "#86EFAC", badge: "#22C55E" },
       { gradient: ["#4C1D95", "#5B21B6", "#7C3AED"] as const, accent: "#C4B5FD", badge: "#8B5CF6" },
@@ -215,7 +215,7 @@ export default function PromoPage() {
   };
 
   if (isLoading) {
-    return <ScreenContainer><View style={s.loadingWrap}><ActivityIndicator size="large" color="#D97706" /></View></ScreenContainer>;
+    return <ScreenContainer><View style={s.loadingWrap}><ActivityIndicator size="large" color="#A8895A" /></View></ScreenContainer>;
   }
 
   return (
@@ -227,7 +227,7 @@ export default function PromoPage() {
         </TouchableOpacity>
 
         {/* ==================== 顶部 Hero ==================== */}
-        <LinearGradient colors={["#0F172A", "#1a0a00", "#0F172A"]} style={s.hero}>
+        <LinearGradient colors={["#0A1628", "#1a0a00", "#0A1628"]} style={s.hero}>
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], alignItems: "center", width: "100%" }}>
             {/* 滚动公告条 */}
             <View style={s.announcementBar}>
@@ -261,7 +261,7 @@ export default function PromoPage() {
                 { num: "24h", label: "极速发货", icon: "rocket" },
               ].map((stat, i) => (
                 <View key={i} style={s.heroStatItem}>
-                  <Ionicons name={stat.icon as any} size={16} color="#D97706" />
+                  <Ionicons name={stat.icon as any} size={16} color="#A8895A" />
                   <Text style={s.heroStatNum}>{stat.num}</Text>
                   <Text style={s.heroStatLabel}>{stat.label}</Text>
                 </View>
@@ -272,7 +272,7 @@ export default function PromoPage() {
             <View style={s.authorityStrip}>
               {["源码级掌控", "正版授权", "独家优化", "全网最低价"].map((tag, i) => (
                 <View key={i} style={s.authorityTag}>
-                  <Ionicons name="checkmark-circle" size={12} color="#D97706" />
+                  <Ionicons name="checkmark-circle" size={12} color="#A8895A" />
                   <Text style={s.authorityTagText}>{tag}</Text>
                 </View>
               ))}
@@ -292,7 +292,7 @@ export default function PromoPage() {
                   onPress={() => setActiveCategory(cat.key)}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name={cat.icon as any} size={15} color={isActive ? "#0F172A" : "#F1F5F9"} />
+                  <Ionicons name={cat.icon as any} size={15} color={isActive ? "#0A1628" : "#F1F5F9"} />
                   <Text style={[s.categoryChipText, isActive && s.categoryChipTextActive]}>{cat.label}</Text>
                 </TouchableOpacity>
               );
@@ -303,7 +303,7 @@ export default function PromoPage() {
         {/* 结果提示 */}
         <View style={s.resultBar}>
           <Text style={s.resultCount}>
-            共 <Text style={{ color: "#D97706", fontWeight: "900" }}>{products.length}</Text> 款精选
+            共 <Text style={{ color: "#A8895A", fontWeight: "900" }}>{products.length}</Text> 款精选
           </Text>
           <View style={s.resultTip}>
             <Ionicons name="pricetag" size={13} color="#10B981" />
@@ -397,7 +397,7 @@ export default function PromoPage() {
                     <View style={s.metricsRow}>
                       {[
                         { label: "胜率", value: metrics.winRate, color: "#22C55E" },
-                        { label: "年化", value: metrics.profit, color: "#D97706" },
+                        { label: "年化", value: metrics.profit, color: "#A8895A" },
                         { label: "回撤", value: metrics.drawdown, color: "#EF4444" },
                       ].map((m, i) => (
                         <View key={i} style={s.metricItem}>
@@ -417,7 +417,7 @@ export default function PromoPage() {
                       <View style={s.stockInfo}>
                         <View style={s.stockBarOuter}>
                           <LinearGradient
-                            colors={isUrgent ? ["#DC2626", "#EF4444"] : ["#D97706", "#F59E0B"]}
+                            colors={isUrgent ? ["#DC2626", "#EF4444"] : ["#A8895A", "#C9A96E"]}
                             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                             style={[s.stockBarInner, { width: `${stockPercent}%` }]}
                           />
@@ -458,7 +458,7 @@ export default function PromoPage() {
           <Text style={s.whySectionTitle}>为什么在这里提货？</Text>
           <View style={s.whyGrid}>
             {[
-              { icon: "diamond", title: "源头直供", desc: "持有全网主流EA源码\n非二手倒卖", color: "#D97706" },
+              { icon: "diamond", title: "源头直供", desc: "持有全网主流EA源码\n非二手倒卖", color: "#A8895A" },
               { icon: "shield-checkmark", title: "正版保障", desc: "官方授权或源码编译\n杜绝后门木马", color: "#22C55E" },
               { icon: "rocket", title: "极速发货", desc: "付款后即时交付\n紧急需求可加急", color: "#3B82F6" },
               { icon: "build", title: "专属EA定制", desc: "自定义名称与调优模式\n无限授权 · 版权归属工作室", color: "#8B5CF6" },
@@ -478,12 +478,12 @@ export default function PromoPage() {
 
         {/* ==================== 底部CTA ==================== */}
         <View style={s.bottomCta}>
-          <LinearGradient colors={["#1E293B", "#0F172A"]} style={s.bottomCtaInner}>
-            <Ionicons name="search" size={32} color="#D97706" />
+          <LinearGradient colors={["#1E293B", "#0A1628"]} style={s.bottomCtaInner}>
+            <Ionicons name="search" size={32} color="#A8895A" />
             <Text style={s.bottomCtaTitle}>没找到想要的EA？</Text>
             <Text style={s.bottomCtaDesc}>告诉我们名字，全网EA我们都能搞到源码{"\n"}支持专属EA定制：自定义策略名称与调优模式{"\n"}无限授权不受限 · 版权与联系方式替换为工作室品牌</Text>
             <TouchableOpacity style={s.bottomCtaBtn} onPress={() => setShowContact(true)}>
-              <Ionicons name="chatbubbles" size={18} color="#0F172A" />
+              <Ionicons name="chatbubbles" size={18} color="#0A1628" />
               <Text style={s.bottomCtaBtnText}>联系客服定制</Text>
             </TouchableOpacity>
           </LinearGradient>
@@ -551,8 +551,8 @@ export default function PromoPage() {
                   </View>
                 )}
                 {selectedProduct?.promoLabel && (
-                  <View style={[s.modalTag, { backgroundColor: "#D97706" }]}>
-                    <Text style={[s.modalTagText, { color: "#0F172A" }]}>{selectedProduct.promoLabel}</Text>
+                  <View style={[s.modalTag, { backgroundColor: "#A8895A" }]}>
+                    <Text style={[s.modalTagText, { color: "#0A1628" }]}>{selectedProduct.promoLabel}</Text>
                   </View>
                 )}
               </View>
@@ -618,10 +618,10 @@ export default function PromoPage() {
       <Modal visible={showContact} animationType="fade" transparent>
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setShowContact(false)}>
           <View style={s.contactModal}>
-            <LinearGradient colors={["#1E293B", "#0F172A"]} style={s.contactModalInner}>
+            <LinearGradient colors={["#1E293B", "#0A1628"]} style={s.contactModalInner}>
               <View style={s.contactHeader}>
                 <View style={s.contactIconWrap}>
-                  <Ionicons name="cart" size={28} color="#D97706" />
+                  <Ionicons name="cart" size={28} color="#A8895A" />
                 </View>
                 <Text style={s.contactTitle}>联系客服购买</Text>
                 <Text style={s.contactDesc}>备注商品名称，客服确认库存后即时发货</Text>
@@ -703,8 +703,8 @@ export default function PromoPage() {
 }
 
 const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#0F172A" },
-  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0F172A" },
+  page: { flex: 1, backgroundColor: "#0A1628" },
+  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0A1628" },
   backBtn: { position: "absolute", top: 16, left: 16, zIndex: 10, padding: 8, backgroundColor: "rgba(15,23,42,0.8)", borderRadius: 20, borderWidth: 1, borderColor: "#475569" },
 
   // Hero
@@ -718,8 +718,8 @@ const s = StyleSheet.create({
   announceText: { color: "#FCA5A5", fontSize: 12, fontWeight: "600", flex: 1 },
 
   heroTitle: { color: "#FFFFFF", fontSize: 34, fontWeight: "900", textAlign: "center", letterSpacing: 4 },
-  heroTitleLine: { width: 60, height: 3, backgroundColor: "#D97706", borderRadius: 2, marginVertical: 12 },
-  heroSubtitle: { color: "#D97706", fontSize: 13, fontWeight: "700", letterSpacing: 6, marginBottom: 16, textAlign: "center" },
+  heroTitleLine: { width: 60, height: 3, backgroundColor: "#A8895A", borderRadius: 2, marginVertical: 12 },
+  heroSubtitle: { color: "#A8895A", fontSize: 13, fontWeight: "700", letterSpacing: 6, marginBottom: 16, textAlign: "center" },
   heroDesc: { color: "#F1F5F9", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20, maxWidth: 440 },
 
   // Hero Stats
@@ -731,15 +731,15 @@ const s = StyleSheet.create({
   // Authority Strip
   authorityStrip: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8 },
   authorityTag: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(217,119,6,0.1)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, borderColor: "rgba(217,119,6,0.2)" },
-  authorityTagText: { color: "#D97706", fontSize: 11, fontWeight: "700" },
+  authorityTagText: { color: "#A8895A", fontSize: 11, fontWeight: "700" },
 
   // Category
-  categorySection: { paddingVertical: 14, backgroundColor: "#0F172A", borderBottomWidth: 1, borderBottomColor: "#1E293B" },
+  categorySection: { paddingVertical: 14, backgroundColor: "#0A1628", borderBottomWidth: 1, borderBottomColor: "#1E293B" },
   categoryScroll: { paddingHorizontal: 16, gap: 8 },
   categoryChip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 24, backgroundColor: "#1E293B", borderWidth: 1, borderColor: "#475569" },
-  categoryChipActive: { backgroundColor: "#D97706", borderColor: "#D97706" },
+  categoryChipActive: { backgroundColor: "#A8895A", borderColor: "#A8895A" },
   categoryChipText: { color: "#F1F5F9", fontSize: 13, fontWeight: "600" },
-  categoryChipTextActive: { color: "#0F172A", fontWeight: "800" },
+  categoryChipTextActive: { color: "#0A1628", fontWeight: "800" },
 
   // Result
   resultBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14 },
@@ -779,7 +779,7 @@ const s = StyleSheet.create({
 
   // Metrics
   metricsRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  metricItem: { flex: 1, backgroundColor: "#0F172A", borderRadius: 8, padding: 8, alignItems: "center", borderWidth: 1, borderColor: "#475569" },
+  metricItem: { flex: 1, backgroundColor: "#0A1628", borderRadius: 8, padding: 8, alignItems: "center", borderWidth: 1, borderColor: "#475569" },
   metricValue: { fontSize: 15, fontWeight: "900", marginBottom: 2 },
   metricLabel: { color: "#F1F5F9", fontSize: 10 },
 
@@ -795,7 +795,7 @@ const s = StyleSheet.create({
 
   // Countdown
   countdownRow: { flexDirection: "row", alignItems: "center", gap: 3 },
-  countdownBlock: { backgroundColor: "#0F172A", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4, borderWidth: 1, borderColor: "#475569", minWidth: 26, alignItems: "center" },
+  countdownBlock: { backgroundColor: "#0A1628", paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4, borderWidth: 1, borderColor: "#475569", minWidth: 26, alignItems: "center" },
   countdownBlockLg: { paddingHorizontal: 8, paddingVertical: 5, minWidth: 32 },
   countdownNum: { color: "#EF4444", fontSize: 12, fontWeight: "900", fontVariant: ["tabular-nums"] },
   countdownSep: { color: "#EF4444", fontSize: 12, fontWeight: "700" },
@@ -820,12 +820,12 @@ const s = StyleSheet.create({
   whyItemDesc: { color: "#F1F5F9", fontSize: 11, lineHeight: 16, textAlign: "center" },
 
   // Bottom CTA
-  bottomCta: { marginHorizontal: 20, marginTop: 24, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "#D97706" },
+  bottomCta: { marginHorizontal: 20, marginTop: 24, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "#A8895A" },
   bottomCtaInner: { padding: 28, alignItems: "center" },
   bottomCtaTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginTop: 12, marginBottom: 6 },
   bottomCtaDesc: { color: "#F1F5F9", fontSize: 13, marginBottom: 20, textAlign: "center", lineHeight: 20 },
-  bottomCtaBtn: { backgroundColor: "#D97706", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 24 },
-  bottomCtaBtnText: { color: "#0F172A", fontSize: 15, fontWeight: "800" },
+  bottomCtaBtn: { backgroundColor: "#A8895A", flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 24 },
+  bottomCtaBtnText: { color: "#0A1628", fontSize: 15, fontWeight: "800" },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.8)", justifyContent: "flex-end" },
@@ -857,8 +857,8 @@ const s = StyleSheet.create({
 
   buyProcessSection: { marginBottom: 20 },
   buyStep: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 },
-  buyStepNum: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#D97706", justifyContent: "center", alignItems: "center" },
-  buyStepNumText: { color: "#0F172A", fontSize: 14, fontWeight: "800" },
+  buyStepNum: { width: 28, height: 28, borderRadius: 14, backgroundColor: "#A8895A", justifyContent: "center", alignItems: "center" },
+  buyStepNumText: { color: "#0A1628", fontSize: 14, fontWeight: "800" },
   buyStepText: { color: "#CBD5E1", fontSize: 13, flex: 1 },
 
   buyBtn: { marginBottom: 12 },

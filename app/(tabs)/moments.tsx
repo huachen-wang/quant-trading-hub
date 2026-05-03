@@ -2,7 +2,7 @@
  * 合作生态页面（简化版）
  * 顶部：工作室深度合作大Banner → 跳转 /cooperation
  * 核心：定价方案 + 免费领取 + CTA
- * Design: Deep blue-black + Gold accent (#F59E0B)
+ * Design: Deep blue-black + Gold accent (#C9A96E)
  */
 import { useRef, useEffect, useState, useCallback } from "react";
 import {
@@ -41,7 +41,7 @@ function FadeInView({ children, delay = 0, style }: { children: React.ReactNode;
 }
 
 // ===== 颜色 =====
-const GOLD = "#F59E0B";
+const GOLD = "#C9A96E";
 const GOLD_DIM = "rgba(245,158,11,0.6)";
 const GOLD_BG = "rgba(245,158,11,0.1)";
 const GOLD_BORDER = "rgba(245,158,11,0.2)";
@@ -50,8 +50,8 @@ const CARD_BORDER = "rgba(148,163,184,0.22)";
 const TEXT_PRIMARY = "rgba(255,255,255,0.9)";
 const TEXT_SECONDARY = "rgba(255,255,255,0.9)";
 const TEXT_BODY = "rgba(255,255,255,0.95)";
-const DARK_BG = "#0F172A";
-const DARK_BG_MID = "#0F172A";
+const DARK_BG = "#0A1628";
+const DARK_BG_MID = "#0A1628";
 
 // ===== 数据 =====
 const pricingTiers = [
@@ -219,7 +219,7 @@ export default function CooperationScreen() {
                       {/* 核心数据 */}
                       <View style={styles.bannerStats}>
                         {[
-                          { num: "200+", label: "EA源码", color: "#FBBF24" },
+                          { num: "200+", label: "EA源码", color: "#D8BC83" },
                           { num: "30+", label: "合作工作室", color: "#A78BFA" },
                           { num: "50+", label: "独家版", color: "#34D399" },
                         ].map((s, i) => (
@@ -298,7 +298,7 @@ export default function CooperationScreen() {
                     </View>
                     <TouchableOpacity onPress={handleConsult} activeOpacity={0.85} style={{ marginTop: 16 }}>
                       {tier.highlight ? (
-                        <LinearGradient colors={["#F59E0B", "#D97706"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.pricingCTAHighlight}>
+                        <LinearGradient colors={["#C9A96E", "#A8895A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.pricingCTAHighlight}>
                           <Text style={styles.pricingCTAHighlightText}>{tier.cta}</Text>
                         </LinearGradient>
                       ) : tier.id === "free" ? (
@@ -353,7 +353,7 @@ export default function CooperationScreen() {
 
               <View style={{ alignItems: "center", marginTop: 28 }}>
                 <TouchableOpacity onPress={handleConsult} activeOpacity={0.85}>
-                  <LinearGradient colors={["#F59E0B", "#D97706"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.freeCTAGradient}>
+                  <LinearGradient colors={["#C9A96E", "#A8895A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.freeCTAGradient}>
                     <Text style={{ fontSize: 18 }}>🎁</Text>
                     <Text style={styles.freeCTAText}>立即免费领取全部</Text>
                   </LinearGradient>
@@ -390,7 +390,7 @@ export default function CooperationScreen() {
                     ))}
                   </View>
                   <TouchableOpacity onPress={handleConsult} activeOpacity={0.85} style={styles.customEACTA}>
-                    <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.customEACTAGradient}>
+                    <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.customEACTAGradient}>
                       <Text style={styles.customEACTAText}>咨询定制方案</Text>
                     </LinearGradient>
                   </TouchableOpacity>
@@ -405,7 +405,7 @@ export default function CooperationScreen() {
           <FadeInView delay={300}>
             <View style={[styles.ctaWrapper, { maxWidth: maxContentWidth }]}>
               <TouchableOpacity onPress={handleConsult} activeOpacity={0.85} style={styles.ctaPrimary}>
-                <LinearGradient colors={["#F59E0B", "#D97706"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaPrimaryGradient}>
+                <LinearGradient colors={["#C9A96E", "#A8895A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaPrimaryGradient}>
                   <Text style={styles.ctaPrimaryText}>免费咨询合作方案</Text>
                   <Text style={styles.ctaPrimaryArrow}>→</Text>
                 </LinearGradient>

@@ -92,16 +92,16 @@ export async function sendVerificationCodeEmail(to: string, code: string, purpos
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>${subject}</title></head>
-<body style="margin:0;padding:0;background:#0F172A;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<body style="margin:0;padding:0;background:#0A1628;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:40px 32px;color:#F1F5F9;">
     <div style="text-align:center;margin-bottom:32px;">
-      <div style="display:inline-block;padding:10px 20px;background:linear-gradient(135deg,#D97706,#FBBF24);color:#0F172A;font-weight:900;font-size:18px;border-radius:8px;letter-spacing:0.04em;">EAXAU · 量化军火库</div>
+      <div style="display:inline-block;padding:10px 20px;background:linear-gradient(135deg,#A8895A,#D8BC83);color:#0A1628;font-weight:900;font-size:18px;border-radius:8px;letter-spacing:0.04em;">EAXAU · 量化军火库</div>
     </div>
     <div style="background:rgba(30,41,59,0.6);border:1px solid rgba(148,163,184,0.12);border-radius:16px;padding:32px;">
       <h1 style="font-size:22px;font-weight:800;margin:0 0 16px;color:#F1F5F9;">${label}验证码</h1>
-      <p style="font-size:14px;color:#94A3B8;margin:0 0 24px;line-height:1.6;">您正在进行 <b style="color:#FBBF24;">${label}</b> 操作。请在页面中输入下面的验证码完成验证：</p>
+      <p style="font-size:14px;color:#94A3B8;margin:0 0 24px;line-height:1.6;">您正在进行 <b style="color:#D8BC83;">${label}</b> 操作。请在页面中输入下面的验证码完成验证：</p>
       <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:24px;text-align:center;margin-bottom:24px;">
-        <div style="font-size:32px;font-weight:900;color:#FBBF24;letter-spacing:0.3em;font-family:'SF Mono',monospace;">${code}</div>
+        <div style="font-size:32px;font-weight:900;color:#D8BC83;letter-spacing:0.3em;font-family:'SF Mono',monospace;">${code}</div>
       </div>
       <p style="font-size:13px;color:#64748B;margin:0;line-height:1.6;">验证码 <b>5 分钟内有效</b>，请勿向任何人透露。如非本人操作，请忽略此邮件。</p>
     </div>

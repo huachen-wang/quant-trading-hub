@@ -79,7 +79,7 @@ export default function CheckoutNewScreen() {
 
   return (
     <View style={styles.center}>
-      <ActivityIndicator size="large" color="#FBBF24" />
+      <ActivityIndicator size="large" color="#D8BC83" />
       <Text style={[styles.loadingText, { color: colors.muted }]}>正在为您创建订单...</Text>
     </View>
   );
@@ -103,5 +103,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
   },
-  backBtnText: { color: "#FBBF24", fontWeight: "700" },
+  backBtnText: { color: "#D8BC83", fontWeight: "700" },
 });

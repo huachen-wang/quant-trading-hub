@@ -27,7 +27,7 @@ const STATUS_LABELS: Record<string, string> = {
   expired: "已过期",
 };
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#FBBF24",
+  pending: "#D8BC83",
   paid: "#34D399",
   cancelled: "#94A3B8",
   refunded: "#60A5FA",
@@ -75,7 +75,7 @@ export default function AdminOrderDetailScreen() {
     return (
       <ScreenContainer>
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#FBBF24" />
+          <ActivityIndicator size="large" color="#D8BC83" />
         </View>
       </ScreenContainer>
     );
@@ -151,7 +151,7 @@ export default function AdminOrderDetailScreen() {
             colors={colors}
           />
           <InfoRow label="商品 ID" value={String(order.productId)} colors={colors} />
-          <InfoRow label="实付金额" value={`¥ ${order.amount}`} valueStyle={{ color: "#FBBF24", fontWeight: "800" }} colors={colors} />
+          <InfoRow label="实付金额" value={`¥ ${order.amount}`} valueStyle={{ color: "#D8BC83", fontWeight: "800" }} colors={colors} />
           {order.originalAmount ? (
             <InfoRow label="原价" value={`¥ ${order.originalAmount}`} colors={colors} />
           ) : null}
@@ -246,7 +246,7 @@ export default function AdminOrderDetailScreen() {
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={["#D97706", "#F59E0B"]}
+              colors={["#A8895A", "#C9A96E"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.actionBtnInner}
@@ -327,13 +327,13 @@ export default function AdminOrderDetailScreen() {
                 style={[modalStyles.okBtn, { opacity: busy ? 0.6 : 1 }]}
               >
                 <LinearGradient
-                  colors={["#D97706", "#F59E0B"]}
+                  colors={["#A8895A", "#C9A96E"]}
                   style={StyleSheet.absoluteFillObject}
                 />
                 {busy ? (
-                  <ActivityIndicator color="#0F172A" size="small" />
+                  <ActivityIndicator color="#0A1628" size="small" />
                 ) : (
-                  <Text style={{ color: "#0F172A", fontWeight: "800" }}>确认收款</Text>
+                  <Text style={{ color: "#0A1628", fontWeight: "800" }}>确认收款</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -372,7 +372,7 @@ const pStatusLabels: Record<string, string> = {
   refunded: "已退款",
 };
 const pStatusColorMap: Record<string, string> = {
-  pending: "#FBBF24",
+  pending: "#D8BC83",
   success: "#34D399",
   failed: "#F87171",
   refunded: "#60A5FA",
@@ -454,7 +454,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   actionBtnText: {
-    color: "#0F172A",
+    color: "#0A1628",
     fontSize: 15,
     fontWeight: "800",
   },

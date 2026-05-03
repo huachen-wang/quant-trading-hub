@@ -181,7 +181,7 @@ export default function StrategyForm() {
             <TouchableOpacity
               key={opt.value}
               onPress={() => setFormData({ ...formData, saleMode: opt.value })}
-              style={[s.chip, { backgroundColor: formData.saleMode === opt.value ? "#D97706" : colors.surface }]}
+              style={[s.chip, { backgroundColor: formData.saleMode === opt.value ? "#A8895A" : colors.surface }]}
               activeOpacity={0.7}
             >
               <Text style={{ color: formData.saleMode === opt.value ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{opt.label}</Text>
@@ -198,12 +198,12 @@ export default function StrategyForm() {
         <TextInput value={formData.timeframe} onChangeText={(t) => setFormData({ ...formData, timeframe: t })} placeholder="H1, H4, D1" placeholderTextColor={colors.muted} style={inputStyle} />
 
         {/* 旗舰产品设置 */}
-        <Text style={[s.sectionTitle, { color: "#D97706" }]}>⭐ 旗舰产品设置</Text>
+        <Text style={[s.sectionTitle, { color: "#A8895A" }]}>⭐ 旗舰产品设置</Text>
         <Text style={[{ fontSize: 12, color: colors.muted, marginBottom: 8 }]}>旗舰产品将在首页置顶展示，并显示金色标签</Text>
 
         <View style={[s.row, { alignItems: "center", justifyContent: "space-between", marginBottom: 12 }]}>
           <Text style={[s.label, { color: colors.foreground, marginBottom: 0 }]}>标记为旗舰产品</Text>
-          <TouchableOpacity onPress={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })} style={[s.toggle, { backgroundColor: formData.isFeatured ? "#D97706" : colors.muted }]} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => setFormData({ ...formData, isFeatured: !formData.isFeatured })} style={[s.toggle, { backgroundColor: formData.isFeatured ? "#A8895A" : colors.muted }]} activeOpacity={0.7}>
             <View style={[s.toggleDot, { marginLeft: formData.isFeatured ? 22 : 2 }]} />
           </TouchableOpacity>
         </View>

@@ -56,7 +56,7 @@ function NotifCard({ item, colors }: { item: NotificationItem; colors: any }) {
     info: colors.primary,
     success: colors.success,
     warning: colors.warning,
-    promo: "#F59E0B",
+    promo: "#C9A96E",
   };
 
   const accentColor = typeColors[item.type] || colors.primary;

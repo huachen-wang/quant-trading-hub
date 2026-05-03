@@ -28,7 +28,7 @@ const QUICK_ENTRIES = [
     title: "工作室扶持合作",
     subtitle: "深度扶持 · 源头直供",
     icon: "🤝",
-    gradient: ["#0F172A", "#1E3A8A", "#2563EB"] as readonly [string, string, ...string[]],
+    gradient: ["#0A1628", "#1E3A8A", "#2563EB"] as readonly [string, string, ...string[]],
     type: "route" as const,
     target: "/cooperation",
     accentColor: "#60A5FA",
@@ -50,10 +50,10 @@ const QUICK_ENTRIES = [
     title: "订单流独家策略",
     subtitle: "四维共振 · 独家研发",
     icon: "🏆",
-    gradient: ["#1A0E00", "#78350F", "#D97706"] as readonly [string, string, ...string[]],
+    gradient: ["#1A0E00", "#78350F", "#A8895A"] as readonly [string, string, ...string[]],
     type: "link" as const,
     target: "https://ddxau.com",
-    accentColor: "#FBBF24",
+    accentColor: "#D8BC83",
     glowColor: "rgba(251,191,36,0.15)",
   },
 ];
@@ -252,7 +252,7 @@ export default function HomeScreen() {
         {/* ─── 数据指标（带计数动画） ─── */}
         <View style={heroStyles.statsRow}>
           {[
-            { num: `${displayCount.ea}+`, label: "EA源码", color: "#FBBF24", bgColor: "rgba(251,191,36,0.08)" },
+            { num: `${displayCount.ea}+`, label: "EA源码", color: "#D8BC83", bgColor: "rgba(251,191,36,0.08)" },
             { num: `${displayCount.studio}+`, label: "合作工作室", color: "#60A5FA", bgColor: "rgba(96,165,250,0.08)" },
             { num: `${displayCount.exclusive}+`, label: "独家版", color: "#34D399", bgColor: "rgba(52,211,153,0.08)" },
           ].map((stat, i) => (
@@ -337,7 +337,7 @@ export default function HomeScreen() {
             style={filterStyles.uploadBtn}
             activeOpacity={0.8}
           >
-            <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={filterStyles.uploadBtnInner}>
+            <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={filterStyles.uploadBtnInner}>
               <Text style={filterStyles.uploadBtnText}>+ 上架EA</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -367,7 +367,7 @@ export default function HomeScreen() {
                 style={[
                   filterStyles.filterChip,
                   isActive
-                    ? { backgroundColor: "#D97706", borderColor: "#D97706" }
+                    ? { backgroundColor: "#A8895A", borderColor: "#A8895A" }
                     : { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
                 activeOpacity={0.7}
@@ -395,11 +395,11 @@ export default function HomeScreen() {
                 onPress={() => setOrderBy(item.value)}
                 style={[
                   filterStyles.sortChip,
-                  isActive && { borderBottomWidth: 2, borderBottomColor: "#D97706" },
+                  isActive && { borderBottomWidth: 2, borderBottomColor: "#A8895A" },
                 ]}
                 activeOpacity={0.7}
               >
-                <Text style={[filterStyles.sortChipText, { color: isActive ? "#D97706" : colors.muted }]}>
+                <Text style={[filterStyles.sortChipText, { color: isActive ? "#A8895A" : colors.muted }]}>
                   {item.label}
                 </Text>
               </TouchableOpacity>
@@ -424,7 +424,7 @@ export default function HomeScreen() {
                 style={[
                   filterStyles.filterChip,
                   isActive
-                    ? { backgroundColor: "#D97706", borderColor: "#D97706" }
+                    ? { backgroundColor: "#A8895A", borderColor: "#A8895A" }
                     : { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
                 activeOpacity={0.7}
@@ -440,13 +440,13 @@ export default function HomeScreen() {
       {/* A.2: 分类筛选 */}
       {(categoriesData || []).length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 6 }} style={{ marginTop: 4 }}>
-          <TouchableOpacity onPress={() => setCategoryFilter(undefined)} style={[filterStyles.filterChip, !categoryFilter ? { backgroundColor: "#D97706", borderColor: "#D97706" } : { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.7}>
+          <TouchableOpacity onPress={() => setCategoryFilter(undefined)} style={[filterStyles.filterChip, !categoryFilter ? { backgroundColor: "#A8895A", borderColor: "#A8895A" } : { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.7}>
             <Text style={[filterStyles.filterChipText, { color: !categoryFilter ? "#fff" : colors.muted }]}>全部分类</Text>
           </TouchableOpacity>
           {(categoriesData || []).filter((c: any) => c.parentId === null).map((c: any) => {
             const isActive = categoryFilter === c.slug;
             return (
-              <TouchableOpacity key={c.slug} onPress={() => setCategoryFilter(c.slug)} style={[filterStyles.filterChip, isActive ? { backgroundColor: "#D97706", borderColor: "#D97706" } : { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.7}>
+              <TouchableOpacity key={c.slug} onPress={() => setCategoryFilter(c.slug)} style={[filterStyles.filterChip, isActive ? { backgroundColor: "#A8895A", borderColor: "#A8895A" } : { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.7}>
                 <Text style={[filterStyles.filterChipText, { color: isActive ? "#fff" : colors.muted }]}>{c.icon ? `${c.icon} ` : ""}{c.name}</Text>
               </TouchableOpacity>
             );
@@ -462,13 +462,13 @@ export default function HomeScreen() {
             style={[
               filterStyles.tagChip,
               {
-                backgroundColor: tagFilter === "" ? "#D9770615" : colors.surface,
-                borderColor: tagFilter === "" ? "#D97706" : colors.border,
+                backgroundColor: tagFilter === "" ? "#A8895A15" : colors.surface,
+                borderColor: tagFilter === "" ? "#A8895A" : colors.border,
               },
             ]}
             activeOpacity={0.7}
           >
-            <Text style={[filterStyles.tagChipText, { color: tagFilter === "" ? "#D97706" : colors.muted }]}>全部</Text>
+            <Text style={[filterStyles.tagChipText, { color: tagFilter === "" ? "#A8895A" : colors.muted }]}>全部</Text>
           </TouchableOpacity>
           {dynamicTags.map((tag) => {
             const isActive = tagFilter === tag.value;
@@ -479,13 +479,13 @@ export default function HomeScreen() {
                 style={[
                   filterStyles.tagChip,
                   {
-                    backgroundColor: isActive ? "#D9770615" : colors.surface,
-                    borderColor: isActive ? "#D97706" : colors.border,
+                    backgroundColor: isActive ? "#A8895A15" : colors.surface,
+                    borderColor: isActive ? "#A8895A" : colors.border,
                   },
                 ]}
                 activeOpacity={0.7}
               >
-                <Text style={[filterStyles.tagChipText, { color: isActive ? "#D97706" : colors.muted }]}>
+                <Text style={[filterStyles.tagChipText, { color: isActive ? "#A8895A" : colors.muted }]}>
                   {tag.label}
                 </Text>
               </TouchableOpacity>
@@ -505,7 +505,7 @@ export default function HomeScreen() {
       style={customBannerStyles.outer}
     >
       <LinearGradient
-        colors={["#0F172A", "#1E1B4B", "#312E81"]}
+        colors={["#0A1628", "#1E1B4B", "#312E81"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={customBannerStyles.container}
@@ -518,7 +518,7 @@ export default function HomeScreen() {
 
         {/* 左侧图标 */}
         <View style={customBannerStyles.iconWrap}>
-          <LinearGradient colors={["#D97706", "#F59E0B"]} style={customBannerStyles.iconGradient}>
+          <LinearGradient colors={["#A8895A", "#C9A96E"]} style={customBannerStyles.iconGradient}>
             <Text style={{ fontSize: 18 }}>🛠️</Text>
           </LinearGradient>
         </View>
@@ -541,7 +541,7 @@ export default function HomeScreen() {
 
         {/* 右侧箭头 */}
         <View style={customBannerStyles.arrow}>
-          <Text style={{ color: "#D97706", fontSize: 18, fontWeight: "900" }}>›</Text>
+          <Text style={{ color: "#A8895A", fontSize: 18, fontWeight: "900" }}>›</Text>
         </View>
       </LinearGradient>
     </TouchableOpacity>
@@ -562,7 +562,7 @@ export default function HomeScreen() {
       <Text style={{ color: colors.foreground, fontSize: 18, fontWeight: "700", marginTop: 16 }}>暂无策略</Text>
       <Text style={{ color: colors.muted, fontSize: 13, marginTop: 8 }}>策略广场正在上架中，敬请期待</Text>
       <TouchableOpacity onPress={() => setShowContactModal(true)} activeOpacity={0.8} style={{ marginTop: 24 }}>
-        <LinearGradient colors={["#D97706", "#F59E0B"]} style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 }}>
+        <LinearGradient colors={["#A8895A", "#C9A96E"]} style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 }}>
           <Text style={{ color: "#0A0E1A", fontWeight: "700", fontSize: 14 }}>上架我的EA</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -573,7 +573,7 @@ export default function HomeScreen() {
     <View>
       {isLoadingMore && (
         <View style={{ paddingVertical: 16, alignItems: "center" }}>
-          <ActivityIndicator size="small" color="#D97706" />
+          <ActivityIndicator size="small" color="#A8895A" />
         </View>
       )}
       {!hasMore && allStrategies.length > 0 && (
@@ -590,7 +590,7 @@ export default function HomeScreen() {
     return (
       <ScreenContainer>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator size="large" color="#D97706" />
+          <ActivityIndicator size="large" color="#A8895A" />
         </View>
       </ScreenContainer>
     );
@@ -634,7 +634,7 @@ export default function HomeScreen() {
         ListFooterComponent={renderFooter}
         columnWrapperStyle={{ justifyContent: "flex-start" }}
         contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 20 }}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor="#D97706" />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor="#A8895A" />}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         initialNumToRender={8}
@@ -900,7 +900,7 @@ const filterStyles = StyleSheet.create({
     width: 3,
     height: 20,
     borderRadius: 2,
-    backgroundColor: "#D97706",
+    backgroundColor: "#A8895A",
     marginRight: 8,
   },
   titleText: {
@@ -1104,7 +1104,7 @@ const customBannerStyles = StyleSheet.create({
     gap: 4,
   },
   featureDot: {
-    color: "#D97706",
+    color: "#A8895A",
     fontSize: 6,
   },
   featureText: {

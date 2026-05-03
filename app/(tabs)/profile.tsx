@@ -200,7 +200,7 @@ export default function ProfileScreen() {
                 justifyContent: "center",
                 marginBottom: 12,
                 borderWidth: 2,
-                borderColor: isFullMember ? "#FBBF24" : "transparent",
+                borderColor: isFullMember ? "#D8BC83" : "transparent",
               }}
             >
               <Text style={{ fontSize: 32, color: colors.primary, fontWeight: "900" }}>
@@ -327,7 +327,7 @@ export default function ProfileScreen() {
                   </View>
                 </View>
                 {!emailVerified && (
-                  <Text style={{ color: "#FBBF24", fontSize: 13, fontWeight: "700" }}>去验证 →</Text>
+                  <Text style={{ color: "#D8BC83", fontSize: 13, fontWeight: "700" }}>去验证 →</Text>
                 )}
               </TouchableOpacity>
 
@@ -383,13 +383,13 @@ export default function ProfileScreen() {
                   </View>
                 </View>
                 {!phoneBound && (
-                  <Text style={{ color: "#FBBF24", fontSize: 13, fontWeight: "700" }}>去绑定 →</Text>
+                  <Text style={{ color: "#D8BC83", fontSize: 13, fontWeight: "700" }}>去绑定 →</Text>
                 )}
               </TouchableOpacity>
 
               <View style={styles.welfareFooter}>
                 <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 18 }}>
-                  <Text style={{ color: "#FBBF24", fontWeight: "700" }}>会员福利：</Text>
+                  <Text style={{ color: "#D8BC83", fontWeight: "700" }}>会员福利：</Text>
                   独家 EA 限时领取 · 新策略优先体验 · 专属客服通道 · 不定期空投活动
                 </Text>
               </View>
@@ -399,7 +399,7 @@ export default function ProfileScreen() {
           {/* 数据统计 - A.3 扩展为 4 列 */}
           <View style={[styles.statsRow, glassStyle("subtle") as any]}>
             <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: "#FBBF24" }]}>
+              <Text style={[styles.statNum, { color: "#D8BC83" }]}>
                 {myOrders?.filter((o: any) => o.status === "paid").length || 0}
               </Text>
               <Text style={[styles.statLabel, { color: colors.muted }]}>订单</Text>
@@ -427,7 +427,7 @@ export default function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>📋 我的订单</Text>
           {myOrders && myOrders.length > 0 ? (
             myOrders.slice(0, 5).map((order: any) => {
-              const statusColors: Record<string, string> = { pending: "#FBBF24", paid: "#34D399", cancelled: "#94A3B8", expired: "#F87171" };
+              const statusColors: Record<string, string> = { pending: "#D8BC83", paid: "#34D399", cancelled: "#94A3B8", expired: "#F87171" };
               const statusLabels: Record<string, string> = { pending: "待支付", paid: "已支付", cancelled: "已取消", expired: "已过期" };
               const statusColor = statusColors[order.status] || colors.muted;
               return (
@@ -537,13 +537,13 @@ export default function ProfileScreen() {
                 style={[modalStyles.okBtn, { opacity: busy ? 0.6 : 1 }]}
               >
                 <LinearGradient
-                  colors={["#D97706", "#F59E0B"]}
+                  colors={["#A8895A", "#C9A96E"]}
                   style={StyleSheet.absoluteFillObject}
                 />
                 {busy ? (
-                  <ActivityIndicator color="#0F172A" size="small" />
+                  <ActivityIndicator color="#0A1628" size="small" />
                 ) : (
-                  <Text style={{ color: "#0F172A", fontWeight: "800" }}>确认验证</Text>
+                  <Text style={{ color: "#0A1628", fontWeight: "800" }}>确认验证</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -589,13 +589,13 @@ export default function ProfileScreen() {
                 style={[modalStyles.okBtn, { opacity: busy ? 0.6 : 1 }]}
               >
                 <LinearGradient
-                  colors={["#D97706", "#F59E0B"]}
+                  colors={["#A8895A", "#C9A96E"]}
                   style={StyleSheet.absoluteFillObject}
                 />
                 {busy ? (
-                  <ActivityIndicator color="#0F172A" size="small" />
+                  <ActivityIndicator color="#0A1628" size="small" />
                 ) : (
-                  <Text style={{ color: "#0F172A", fontWeight: "800" }}>保存</Text>
+                  <Text style={{ color: "#0A1628", fontWeight: "800" }}>保存</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -647,14 +647,14 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: -4,
     right: -4,
-    backgroundColor: "#FBBF24",
+    backgroundColor: "#D8BC83",
     width: 24,
     height: 24,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "#0F172A",
+    borderColor: "#0A1628",
   },
   memberBadge: {
     marginTop: 8,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
   },
-  memberBadgeText: { color: "#FBBF24", fontWeight: "700", fontSize: 12 },
+  memberBadgeText: { color: "#D8BC83", fontWeight: "700", fontSize: 12 },
   normalBadge: {
     marginTop: 8,
     backgroundColor: "rgba(148,163,184,0.1)",
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(245,158,11,0.25)",
   },
   welfareHeader: { marginBottom: 14 },
-  welfareTitle: { color: "#FBBF24", fontSize: 16, fontWeight: "900", marginBottom: 4 },
+  welfareTitle: { color: "#D8BC83", fontSize: 16, fontWeight: "900", marginBottom: 4 },
   welfareSubtitle: { fontSize: 12 },
   welfareTask: {
     flexDirection: "row",

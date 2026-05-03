@@ -28,7 +28,7 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
 ];
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#FBBF24",
+  pending: "#D8BC83",
   paid: "#34D399",
   cancelled: "#94A3B8",
   refunded: "#60A5FA",
@@ -92,7 +92,7 @@ export default function AdminOrdersScreen() {
         {/* 待确认 USDT 提示卡 */}
         {pendingUsdt && pendingUsdt.length > 0 ? (
           <View style={[styles.pendingCard, { borderColor: "rgba(245, 158, 11, 0.4)" }]}>
-            <Text style={{ color: "#FBBF24", fontWeight: "800", fontSize: 14 }}>
+            <Text style={{ color: "#D8BC83", fontWeight: "800", fontSize: 14 }}>
               ⚠️ 有 {pendingUsdt.length} 笔 USDT 转账等待确认
             </Text>
             <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
@@ -116,7 +116,7 @@ export default function AdminOrdersScreen() {
                 style={[
                   styles.filterChip,
                   isActive
-                    ? { backgroundColor: "#D97706", borderColor: "#D97706" }
+                    ? { backgroundColor: "#A8895A", borderColor: "#A8895A" }
                     : { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
               >
@@ -136,7 +136,7 @@ export default function AdminOrdersScreen() {
 
         {/* 订单列表 */}
         {isLoading ? (
-          <ActivityIndicator color="#FBBF24" style={{ marginTop: 40 }} />
+          <ActivityIndicator color="#D8BC83" style={{ marginTop: 40 }} />
         ) : !orders || orders.length === 0 ? (
           <View style={styles.empty}>
             <Text style={{ fontSize: 36 }}>📭</Text>
@@ -197,12 +197,12 @@ export default function AdminOrdersScreen() {
                     activeOpacity={0.85}
                   >
                     <LinearGradient
-                      colors={["#D97706", "#F59E0B"]}
+                      colors={["#A8895A", "#C9A96E"]}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.confirmBtnInner}
                     >
-                      <Text style={{ color: "#0F172A", fontWeight: "800", fontSize: 13 }}>
+                      <Text style={{ color: "#0A1628", fontWeight: "800", fontSize: 13 }}>
                         ✓ 确认 USDT 收款
                       </Text>
                     </LinearGradient>
@@ -272,13 +272,13 @@ export default function AdminOrdersScreen() {
                 style={[modalStyles.okBtn, { opacity: busy ? 0.6 : 1 }]}
               >
                 <LinearGradient
-                  colors={["#D97706", "#F59E0B"]}
+                  colors={["#A8895A", "#C9A96E"]}
                   style={StyleSheet.absoluteFillObject}
                 />
                 {busy ? (
-                  <ActivityIndicator color="#0F172A" size="small" />
+                  <ActivityIndicator color="#0A1628" size="small" />
                 ) : (
-                  <Text style={{ color: "#0F172A", fontWeight: "800" }}>确认收款</Text>
+                  <Text style={{ color: "#0A1628", fontWeight: "800" }}>确认收款</Text>
                 )}
               </TouchableOpacity>
             </View>

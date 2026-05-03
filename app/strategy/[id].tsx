@@ -166,7 +166,7 @@ export default function StrategyDetailScreen() {
 
   const gradientColors: readonly [string, string, ...string[]] =
     (strategy as any).isFeatured
-      ? ["#92400E", "#D97706"]
+      ? ["#92400E", "#A8895A"]
       : strategy.platform === "MT4" ? ["#1E3A8A", "#3B82F6"] : ["#7C3AED", "#A78BFA"];
 
   const returnValue = parseFloat(strategy.totalReturn) || 0;
@@ -467,7 +467,7 @@ export default function StrategyDetailScreen() {
               {/* 旗舰标签 */}
               {isFeatured && (
                 <View style={styles.featuredDetailBadge}>
-                  <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.featuredDetailGradient}>
+                  <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.featuredDetailGradient}>
                     <Text style={styles.featuredDetailText}>⭐ 官方旗舰</Text>
                   </LinearGradient>
                 </View>
@@ -494,7 +494,7 @@ export default function StrategyDetailScreen() {
               </View>
               {isFeatured && (
                 <View style={styles.featuredDetailBadge}>
-                  <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.featuredDetailGradient}>
+                  <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.featuredDetailGradient}>
                     <Text style={styles.featuredDetailText}>⭐ 官方旗舰</Text>
                   </LinearGradient>
                 </View>
@@ -517,7 +517,7 @@ export default function StrategyDetailScreen() {
           {/* 标题和描述 */}
           <View style={styles.titleSection}>
             <View style={styles.titleRow}>
-              <Text style={[styles.title, { color: isFeatured ? "#D97706" : colors.foreground, flex: 1 }]}>{strategy.title}</Text>
+              <Text style={[styles.title, { color: isFeatured ? "#A8895A" : colors.foreground, flex: 1 }]}>{strategy.title}</Text>
             </View>
             {/* 标签 */}
             {tagList.length > 0 && (
@@ -593,7 +593,7 @@ export default function StrategyDetailScreen() {
                     <Text style={[styles.priceValue, { color: colors.success }]}>免费</Text>
                   ) : (
                     <View style={styles.priceDisplayRow}>
-                      <Text style={[styles.priceValue, { color: "#F59E0B" }]}>¥{strategy.price}</Text>
+                      <Text style={[styles.priceValue, { color: "#C9A96E" }]}>¥{strategy.price}</Text>
                       {hasDiscount && (
                         <View style={styles.priceAnchor}>
                           <Text style={[styles.originalPriceText, { color: colors.muted }]}>¥{originalPrice}</Text>

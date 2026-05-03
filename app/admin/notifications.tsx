@@ -7,7 +7,7 @@ import { getAdminNotifications, createNotification, updateNotification, deleteNo
 const TYPES = [
   { value: "info", label: "通知", color: "#3B82F6" },
   { value: "success", label: "成功", color: "#22C55E" },
-  { value: "warning", label: "警告", color: "#F59E0B" },
+  { value: "warning", label: "警告", color: "#C9A96E" },
   { value: "promo", label: "推广", color: "#A855F7" },
 ];
 

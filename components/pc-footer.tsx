@@ -53,7 +53,7 @@ export function PcFooter() {
         <View style={styles.sites}>
           <Text style={styles.sitesLabel}>EAXAU 项目矩阵</Text>
           <View style={[styles.sitePill, styles.sitePillActive]}>
-            <Text style={[styles.sitePillText, { color: "#FBBF24" }]}>
+            <Text style={[styles.sitePillText, { color: "#D8BC83" }]}>
               EA 军火库 · eaxau.com
             </Text>
           </View>

@@ -199,13 +199,13 @@ export default function ProfileEditScreen() {
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={["#D97706", "#F59E0B"]}
+              colors={["#A8895A", "#C9A96E"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.ctaInner}
             >
               {busy ? (
-                <ActivityIndicator color="#0F172A" size="small" />
+                <ActivityIndicator color="#0A1628" size="small" />
               ) : (
                 <Text style={styles.ctaText}>保存修改</Text>
               )}
@@ -313,5 +313,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 10,
   },
-  ctaText: { color: "#0F172A", fontWeight: "800", fontSize: 14 },
+  ctaText: { color: "#0A1628", fontWeight: "800", fontSize: 14 },
 });

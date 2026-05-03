@@ -38,7 +38,7 @@ export function TiptapEditor({ value, onChange, placeholder, minHeight = 280 }: 
             { borderColor: "rgba(245,158,11,0.3)" },
           ]}
         >
-          <Text style={{ color: "#FBBF24", fontSize: 11, fontWeight: "700" }}>
+          <Text style={{ color: "#D8BC83", fontSize: 11, fontWeight: "700" }}>
             💡 移动端提示
           </Text>
           <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>
@@ -235,13 +235,13 @@ function WebTiptapEditor({
               .ProseMirror h1 { font-size: 22px; font-weight: 800; margin: 16px 0 10px; }
               .ProseMirror h2 { font-size: 19px; font-weight: 800; margin: 14px 0 8px; }
               .ProseMirror h3 { font-size: 17px; font-weight: 800; margin: 12px 0 8px; }
-              .ProseMirror strong { color: #FBBF24; font-weight: 700; }
+              .ProseMirror strong { color: #D8BC83; font-weight: 700; }
               .ProseMirror em { color: #94A3B8; font-style: italic; }
               .ProseMirror a { color: #60A5FA; text-decoration: underline; }
               .ProseMirror ul, .ProseMirror ol { margin: 0 0 12px; padding-left: 20px; }
               .ProseMirror li { margin-bottom: 4px; }
               .ProseMirror blockquote {
-                border-left: 3px solid #D97706;
+                border-left: 3px solid #A8895A;
                 padding: 6px 12px;
                 margin: 12px 0;
                 background: rgba(245, 158, 11, 0.06);
@@ -295,7 +295,7 @@ function ToolbarBtn({
       title={tooltip}
       style={{
         background: active ? "rgba(245,158,11,0.15)" : "transparent",
-        color: active ? "#FBBF24" : "#94A3B8",
+        color: active ? "#D8BC83" : "#94A3B8",
         border: "1px solid " + (active ? "rgba(245,158,11,0.4)" : "transparent"),
         padding: "6px 10px",
         margin: "0 1px",

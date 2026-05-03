@@ -106,7 +106,7 @@ export default function CooperationPage() {
   };
 
   if (cardsLoading) {
-    return <ScreenContainer><View style={s.loadingWrap}><ActivityIndicator size="large" color="#D97706" /></View></ScreenContainer>;
+    return <ScreenContainer><View style={s.loadingWrap}><ActivityIndicator size="large" color="#A8895A" /></View></ScreenContainer>;
   }
 
   return (
@@ -149,7 +149,7 @@ export default function CooperationPage() {
             </View>
 
             <TouchableOpacity style={s.heroCTA} onPress={() => setShowContact(true)}>
-              <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.heroCTAInner}>
+              <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.heroCTAInner}>
                 <Ionicons name="chatbubble-ellipses" size={18} color="#0A0E1A" />
                 <Text style={s.heroCTAText}>立即咨询合作</Text>
               </LinearGradient>
@@ -285,7 +285,7 @@ export default function CooperationPage() {
               { icon: "construct", title: "深度调优", desc: "针对合作平台的点差、杠杆、延迟进行专属参数优化", color: "#3B82F6" },
               { icon: "analytics", title: "实盘观摩", desc: "所有策略均提供实盘观摩账户，数据透明可查，眼见为实", color: "#10B981" },
               { icon: "headset", title: "1对1陪跑", desc: "专属技术顾问，7×24小时响应，从部署到运维全程陪跑", color: "#EF4444" },
-              { icon: "cash", title: "源头直供", desc: "成本直降80%，比市面任何渠道都便宜。发我对比给你更优价", color: "#F59E0B" },
+              { icon: "cash", title: "源头直供", desc: "成本直降80%，比市面任何渠道都便宜。发我对比给你更优价", color: "#C9A96E" },
               { icon: "infinite", title: "无限授权", desc: "有效期内不限窗口、不限账户，一个价格覆盖所有需求", color: "#06B6D4" },
             ].map((item, i) => (
               <View key={i} style={[s.supportCard]}
@@ -310,9 +310,9 @@ export default function CooperationPage() {
           </View>
 
           <View style={[s.customEABlock]}>
-            <LinearGradient colors={["#1E293B", "#0F172A"]} style={s.customEAInner}>
+            <LinearGradient colors={["#1E293B", "#0A1628"]} style={s.customEAInner}>
               <View style={s.customEABadge}>
-                <Ionicons name="code-slash" size={16} color="#D97706" />
+                <Ionicons name="code-slash" size={16} color="#A8895A" />
                 <Text style={s.customEABadgeText}>核心服务</Text>
               </View>
               <Text style={s.customEATitle}>为工作室量身打造专属EA</Text>
@@ -330,7 +330,7 @@ export default function CooperationPage() {
                 ].map((f, i) => (
                   <View key={i} style={s.customEAFeatureRow}>
                     <View style={s.customEAFeatureIcon}>
-                      <Ionicons name={f.icon as any} size={16} color="#D97706" />
+                      <Ionicons name={f.icon as any} size={16} color="#A8895A" />
                     </View>
                     <Text style={s.customEAFeatureText}>{f.text}</Text>
                   </View>
@@ -338,7 +338,7 @@ export default function CooperationPage() {
               </View>
 
               <TouchableOpacity style={s.customEACTA} onPress={() => setShowContact(true)}>
-                <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.customEACTAInner}>
+                <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.customEACTAInner}>
                   <Ionicons name="chatbubbles" size={18} color="#0A0E1A" />
                   <Text style={s.customEACTAText}>咨询定制方案</Text>
                 </LinearGradient>
@@ -367,7 +367,7 @@ export default function CooperationPage() {
                 <View key={plan.id} style={[s.planCard, isMain && s.planCardMain]}
                 >
                   {isMain && (
-                    <LinearGradient colors={["#D97706", "#F59E0B"]} style={s.planRibbon}>
+                    <LinearGradient colors={["#A8895A", "#C9A96E"]} style={s.planRibbon}>
                       <Text style={s.planRibbonText}>推荐</Text>
                     </LinearGradient>
                   )}
@@ -375,12 +375,12 @@ export default function CooperationPage() {
                   {plan.badge && plan.badge !== "推荐" && (
                     <View style={s.planBadge}><Text style={s.planBadgeText}>{plan.badge}</Text></View>
                   )}
-                  <Text style={[s.planPrice, isMain && { color: "#D97706" }]}>{plan.price}</Text>
+                  <Text style={[s.planPrice, isMain && { color: "#A8895A" }]}>{plan.price}</Text>
                   {plan.priceNote && <Text style={s.planPriceNote}>{plan.priceNote}</Text>}
                   <View style={s.planDivider} />
                   {parseFeatures(plan.features).map((f: string, fi: number) => (
                     <View key={fi} style={s.planFeatureRow}>
-                      <Ionicons name="checkmark-circle" size={15} color={isMain ? "#D97706" : "#94A3B8"} />
+                      <Ionicons name="checkmark-circle" size={15} color={isMain ? "#A8895A" : "#94A3B8"} />
                       <Text style={s.planFeatureText}>{f}</Text>
                     </View>
                   ))}
@@ -395,11 +395,11 @@ export default function CooperationPage() {
 
         {/* ═══════════════════ 底部CTA ═══════════════════ */}
         <View style={s.bottomCTA}>
-          <LinearGradient colors={["#1E293B", "#0F172A"]} style={s.bottomCTAInner}>
+          <LinearGradient colors={["#1E293B", "#0A1628"]} style={s.bottomCTAInner}>
             <Text style={s.bottomCTATitle}>准备好开始合作了吗？</Text>
             <Text style={s.bottomCTADesc}>私聊备注「策略名称」获取观摩账户 & 专属报价</Text>
             <TouchableOpacity style={s.bottomCTABtnWrap} onPress={() => setShowContact(true)}>
-              <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bottomCTABtnInner}>
+              <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bottomCTABtnInner}>
                 <Ionicons name="chatbubbles" size={20} color="#0A0E1A" />
                 <Text style={s.bottomCTABtnText}>立即联系</Text>
               </LinearGradient>
@@ -469,14 +469,14 @@ export default function CooperationPage() {
               {/* 观摩说明 */}
               {selectedCard?.observeNote && (
                 <View style={s.modalObserve}>
-                  <Ionicons name="eye" size={18} color="#D97706" />
+                  <Ionicons name="eye" size={18} color="#A8895A" />
                   <Text style={s.modalObserveText}>{selectedCard.observeNote}</Text>
                 </View>
               )}
 
               {/* CTA */}
               <TouchableOpacity style={s.modalCTA} onPress={() => { setSelectedCard(null); setShowContact(true); }}>
-                <LinearGradient colors={["#D97706", "#F59E0B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalCTAInner}>
+                <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.modalCTAInner}>
                   <Ionicons name="chatbubble-ellipses" size={18} color="#0A0E1A" />
                   <Text style={s.modalCTAText}>立即咨询获取观摩账户</Text>
                 </LinearGradient>
@@ -490,9 +490,9 @@ export default function CooperationPage() {
       <Modal visible={showContact} animationType="fade" transparent>
         <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setShowContact(false)}>
           <View style={s.contactSheet}>
-            <LinearGradient colors={["#1E293B", "#0F172A"]} style={s.contactInner}>
+            <LinearGradient colors={["#1E293B", "#0A1628"]} style={s.contactInner}>
               <View style={s.contactIconWrap}>
-                <Ionicons name="chatbubbles" size={28} color="#D97706" />
+                <Ionicons name="chatbubbles" size={28} color="#A8895A" />
               </View>
               <Text style={s.contactTitle}>联系我们</Text>
               <Text style={s.contactDesc}>私聊备注「策略名称」获取观摩账户 & 专属报价</Text>
@@ -554,18 +554,18 @@ export default function CooperationPage() {
 const COVER_SIZE = isDesktop ? 180 : 130;
 
 const s = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#0F172A" },
-  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0F172A" },
+  page: { flex: 1, backgroundColor: "#0A1628" },
+  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0A1628" },
   backBtn: { position: "absolute", top: 16, left: 16, zIndex: 10, padding: 8, backgroundColor: "rgba(10,14,26,0.7)", borderRadius: 20 },
 
   // Hero
   hero: { paddingTop: 72, paddingBottom: 36, paddingHorizontal: 20, alignItems: "center" },
-  heroAccent: { width: 60, height: 3, backgroundColor: "#D97706", borderRadius: 2, marginBottom: 24 },
+  heroAccent: { width: 60, height: 3, backgroundColor: "#A8895A", borderRadius: 2, marginBottom: 24 },
   heroBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginBottom: 20, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
-  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#D97706", marginRight: 8 },
-  heroBadgeText: { color: "#D97706", fontSize: 12, fontWeight: "700", letterSpacing: 1 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#A8895A", marginRight: 8 },
+  heroBadgeText: { color: "#A8895A", fontSize: 12, fontWeight: "700", letterSpacing: 1 },
   heroTitle: { color: "#FFFFFF", fontSize: 32, fontWeight: "900", marginBottom: 8, textAlign: "center", letterSpacing: 1 },
-  heroTagline: { color: "#D97706", fontSize: 14, fontWeight: "700", marginBottom: 16, letterSpacing: 2 },
+  heroTagline: { color: "#A8895A", fontSize: 14, fontWeight: "700", marginBottom: 16, letterSpacing: 2 },
   heroDesc: { color: "#F1F5F9", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 28 },
   statsRow: { flexDirection: "row", gap: 0, marginBottom: 28, width: "100%", maxWidth: 500 },
   statItem: { flex: 1, alignItems: "center", borderRightWidth: 1, borderRightColor: "#1E293B" },
@@ -578,7 +578,7 @@ const s = StyleSheet.create({
   // Section
   section: { marginTop: 12, paddingHorizontal: 16 },
   sectionHeader: { alignItems: "center", marginBottom: 24, paddingTop: 20 },
-  sectionLine: { width: 40, height: 2, backgroundColor: "#D97706", borderRadius: 1, marginBottom: 16 },
+  sectionLine: { width: 40, height: 2, backgroundColor: "#A8895A", borderRadius: 1, marginBottom: 16 },
   sectionLabel: { color: "#F1F5F9", fontSize: 11, fontWeight: "700", letterSpacing: 3, marginBottom: 8 },
   sectionTitle: { color: "#FFFFFF", fontSize: 24, fontWeight: "900", marginBottom: 6 },
   sectionSubtitle: { color: "#F1F5F9", fontSize: 13 },
@@ -774,24 +774,24 @@ const s = StyleSheet.create({
   // Plans
   plansRow: { flexDirection: isDesktop ? "row" : "column", gap: 12, marginBottom: 20 },
   planCard: { flex: isDesktop ? 1 : undefined, backgroundColor: "#1E293B", borderRadius: 16, padding: 24, borderWidth: 1, borderColor: "rgba(148,163,184,0.12)" },
-  planCardMain: { borderColor: "#D97706", borderWidth: 2, position: "relative" },
+  planCardMain: { borderColor: "#A8895A", borderWidth: 2, position: "relative" },
   planRibbon: { position: "absolute", top: 0, right: 24, paddingHorizontal: 14, paddingVertical: 4, borderBottomLeftRadius: 8, borderBottomRightRadius: 8 },
   planRibbonText: { color: "#0A0E1A", fontSize: 12, fontWeight: "800" },
   planTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "800", marginBottom: 6 },
   planBadge: { backgroundColor: "rgba(217,119,6,0.15)", alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, marginBottom: 8 },
-  planBadgeText: { color: "#D97706", fontSize: 11, fontWeight: "700" },
+  planBadgeText: { color: "#A8895A", fontSize: 11, fontWeight: "700" },
   planPrice: { color: "#FFFFFF", fontSize: 28, fontWeight: "900", marginBottom: 2 },
   planPriceNote: { color: "#F1F5F9", fontSize: 13, marginBottom: 12 },
   planDivider: { height: 1, backgroundColor: "#1E293B", marginVertical: 14 },
   planFeatureRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
   planFeatureText: { color: "#CBD5E1", fontSize: 13, flex: 1 },
   planCTA: { marginTop: 16, backgroundColor: "#1E293B", borderRadius: 10, paddingVertical: 12, alignItems: "center" },
-  planCTAMain: { backgroundColor: "#D97706" },
+  planCTAMain: { backgroundColor: "#A8895A" },
   planCTAText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
 
   // Bottom CTA
   bottomCTA: { margin: 16 },
-  bottomCTAInner: { borderRadius: 16, padding: 28, alignItems: "center", borderWidth: 1, borderColor: "#D97706" },
+  bottomCTAInner: { borderRadius: 16, padding: 28, alignItems: "center", borderWidth: 1, borderColor: "#A8895A" },
   bottomCTATitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginBottom: 8 },
   bottomCTADesc: { color: "#F1F5F9", fontSize: 13, marginBottom: 20, textAlign: "center" },
   bottomCTABtnWrap: { borderRadius: 28, overflow: "hidden" },
@@ -801,7 +801,7 @@ const s = StyleSheet.create({
   // Footer
   footer: { paddingVertical: 32, paddingHorizontal: 20, alignItems: "center", borderTopWidth: 1, borderTopColor: "#1E293B" },
   footerBrand: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  footerBrandText: { color: "#D97706", fontSize: 16, fontWeight: "700", marginLeft: 6 },
+  footerBrandText: { color: "#A8895A", fontSize: 16, fontWeight: "700", marginLeft: 6 },
   footerSlogan: { color: "#F1F5F9", fontSize: 13, marginBottom: 16 },
   footerDisclaimer: { color: "#475569", fontSize: 11, textAlign: "center", lineHeight: 18 },
 
@@ -813,7 +813,7 @@ const s = StyleSheet.create({
   modalTitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", flex: 1, marginRight: 12 },
   modalBody: { padding: 20 },
   modalCover: { width: "100%", height: 220, borderRadius: 12, marginBottom: 16 },
-  modalSubtitle: { color: "#D97706", fontSize: 15, fontWeight: "700", marginBottom: 12 },
+  modalSubtitle: { color: "#A8895A", fontSize: 15, fontWeight: "700", marginBottom: 12 },
   modalTags: { flexDirection: "row", gap: 8, marginBottom: 16, flexWrap: "wrap" },
   modalTag: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: "#475569" },
   modalTagText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700" },
@@ -822,7 +822,7 @@ const s = StyleSheet.create({
   modalGallery: { marginBottom: 16 },
   galleryThumb: { width: 160, height: 110, borderRadius: 8, marginRight: 10, backgroundColor: "#475569" },
   modalObserve: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 10, gap: 10, marginBottom: 20, backgroundColor: "rgba(217,119,6,0.1)", borderWidth: 1, borderColor: "rgba(217,119,6,0.3)" },
-  modalObserveText: { color: "#D97706", fontSize: 13, flex: 1, fontWeight: "600" },
+  modalObserveText: { color: "#A8895A", fontSize: 13, flex: 1, fontWeight: "600" },
   modalCTA: { marginBottom: 24, borderRadius: 12, overflow: "hidden" },
   modalCTAInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14 },
   modalCTAText: { color: "#0A0E1A", fontSize: 15, fontWeight: "800" },
@@ -850,7 +850,7 @@ const s = StyleSheet.create({
   customEABlock: { marginHorizontal: 4, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(217,119,6,0.2)" },
   customEAInner: { padding: 24, alignItems: "center" },
   customEABadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: 16, marginBottom: 16, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
-  customEABadgeText: { color: "#D97706", fontSize: 12, fontWeight: "700" },
+  customEABadgeText: { color: "#A8895A", fontSize: 12, fontWeight: "700" },
   customEATitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginBottom: 10, textAlign: "center" },
   customEADesc: { color: "#F1F5F9", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20 },
   customEAFeatures: { width: "100%", gap: 12, marginBottom: 24 },
