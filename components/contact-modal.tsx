@@ -64,6 +64,9 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
     }
   };
 
+  // ─── Web 端修复：visible=false 时不渲染 Modal，避免 RN-Web 在 web 端遗留 overlay 蒙层 ───
+  if (!visible) return null;
+
   return (
     <Modal
       visible={visible}

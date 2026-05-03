@@ -85,6 +85,12 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
     onClose();
   };
 
+  // ─── Web 端修复：visible=false 时不渲染 Modal ───
+
+
+  if (!visible) return null;
+
+
   return (
     <Modal
       visible={visible}
