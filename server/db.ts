@@ -1408,3 +1408,37 @@ export async function createVerificationCode(opts: {
   const { createVerificationCode: _create } = await import("./_core/verification");
   return _create(opts);
 }
+
+// ============================================================
+// 侧边栏自定义入口 CRUD
+// ============================================================
+export async function listSiteEntries(params?: { enabled?: boolean; all?: boolean }) {
+  const db = await getDb();
+  const { siteEntries } = schema;
+  let query = db.select().from(siteEntries).$dynamic();
+  if (!params?.all && params?.enabled !== undefined) {
+    query = query.where(eq(siteEntries.enabled, params.enabled));
+  } else if (!params?.all) {
+    // 默认只返回启用的
+    query = query.where(eq(siteEntries.enabled, true));
+  }
+  return query.orderBy(asc(siteEntries.sortOrder), asc(siteEntries.id));
+}
+
+export async function createSiteEntry(data: typeof schema.siteEntries.$inferInsert) {
+  const db = await getDb();
+  const result = await db.insert(schema.siteEntries).values(data);
+  return { ok: true, id: (result as any)[0]?.insertId };
+}
+
+export async function updateSiteEntry(id: number, data: Partial<typeof schema.siteEntries.$inferInsert>) {
+  const db = await getDb();
+  await db.update(schema.siteEntries).set(data).where(eq(schema.siteEntries.id, id));
+  return { ok: true };
+}
+
+export async function deleteSiteEntry(id: number) {
+  const db = await getDb();
+  await db.delete(schema.siteEntries).where(eq(schema.siteEntries.id, id));
+  return { ok: true };
+}

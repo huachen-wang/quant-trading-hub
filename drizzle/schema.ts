@@ -525,3 +525,23 @@ export const userFavorites = mysqlTable("user_favorites", {
 
 export type UserFavorite = typeof userFavorites.$inferSelect;
 export type InsertUserFavorite = typeof userFavorites.$inferInsert;
+
+// ============================================================
+// 侧边栏 · 自定义入口（后台可编辑）
+// ============================================================
+export const siteEntries = mysqlTable("site_entries", {
+  id: int("id").autoincrement().primaryKey(),
+  emoji: varchar("emoji", { length: 16 }).notNull(),
+  label: varchar("label", { length: 50 }).notNull(),
+  href: varchar("href", { length: 500 }).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  enabled: boolean("enabled").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  enabledIdx: index("enabled_idx").on(table.enabled),
+  sortOrderIdx: index("sortOrder_idx").on(table.sortOrder),
+}));
+
+export type SiteEntry = typeof siteEntries.$inferSelect;
+export type InsertSiteEntry = typeof siteEntries.$inferInsert;

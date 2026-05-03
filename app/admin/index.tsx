@@ -133,6 +133,12 @@ export default function AdminDashboard() {
       count: 0,
       description: "设置上架EA弹窗的联系方式",
     },
+    {
+      title: "🔗 侧边栏入口管理",
+      route: "/admin/site-entries",
+      count: 0,
+      description: "管理左上角悬浮侧边栏的快捷入口",
+    },
   ];
 
   return (

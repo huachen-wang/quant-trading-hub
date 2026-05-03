@@ -8,6 +8,7 @@ import { ContactModal } from "@/components/contact-modal";
 import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
 import { PcTopNav } from "@/components/pc-top-nav";
+import { FloatingSideNav } from "@/components/floating-side-nav";
 import { useResponsive } from "@/hooks/use-responsive";
 
 // 自定义Tab图标组件 - 支持高亮和置灰
@@ -93,6 +94,7 @@ export default function TabLayout() {
     <View style={{ flex: 1 }}>
       {/* B: PC 顶部导航 */}
       <PcTopNav />
+      <FloatingSideNav />
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: colors.primary,

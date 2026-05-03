@@ -14,6 +14,8 @@ import { sendVerificationCodeEmail } from "./_core/email";
 import { getPublicFeatureFlags } from "../constants/features";
 import { ONE_YEAR_MS } from "../shared/const.js";
 import { sdk } from "./_core/sdk";
+import { eq, asc } from "drizzle-orm";
+import { siteEntries, type InsertSiteEntry } from "../drizzle/schema";
 
 // 管理员权限中间件
 const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
@@ -893,6 +895,47 @@ export const appRouter = router({
         if (ctx.user.role !== 'admin') throw new Error('Admin only');
         await db.deleteCategory(input.id);
         return { ok: true };
+      }),
+  }),
+
+  // ─── 侧边栏自定义入口 ───
+  siteEntries: router({
+    list: publicProcedure
+      .input(z.object({ enabled: z.boolean().optional() }).optional())
+      .query(async ({ input }) => {
+        return db.listSiteEntries({ enabled: input?.enabled });
+      }),
+    adminList: adminProcedure.query(async () => {
+      return db.listSiteEntries({ all: true });
+    }),
+    create: adminProcedure
+      .input(z.object({
+        emoji: z.string().min(1).max(16),
+        label: z.string().min(1).max(50),
+        href: z.string().min(1).max(500),
+        sortOrder: z.number().int().default(0),
+        enabled: z.boolean().default(true),
+      }))
+      .mutation(async ({ input }) => {
+        return db.createSiteEntry(input);
+      }),
+    update: adminProcedure
+      .input(z.object({
+        id: z.number().int(),
+        emoji: z.string().min(1).max(16).optional(),
+        label: z.string().min(1).max(50).optional(),
+        href: z.string().min(1).max(500).optional(),
+        sortOrder: z.number().int().optional(),
+        enabled: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...rest } = input;
+        return db.updateSiteEntry(id, rest);
+      }),
+    delete: adminProcedure
+      .input(z.object({ id: z.number().int() }))
+      .mutation(async ({ input }) => {
+        return db.deleteSiteEntry(input.id);
       }),
   }),
   // ─── Bundle A.3: 订单 ───
