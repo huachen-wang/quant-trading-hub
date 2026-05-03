@@ -139,6 +139,18 @@ export default function AdminDashboard() {
       count: 0,
       description: "管理左上角悬浮侧边栏的快捷入口",
     },
+    {
+      title: "💳 订单管理",
+      route: "/admin/orders",
+      count: 0,
+      description: "查看所有订单、对账、改状态",
+    },
+    {
+      title: "📈 回测数据",
+      route: "/admin/backtest-data",
+      count: 0,
+      description: "管理 EA 的回测数据曲线",
+    },
   ];
 
   return (
