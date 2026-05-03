@@ -90,9 +90,9 @@ export default function Root({ children }: PropsWithChildren) {
           id="expo-reset"
           dangerouslySetInnerHTML={{
             __html: `
-              html, body { height: 100%; margin: 0; padding: 0; }
-              body { overflow: auto; -webkit-overflow-scrolling: touch; }
-              #root { display: flex; height: 100%; flex: 1; }
+              html, body { height: 100%; margin: 0; padding: 0; background-color: #050810; }
+              body { overflow: auto; -webkit-overflow-scrolling: touch; background-color: #050810; }
+              #root { display: flex; height: 100%; flex: 1; background-color: #050810; }
             `,
           }}
         />
