@@ -637,7 +637,7 @@ export default function HomeScreen() {
   const renderHeader = () => (
     <View style={{ marginBottom: 4 }}>
       {renderHero()}
-      {renderQuickEntries()}
+      {/* 3 大卡已隐藏 — renderQuickEntries() */}
       {renderCustomEABanner()}
       {renderFilters()}
     </View>
