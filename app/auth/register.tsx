@@ -24,7 +24,7 @@ type Mode = "password" | "code";
 export default function UserRegisterScreen() {
   const colors = useColors();
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("code"); // 默认推荐验证码注册（更安全）
+  const [mode, setMode] = useState<Mode>("password"); // 默认密码注册（用户更熟悉）
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -68,6 +68,7 @@ export default function UserRegisterScreen() {
   // 验证码注册
   const handleCodeRegister = async () => {
     if (!email.trim() || !code) return showMsg("请填写邮箱和验证码");
+    if (!phone.trim()) return showMsg("请填写手机号");
     setBusy(true);
     try {
       const result = await registerWithCodeMutation.mutateAsync({
@@ -81,7 +82,11 @@ export default function UserRegisterScreen() {
         await setSessionToken(result.sessionToken);
       }
       showMsg("注册成功！");
-      router.replace("/(tabs)" as any);
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.location.href = "/";
+      } else {
+        router.replace("/(tabs)" as any);
+      }
     } catch (e: any) {
       showMsg(e.message || "注册失败");
     } finally {
@@ -93,6 +98,7 @@ export default function UserRegisterScreen() {
   const handlePasswordRegister = async () => {
     if (!email.trim() || !password) return showMsg("请填写邮箱和密码");
     if (password.length < 6) return showMsg("密码至少 6 位");
+    if (!phone.trim()) return showMsg("请填写手机号");
     setBusy(true);
     try {
       const baseUrl = getApiBaseUrl();
@@ -113,8 +119,12 @@ export default function UserRegisterScreen() {
       if (data.app_session_id) {
         await setSessionToken(data.app_session_id);
       }
-      showMsg("注册成功！可在用户中心验证邮箱解锁完整福利。");
-      router.replace("/(tabs)" as any);
+      showMsg("注册成功！");
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        window.location.href = "/";
+      } else {
+        router.replace("/(tabs)" as any);
+      }
     } catch (e: any) {
       showMsg(e.message || "注册失败");
     } finally {
@@ -290,18 +300,15 @@ export default function UserRegisterScreen() {
             </View>
           )}
 
-          {/* 手机号（选填，强烈推荐） */}
+          {/* 手机号（必填） */}
           <View style={styles.field}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Text style={[styles.label, { color: colors.muted }]}>手机号</Text>
-              <View style={styles.recommendBadge}>
-                <Text style={styles.recommendText}>建议填写 · 解锁定期福利</Text>
-              </View>
-            </View>
+            <Text style={[styles.label, { color: colors.muted }]}>
+              手机号 <Text style={{ color: "#F87171" }}>*</Text>
+            </Text>
             <TextInput
               value={phone}
               onChangeText={setPhone}
-              placeholder="选填，用于接收 EA 更新与活动通知"
+              placeholder="请输入手机号，用于接收 EA 更新与活动通知"
               placeholderTextColor={colors.muted}
               keyboardType="phone-pad"
               maxLength={20}
