@@ -8,6 +8,7 @@ const isCiOrProdBuild = process.env.CI === "true" || process.env.NODE_ENV === "p
 // === 性能 P0 改造 ===
 
 // 1. 生产构建丢掉 console.log/info/debug，保留 console.warn/error
+//    注意：Metro 内部用 'output' 字段，所以这里不要用 'format'，避免冲突
 config.transformer.minifierConfig = {
   ...(config.transformer.minifierConfig ?? {}),
   compress: {
@@ -18,7 +19,6 @@ config.transformer.minifierConfig = {
     passes: 2,
   },
   mangle: { safari10: true },
-  format: { comments: false },
 };
 
 // 2. 防止 server 代码泄漏到 web bundle
