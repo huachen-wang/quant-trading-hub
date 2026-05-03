@@ -592,7 +592,7 @@ export default function HomeScreen() {
       style={customBannerStyles.outer}
     >
       <LinearGradient
-        colors={["#0A1628", "#1E1B4B", "#312E81"]}
+        colors={["#0A1628", "#1A1410", "#2A1F0E"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={customBannerStyles.container}
@@ -603,26 +603,16 @@ export default function HomeScreen() {
         <View style={customBannerStyles.gridLine1} />
         <View style={customBannerStyles.gridLine2} />
 
-        {/* 左侧图标 */}
+        {/* 左侧图标（裸 emoji，无外框） */}
         <View style={customBannerStyles.iconWrap}>
-          <LinearGradient colors={["#A8895A", "#C9A96E"]} style={customBannerStyles.iconGradient}>
-            <Text style={{ fontSize: 18 }}>🛠️</Text>
-          </LinearGradient>
+          <Text style={{ fontSize: 28 }}>🔓</Text>
         </View>
 
         {/* 右侧内容 */}
         <View style={customBannerStyles.content}>
-          <View style={customBannerStyles.tagRow}>
-            <View style={customBannerStyles.tag}>
-              <Text style={customBannerStyles.tagText}>核心服务</Text>
-            </View>
-            <View style={customBannerStyles.tagHot}>
-              <Text style={customBannerStyles.tagHotText}>热门</Text>
-            </View>
-          </View>
-          <Text style={customBannerStyles.title}>军火库 · 专属EA定制</Text>
+          <Text style={customBannerStyles.title}>EA 破解网 · 专属 EA 破解</Text>
           <Text style={customBannerStyles.desc} numberOfLines={2}>
-            源头低价拿货 · 无限授权 · 专属品牌定制
+            联系定制 · 专业团队
           </Text>
         </View>
 
