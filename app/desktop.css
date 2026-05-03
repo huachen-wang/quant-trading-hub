@@ -80,12 +80,10 @@
     background-color: #080d19;
   }
 
-  #root > div {
-    max-width: 1280px;
-    margin: 0 auto;
-    min-height: 100vh;
-    box-shadow: 0 0 60px rgba(0, 0, 0, 0.3);
-  }
+  /* 移除强制居中和 100vh 限制 — 这些约束会嵌套限高，导致内容被卡在一窄条里 */
+  /* 让内容自然撑开，宽度撑满屏幕，高度跟随实际内容 */
+  /* 如果未来要做 1280px 居中布局，应该在每个页面内部用 maxWidth + alignSelf 实现，
+     不要在 #root > div 这个全局容器上做 */
 
   header {
     padding: 16px 24px !important;
