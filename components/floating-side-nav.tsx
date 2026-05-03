@@ -247,7 +247,7 @@ function SectionTitle({ en, zh }: { en: string; zh: string }) {
 const styles = StyleSheet.create({
   // FAB（右下角）
   fab: {
-    position: "absolute" as any,
+    position: "fixed" as any,
     bottom: 96, // 咨询按钮一般 24-30px，留 60px 间距 + 自身高度
     right: 24,
     width: 48,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
 
   // 遮罩
   backdrop: {
-    position: "absolute" as any,
+    position: "fixed" as any,
     top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: "rgba(0,0,0,0.55)",
     zIndex: 1000,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
 
   // 抽屉（280 宽）
   drawer: {
-    position: "absolute" as any,
+    position: "fixed" as any,
     top: 0, left: 0, bottom: 0,
     width: 280,
     backgroundColor: "#0F1E33",
