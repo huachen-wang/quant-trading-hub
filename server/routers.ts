@@ -254,6 +254,11 @@ export const appRouter = router({
       .input(z.object({ strategyId: z.number() }))
       .query(({ ctx, input }) => db.hasPurchased(ctx.user.id, input.strategyId)),
   }),
+
+  // 下载相关
+  downloads: router({
+    create: protectedProcedure
+      .input(z.object({ strategyId: z.number() }))
       .mutation(({ ctx, input }) => {
         return db.createDownload({
           userId: ctx.user.id,
@@ -1010,18 +1015,6 @@ export const appRouter = router({
         await db.updatePayment(usdtPayment.id, { callbackRaw: JSON.stringify({ type: 'user_submitted', submittedAt: new Date().toISOString(), userNote: input.txHashOrNote || null }) });
         return { ok: true, message: '已通知客服，30 分钟内确认。' };
       }),
-  }),
-  // ─── Bundle B: 下载 ───
-  downloads: router({
-    getSignedUrl: protectedProcedure
-      .input(z.object({ productKind: z.enum(['strategy']), productId: z.number() }))
-      .query(async ({ ctx, input }) => {
-        const purchased = await db.hasUserPurchased(ctx.user.id, input.productId);
-        const strategy = await db.getStrategyById(input.productId);
-        const token = signDownloadToken({ userId: ctx.user.id, productKind: input.productKind, productId: input.productId });
-        return { url: '/api/download/secure?token=' + encodeURIComponent(token), expiresIn: 30 * 60 };
-      }),
-    list: protectedProcedure.query(async ({ ctx }) => db.getUserDownloads(ctx.user.id)),
   }),
 });
 

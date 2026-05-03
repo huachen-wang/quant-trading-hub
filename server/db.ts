@@ -1329,22 +1329,12 @@ export async function listPendingUsdtPayments() {
     )
     .orderBy(desc(payments.createdAt));
 }
-) {
-  const db = await getDb();
-  if (!db) throw new Error("DB not available");
-  const update: any = {};
-  if (data.name !== undefined) update.name = data.name;
-  if (data.avatar !== undefined) update.avatar = data.avatar;
-  if (data.bio !== undefined) update.bio = data.bio;
-  if (Object.keys(update).length === 0) return;
-  await db.update(users).set(update).where(eq(users.id, userId));
-}
-// ==================== Bundle B additions ====================
+
+// ==================== Bundle B: 购买权限 / 下载记录 / Profile 编辑 ====================
+
 export async function hasUserPurchased(userId: number, strategyId: number): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
-
-  // 检查新订单系统
   const paidOrders = await db
     .select()
     .from(orders)
@@ -1358,8 +1348,6 @@ export async function hasUserPurchased(userId: number, strategyId: number): Prom
     )
     .limit(1);
   if (paidOrders.length > 0) return true;
-
-  // 检查旧 purchases 表（向后兼容）
   const purchaseRows = await db
     .select()
     .from(purchases)
@@ -1368,32 +1356,16 @@ export async function hasUserPurchased(userId: number, strategyId: number): Prom
   return purchaseRows.length > 0;
 }
 
-/**
- * 记录下载（用于统计）
- *
- * 写入 downloads 表 + 更新 strategies.downloadCount。
- * 已存在的下载记录（同用户同策略）不重复增加 count。
- */
 export async function recordDownload(userId: number, strategyId: number) {
   const db = await getDb();
   if (!db) return;
-
-  // 检查是否已记录过下载
   const existing = await db
     .select()
     .from(downloads)
     .where(and(eq(downloads.userId, userId), eq(downloads.strategyId, strategyId)))
     .limit(1);
-
   if (existing.length === 0) {
-    // 首次下载：写记录 + 增加计数
-    await db.insert(downloads).values({
-      userId,
-      strategyId,
-      downloadedAt: new Date(),
-    });
-
-    // 更新 strategies.downloadCount + 1
+    await db.insert(downloads).values({ userId, strategyId, downloadedAt: new Date() });
     const strategy = await getStrategyById(strategyId);
     if (strategy) {
       await db
@@ -1403,8 +1375,6 @@ export async function recordDownload(userId: number, strategyId: number) {
     }
   }
 }
-
-// ==================== Profile 编辑 ====================
 
 export async function updateUserProfile(
   userId: number,
