@@ -85,7 +85,10 @@ const config: ExpoConfig = {
     favicon: "./assets/images/favicon.png",
   },
   plugins: [
-    "expo-router",
+    [
+      "expo-router",
+      { asyncRoutes: { web: true, default: "development" } },
+    ],
     [
       "expo-audio",
       {
