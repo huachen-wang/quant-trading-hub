@@ -101,7 +101,7 @@ export default function TabLayout() {
           tabBarButton: HapticTab,
           tabBarShowLabel: false,
           tabBarIconStyle: Platform.OS === "web" ? { height: 52 } : undefined,
-          tabBarStyle: isDesktopWeb
+          tabBarStyle: Platform.OS === "web"
             ? { display: "none" }
             : {
                 paddingTop: 2,
