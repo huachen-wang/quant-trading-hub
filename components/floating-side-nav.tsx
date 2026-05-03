@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
   Platform,
-  Dimensions,
   ScrollView,
   ActivityIndicator,
 } from "react-native";
@@ -15,42 +14,36 @@ import { trpc } from "@/lib/trpc";
 /**
  * 悬浮侧边栏（左上角入口）
  *
- * 折叠态：左上角一个 ☰ 按钮（z-index 高于内容、低于 Modal）
+ * 折叠态：左上角一个 ☰ 按钮
  * 展开态：从左侧滑入 320px 宽抽屉，内含三个区：
- *   1. 项目矩阵（写死的 4 个子站）
- *   2. 快捷跳转（5 个主栏目，跟顶导一致，方便用户少移动鼠标）
+ *   1. 快捷跳转（5 个主栏目）
+ *   2. 项目矩阵（4 个子站）
  *   3. 自定义入口（后台 trpc.siteEntries.list 拉数据）
+ *
+ * v2 修复:
+ * - 删除 windowWidth 守卫（无意义，反而 useState(0) 时某些路径下 return null 不再渲染）
+ * - trpc.siteEntries.list.useQuery 必须直接调用（hooks 不能用可选链 ?. ）
+ * - z-index 提到 999，避免被顶导（z-index 100）盖住
+ * - FAB 加古金描边，提高可视度
  */
 export function FloatingSideNav() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(0);
 
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    const update = () => {
-      try { setWindowWidth(Dimensions.get("window").width); } catch {}
-    };
-    update();
-    const sub = Dimensions.addEventListener("change", update);
-    return () => { try { sub?.remove(); } catch {} };
-  }, []);
-
-  // 拉后台自定义入口
-  const customEntriesQuery = trpc.siteEntries?.list?.useQuery?.(
+  // Hooks 必须在条件判断之前调用
+  const customEntriesQuery = trpc.siteEntries.list.useQuery(
     { enabled: true },
     {
-      // 安全降级：如果后端 trpc 没注册这个 router，前端不报错
       enabled: Platform.OS === "web",
       retry: false,
       staleTime: 5 * 60 * 1000,
     }
   );
-  const customEntries = customEntriesQuery?.data ?? [];
 
   // 仅 web 端显示，原生 App 走自己的导航
   if (Platform.OS !== "web") return null;
-  if (windowWidth === 0) return null;
+
+  const customEntries = customEntriesQuery.data ?? [];
 
   const goTo = (href: string) => {
     setIsOpen(false);
@@ -82,13 +75,15 @@ export function FloatingSideNav() {
   return (
     <>
       {/* 左上角悬浮按钮 */}
-      <Pressable
-        onPress={() => setIsOpen(true)}
-        style={[styles.fab, isOpen && styles.fabHidden]}
-        accessibilityLabel="打开导航"
-      >
-        <Text style={styles.fabIcon}>☰</Text>
-      </Pressable>
+      {!isOpen && (
+        <Pressable
+          onPress={() => setIsOpen(true)}
+          style={styles.fab}
+          accessibilityLabel="打开导航"
+        >
+          <Text style={styles.fabIcon}>☰</Text>
+        </Pressable>
+      )}
 
       {/* 遮罩 */}
       {isOpen && (
@@ -194,7 +189,7 @@ export function FloatingSideNav() {
               </>
             )}
 
-            {customEntriesQuery?.isLoading && (
+            {customEntriesQuery.isLoading && (
               <View style={{ padding: 24, alignItems: "center" }}>
                 <ActivityIndicator color="#C9A96E" />
               </View>
@@ -215,19 +210,18 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    backgroundColor: "rgba(10,22,40,0.85)",
     borderWidth: 1,
-    borderColor: "rgba(148,163,184,0.18)",
+    borderColor: "rgba(201,169,110,0.4)",
     alignItems: "center",
     justifyContent: "center",
-    zIndex: 90, // 低于顶导（顶导 100），不挡 logo
-    // 注意：如果你顶导左上角有 logo，FAB 会跟它重叠。下面 fabHidden 在抽屉打开时隐藏 FAB。
+    zIndex: 999,
   },
-  fabHidden: { opacity: 0 },
   fabIcon: {
-    color: "#F4F6FB",
-    fontSize: 18,
+    color: "#C9A96E",
+    fontSize: 20,
     fontWeight: "700",
+    lineHeight: 22,
   },
 
   // 遮罩
@@ -301,7 +295,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   entryCell: {
-    width: 95, // (320 - 24 padding - 6 gap) / 2 ≈ 145，但要再小点排得开
+    width: 145,
     paddingVertical: 14,
     paddingHorizontal: 6,
     backgroundColor: "rgba(255,255,255,0.03)",
