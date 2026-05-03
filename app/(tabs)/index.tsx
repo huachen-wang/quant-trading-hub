@@ -68,6 +68,17 @@ export default function HomeScreen() {
   const [saleModeFilter, setSaleModeFilter] = useState<"all" | "direct" | "inquiry">("all");
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // 是否有任何筛选生效（用于显示"清空全部"和面包屑）
+  const hasAnyFilter = !!platformFilter || saleModeFilter !== "all" || !!categoryFilter || !!tagFilter || orderBy !== "hot";
+  const clearAllFilters = () => {
+    setPlatformFilter(undefined);
+    setSaleModeFilter("all");
+    setCategoryFilter(undefined);
+    setTagFilter("");
+    setOrderBy("hot");
+  };
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [selectedStrategyTitle, setSelectedStrategyTitle] = useState("");
 
@@ -323,6 +334,26 @@ export default function HomeScreen() {
   );
 
   // ═══════════════════ 筛选区域 ═══════════════════
+  // 已选中的筛选标签（面包屑）
+  const activeFilterChips = (() => {
+    const chips: { label: string; clear: () => void }[] = [];
+    if (platformFilter) chips.push({ label: platformFilter, clear: () => setPlatformFilter(undefined) });
+    if (saleModeFilter === "direct") chips.push({ label: "💰 直购", clear: () => setSaleModeFilter("all") });
+    if (saleModeFilter === "inquiry") chips.push({ label: "🤝 商务授权", clear: () => setSaleModeFilter("all") });
+    if (categoryFilter) {
+      const cat = (categoriesData || []).find((c: any) => c.slug === categoryFilter);
+      if (cat) chips.push({ label: `${cat.icon || ""}${cat.name}`.trim(), clear: () => setCategoryFilter(undefined) });
+    }
+    if (tagFilter) {
+      const tag = dynamicTags.find((t: any) => t.value === tagFilter);
+      chips.push({ label: tag?.label || tagFilter, clear: () => setTagFilter("") });
+    }
+    if (orderBy !== "hot") {
+      chips.push({ label: orderBy === "latest" ? "最新" : "收益率", clear: () => setOrderBy("hot") });
+    }
+    return chips;
+  })();
+
   const renderFilters = () => (
     <View style={filterStyles.container}>
       {/* 标题行 */}
@@ -351,7 +382,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* 平台 + 排序 */}
+      {/* 行 1：平台 + 排序（最常用，常驻）*/}
       <View style={filterStyles.filterRow}>
         <View style={filterStyles.filterGroup}>
           {[
@@ -367,12 +398,12 @@ export default function HomeScreen() {
                 style={[
                   filterStyles.filterChip,
                   isActive
-                    ? { backgroundColor: "#A8895A", borderColor: "#A8895A" }
+                    ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" }
                     : { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
                 activeOpacity={0.7}
               >
-                <Text style={[filterStyles.filterChipText, { color: isActive ? "#fff" : colors.muted }]}>
+                <Text style={[filterStyles.filterChipText, { color: isActive ? "#0A1628" : colors.muted }]}>
                   {item.label}
                 </Text>
               </TouchableOpacity>
@@ -395,11 +426,11 @@ export default function HomeScreen() {
                 onPress={() => setOrderBy(item.value)}
                 style={[
                   filterStyles.sortChip,
-                  isActive && { borderBottomWidth: 2, borderBottomColor: "#A8895A" },
+                  isActive && { borderBottomWidth: 2, borderBottomColor: "#C9A96E" },
                 ]}
                 activeOpacity={0.7}
               >
-                <Text style={[filterStyles.sortChipText, { color: isActive ? "#A8895A" : colors.muted }]}>
+                <Text style={[filterStyles.sortChipText, { color: isActive ? "#C9A96E" : colors.muted }]}>
                   {item.label}
                 </Text>
               </TouchableOpacity>
@@ -408,8 +439,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* A.2: 销售模式筛选 */}
-      <View style={[filterStyles.filterRow, { marginTop: 8 }]}>
+      {/* 行 2：销售模式 + 高级筛选按钮 */}
+      <View style={[filterStyles.filterRow, { marginTop: 8, justifyContent: "space-between" }]}>
         <View style={filterStyles.filterGroup}>
           {([
             { label: "全部", value: "all" },
@@ -424,74 +455,130 @@ export default function HomeScreen() {
                 style={[
                   filterStyles.filterChip,
                   isActive
-                    ? { backgroundColor: "#A8895A", borderColor: "#A8895A" }
+                    ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" }
                     : { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
                 activeOpacity={0.7}
               >
-                <Text style={[filterStyles.filterChipText, { color: isActive ? "#fff" : colors.muted }]}>
+                <Text style={[filterStyles.filterChipText, { color: isActive ? "#0A1628" : colors.muted }]}>
                   {item.label}
                 </Text>
               </TouchableOpacity>
             );
           })}
         </View>
+
+        {/* 高级筛选切换 */}
+        <TouchableOpacity
+          onPress={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          style={[
+            filterStyles.advancedToggle,
+            showAdvancedFilters
+              ? { backgroundColor: "rgba(201,169,110,0.12)", borderColor: "#C9A96E" }
+              : { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+          activeOpacity={0.7}
+        >
+          <Text style={[filterStyles.advancedToggleText, { color: showAdvancedFilters ? "#C9A96E" : colors.muted }]}>
+            {showAdvancedFilters ? "▲ 收起" : "▾ 高级筛选"}
+          </Text>
+          {(categoryFilter || tagFilter) && !showAdvancedFilters && (
+            <View style={filterStyles.advancedDot} />
+          )}
+        </TouchableOpacity>
       </View>
-      {/* A.2: 分类筛选 */}
-      {(categoriesData || []).length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8, gap: 6 }} style={{ marginTop: 4 }}>
-          <TouchableOpacity onPress={() => setCategoryFilter(undefined)} style={[filterStyles.filterChip, !categoryFilter ? { backgroundColor: "#A8895A", borderColor: "#A8895A" } : { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.7}>
-            <Text style={[filterStyles.filterChipText, { color: !categoryFilter ? "#fff" : colors.muted }]}>全部分类</Text>
-          </TouchableOpacity>
-          {(categoriesData || []).filter((c: any) => c.parentId === null).map((c: any) => {
-            const isActive = categoryFilter === c.slug;
-            return (
-              <TouchableOpacity key={c.slug} onPress={() => setCategoryFilter(c.slug)} style={[filterStyles.filterChip, isActive ? { backgroundColor: "#A8895A", borderColor: "#A8895A" } : { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.7}>
-                <Text style={[filterStyles.filterChipText, { color: isActive ? "#fff" : colors.muted }]}>{c.icon ? `${c.icon} ` : ""}{c.name}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
-      {/* 标签筛选（动态提取，无标签时不显示） */}
-      {dynamicTags.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }} contentContainerStyle={{ paddingRight: 12 }}>
-          {/* “全部”按钮 */}
+
+      {/* 行 3（条件）：已选筛选面包屑 + 清空按钮 */}
+      {hasAnyFilter && (
+        <View style={[filterStyles.filterRow, { marginTop: 10, alignItems: "center", flexWrap: "wrap" }]}>
+          <Text style={[filterStyles.activeLabel, { color: colors.muted }]}>已选：</Text>
+          {activeFilterChips.map((chip, i) => (
+            <TouchableOpacity
+              key={i}
+              onPress={chip.clear}
+              style={filterStyles.activeChip}
+              activeOpacity={0.7}
+            >
+              <Text style={filterStyles.activeChipText}>{chip.label}</Text>
+              <Text style={filterStyles.activeChipX}>✕</Text>
+            </TouchableOpacity>
+          ))}
           <TouchableOpacity
-            onPress={() => setTagFilter("")}
-            style={[
-              filterStyles.tagChip,
-              {
-                backgroundColor: tagFilter === "" ? "#A8895A15" : colors.surface,
-                borderColor: tagFilter === "" ? "#A8895A" : colors.border,
-              },
-            ]}
+            onPress={clearAllFilters}
+            style={filterStyles.clearAllBtn}
             activeOpacity={0.7}
           >
-            <Text style={[filterStyles.tagChipText, { color: tagFilter === "" ? "#A8895A" : colors.muted }]}>全部</Text>
+            <Text style={filterStyles.clearAllText}>清空全部</Text>
           </TouchableOpacity>
-          {dynamicTags.map((tag) => {
-            const isActive = tagFilter === tag.value;
-            return (
-              <TouchableOpacity
-                key={tag.value}
-                onPress={() => setTagFilter(tag.value)}
-                style={[
-                  filterStyles.tagChip,
-                  {
-                    backgroundColor: isActive ? "#A8895A15" : colors.surface,
-                    borderColor: isActive ? "#A8895A" : colors.border,
-                  },
-                ]}
-                activeOpacity={0.7}
-              >
-                <Text style={[filterStyles.tagChipText, { color: isActive ? "#A8895A" : colors.muted }]}>
-                  {tag.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        </View>
+      )}
+
+      {/* 折叠抽屉：高级筛选（分类 + 标签）*/}
+      {showAdvancedFilters && (
+        <View style={[filterStyles.advancedPanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {/* 分类 */}
+          {(categoriesData || []).length > 0 && (
+            <>
+              <Text style={[filterStyles.advancedSectionTitle, { color: colors.muted }]}>分类</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4, gap: 6 }}>
+                <TouchableOpacity onPress={() => setCategoryFilter(undefined)} style={[filterStyles.filterChip, !categoryFilter ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" } : { backgroundColor: colors.background, borderColor: colors.border }]} activeOpacity={0.7}>
+                  <Text style={[filterStyles.filterChipText, { color: !categoryFilter ? "#0A1628" : colors.muted }]}>全部分类</Text>
+                </TouchableOpacity>
+                {(categoriesData || []).filter((c: any) => c.parentId === null).map((c: any) => {
+                  const isActive = categoryFilter === c.slug;
+                  return (
+                    <TouchableOpacity key={c.slug} onPress={() => setCategoryFilter(c.slug)} style={[filterStyles.filterChip, isActive ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" } : { backgroundColor: colors.background, borderColor: colors.border }]} activeOpacity={0.7}>
+                      <Text style={[filterStyles.filterChipText, { color: isActive ? "#0A1628" : colors.muted }]}>{c.icon ? `${c.icon} ` : ""}{c.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </>
+          )}
+
+          {/* 标签 */}
+          {dynamicTags.length > 0 && (
+            <>
+              <Text style={[filterStyles.advancedSectionTitle, { color: colors.muted, marginTop: 14 }]}>标签</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 12, gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setTagFilter("")}
+                  style={[
+                    filterStyles.tagChip,
+                    {
+                      backgroundColor: tagFilter === "" ? "rgba(201,169,110,0.12)" : colors.background,
+                      borderColor: tagFilter === "" ? "#C9A96E" : colors.border,
+                    },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[filterStyles.tagChipText, { color: tagFilter === "" ? "#C9A96E" : colors.muted }]}>全部</Text>
+                </TouchableOpacity>
+                {dynamicTags.map((tag) => {
+                  const isActive = tagFilter === tag.value;
+                  return (
+                    <TouchableOpacity
+                      key={tag.value}
+                      onPress={() => setTagFilter(tag.value)}
+                      style={[
+                        filterStyles.tagChip,
+                        {
+                          backgroundColor: isActive ? "rgba(201,169,110,0.12)" : colors.background,
+                          borderColor: isActive ? "#C9A96E" : colors.border,
+                        },
+                      ]}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[filterStyles.tagChipText, { color: isActive ? "#C9A96E" : colors.muted }]}>
+                        {tag.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </>
+          )}
+        </View>
       )}
     </View>
   );
@@ -978,6 +1065,83 @@ const filterStyles = StyleSheet.create({
   tagChipText: {
     fontSize: 12,
     fontWeight: "600",
+  },
+
+  // ===== v2 新增：高级筛选切换按钮 =====
+  advancedToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  advancedToggleText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  advancedDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#C9A96E",
+    marginLeft: 6,
+  },
+
+  // ===== v2 新增：已选面包屑 =====
+  activeLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginRight: 8,
+  },
+  activeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(201,169,110,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(201,169,110,0.4)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    marginRight: 6,
+    marginBottom: 4,
+  },
+  activeChipText: {
+    color: "#C9A96E",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  activeChipX: {
+    color: "#C9A96E",
+    fontSize: 12,
+    fontWeight: "700",
+    marginLeft: 6,
+  },
+  clearAllBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginLeft: 4,
+  },
+  clearAllText: {
+    color: "#94A3B8",
+    fontSize: 11,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
+
+  // ===== v2 新增：折叠抽屉面板 =====
+  advancedPanel: {
+    marginTop: 10,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  advancedSectionTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    marginBottom: 6,
+    textTransform: "uppercase",
   },
 });
 
