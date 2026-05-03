@@ -43,9 +43,9 @@ function getScreenSize(): ScreenSize {
 function getNumColumns(screenSize: ScreenSize): number {
   switch (screenSize) {
     case "desktop":
-      return 3; // 桌面端3列 - 让每个卡片更大更醒目
+      return 5; // 桌面端5列（v2: 让一行更紧凑，类似商品瀑布流）
     case "tablet":
-      return 3; // 平板端3列
+      return 3; // 平板端3列（保持）
     case "mobile":
     default:
       return 2; // 移动端2列
