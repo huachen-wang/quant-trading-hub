@@ -922,7 +922,15 @@ export const appRouter = router({
         }
         if (parseFloat(amount) <= 0) throw new Error('商品金额异常');
         const existing = await db.getUserOrders(ctx.user.id, { status: 'pending', limit: 5 });
-        if (dup) return { ok: true, orderNo: dup.orderNo, isExisting: true };
+        const dup = existing.find(
+          (o: any) =>
+            o.productKind === input.productKind &&
+            o.productId === input.productId &&
+            !isOrderExpired(o.expiresAt)
+        );
+        if (dup) {
+          return { ok: true, orderNo: dup.orderNo, isExisting: true };
+        }
         const orderNo = generateOrderNo();
         await db.createOrder({ orderNo, userId: ctx.user.id, productKind: input.productKind, productId: input.productId, productTitle, productCover, amount, originalAmount, status: 'pending', expiresAt: getOrderExpiresAt(30) });
         return { ok: true, orderNo, isExisting: false };
@@ -995,6 +1003,9 @@ export const appRouter = router({
         if (order.status === 'cancelled' || order.status === 'expired') throw new Error('订单已失效');
         if (isOrderExpired(order.expiresAt)) { await db.cancelOrder(order.id); throw new Error('订单已过期，请重新下单'); }
         const gateway = getGatewayForMethod(input.method);
+        if (!gateway) {
+          throw new Error(`不支持的支付方式：${input.method}`);
+        }
         const returnUrl = (process.env.ZPAY_RETURN_URL || '') + '?orderNo=' + encodeURIComponent(order.orderNo);
         const result = await gateway.initiate({ order, method: input.method, returnUrl });
         const existing = await db.getActivePaymentByOrderId(order.id);

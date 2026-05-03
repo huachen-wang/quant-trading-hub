@@ -18,7 +18,7 @@
  *   verify_phone    - 同上，验证手机号
  */
 
-import { eq, and, gt, desc } from "drizzle-orm";
+import { eq, and, gt, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../../drizzle/schema";
@@ -184,7 +184,7 @@ export async function verifyCode(opts: VerifyCodeOpts): Promise<VerifyCodeResult
  */
 export async function cleanupExpiredCodes(): Promise<number> {
   const d = getDb();
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 小时前
-  const result = await d.delete(verificationCodes).where(gt(cutoff, verificationCodes.expiresAt));
+  // 删除 expiresAt < NOW() 的过期验证码
+  const result = await d.delete(verificationCodes).where(gt(sql`NOW()`, verificationCodes.expiresAt));
   return result.rowsAffected || 0;
 }
