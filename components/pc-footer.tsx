@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     borderTopWidth: 1,
     borderTopColor: "rgba(148,163,184,0.12)",
-    backgroundColor: "rgba(5,8,16,0.4)",
+    backgroundColor: "#0A0E1A",
   },
   inner: { maxWidth: 1400, width: "100%", alignSelf: "center" },
   sites: {
