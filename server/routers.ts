@@ -254,11 +254,6 @@ export const appRouter = router({
       .input(z.object({ strategyId: z.number() }))
       .query(({ ctx, input }) => db.hasPurchased(ctx.user.id, input.strategyId)),
   }),
-
-  // 下载相关
-  downloads: router({
-    create: protectedProcedure
-      .input(z.object({ strategyId: z.number() }))
       .mutation(({ ctx, input }) => {
         return db.createDownload({
           userId: ctx.user.id,

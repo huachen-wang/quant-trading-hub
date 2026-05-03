@@ -1329,56 +1329,6 @@ export async function listPendingUsdtPayments() {
     )
     .orderBy(desc(payments.createdAt));
 }
-
-// ==================== Bundle B: 购买权限 / 下载记录 / Profile 编辑 ====================
-
-export async function hasUserPurchased(userId: number, strategyId: number): Promise<boolean> {
-  const db = await getDb();
-  if (!db) return false;
-  const paidOrders = await db
-    .select()
-    .from(orders)
-    .where(
-      and(
-        eq(orders.userId, userId),
-        eq(orders.productKind, "strategy"),
-        eq(orders.productId, strategyId),
-        eq(orders.status, "paid")
-      )
-    )
-    .limit(1);
-  if (paidOrders.length > 0) return true;
-  const purchaseRows = await db
-    .select()
-    .from(purchases)
-    .where(and(eq(purchases.userId, userId), eq(purchases.strategyId, strategyId)))
-    .limit(1);
-  return purchaseRows.length > 0;
-}
-
-export async function recordDownload(userId: number, strategyId: number) {
-  const db = await getDb();
-  if (!db) return;
-  const existing = await db
-    .select()
-    .from(downloads)
-    .where(and(eq(downloads.userId, userId), eq(downloads.strategyId, strategyId)))
-    .limit(1);
-  if (existing.length === 0) {
-    await db.insert(downloads).values({ userId, strategyId, downloadedAt: new Date() });
-    const strategy = await getStrategyById(strategyId);
-    if (strategy) {
-      await db
-        .update(strategies)
-        .set({ downloadCount: (strategy.downloadCount || 0) + 1 })
-        .where(eq(strategies.id, strategyId));
-    }
-  }
-}
-
-export async function updateUserProfile(
-  userId: number,
-  data: { name?: string; avatar?: string; bio?: string }
 ) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
@@ -1389,15 +1339,6 @@ export async function updateUserProfile(
   if (Object.keys(update).length === 0) return;
   await db.update(users).set(update).where(eq(users.id, userId));
 }
-
-export async function updateUserPassword(userId: number, passwordHash: string) {
-  const db = await getDb();
-  if (!db) throw new Error("DB not available");
-  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
-}
-
-
-
 // ==================== Bundle B additions ====================
 export async function hasUserPurchased(userId: number, strategyId: number): Promise<boolean> {
   const db = await getDb();
