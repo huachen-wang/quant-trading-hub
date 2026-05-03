@@ -11,22 +11,18 @@ import { useRouter, usePathname } from "expo-router";
 import { trpc } from "@/lib/trpc";
 
 /**
- * 悬浮侧边栏 v2 — 高级版
+ * 悬浮侧边栏 v3
  *
- * 核心改动 vs v1:
- * - FAB 从左上角 → 右下角（避开 logo + 咨询按钮上方 60px）
- * - 抽屉宽度 320 → 280（更精致）
- * - 列表项左对齐 + 主标 + 副标（信息层级感）
- * - 当前页加 3px 古金竖条 + 浅金底色（active 状态）
- * - 章节标题加 3px 古金竖条 + 英文小字 + 中文（专业感）
- * - 项目矩阵：当前站绿色"当前"标签，外链 ↗ 箭头
- * - 资源中心：2 列网格 + 主标 + 副标
- * - 限时促销加红色 badge 圆点
+ * v3 vs v2 改动:
+ * - FAB 从右下角圆形 → 左下角胶囊 + "导航" 文字（用户一眼看懂、不挡咨询、不撞手机系统三横）
+ * - FAB 形状跟咨询按钮一致（胶囊），颜色独立（古金描边 vs 蓝色实心）
+ * - hover 时古金底色加深
  */
 export function FloatingSideNav() {
   const router = useRouter();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   // Hooks 必须在条件之前
   const customEntriesQuery = trpc.siteEntries.list.useQuery(
@@ -52,7 +48,7 @@ export function FloatingSideNav() {
     if (typeof window !== "undefined") window.open(url, "_blank");
   };
 
-  // ==== 快捷跳转（带副标题）====
+  // ==== 快捷跳转 ====
   const quickLinks = [
     { emoji: "📊", label: "策略广场", sub: "浏览全部 EA 策略", href: "/(tabs)", matchPaths: ["/", "/(tabs)"] },
     { emoji: "🤝", label: "合购", sub: "拼单更优惠", href: "/(tabs)/group-buy", matchPaths: ["/(tabs)/group-buy", "/group-buy"] },
@@ -71,14 +67,17 @@ export function FloatingSideNav() {
 
   return (
     <>
-      {/* 右下角 FAB（贴咨询按钮上方 60px）*/}
+      {/* 左下角胶囊 FAB */}
       {!isOpen && (
         <Pressable
           onPress={() => setIsOpen(true)}
-          style={styles.fab}
+          onHoverIn={() => setIsHovered(true)}
+          onHoverOut={() => setIsHovered(false)}
+          style={[styles.fab, isHovered && styles.fabHover]}
           accessibilityLabel="打开导航"
         >
           <Text style={styles.fabIcon}>☰</Text>
+          <Text style={styles.fabLabel}>导航</Text>
         </Pressable>
       )}
 
@@ -190,7 +189,7 @@ export function FloatingSideNav() {
               ))}
             </View>
 
-            {/* 区 3：资源中心（仅当后台有数据）*/}
+            {/* 区 3：资源中心 */}
             {customEntries.length > 0 && (
               <>
                 <View style={styles.divider} />
@@ -221,7 +220,7 @@ export function FloatingSideNav() {
             )}
           </ScrollView>
 
-          {/* 抽屉底部 footer */}
+          {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>EAXAU © 2026 · 量化军火库</Text>
           </View>
@@ -231,7 +230,6 @@ export function FloatingSideNav() {
   );
 }
 
-// 章节标题组件
 function SectionTitle({ en, zh }: { en: string; zh: string }) {
   return (
     <View style={styles.sectionTitleWrap}>
@@ -245,34 +243,47 @@ function SectionTitle({ en, zh }: { en: string; zh: string }) {
 }
 
 const styles = StyleSheet.create({
-  // FAB（右下角）
+  // ===== 左下角胶囊 FAB =====
   fab: {
-    position: "fixed" as any,
-    bottom: 96, // 咨询按钮一般 24-30px，留 60px 间距 + 自身高度
-    right: 24,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#C9A96E",
+    position: "absolute" as any,
+    bottom: 24,
+    left: 20, // 左下贴角
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 24, // 胶囊形
+    backgroundColor: "rgba(15,30,51,0.95)",
+    borderWidth: 1.2,
+    borderColor: "#C9A96E",
     zIndex: 999,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
-    // 手机端可能太靠右下，但有 ConsultButton 在更下面，不冲突
+  },
+  fabHover: {
+    backgroundColor: "rgba(201,169,110,0.12)",
+    borderColor: "#D8BC83",
   },
   fabIcon: {
-    color: "#0A1628",
-    fontSize: 22,
-    fontWeight: "900",
-    lineHeight: 24,
+    color: "#C9A96E",
+    fontSize: 16,
+    fontWeight: "700",
+    lineHeight: 18,
+    marginRight: 8,
+  },
+  fabLabel: {
+    color: "#F4F6FB",
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+    lineHeight: 16,
   },
 
   // 遮罩
   backdrop: {
-    position: "fixed" as any,
+    position: "absolute" as any,
     top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: "rgba(0,0,0,0.55)",
     zIndex: 1000,
@@ -280,7 +291,7 @@ const styles = StyleSheet.create({
 
   // 抽屉（280 宽）
   drawer: {
-    position: "fixed" as any,
+    position: "absolute" as any,
     top: 0, left: 0, bottom: 0,
     width: 280,
     backgroundColor: "#0F1E33",
@@ -294,7 +305,6 @@ const styles = StyleSheet.create({
     flexDirection: "column",
   },
 
-  // 抽屉头
   drawerHeader: {
     height: 64,
     flexDirection: "row",
@@ -333,98 +343,55 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   sectionBar: {
-    width: 3,
-    height: 14,
+    width: 3, height: 14,
     backgroundColor: "#C9A96E",
     borderRadius: 2,
     marginRight: 12,
   },
   sectionEn: {
-    color: "#A8B3C7",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-    lineHeight: 12,
+    color: "#A8B3C7", fontSize: 10, fontWeight: "700",
+    letterSpacing: 2, lineHeight: 12,
   },
   sectionZh: {
-    color: "#6B7891",
-    fontSize: 10,
-    fontWeight: "500",
-    marginTop: 3,
-    lineHeight: 11,
+    color: "#6B7891", fontSize: 10, fontWeight: "500",
+    marginTop: 3, lineHeight: 11,
   },
 
-  // 列表项（快捷跳转）
+  // 列表项
   listItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginBottom: 2,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 8, marginBottom: 2,
     position: "relative" as any,
   },
-  listItemActive: {
-    backgroundColor: "rgba(201,169,110,0.06)",
-  },
-  listItemHover: {
-    backgroundColor: "rgba(255,255,255,0.03)",
-  },
+  listItemActive: { backgroundColor: "rgba(201,169,110,0.06)" },
+  listItemHover: { backgroundColor: "rgba(255,255,255,0.03)" },
   activeBar: {
     position: "absolute" as any,
-    left: 0,
-    top: 8,
-    bottom: 8,
-    width: 3,
-    backgroundColor: "#C9A96E",
-    borderRadius: 2,
+    left: 0, top: 8, bottom: 8, width: 3,
+    backgroundColor: "#C9A96E", borderRadius: 2,
   },
-  itemEmoji: {
-    fontSize: 16,
-    marginRight: 14,
-  },
-  itemLabel: {
-    color: "#F4F6FB",
-    fontSize: 13,
-    fontWeight: "500",
-    lineHeight: 16,
-  },
-  itemSub: {
-    color: "#6B7891",
-    fontSize: 10,
-    marginTop: 2,
-    lineHeight: 12,
-  },
+  itemEmoji: { fontSize: 16, marginRight: 14 },
+  itemLabel: { color: "#F4F6FB", fontSize: 13, fontWeight: "500", lineHeight: 16 },
+  itemSub: { color: "#6B7891", fontSize: 10, marginTop: 2, lineHeight: 12 },
   badge: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#E63946",
-    marginLeft: 8,
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: "#E63946", marginLeft: 8,
   },
   activeArrow: {
-    color: "#C9A96E",
-    fontSize: 12,
-    fontWeight: "600",
-    marginLeft: 8,
+    color: "#C9A96E", fontSize: 12, fontWeight: "600", marginLeft: 8,
   },
 
-  // 分隔线
   divider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.05)",
-    marginVertical: 8,
-    marginHorizontal: 20,
+    height: 1, backgroundColor: "rgba(255,255,255,0.05)",
+    marginVertical: 8, marginHorizontal: 20,
   },
 
   // 项目矩阵
   matrixItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginBottom: 4,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 8, marginBottom: 4,
   },
   matrixItemCurrent: {
     backgroundColor: "rgba(201,169,110,0.06)",
@@ -437,36 +404,24 @@ const styles = StyleSheet.create({
   matrixSub: { color: "#6B7891", fontSize: 10, marginTop: 2, lineHeight: 11 },
   currentTag: {
     backgroundColor: "rgba(22,163,74,0.18)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 9,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9,
   },
   currentTagText: {
-    color: "#16A34A",
-    fontSize: 9,
-    fontWeight: "600",
-    lineHeight: 10,
+    color: "#16A34A", fontSize: 9, fontWeight: "600", lineHeight: 10,
   },
   externalIcon: {
-    color: "#A8B3C7",
-    fontSize: 13,
-    fontWeight: "500",
-    marginLeft: 8,
+    color: "#A8B3C7", fontSize: 13, fontWeight: "500", marginLeft: 8,
   },
 
-  // 资源中心 2 列网格
+  // 资源中心 2 列
   resourceGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    paddingHorizontal: 12,
-    gap: 6,
+    flexDirection: "row", flexWrap: "wrap",
+    paddingHorizontal: 12, gap: 6,
   },
   resourceCell: {
-    width: 124, // (280 - 24 - 6) / 2 = 125
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 12,
+    width: 124,
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 10, paddingVertical: 12,
     backgroundColor: "rgba(255,255,255,0.02)",
     borderRadius: 8,
     borderWidth: 1,
@@ -478,22 +433,15 @@ const styles = StyleSheet.create({
   },
   resourceEmoji: { fontSize: 14 },
   resourceLabel: {
-    color: "#F4F6FB",
-    fontSize: 11,
-    fontWeight: "500",
-    lineHeight: 13,
+    color: "#F4F6FB", fontSize: 11, fontWeight: "500", lineHeight: 13,
   },
 
-  // Footer
   footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 20, paddingVertical: 14,
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.05)",
   },
   footerText: {
-    color: "#475569",
-    fontSize: 10,
-    letterSpacing: 0.5,
+    color: "#475569", fontSize: 10, letterSpacing: 0.5,
   },
 });
