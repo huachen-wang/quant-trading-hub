@@ -8,7 +8,6 @@ import { ContactModal } from "@/components/contact-modal";
 import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
 import { PcTopNav } from "@/components/pc-top-nav";
-import { PcFooter } from "@/components/pc-footer";
 import { useResponsive } from "@/hooks/use-responsive";
 
 // 自定义Tab图标组件 - 支持高亮和置灰
@@ -159,8 +158,6 @@ export default function TabLayout() {
         <Tabs.Screen name="favorites" options={{ href: null }} />
         <Tabs.Screen name="profile" options={{ href: null }} />
       </Tabs>
-      {/* B: PC 底部 Footer */}
-      <PcFooter />
       {/* 全局悬浮咋询按钮 */}
       <FloatingConsultButton />
     </View>
