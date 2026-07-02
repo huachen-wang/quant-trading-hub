@@ -9,7 +9,6 @@ import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
 import { PcTopNav } from "@/components/pc-top-nav";
 import { FloatingSideNav } from "@/components/floating-side-nav";
-import { useResponsive } from "@/hooks/use-responsive";
 
 // 自定义Tab图标组件 - 支持高亮和置灰
 function TabIcon({ emoji, label, focused, activeColor, inactiveColor }: {
@@ -85,10 +84,9 @@ function FloatingConsultButton() {
 export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { isDesktop } = useResponsive();
-  const isDesktopWeb = Platform.OS === "web" && isDesktop;
-  const bottomPadding = Platform.OS === "web" ? 4 : Math.max(insets.bottom, 4);
-  const tabBarHeight = (Platform.OS === "web" ? 72 : 56) + bottomPadding;
+  const isWeb = Platform.OS === "web";
+  const bottomPadding = isWeb ? 4 : Math.max(insets.bottom, 4);
+  const tabBarHeight = (isWeb ? 72 : 56) + bottomPadding;
 
   return (
     <View style={{ flex: 1 }}>
@@ -102,21 +100,16 @@ export default function TabLayout() {
           headerShown: false,
           tabBarButton: HapticTab,
           tabBarShowLabel: false,
-          tabBarIconStyle: Platform.OS === "web" ? { height: 52 } : undefined,
-          tabBarStyle: Platform.OS === "web"
+          tabBarIconStyle: isWeb ? { height: 52 } : undefined,
+          tabBarStyle: isWeb
             ? { display: "none" }
             : {
                 paddingTop: 2,
                 paddingBottom: bottomPadding,
                 height: tabBarHeight,
-                backgroundColor: Platform.OS === "web" ? "rgba(15,23,42,0.75)" : colors.background,
+                backgroundColor: colors.background,
                 borderTopColor: "rgba(148,163,184,0.08)",
                 borderTopWidth: StyleSheet.hairlineWidth,
-                ...(Platform.OS === "web" ? {
-                  // @ts-ignore - web-only CSS properties
-                  backdropFilter: "blur(20px) saturate(150%)",
-                  WebkitBackdropFilter: "blur(20px) saturate(150%)",
-                } : {}),
               },
         }}
       >

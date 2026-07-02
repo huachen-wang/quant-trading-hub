@@ -11,7 +11,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from "react-native";
-import { useRouter, Link } from "expo-router";
+import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { UserAuthCard } from "@/components/user-auth-card";
 import { useColors } from "@/hooks/use-colors";
@@ -142,12 +142,12 @@ export default function UserRegisterScreen() {
           title="注册"
           subtitle="加入 EAXAU · 验证邮箱后解锁完整功能与 EA 福利"
           footer={
-            <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center" }}>
-              已有账号？
-              <Link href="/auth/login" style={{ color: colors.primary, fontWeight: "700" }}>
-                {" 立即登录"}
-              </Link>
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <Text style={{ color: colors.muted, fontSize: 13 }}>已有账号？</Text>
+              <TouchableOpacity onPress={() => router.push("/auth/login" as any)}>
+                <Text style={{ color: colors.primary, fontWeight: "700" }}>立即登录</Text>
+              </TouchableOpacity>
+            </View>
           }
         >
           {/* 模式切换 */}

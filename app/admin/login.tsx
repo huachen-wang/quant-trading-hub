@@ -7,6 +7,8 @@ import * as SecureStore from "expo-secure-store";
 import { EventEmitter } from "@/lib/event-emitter";
 import { getApiBaseUrl } from "@/constants/oauth";
 
+const BRAND_LETTERS = ["E", "A", "X", "A", "U"];
+
 /**
  * 管理后台登录页面
  * 访问路径: /admin/login
@@ -91,11 +93,18 @@ export default function AdminLogin() {
       <View style={styles.container}>
         {/* Logo和标题 */}
         <View style={styles.header}>
-          <View style={[styles.logoCircle, { backgroundColor: colors.primary + "15" }]}>
-            <Text style={styles.logoEmoji}>⚙️</Text>
+          <View style={styles.brandMark}>
+            {BRAND_LETTERS.map((letter, index) => (
+              <Text
+                key={`${letter}-${index}`}
+                style={[styles.brandLetter, index === 2 && styles.brandLetterAccent]}
+              >
+                {letter}
+              </Text>
+            ))}
           </View>
           <Text style={[styles.title, { color: colors.foreground }]}>管理员登录</Text>
-          <Text style={[styles.subtitle, { color: colors.muted }]}>量化军火库 - 后台管理系统</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>后台管理系统</Text>
         </View>
 
         {/* 错误提示 */}
@@ -184,16 +193,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 32,
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  brandMark: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 3,
     marginBottom: 16,
   },
-  logoEmoji: {
-    fontSize: 40,
+  brandLetter: {
+    color: "#F8FAFC",
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "900",
+    textShadowColor: "rgba(201,169,110,0.24)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
+  },
+  brandLetterAccent: {
+    color: "#D8BC83",
   },
   title: {
     fontSize: 24,

@@ -14,7 +14,6 @@ import {
   Platform,
   Animated,
   RefreshControl,
-  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,8 +23,6 @@ import { QuickNav } from "@/components/quick-nav";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
-
-const { width: SW } = Dimensions.get("window");
 
 // ===== 动画 =====
 function FadeInView({ children, delay = 0, style }: { children: React.ReactNode; delay?: number; style?: any }) {
@@ -438,7 +435,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
     alignSelf: "center",
-    width: SW - 32,
+    width: "100%",
     ...(Platform.OS === "web"
       ? { boxShadow: "0 4px 30px rgba(168,85,247,0.15), 0 0 60px rgba(168,85,247,0.05)" }
       : { shadowColor: "#A855F7", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 12 }),
@@ -451,21 +448,21 @@ const styles = StyleSheet.create({
   },
   bannerDecorTL: {
     position: "absolute",
-    top: -20,
-    left: -20,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(168,85,247,0.08)",
+    top: 12,
+    left: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(168,85,247,0.05)",
   },
   bannerDecorBR: {
     position: "absolute",
-    bottom: -30,
-    right: -30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(124,58,237,0.06)",
+    bottom: 12,
+    right: 12,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "rgba(124,58,237,0.04)",
   },
   bannerGlow: {
     position: "absolute",
@@ -892,12 +889,12 @@ const styles = StyleSheet.create({
   },
   customEAGlow: {
     position: "absolute",
-    top: -40,
-    right: -40,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(139,92,246,0.1)",
+    top: 12,
+    right: 12,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "rgba(139,92,246,0.08)",
   },
   customEABadge: {
     flexDirection: "row",

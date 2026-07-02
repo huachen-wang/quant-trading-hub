@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { EmptyState } from "@/components/empty-state";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
@@ -138,10 +139,11 @@ export default function AdminOrdersScreen() {
         {isLoading ? (
           <ActivityIndicator color="#D8BC83" style={{ marginTop: 40 }} />
         ) : !orders || orders.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={{ fontSize: 36 }}>📭</Text>
-            <Text style={{ color: colors.muted, marginTop: 8 }}>暂无订单</Text>
-          </View>
+          <EmptyState
+            emoji="📭"
+            title={statusFilter === "all" ? "暂无订单" : `暂无${STATUS_OPTIONS.find((opt) => opt.value === statusFilter)?.label || ""}订单`}
+            subtitle="本地预览会显示样例订单；真实部署后这里会连接线上数据库订单。"
+          />
         ) : (
           orders.map((order: any) => {
             const statusColor = STATUS_COLORS[order.status] || colors.muted;
@@ -333,7 +335,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  empty: { alignItems: "center", padding: 60 },
   orderCard: {
     borderRadius: 12,
     padding: 14,

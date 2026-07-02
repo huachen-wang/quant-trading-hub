@@ -36,7 +36,7 @@ export default function CheckoutSuccessScreen() {
 
   const checkAnim = useRef(new Animated.Value(0)).current;
 
-  const { data: order, isLoading } = trpc.orders.detail.useQuery(
+  const { data: order, isLoading, error: orderError } = trpc.orders.detail.useQuery(
     { orderNo: orderNo! },
     {
       enabled: !!orderNo,
@@ -64,11 +64,39 @@ export default function CheckoutSuccessScreen() {
     );
   }
 
-  if (isLoading || !order) {
+  if (isLoading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#D8BC83" />
         <Text style={{ color: colors.muted, marginTop: 16 }}>加载订单中...</Text>
+      </View>
+    );
+  }
+
+  if (!order) {
+    const needsLogin = /login|unauthorized|10001/i.test(orderError?.message || "");
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyIcon}>!</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>
+          {needsLogin ? "需要登录" : "订单不存在"}
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>
+          {needsLogin ? "请先登录后查看支付结果，或返回首页重新选择商品。" : "没有找到支付结果，请返回首页重新选择商品。"}
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)}
+          style={styles.cta}
+        >
+          <LinearGradient
+            colors={["#A8895A", "#C9A96E"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.ctaInner}
+          >
+            <Text style={styles.ctaText}>{needsLogin ? "去登录" : "返回首页"}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -228,6 +256,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
+  },
+  emptyIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.5)",
+    color: "#D8BC83",
+    textAlign: "center",
+    lineHeight: 52,
+    fontSize: 30,
+    fontWeight: "900",
+    marginBottom: 16,
   },
   successWrap: {
     flex: 1,

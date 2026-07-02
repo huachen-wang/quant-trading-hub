@@ -11,7 +11,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from "react-native";
-import { useRouter, Link } from "expo-router";
+import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { UserAuthCard } from "@/components/user-auth-card";
 import { useColors } from "@/hooks/use-colors";
@@ -143,15 +143,15 @@ export default function UserLoginScreen() {
           subtitle="登录后享受完整功能与会员福利"
           footer={
             <View style={{ alignItems: "center", gap: 10 }}>
-              <Text style={{ color: colors.muted, fontSize: 13 }}>
-                还没有账号？
-                <Link href="/auth/register" style={{ color: colors.primary, fontWeight: "700" }}>
-                  {" 立即注册"}
-                </Link>
-              </Text>
-              <Link href="/auth/forgot-password" style={{ color: colors.muted, fontSize: 12 }}>
-                忘记密码？
-              </Link>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Text style={{ color: colors.muted, fontSize: 13 }}>还没有账号？</Text>
+                <TouchableOpacity onPress={() => router.push("/auth/register" as any)}>
+                  <Text style={{ color: colors.primary, fontWeight: "700" }}>立即注册</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity onPress={() => router.push("/auth/forgot-password" as any)}>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>忘记密码？</Text>
+              </TouchableOpacity>
             </View>
           }
         >

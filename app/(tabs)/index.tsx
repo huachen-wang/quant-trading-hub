@@ -1,159 +1,89 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { View, Text, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator, Animated, StyleSheet, Linking, Platform, ScrollView, Dimensions } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, RefreshControl, Text, View } from "react-native";
+import type { ListRenderItem } from "react-native";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import { Image } from "expo-image";
 import { ScreenContainer } from "@/components/screen-container";
-import { StrategyCard } from "@/components/strategy-card";
 import { ContactModal } from "@/components/contact-modal";
 import { SubscribeModal } from "@/components/subscribe-modal";
-import { QuickNav } from "@/components/quick-nav";
-import { IconSymbol } from "@/components/ui/icon-symbol";
+import { CustomEABanner } from "@/components/home/custom-ea-banner";
+import { HomeHero } from "@/components/home/home-hero";
+import { StrategyFilters, type OrderBy, type PlatformFilter, type SaleModeFilter } from "@/components/home/strategy-filters";
+import { StrategyListItem } from "@/components/home/strategy-list-item";
+import { StrategyListEmpty, StrategyListFooter } from "@/components/home/strategy-list-states";
+import type { HomeStrategy } from "@/components/home/types";
 import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 
-type PlatformFilter = "MT4" | "MT5" | undefined;
-type OrderBy = "latest" | "return" | "hot";
-
 const PAGE_SIZE = 12;
-const { width: SW } = Dimensions.get("window");
-
-// 标签从策略数据中自动提取，无需手动维护
-
-// ─── 快捷入口（文字已修改） ───
-const QUICK_ENTRIES = [
-  {
-    id: "cooperation",
-    title: "工作室扶持合作",
-    subtitle: "深度扶持 · 源头直供",
-    icon: "🤝",
-    gradient: ["#0A1628", "#1E3A8A", "#2563EB"] as readonly [string, string, ...string[]],
-    type: "route" as const,
-    target: "/cooperation",
-    accentColor: "#60A5FA",
-    glowColor: "rgba(96,165,250,0.15)",
-  },
-  {
-    id: "promo",
-    title: "EA限时促销",
-    subtitle: "源头价 · 限时特惠",
-    icon: "⚡",
-    gradient: ["#1A0000", "#7F1D1D", "#DC2626"] as readonly [string, string, ...string[]],
-    type: "route" as const,
-    target: "/promo",
-    accentColor: "#F87171",
-    glowColor: "rgba(248,113,113,0.15)",
-  },
-  {
-    id: "ddxau",
-    title: "订单流独家策略",
-    subtitle: "四维共振 · 独家研发",
-    icon: "🏆",
-    gradient: ["#1A0E00", "#78350F", "#A8895A"] as readonly [string, string, ...string[]],
-    type: "link" as const,
-    target: "https://ddxau.com",
-    accentColor: "#D8BC83",
-    glowColor: "rgba(251,191,36,0.15)",
-  },
+const PRODUCT_TYPE_OPTIONS = [
+  { name: "EA", slug: "ea", icon: "🤖", parentId: null },
+  { name: "指标", slug: "indicator", icon: "📈", parentId: null },
+  { name: "工具", slug: "tool", icon: "🧰", parentId: null },
 ];
+const PRODUCT_TYPE_SLUGS = new Set(PRODUCT_TYPE_OPTIONS.map((item) => item.slug));
 
 export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { numColumns, isDesktop } = useResponsive();
+  const { numColumns } = useResponsive();
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(undefined);
   const [orderBy, setOrderBy] = useState<OrderBy>("hot");
   const [tagFilter, setTagFilter] = useState("");
-  const [saleModeFilter, setSaleModeFilter] = useState<"all" | "direct" | "inquiry">("all");
+  const [saleModeFilter, setSaleModeFilter] = useState<SaleModeFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-
-  // 是否有任何筛选生效（用于显示"清空全部"和面包屑）
-  const hasAnyFilter = !!platformFilter || saleModeFilter !== "all" || !!categoryFilter || !!tagFilter || orderBy !== "hot";
-  const clearAllFilters = () => {
-    setPlatformFilter(undefined);
-    setSaleModeFilter("all");
-    setCategoryFilter(undefined);
-    setTagFilter("");
-    setOrderBy("hot");
-  };
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [selectedStrategyTitle, setSelectedStrategyTitle] = useState("");
-
-  const [allStrategies, setAllStrategies] = useState<any[]>([]);
+  const [allStrategies, setAllStrategies] = useState<HomeStrategy[]>([]);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // 动态提取标签：从已加载的策略数据中自动生成筛选项（使用 useMemo 避免每次渲染重新计算）
+  const { data: categoriesData } = trpc.categories.list.useQuery();
+  const productTypeFilter = categoryFilter && PRODUCT_TYPE_SLUGS.has(categoryFilter)
+    ? categoryFilter
+    : undefined;
+  const activeSaleMode = saleModeFilter === "all" ? undefined : saleModeFilter;
+
+  const categoriesForFilters = useMemo(() => {
+    const productTypeCategories = ((categoriesData || []) as any[])
+      .filter((category) => PRODUCT_TYPE_SLUGS.has(category.slug))
+      .map((category) => ({ ...category, parentId: null }));
+    return productTypeCategories.length > 0 ? productTypeCategories : PRODUCT_TYPE_OPTIONS;
+  }, [categoriesData]);
+
   const dynamicTags = useMemo(() => {
     const tagCountMap = new Map<string, number>();
-    allStrategies.forEach((s) => {
-      if (s.tags) {
-        s.tags.split(",").map((t: string) => t.trim()).filter(Boolean).forEach((t: string) => {
-          tagCountMap.set(t, (tagCountMap.get(t) || 0) + 1);
-        });
+    allStrategies.forEach((strategy) => {
+      if (strategy.tags) {
+        strategy.tags
+          .split(",")
+          .map((tag: string) => tag.trim())
+          .filter(Boolean)
+          .forEach((tag: string) => {
+            tagCountMap.set(tag, (tagCountMap.get(tag) || 0) + 1);
+          });
       }
     });
-    // 按出现次数排序，取前10个
+
     return Array.from(tagCountMap.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([tag]) => ({ label: tag, value: tag }));
   }, [allStrategies]);
 
-  // ─── 动画 ───
-  const heroFade = useRef(new Animated.Value(0)).current;
-  const heroSlide = useRef(new Animated.Value(20)).current;
-  const entryAnims = useRef(QUICK_ENTRIES.map(() => new Animated.Value(0))).current;
-  const entrySlides = useRef(QUICK_ENTRIES.map(() => new Animated.Value(30))).current;
-  // 脉冲动画
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  // 数据计数动画
-  const countAnim = useRef(new Animated.Value(0)).current;
-  const [displayCount, setDisplayCount] = useState({ ea: 0, studio: 0, exclusive: 0 });
-
-  useEffect(() => {
-    // Hero 动画
-    Animated.parallel([
-      Animated.timing(heroFade, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.timing(heroSlide, { toValue: 0, duration: 800, useNativeDriver: true }),
-    ]).start();
-    // 入口卡片依次入场
-    QUICK_ENTRIES.forEach((_, i) => {
-      setTimeout(() => {
-        Animated.parallel([
-          Animated.spring(entryAnims[i], { toValue: 1, tension: 80, friction: 12, useNativeDriver: true }),
-          Animated.spring(entrySlides[i], { toValue: 0, tension: 80, friction: 12, useNativeDriver: true }),
-        ]).start();
-      }, 300 + i * 150);
-    });
-    // 脉冲光环
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.15, duration: 2000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
-      ])
-    ).start();
-    // 数字递增动画
-    Animated.timing(countAnim, { toValue: 1, duration: 1500, useNativeDriver: false }).start();
-    const listener = countAnim.addListener(({ value }) => {
-      setDisplayCount({
-        ea: Math.round(200 * value),
-        studio: Math.round(30 * value),
-        exclusive: Math.round(50 * value),
-      });
-    });
-    return () => countAnim.removeListener(listener);
-  }, []);
-
-  const { data: categoriesData } = trpc.categories.list.useQuery();
-  const { data: initialData, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
+  const listFilters = useMemo(() => ({
     platform: platformFilter,
     orderBy,
     tag: tagFilter || undefined,
+    productType: productTypeFilter,
+    saleMode: activeSaleMode,
+  }), [activeSaleMode, orderBy, platformFilter, productTypeFilter, tagFilter]);
+
+  const { data: initialData, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
+    ...listFilters,
     limit: PAGE_SIZE,
     offset: 0,
   });
@@ -166,20 +96,38 @@ export default function HomeScreen() {
     }
   }, [initialData]);
 
-  const loadMoreQuery = trpc.strategies.list.useQuery(
-    { platform: platformFilter, orderBy, tag: tagFilter || undefined, limit: PAGE_SIZE, offset },
-    { enabled: false }
+  const { refetch: refetchLoadMore } = trpc.strategies.list.useQuery(
+    {
+      ...listFilters,
+      limit: PAGE_SIZE,
+      offset,
+    },
+    { enabled: false },
   );
+
+  const openContactModal = useCallback(() => setShowContactModal(true), []);
+  const closeContactModal = useCallback(() => setShowContactModal(false), []);
+  const closeSubscribeModal = useCallback(() => setShowSubscribeModal(false), []);
+  const toggleAdvancedFilters = useCallback(() => setShowAdvancedFilters((value) => !value), []);
+  const openSearch = useCallback(() => router.push("/search" as any), [router]);
+
+  const clearAllFilters = useCallback(() => {
+    setPlatformFilter(undefined);
+    setSaleModeFilter("all");
+    setCategoryFilter(undefined);
+    setTagFilter("");
+    setOrderBy("hot");
+  }, []);
 
   const handleLoadMore = useCallback(async () => {
     if (!hasMore || isLoadingMore || isLoading) return;
     setIsLoadingMore(true);
     try {
-      const result = await loadMoreQuery.refetch();
+      const result = await refetchLoadMore();
       if (result.data && result.data.length > 0) {
         setAllStrategies((prev) => {
-          const existingIds = new Set(prev.map((s) => s.id));
-          const newItems = result.data.filter((s: any) => !existingIds.has(s.id));
+          const existingIds = new Set(prev.map((strategy) => strategy.id));
+          const newItems = result.data.filter((strategy: HomeStrategy) => !existingIds.has(strategy.id));
           return [...prev, ...newItems];
         });
         setOffset((prev) => prev + result.data.length);
@@ -188,11 +136,11 @@ export default function HomeScreen() {
         setHasMore(false);
       }
     } catch {
-      // Load more failed silently
+      // Keep the current list visible if pagination fails.
     } finally {
       setIsLoadingMore(false);
     }
-  }, [hasMore, isLoadingMore, isLoading, loadMoreQuery]);
+  }, [hasMore, isLoadingMore, isLoading, refetchLoadMore]);
 
   const handleRefresh = useCallback(async () => {
     setOffset(0);
@@ -200,468 +148,67 @@ export default function HomeScreen() {
     await refetch();
   }, [refetch]);
 
-  const handleSubscribePress = (title: string) => {
+  const handleSubscribePress = useCallback((title: string) => {
     setSelectedStrategyTitle(title);
     setShowSubscribeModal(true);
-  };
+  }, []);
 
-  const handleStrategyPress = (id: number) => {
+  const handleStrategyPress = useCallback((id: number) => {
     router.push(`/strategy/${id}` as any);
-  };
+  }, [router]);
 
-  const handleEntryPress = (entry: typeof QUICK_ENTRIES[0]) => {
-    if (entry.type === "link") {
-      Linking.openURL(entry.target);
-    } else {
-      router.push(entry.target as any);
-    }
-  };
-
-  // ═══════════════════ 炫酷 Hero 区域 ═══════════════════
-  const renderHero = () => (
-    <Animated.View style={[heroStyles.container, { opacity: heroFade, transform: [{ translateY: heroSlide }] }]}>
-      <LinearGradient
-        colors={["#050810", "#0A0E1A", "#0D1525", "#0A0E1A"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={heroStyles.gradient}
-      >
-        {/* ─── 装饰网格线 ─── */}
-        {[...Array(5)].map((_, i) => (
-          <View key={`vl${i}`} style={[heroStyles.gridLineV, { right: 30 + i * 60, opacity: 0.03 - i * 0.004 }]} />
-        ))}
-        {[...Array(3)].map((_, i) => (
-          <View key={`hl${i}`} style={[heroStyles.gridLineH, { top: 20 + i * 40, opacity: 0.03 - i * 0.005 }]} />
-        ))}
-
-        {/* ─── 脉冲光环 ─── */}
-        <Animated.View style={[heroStyles.pulseRing, { transform: [{ scale: pulseAnim }] }]} />
-
-        {/* ─── 装饰粒子 ─── */}
-        <View style={[heroStyles.particle, { top: 15, right: 25, width: 3, height: 3, backgroundColor: "rgba(251,191,36,0.5)" }]} />
-        <View style={[heroStyles.particle, { top: 45, right: 80, width: 2, height: 2, backgroundColor: "rgba(96,165,250,0.4)" }]} />
-        <View style={[heroStyles.particle, { bottom: 30, right: 40, width: 2, height: 2, backgroundColor: "rgba(52,211,153,0.4)" }]} />
-        <View style={[heroStyles.particle, { top: 60, right: 140, width: 2, height: 2, backgroundColor: "rgba(251,191,36,0.3)" }]} />
-        <View style={[heroStyles.particle, { bottom: 50, left: 30, width: 2, height: 2, backgroundColor: "rgba(248,113,113,0.3)" }]} />
-
-        {/* ─── 品牌标识 ─── */}
-        <View style={heroStyles.brandRow}>
-          <View style={heroStyles.liveDotOuter}>
-            <View style={heroStyles.liveDot} />
-          </View>
-          <Text style={heroStyles.brandText}>量化军火库</Text>
-          <View style={heroStyles.brandDivider} />
-          <Text style={heroStyles.brandSub}>eaxau.com</Text>
-        </View>
-
-        {/* ─── 主标题 ─── */}
-        <Text style={heroStyles.title}>全网EA源头提货</Text>
-        <Text style={heroStyles.tagline}>
-          200+源码库 · 100%破解能力 · 独家调优
-        </Text>
-
-        {/* ─── 数据指标（带计数动画） ─── */}
-        <View style={heroStyles.statsRow}>
-          {[
-            { num: `${displayCount.ea}+`, label: "EA源码", color: "#D8BC83", bgColor: "rgba(251,191,36,0.08)" },
-            { num: `${displayCount.studio}+`, label: "合作工作室", color: "#60A5FA", bgColor: "rgba(96,165,250,0.08)" },
-            { num: `${displayCount.exclusive}+`, label: "独家版", color: "#34D399", bgColor: "rgba(52,211,153,0.08)" },
-          ].map((stat, i) => (
-            <View key={i} style={[heroStyles.statItem, { backgroundColor: stat.bgColor }]}>
-              <Text style={[heroStyles.statNum, { color: stat.color }]}>{stat.num}</Text>
-              <Text style={heroStyles.statLabel}>{stat.label}</Text>
-              {/* 底部强调线 */}
-              <View style={[heroStyles.statAccent, { backgroundColor: stat.color + "30" }]} />
-            </View>
-          ))}
-        </View>
-
-        {/* ─── 底部装饰渐变线 ─── */}
-        <LinearGradient
-          colors={["transparent", "rgba(251,191,36,0.15)", "transparent"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={heroStyles.bottomLine}
-        />
-      </LinearGradient>
-    </Animated.View>
-  );
-
-  // ═══════════════════ 快捷入口 ═══════════════════
-  const renderQuickEntries = () => (
-    <View style={qeStyles.container}>
-      {QUICK_ENTRIES.map((entry, i) => (
-        <Animated.View
-          key={entry.id}
-          style={[
-            qeStyles.entryWrap,
-            { opacity: entryAnims[i], transform: [{ translateY: entrySlides[i] }] },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={() => handleEntryPress(entry)}
-            activeOpacity={0.85}
-            style={qeStyles.entryTouchable}
-          >
-            {/* 外发光 */}
-            <View style={[qeStyles.entryGlow, { backgroundColor: entry.glowColor }]} />
-            <LinearGradient
-              colors={entry.gradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={qeStyles.entryCard}
-            >
-              {/* 装饰光线 */}
-              <View style={[qeStyles.entryShine, { backgroundColor: entry.accentColor + "10" }]} />
-              {/* 角落装饰 */}
-              <View style={[qeStyles.cornerDecor, { borderColor: entry.accentColor + "20" }]} />
-              {/* 图标 */}
-              <View style={[qeStyles.iconWrap, { backgroundColor: entry.accentColor + "20", borderColor: entry.accentColor + "30" }]}>
-                <Text style={qeStyles.entryIcon}>{entry.icon}</Text>
-              </View>
-              {/* 文字 */}
-              <Text style={qeStyles.entryTitle} numberOfLines={1}>{entry.title}</Text>
-              <Text style={[qeStyles.entrySubtitle, { color: entry.accentColor + "BB" }]} numberOfLines={1}>{entry.subtitle}</Text>
-              {/* 箭头 */}
-              <View style={[qeStyles.arrowWrap, { backgroundColor: entry.accentColor + "18", borderColor: entry.accentColor + "25" }]}>
-                <Text style={[qeStyles.arrowText, { color: entry.accentColor }]}>→</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-      ))}
-    </View>
-  );
-
-  // ═══════════════════ 筛选区域 ═══════════════════
-  // 已选中的筛选标签（面包屑）
-  const activeFilterChips = (() => {
-    const chips: { label: string; clear: () => void }[] = [];
-    if (platformFilter) chips.push({ label: platformFilter, clear: () => setPlatformFilter(undefined) });
-    if (saleModeFilter === "direct") chips.push({ label: "💰 直购", clear: () => setSaleModeFilter("all") });
-    if (saleModeFilter === "inquiry") chips.push({ label: "🤝 商务授权", clear: () => setSaleModeFilter("all") });
-    if (categoryFilter) {
-      const cat = (categoriesData || []).find((c: any) => c.slug === categoryFilter);
-      if (cat) chips.push({ label: `${cat.icon || ""}${cat.name}`.trim(), clear: () => setCategoryFilter(undefined) });
-    }
-    if (tagFilter) {
-      const tag = dynamicTags.find((t: any) => t.value === tagFilter);
-      chips.push({ label: tag?.label || tagFilter, clear: () => setTagFilter("") });
-    }
-    if (orderBy !== "hot") {
-      chips.push({ label: orderBy === "latest" ? "最新" : "收益率", clear: () => setOrderBy("hot") });
-    }
-    return chips;
-  })();
-
-  const renderFilters = () => (
-    <View style={filterStyles.container}>
-      {/* 标题行 */}
-      <View style={filterStyles.titleRow}>
-        <View style={filterStyles.titleLeft}>
-          <View style={filterStyles.titleAccent} />
-          <Text style={[filterStyles.titleText, { color: colors.foreground }]}>策略广场</Text>
-        </View>
-        <View style={filterStyles.titleRight}>
-          <TouchableOpacity
-            onPress={() => setShowContactModal(true)}
-            style={filterStyles.uploadBtn}
-            activeOpacity={0.8}
-          >
-            <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={filterStyles.uploadBtnInner}>
-              <Text style={filterStyles.uploadBtnText}>+ 上架EA</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push("/search" as any)}
-            style={[filterStyles.searchBtn, { backgroundColor: colors.surface }]}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="magnifyingglass" size={18} color={colors.muted} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* 行 1：平台 + 排序（最常用，常驻）*/}
-      <View style={filterStyles.filterRow}>
-        <View style={filterStyles.filterGroup}>
-          {[
-            { label: "全部", value: undefined },
-            { label: "MT4", value: "MT4" as PlatformFilter },
-            { label: "MT5", value: "MT5" as PlatformFilter },
-          ].map((item) => {
-            const isActive = platformFilter === item.value;
-            return (
-              <TouchableOpacity
-                key={item.label}
-                onPress={() => setPlatformFilter(item.value)}
-                style={[
-                  filterStyles.filterChip,
-                  isActive
-                    ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" }
-                    : { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-                activeOpacity={0.7}
-              >
-                <Text style={[filterStyles.filterChipText, { color: isActive ? "#0A1628" : colors.muted }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={[filterStyles.divider, { backgroundColor: colors.border }]} />
-
-        <View style={filterStyles.filterGroup}>
-          {[
-            { label: "热度", value: "hot" as OrderBy },
-            { label: "最新", value: "latest" as OrderBy },
-            { label: "收益率", value: "return" as OrderBy },
-          ].map((item) => {
-            const isActive = orderBy === item.value;
-            return (
-              <TouchableOpacity
-                key={item.label}
-                onPress={() => setOrderBy(item.value)}
-                style={[
-                  filterStyles.sortChip,
-                  isActive && { borderBottomWidth: 2, borderBottomColor: "#C9A96E" },
-                ]}
-                activeOpacity={0.7}
-              >
-                <Text style={[filterStyles.sortChipText, { color: isActive ? "#C9A96E" : colors.muted }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* 行 2：销售模式 + 高级筛选按钮 */}
-      <View style={[filterStyles.filterRow, { marginTop: 8, justifyContent: "space-between" }]}>
-        <View style={filterStyles.filterGroup}>
-          {([
-            { label: "全部", value: "all" },
-            { label: "💰 直购", value: "direct" },
-            { label: "🤝 商务授权", value: "inquiry" },
-          ] as const).map((item) => {
-            const isActive = saleModeFilter === item.value;
-            return (
-              <TouchableOpacity
-                key={item.value}
-                onPress={() => setSaleModeFilter(item.value)}
-                style={[
-                  filterStyles.filterChip,
-                  isActive
-                    ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" }
-                    : { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-                activeOpacity={0.7}
-              >
-                <Text style={[filterStyles.filterChipText, { color: isActive ? "#0A1628" : colors.muted }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* 高级筛选切换 */}
-        <TouchableOpacity
-          onPress={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          style={[
-            filterStyles.advancedToggle,
-            showAdvancedFilters
-              ? { backgroundColor: "rgba(201,169,110,0.12)", borderColor: "#C9A96E" }
-              : { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
-          activeOpacity={0.7}
-        >
-          <Text style={[filterStyles.advancedToggleText, { color: showAdvancedFilters ? "#C9A96E" : colors.muted }]}>
-            {showAdvancedFilters ? "▲ 收起" : "▾ 高级筛选"}
-          </Text>
-          {(categoryFilter || tagFilter) && !showAdvancedFilters && (
-            <View style={filterStyles.advancedDot} />
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* 行 3（条件）：已选筛选面包屑 + 清空按钮 */}
-      {hasAnyFilter && (
-        <View style={[filterStyles.filterRow, { marginTop: 10, alignItems: "center", flexWrap: "wrap" }]}>
-          <Text style={[filterStyles.activeLabel, { color: colors.muted }]}>已选：</Text>
-          {activeFilterChips.map((chip, i) => (
-            <TouchableOpacity
-              key={i}
-              onPress={chip.clear}
-              style={filterStyles.activeChip}
-              activeOpacity={0.7}
-            >
-              <Text style={filterStyles.activeChipText}>{chip.label}</Text>
-              <Text style={filterStyles.activeChipX}>✕</Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity
-            onPress={clearAllFilters}
-            style={filterStyles.clearAllBtn}
-            activeOpacity={0.7}
-          >
-            <Text style={filterStyles.clearAllText}>清空全部</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* 折叠抽屉：高级筛选（分类 + 标签）*/}
-      {showAdvancedFilters && (
-        <View style={[filterStyles.advancedPanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          {/* 分类 */}
-          {(categoriesData || []).length > 0 && (
-            <>
-              <Text style={[filterStyles.advancedSectionTitle, { color: colors.muted }]}>分类</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4, gap: 6 }}>
-                <TouchableOpacity onPress={() => setCategoryFilter(undefined)} style={[filterStyles.filterChip, !categoryFilter ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" } : { backgroundColor: colors.background, borderColor: colors.border }]} activeOpacity={0.7}>
-                  <Text style={[filterStyles.filterChipText, { color: !categoryFilter ? "#0A1628" : colors.muted }]}>全部分类</Text>
-                </TouchableOpacity>
-                {(categoriesData || []).filter((c: any) => c.parentId === null).map((c: any) => {
-                  const isActive = categoryFilter === c.slug;
-                  return (
-                    <TouchableOpacity key={c.slug} onPress={() => setCategoryFilter(c.slug)} style={[filterStyles.filterChip, isActive ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" } : { backgroundColor: colors.background, borderColor: colors.border }]} activeOpacity={0.7}>
-                      <Text style={[filterStyles.filterChipText, { color: isActive ? "#0A1628" : colors.muted }]}>{c.icon ? `${c.icon} ` : ""}{c.name}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </>
-          )}
-
-          {/* 标签 */}
-          {dynamicTags.length > 0 && (
-            <>
-              <Text style={[filterStyles.advancedSectionTitle, { color: colors.muted, marginTop: 14 }]}>标签</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 12, gap: 8 }}>
-                <TouchableOpacity
-                  onPress={() => setTagFilter("")}
-                  style={[
-                    filterStyles.tagChip,
-                    {
-                      backgroundColor: tagFilter === "" ? "rgba(201,169,110,0.12)" : colors.background,
-                      borderColor: tagFilter === "" ? "#C9A96E" : colors.border,
-                    },
-                  ]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[filterStyles.tagChipText, { color: tagFilter === "" ? "#C9A96E" : colors.muted }]}>全部</Text>
-                </TouchableOpacity>
-                {dynamicTags.map((tag) => {
-                  const isActive = tagFilter === tag.value;
-                  return (
-                    <TouchableOpacity
-                      key={tag.value}
-                      onPress={() => setTagFilter(tag.value)}
-                      style={[
-                        filterStyles.tagChip,
-                        {
-                          backgroundColor: isActive ? "rgba(201,169,110,0.12)" : colors.background,
-                          borderColor: isActive ? "#C9A96E" : colors.border,
-                        },
-                      ]}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[filterStyles.tagChipText, { color: isActive ? "#C9A96E" : colors.muted }]}>
-                        {tag.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </>
-          )}
-        </View>
-      )}
-    </View>
-  );
-
-  // ═══════════════════ 完整 Header ═══════════════════
-  // ═══════════════════ 定制EA横幅 ═══════════════════
-  const renderCustomEABanner = () => (
-    <TouchableOpacity
-      activeOpacity={0.85}
-      onPress={() => setShowContactModal(true)}
-      style={customBannerStyles.outer}
-    >
-      <LinearGradient
-        colors={["#0A1628", "#1A1410", "#2A1F0E"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={customBannerStyles.container}
-      >
-        {/* 装饰元素 */}
-        <View style={customBannerStyles.glowOrb} />
-        <View style={customBannerStyles.glowOrb2} />
-        <View style={customBannerStyles.gridLine1} />
-        <View style={customBannerStyles.gridLine2} />
-
-        {/* 左侧图标（裸 emoji，无外框） */}
-        <View style={customBannerStyles.iconWrap}>
-          <Text style={{ fontSize: 28 }}>🔓</Text>
-        </View>
-
-        {/* 右侧内容 */}
-        <View style={customBannerStyles.content}>
-          <Text style={customBannerStyles.title}>EA 破解网 · 专属 EA 破解</Text>
-          <Text style={customBannerStyles.desc} numberOfLines={2}>
-            联系定制 · 专业团队
-          </Text>
-        </View>
-
-        {/* 右侧箭头 */}
-        <View style={customBannerStyles.arrow}>
-          <Text style={{ color: "#A8895A", fontSize: 18, fontWeight: "900" }}>›</Text>
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
-
-  const renderHeader = () => (
+  const renderHeader = useCallback(() => (
     <View style={{ marginBottom: 4 }}>
-      {renderHero()}
-      {/* 3 大卡已隐藏 — renderQuickEntries() */}
-      {renderCustomEABanner()}
-      {renderFilters()}
+      <HomeHero />
+      <CustomEABanner onPress={openContactModal} />
+      <StrategyFilters
+        colors={colors}
+        platformFilter={platformFilter}
+        orderBy={orderBy}
+        tagFilter={tagFilter}
+        saleModeFilter={saleModeFilter}
+        categoryFilter={categoryFilter}
+        showAdvancedFilters={showAdvancedFilters}
+        categories={categoriesForFilters}
+        dynamicTags={dynamicTags}
+        onPlatformChange={setPlatformFilter}
+        onOrderByChange={setOrderBy}
+        onTagChange={setTagFilter}
+        onSaleModeChange={setSaleModeFilter}
+        onCategoryChange={setCategoryFilter}
+        onToggleAdvancedFilters={toggleAdvancedFilters}
+        onClearAll={clearAllFilters}
+        onUploadPress={openContactModal}
+        onSearchPress={openSearch}
+      />
     </View>
-  );
+  ), [categoryFilter, categoriesForFilters, clearAllFilters, colors, dynamicTags, openContactModal, openSearch, orderBy, platformFilter, saleModeFilter, showAdvancedFilters, tagFilter, toggleAdvancedFilters]);
 
-  const renderEmpty = () => (
-    <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 60 }}>
-      <Text style={{ fontSize: 56 }}>📊</Text>
-      <Text style={{ color: colors.foreground, fontSize: 18, fontWeight: "700", marginTop: 16 }}>暂无策略</Text>
-      <Text style={{ color: colors.muted, fontSize: 13, marginTop: 8 }}>策略广场正在上架中，敬请期待</Text>
-      <TouchableOpacity onPress={() => setShowContactModal(true)} activeOpacity={0.8} style={{ marginTop: 24 }}>
-        <LinearGradient colors={["#A8895A", "#C9A96E"]} style={{ paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 }}>
-          <Text style={{ color: "#0A0E1A", fontWeight: "700", fontSize: 14 }}>上架我的EA</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-    </View>
-  );
+  const renderEmpty = useCallback(() => (
+    <StrategyListEmpty
+      colors={colors}
+      onUploadPress={openContactModal}
+    />
+  ), [colors, openContactModal]);
 
-  const renderFooter = () => (
-    <View>
-      {isLoadingMore && (
-        <View style={{ paddingVertical: 16, alignItems: "center" }}>
-          <ActivityIndicator size="small" color="#A8895A" />
-        </View>
-      )}
-      {!hasMore && allStrategies.length > 0 && (
-        <View style={{ paddingVertical: 12, alignItems: "center" }}>
-          <Text style={{ color: colors.muted, fontSize: 12 }}>已展示全部策略</Text>
-        </View>
-      )}
-      {/* 底部常驻快捷导航 */}
-      <QuickNav />
-    </View>
-  );
+  const renderFooter = useCallback(() => (
+    <StrategyListFooter
+      colors={colors}
+      isLoadingMore={isLoadingMore}
+      hasMore={hasMore}
+      itemCount={allStrategies.length}
+    />
+  ), [allStrategies.length, colors, hasMore, isLoadingMore]);
+
+  const renderStrategyItem = useCallback<ListRenderItem<HomeStrategy>>(({ item }) => (
+    <StrategyListItem
+      item={item}
+      onStrategyPress={handleStrategyPress}
+      onSubscribePress={handleSubscribePress}
+    />
+  ), [handleStrategyPress, handleSubscribePress]);
+
+  const keyExtractor = useCallback((item: HomeStrategy) => item.id.toString(), []);
 
   if (isLoading && !initialData) {
     return (
@@ -675,37 +222,14 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer>
-      <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
-      <SubscribeModal visible={showSubscribeModal} onClose={() => setShowSubscribeModal(false)} strategyTitle={selectedStrategyTitle} />
+      <ContactModal visible={showContactModal} onClose={closeContactModal} />
+      <SubscribeModal visible={showSubscribeModal} onClose={closeSubscribeModal} strategyTitle={selectedStrategyTitle} />
       <FlatList
         data={allStrategies}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={keyExtractor}
         key={numColumns}
         numColumns={numColumns}
-        renderItem={({ item }) => (
-          <StrategyCard
-            id={item.id}
-            title={item.title}
-            platform={item.platform}
-            totalReturn={item.totalReturn || "0.00"}
-            winRate={item.winRate || "0.00"}
-            price={item.price || "0.00"}
-            originalPrice={item.originalPrice}
-            isFree={item.isFree}
-            downloadCount={item.downloadCount}
-            virtualDownloads={item.virtualDownloads || 0}
-            coverImage={item.coverImage}
-            pairs={item.pairs}
-            viewCount={item.viewCount}
-            createdAt={item.createdAt}
-            tags={item.tags}
-            productType={item.productType}
-            isFeatured={item.isFeatured}
-            featuredLink={item.featuredLink}
-            onPress={() => handleStrategyPress(item.id)}
-            onSubscribePress={() => handleSubscribePress(item.title)}
-          />
-        )}
+        renderItem={renderStrategyItem}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
@@ -722,558 +246,3 @@ export default function HomeScreen() {
     </ScreenContainer>
   );
 }
-
-// ═══════════════════ Hero 样式 ═══════════════════
-const heroStyles = StyleSheet.create({
-  container: {
-    marginBottom: 6,
-  },
-  gradient: {
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 12,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    overflow: "hidden",
-    position: "relative",
-  },
-  // 网格线
-  gridLineV: {
-    position: "absolute",
-    top: 0,
-    width: 1,
-    height: "100%",
-    backgroundColor: "rgba(255,255,255,1)",
-  },
-  gridLineH: {
-    position: "absolute",
-    left: 0,
-    width: "100%",
-    height: 1,
-    backgroundColor: "rgba(255,255,255,1)",
-  },
-  // 脉冲光环
-  pulseRing: {
-    position: "absolute",
-    top: -60,
-    right: -60,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: "rgba(251,191,36,0.06)",
-    backgroundColor: "rgba(251,191,36,0.02)",
-  },
-  // 粒子
-  particle: {
-    position: "absolute",
-    borderRadius: 10,
-  },
-  // 品牌
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  liveDotOuter: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "rgba(16,185,129,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 8,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#10B981",
-  },
-  brandText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-  brandDivider: {
-    width: 1,
-    height: 14,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    marginHorizontal: 10,
-  },
-  brandSub: {
-    color: "rgba(251,191,36,0.7)",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  // 标题
-  title: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: 1.5,
-    marginBottom: 3,
-  },
-  tagline: {
-    color: "rgba(251,191,36,0.85)",
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    marginBottom: 10,
-  },
-  // 数据
-  statsRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 6,
-    borderRadius: 10,
-    position: "relative",
-    overflow: "hidden",
-  },
-  statNum: {
-    fontSize: 18,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  statLabel: {
-    color: "rgba(255,255,255,0.9)",
-    fontSize: 10,
-    fontWeight: "600",
-    marginTop: 3,
-  },
-  statAccent: {
-    position: "absolute",
-    bottom: 0,
-    left: "20%",
-    right: "20%",
-    height: 2,
-    borderRadius: 1,
-  },
-  // 底部装饰线
-  bottomLine: {
-    position: "absolute",
-    bottom: 0,
-    left: 20,
-    right: 20,
-    height: 1,
-  },
-});
-
-// ═══════════════════ 快捷入口样式 ═══════════════════
-const qeStyles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    paddingHorizontal: 12,
-    gap: 6,
-    marginBottom: 8,
-  },
-  entryWrap: {
-    flex: 1,
-  },
-  entryTouchable: {
-    position: "relative",
-    height: 116,
-  },
-  entryGlow: {
-    position: "absolute",
-    top: 4,
-    left: 4,
-    right: 4,
-    bottom: -3,
-    borderRadius: 18,
-  },
-  entryCard: {
-    borderRadius: 14,
-    padding: 10,
-    height: 110,
-    flex: 1,
-    justifyContent: "space-between",
-    overflow: "hidden",
-    position: "relative",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
-  },
-  entryShine: {
-    position: "absolute",
-    top: -30,
-    right: -30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  cornerDecor: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 16,
-    height: 16,
-    borderTopWidth: 1,
-    borderRightWidth: 1,
-    borderTopRightRadius: 4,
-  },
-  iconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    marginBottom: 4,
-  },
-  entryIcon: {
-    fontSize: 15,
-  },
-  entryTitle: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-    marginBottom: 1,
-  },
-  entrySubtitle: {
-    fontSize: 8,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-    marginBottom: 4,
-  },
-  arrowWrap: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "flex-end",
-    borderWidth: 1,
-  },
-  arrowText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-});
-
-// ═══════════════════ 筛选区样式 ═══════════════════
-const filterStyles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 14,
-    marginBottom: 4,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  titleLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  titleAccent: {
-    width: 3,
-    height: 20,
-    borderRadius: 2,
-    backgroundColor: "#A8895A",
-    marginRight: 8,
-  },
-  titleText: {
-    fontSize: 20,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  titleRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  uploadBtn: {
-    borderRadius: 20,
-    overflow: "hidden",
-  },
-  uploadBtnInner: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-  },
-  uploadBtnText: {
-    color: "#0A0E1A",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  searchBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  filterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  filterGroup: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  divider: {
-    width: 1,
-    height: 16,
-    marginHorizontal: 10,
-  },
-  sortChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  sortChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  tagChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
-    marginRight: 8,
-    borderWidth: 1,
-  },
-  tagChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
-  // ===== v2 新增：高级筛选切换按钮 =====
-  advancedToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  advancedToggleText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  advancedDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#C9A96E",
-    marginLeft: 6,
-  },
-
-  // ===== v2 新增：已选面包屑 =====
-  activeLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginRight: 8,
-  },
-  activeChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(201,169,110,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(201,169,110,0.4)",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 14,
-    marginRight: 6,
-    marginBottom: 4,
-  },
-  activeChipText: {
-    color: "#C9A96E",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  activeChipX: {
-    color: "#C9A96E",
-    fontSize: 12,
-    fontWeight: "700",
-    marginLeft: 6,
-  },
-  clearAllBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginLeft: 4,
-  },
-  clearAllText: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "600",
-    textDecorationLine: "underline",
-  },
-
-  // ===== v2 新增：折叠抽屉面板 =====
-  advancedPanel: {
-    marginTop: 10,
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  advancedSectionTitle: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.2,
-    marginBottom: 6,
-    textTransform: "uppercase",
-  },
-});
-
-// ═══════════════════ 定制EA横幅样式 ═══════════════════
-const customBannerStyles = StyleSheet.create({
-  outer: {
-    marginHorizontal: 12,
-    marginTop: 6,
-    marginBottom: 6,
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(139,92,246,0.25)",
-  },
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    position: "relative",
-    overflow: "hidden",
-  },
-  // 装饰元素
-  glowOrb: {
-    position: "absolute",
-    top: -30,
-    right: -30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(139,92,246,0.08)",
-  },
-  glowOrb2: {
-    position: "absolute",
-    bottom: -20,
-    left: -20,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(217,119,6,0.06)",
-  },
-  gridLine1: {
-    position: "absolute",
-    top: 0,
-    left: "30%",
-    width: 1,
-    height: "100%",
-    backgroundColor: "rgba(255,255,255,0.03)",
-  },
-  gridLine2: {
-    position: "absolute",
-    top: "50%",
-    left: 0,
-    width: "100%",
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.03)",
-  },
-  // 图标
-  iconWrap: {
-    marginRight: 14,
-  },
-  iconGradient: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  // 内容
-  content: {
-    flex: 1,
-  },
-  tagRow: {
-    flexDirection: "row",
-    gap: 6,
-    marginBottom: 4,
-  },
-  tag: {
-    backgroundColor: "rgba(139,92,246,0.15)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(139,92,246,0.3)",
-  },
-  tagText: {
-    color: "#A78BFA",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  tagHot: {
-    backgroundColor: "rgba(239,68,68,0.15)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "rgba(239,68,68,0.3)",
-  },
-  tagHotText: {
-    color: "#F87171",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  title: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "900",
-    marginBottom: 2,
-    letterSpacing: 0.5,
-  },
-  desc: {
-    color: "#F1F5F9",
-    fontSize: 10,
-    lineHeight: 15,
-    marginBottom: 4,
-  },
-  features: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  featureItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  featureDot: {
-    color: "#A8895A",
-    fontSize: 6,
-  },
-  featureText: {
-    color: "#CBD5E1",
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  // 箭头
-  arrow: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(217,119,6,0.12)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 8,
-  },
-});

@@ -125,6 +125,12 @@ export default function AdminLayout() {
         }}
       />
       <Stack.Screen
+        name="backtest-data"
+        options={{
+          title: "回测数据管理",
+        }}
+      />
+      <Stack.Screen
         name="comments"
         options={{
           title: "评论管理",
@@ -170,6 +176,36 @@ export default function AdminLayout() {
         name="cooperation-contents"
         options={{
           title: "合作页面管理",
+        }}
+      />
+      <Stack.Screen
+        name="cooperation-manage"
+        options={{
+          title: "合作方案管理",
+        }}
+      />
+      <Stack.Screen
+        name="promo-manage"
+        options={{
+          title: "促销商城管理",
+        }}
+      />
+      <Stack.Screen
+        name="site-entries"
+        options={{
+          title: "侧边栏入口管理",
+        }}
+      />
+      <Stack.Screen
+        name="orders"
+        options={{
+          title: "订单管理",
+        }}
+      />
+      <Stack.Screen
+        name="order-detail"
+        options={{
+          title: "订单详情",
         }}
       />
       <Stack.Screen

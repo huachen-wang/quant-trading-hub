@@ -68,3 +68,7 @@ Thumbs.db
 
 # Build output
 web-build/
+
+# Database exports (sensitive — do NOT commit)
+database-export.sql
+database-export.sql.backup

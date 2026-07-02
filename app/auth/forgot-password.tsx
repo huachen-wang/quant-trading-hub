@@ -11,7 +11,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from "react-native";
-import { useRouter, Link } from "expo-router";
+import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { UserAuthCard } from "@/components/user-auth-card";
 import { useColors } from "@/hooks/use-colors";
@@ -92,12 +92,12 @@ export default function ForgotPasswordScreen() {
           title="找回密码"
           subtitle="输入您注册时使用的邮箱，我们会发送验证码"
           footer={
-            <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center" }}>
-              想起密码了？
-              <Link href="/auth/login" style={{ color: colors.primary, fontWeight: "700" }}>
-                {" 返回登录"}
-              </Link>
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <Text style={{ color: colors.muted, fontSize: 13 }}>想起密码了？</Text>
+              <TouchableOpacity onPress={() => router.push("/auth/login" as any)}>
+                <Text style={{ color: colors.primary, fontWeight: "700" }}>返回登录</Text>
+              </TouchableOpacity>
+            </View>
           }
         >
           {/* 邮箱 */}

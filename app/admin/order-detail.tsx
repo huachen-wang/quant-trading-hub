@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { EmptyState } from "@/components/empty-state";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
@@ -83,9 +84,13 @@ export default function AdminOrderDetailScreen() {
   if (!order) {
     return (
       <ScreenContainer>
-        <View style={styles.center}>
-          <Text style={{ color: colors.muted }}>订单不存在</Text>
-        </View>
+        <EmptyState
+          emoji="🧾"
+          title={params.orderNo ? "订单不存在" : "缺少订单号"}
+          subtitle="请从订单管理列表进入详情页，避免手动输入错误的订单编号。"
+          actionLabel="返回订单管理"
+          onAction={() => router.replace("/admin/orders" as any)}
+        />
       </ScreenContainer>
     );
   }
