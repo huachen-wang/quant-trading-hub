@@ -1,0 +1,20 @@
+export type HomeStrategy = {
+  id: number;
+  title: string;
+  platform: "MT4" | "MT5";
+  totalReturn?: string | null;
+  winRate?: string | null;
+  price?: string | null;
+  originalPrice?: string | null;
+  isFree: boolean;
+  downloadCount: number;
+  virtualDownloads?: number | null;
+  coverImage?: string | null;
+  pairs?: string | null;
+  viewCount?: number | null;
+  createdAt?: Date | string | null;
+  tags?: string | null;
+  productType?: string | null;
+  isFeatured?: boolean | null;
+  featuredLink?: string | null;
+};
