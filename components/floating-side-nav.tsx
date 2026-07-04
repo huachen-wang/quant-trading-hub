@@ -23,6 +23,7 @@ export function FloatingSideNav() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const brandLetters = ["E", "A", "X", "A", "U"];
 
   // Hooks 必须在条件之前
   const customEntriesQuery = trpc.siteEntries.list.useQuery(
@@ -98,13 +99,14 @@ export function FloatingSideNav() {
               <Text style={styles.closeBtnIcon}>✕</Text>
             </Pressable>
             <View style={styles.brand}>
-              <View style={styles.logoMark}>
-                <Text style={styles.logoMarkText}>EX</Text>
-              </View>
-              <View style={{ marginLeft: 10 }}>
-                <Text style={styles.brandName}>EAXAU</Text>
-                <Text style={styles.brandSub}>量化军火库</Text>
-              </View>
+              {brandLetters.map((letter, index) => (
+                <Text
+                  key={`${letter}-${index}`}
+                  style={[styles.brandLetter, index === 2 && styles.brandLetterAccent]}
+                >
+                  {letter}
+                </Text>
+              ))}
             </View>
           </View>
 
@@ -324,15 +326,23 @@ const styles = StyleSheet.create({
   },
   closeBtnIcon: { color: "#A8B3C7", fontSize: 14, fontWeight: "500", lineHeight: 16 },
 
-  brand: { flexDirection: "row", alignItems: "center" },
-  logoMark: {
-    width: 22, height: 22, borderRadius: 6,
-    backgroundColor: "#C9A96E",
-    alignItems: "center", justifyContent: "center",
+  brand: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
   },
-  logoMarkText: { color: "#0A1628", fontSize: 9, fontWeight: "900", lineHeight: 11 },
-  brandName: { color: "#F4F6FB", fontSize: 13, fontWeight: "700", letterSpacing: 0.3, lineHeight: 14 },
-  brandSub: { color: "#C9A96E", fontSize: 9, fontWeight: "600", letterSpacing: 1.4, marginTop: 3, lineHeight: 10 },
+  brandLetter: {
+    color: "#F4F6FB",
+    fontSize: 17,
+    fontWeight: "900",
+    lineHeight: 22,
+    textShadowColor: "rgba(201,169,110,0.22)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  brandLetterAccent: {
+    color: "#D8BC83",
+  },
 
   // 章节标题
   sectionTitleWrap: {

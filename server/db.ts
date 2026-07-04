@@ -2,6 +2,53 @@ import { eq, and, desc, asc, sql, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../drizzle/schema";
+import type { VerificationPurpose, VerificationTargetType } from "./_core/verification";
+import {
+  createMockComment,
+  createMockAnonymousComment,
+  createMockOrder,
+  createMockPayment,
+  createMockSiteEntry,
+  createMockStrategy,
+  cancelMockOrder,
+  deleteMockSiteEntry,
+  deleteMockStrategy,
+  expireMockStaleOrders,
+  getMockActivePaymentByOrderId,
+  getMockAdminStats,
+  getMockAllComments,
+  getMockAllAnonymousComments,
+  getMockAllStrategies,
+  getMockAnonymousComments,
+  getMockBacktestData,
+  getMockCategories,
+  getMockCategoryById,
+  getMockCategoryBySlug,
+  getMockComments,
+  getMockContactSettings,
+  getMockCooperationCards,
+  getMockCooperationPlans,
+  getMockGroupBuyById,
+  getMockGroupBuys,
+  getMockOrderById,
+  getMockOrderByOrderNo,
+  getMockPaymentById,
+  getMockPaymentsByOrderId,
+  getMockPromoProducts,
+  getMockSiteSetting,
+  getMockSiteSettings,
+  getMockStrategies,
+  getMockStrategyById,
+  getMockUserOrders,
+  listMockAllOrders,
+  listMockPendingUsdtPayments,
+  listMockSiteEntries,
+  markMockOrderPaid,
+  searchMockStrategies,
+  updateMockSiteEntry,
+  updateMockPayment,
+  updateMockStrategy,
+} from "./mock-data";
 
 const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings, backtestData: backtestDataTable, cooperationCards, cooperationPlans, promoProducts, verificationCodes, userFavorites, categories, orders, payments } = schema;
 
@@ -24,6 +71,9 @@ function getPool() {
 
 async function getDb() {
   try {
+    if (!process.env.DATABASE_URL) {
+      return null;
+    }
     if (!db) {
       const p = getPool();
       db = drizzle(p, { schema, mode: "default" });
@@ -101,11 +151,12 @@ export async function getStrategies(params: {
   orderBy?: "latest" | "popular" | "return" | "hot";
   tag?: string;
   productType?: string;
+  saleMode?: "direct" | "inquiry";
   limit?: number;
   offset?: number;
 }) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockStrategies(params);
 
   try {
     // 尝试使用新字段查询（含标签筛选、产品类型筛选、旗舰置顶）
@@ -116,6 +167,7 @@ export async function getStrategies(params: {
       conditions.push(sql`FIND_IN_SET(${params.tag}, REPLACE(${strategies.tags}, ' ', '')) > 0`);
     }
     if (params.productType) conditions.push(eq(strategies.productType, params.productType));
+    if (params.saleMode) conditions.push(eq(strategies.saleMode, params.saleMode));
 
     const whereConditions = and(...conditions);
 
@@ -150,22 +202,58 @@ export async function getStrategies(params: {
         : params.orderBy === "return"
           ? desc(strategies.totalReturn)
           : params.orderBy === "hot"
-            ? desc(sql`${strategies.viewCount} + ${strategies.virtualSubscribers} * 10`)
+            ? desc(strategies.viewCount)
             : desc(strategies.createdAt);
 
-    return db
-      .select()
+    const rows = await db
+      .select({
+        id: strategies.id,
+        title: strategies.title,
+        description: strategies.description,
+        platform: strategies.platform,
+        pairs: strategies.pairs,
+        timeframe: strategies.timeframe,
+        coverImage: strategies.coverImage,
+        totalReturn: strategies.totalReturn,
+        maxDrawdown: strategies.maxDrawdown,
+        sharpeRatio: strategies.sharpeRatio,
+        winRate: strategies.winRate,
+        downloadUrl: strategies.downloadUrl,
+        price: strategies.price,
+        isFree: strategies.isFree,
+        downloadCount: strategies.downloadCount,
+        telegramGroup: strategies.telegramGroup,
+        qqGroup: strategies.qqGroup,
+        viewCount: strategies.viewCount,
+        status: strategies.status,
+        createdAt: strategies.createdAt,
+        updatedAt: strategies.updatedAt,
+      })
       .from(strategies)
       .where(whereConditions)
       .orderBy(orderByColumn)
       .limit(params.limit || 20)
       .offset(params.offset || 0);
+
+    return rows.map((row: any) => ({
+      ...row,
+      originalPrice: null,
+      productType: "ea",
+      tags: null,
+      saleMode: row.isFree ? "direct" : "inquiry",
+      richDescription: null,
+      galleryImages: null,
+      isFeatured: false,
+      featuredLink: null,
+      virtualSubscribers: 0,
+      virtualDownloads: 0,
+    }));
   }
 }
 
 export async function getStrategyById(id: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockStrategyById(id);
 
   const result = await db.select().from(strategies).where(eq(strategies.id, id)).limit(1);
   return result[0] || null;
@@ -183,7 +271,7 @@ export async function incrementStrategyViewCount(id: number) {
 
 export async function searchStrategies(keyword: string, limit?: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return searchMockStrategies(keyword, limit);
 
   return db
     .select()
@@ -201,7 +289,7 @@ export async function searchStrategies(keyword: string, limit?: number) {
 
 export async function getComments(strategyId: number, limit?: number, offset?: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockComments(strategyId, limit, offset);
 
   return db
     .select({
@@ -225,7 +313,7 @@ export async function getComments(strategyId: number, limit?: number, offset?: n
 
 export async function createComment(data: { userId: number; strategyId: number; content: string }) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return createMockComment(data);
 
   const result = await db.insert(comments).values(data);
   return result;
@@ -352,7 +440,7 @@ export async function getUserDownloads(userId: number) {
 
 export async function createStrategy(data: typeof strategies.$inferInsert) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return createMockStrategy(data);
 
   const result = await db.insert(strategies).values(data);
   // 返回插入的策略对象
@@ -362,7 +450,7 @@ export async function createStrategy(data: typeof strategies.$inferInsert) {
 
 export async function updateStrategy(id: number, data: Partial<typeof strategies.$inferInsert>) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return updateMockStrategy(id, data);
 
   await db.update(strategies).set(data).where(eq(strategies.id, id));
   return getStrategyById(id);
@@ -370,7 +458,7 @@ export async function updateStrategy(id: number, data: Partial<typeof strategies
 
 export async function deleteStrategy(id: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return deleteMockStrategy(id);
 
   await db.delete(strategies).where(eq(strategies.id, id));
   return true;
@@ -382,7 +470,7 @@ export async function getAllStrategies(params: {
   offset?: number;
 }) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockAllStrategies(params);
 
   const whereCondition = params.status ? eq(strategies.status, params.status) : undefined;
 
@@ -399,7 +487,7 @@ export async function getAllStrategies(params: {
 
 export async function getAllComments(limit?: number, offset?: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockAllComments(limit, offset);
 
   return db
     .select({
@@ -436,7 +524,7 @@ export async function deleteCommentByAdmin(id: number) {
 
 export async function getAdminStats() {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockAdminStats();
 
   const totalStrategies = await db.select({ count: sql<number>`count(*)` }).from(strategies);
   const publishedStrategies = await db
@@ -460,7 +548,7 @@ export async function getAdminStats() {
 
 export async function getBacktestData(strategyId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockBacktestData(strategyId);
 
   const { backtestData } = schema;
   return db
@@ -499,7 +587,7 @@ export async function deleteAllBacktestData(strategyId: number) {
 
 export async function getAnonymousComments(strategyId: number, limit = 50, offset = 0) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockAnonymousComments(strategyId, limit, offset);
 
   return db
     .select()
@@ -512,7 +600,7 @@ export async function getAnonymousComments(strategyId: number, limit = 50, offse
 
 export async function getAllAnonymousComments(limit = 200, offset = 0) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockAllAnonymousComments(limit, offset);
 
   return db
     .select({
@@ -534,7 +622,7 @@ export async function getAllAnonymousComments(limit = 200, offset = 0) {
 
 export async function createAnonymousComment(data: typeof anonymousComments.$inferInsert) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return createMockAnonymousComment(data);
 
   const result = await db.insert(anonymousComments).values(data);
   return result;
@@ -606,7 +694,10 @@ export async function updateListingRequestStatus(id: number, status: "pending" |
 
 export async function getGroupBuys(status?: "active" | "completed" | "cancelled", limit = 50, offset = 0) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    const rows = getMockGroupBuys().filter((groupBuy: any) => !status || groupBuy.status === status);
+    return rows.slice(offset, offset + limit);
+  }
 
   const whereCondition = status ? eq(groupBuys.status, status) : undefined;
 
@@ -626,7 +717,7 @@ export async function getGroupBuys(status?: "active" | "completed" | "cancelled"
 
 export async function getGroupBuyDetail(id: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockGroupBuyById(id);
 
   const result = await db.select().from(groupBuys).where(eq(groupBuys.id, id)).limit(1);
   return result[0] || null;
@@ -676,8 +767,6 @@ function detectContactType(value: string): string {
 
 export async function createEmailSubscription(input: { email?: string; contactInfo?: string }) {
   const db = await getDb();
-  if (!db) return null;
-
   const { emailSubscriptions } = schema;
   const email = input.email?.trim() || null;
   const contactInfo = input.contactInfo?.trim() || null;
@@ -685,6 +774,8 @@ export async function createEmailSubscription(input: { email?: string; contactIn
   if (!email && !contactInfo) {
     return { success: false, message: "请至少填写一种联系方式" };
   }
+
+  if (!db) return { success: true, message: "提交成功，本地预览已记录样例请求" };
 
   // 检查是否已存在（按邮箱或联系方式查重）
   const conditions = [];
@@ -842,14 +933,14 @@ export async function deleteNotification(id: number) {
 
 export async function getSiteSettings() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockSiteSettings();
 
   return db.select().from(siteSettings);
 }
 
 export async function getSiteSetting(key: string) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockSiteSetting(key);
 
   const result = await db.select().from(siteSettings).where(eq(siteSettings.settingKey, key)).limit(1);
   return result[0] || null;
@@ -870,7 +961,7 @@ export async function upsertSiteSetting(key: string, value: string, description?
 
 export async function getContactSettings() {
   const db = await getDb();
-  if (!db) return {};
+  if (!db) return getMockContactSettings();
 
   const settings = await db.select().from(siteSettings)
     .where(sql`${siteSettings.settingKey} LIKE 'contact_%'`);
@@ -906,7 +997,7 @@ export async function deleteGroupBuy(id: number) {
 
 export async function getAllGroupBuys(limit = 100, offset = 0) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockGroupBuys().slice(offset, offset + limit);
   return db.select().from(groupBuys).orderBy(desc(groupBuys.createdAt)).limit(limit).offset(offset);
 }
 
@@ -923,7 +1014,7 @@ export async function deleteListingRequest(id: number) {
 // 获取可见的合作展示卡片
 export async function getCooperationCards() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockCooperationCards();
   return db.select().from(cooperationCards)
     .where(eq(cooperationCards.isVisible, true))
     .orderBy(asc(cooperationCards.sortOrder));
@@ -932,7 +1023,7 @@ export async function getCooperationCards() {
 // 获取所有合作展示卡片（管理员）
 export async function getAllCooperationCards() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockCooperationCards();
   return db.select().from(cooperationCards).orderBy(asc(cooperationCards.sortOrder));
 }
 
@@ -963,7 +1054,7 @@ export async function deleteCooperationCard(id: number) {
 // 获取可见的合作模式
 export async function getCooperationPlans() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockCooperationPlans();
   return db.select().from(cooperationPlans)
     .where(eq(cooperationPlans.isVisible, true))
     .orderBy(asc(cooperationPlans.sortOrder));
@@ -972,7 +1063,7 @@ export async function getCooperationPlans() {
 // 获取所有合作模式（管理员）
 export async function getAllCooperationPlans() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockCooperationPlans();
   return db.select().from(cooperationPlans).orderBy(asc(cooperationPlans.sortOrder));
 }
 
@@ -1005,7 +1096,7 @@ export async function deleteCooperationPlan(id: number) {
 // 获取可见的促销商品
 export async function getPromoProducts(category?: string) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockPromoProducts(category);
   const conditions = [eq(promoProducts.isVisible, true), eq(promoProducts.status, "active")];
   if (category) {
     conditions.push(eq(promoProducts.category, category));
@@ -1018,7 +1109,7 @@ export async function getPromoProducts(category?: string) {
 // 获取促销商品详情
 export async function getPromoProductById(id: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockPromoProducts().find((product: any) => product.id === id) || null;
   const result = await db.select().from(promoProducts).where(eq(promoProducts.id, id)).limit(1);
   return result[0] || null;
 }
@@ -1026,7 +1117,7 @@ export async function getPromoProductById(id: number) {
 // 获取所有促销商品（管理员）
 export async function getAllPromoProducts() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockPromoProducts();
   return db.select().from(promoProducts).orderBy(asc(promoProducts.sortOrder));
 }
 
@@ -1137,7 +1228,7 @@ export async function isUserEmailVerified(email: string): Promise<boolean> {
 
 export async function listCategories() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockCategories();
   return db
     .select()
     .from(categories)
@@ -1147,7 +1238,7 @@ export async function listCategories() {
 
 export async function getCategoryBySlug(slug: string) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockCategoryBySlug(slug);
   const rows = await db
     .select()
     .from(categories)
@@ -1158,7 +1249,7 @@ export async function getCategoryBySlug(slug: string) {
 
 export async function getCategoryById(id: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockCategoryById(id);
   const rows = await db
     .select()
     .from(categories)
@@ -1191,28 +1282,28 @@ export async function deleteCategory(id: number) {
 
 export async function createOrder(data: typeof orders.$inferInsert) {
   const db = await getDb();
-  if (!db) throw new Error("DB not available");
+  if (!db) return createMockOrder(data);
   await db.insert(orders).values(data);
   return getOrderByOrderNo(data.orderNo);
 }
 
 export async function getOrderById(id: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockOrderById(id);
   const rows = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
   return rows[0] || null;
 }
 
 export async function getOrderByOrderNo(orderNo: string) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockOrderByOrderNo(orderNo);
   const rows = await db.select().from(orders).where(eq(orders.orderNo, orderNo)).limit(1);
   return rows[0] || null;
 }
 
 export async function getUserOrders(userId: number, opts?: { limit?: number; status?: string }) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockUserOrders(userId, opts);
   const conditions: any[] = [eq(orders.userId, userId)];
   if (opts?.status) conditions.push(eq(orders.status, opts.status as any));
   return db
@@ -1225,7 +1316,7 @@ export async function getUserOrders(userId: number, opts?: { limit?: number; sta
 
 export async function listAllOrders(opts?: { limit?: number; status?: string }) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return listMockAllOrders(opts);
   const conditions: any[] = [];
   if (opts?.status) conditions.push(eq(orders.status, opts.status as any));
   const query = db.select().from(orders);
@@ -1238,7 +1329,7 @@ export async function markOrderPaid(
   opts: { paymentMethod?: string | null; paymentGateway?: string | null }
 ) {
   const db = await getDb();
-  if (!db) throw new Error("DB not available");
+  if (!db) return markMockOrderPaid(orderId, opts);
   await db
     .update(orders)
     .set({
@@ -1252,13 +1343,13 @@ export async function markOrderPaid(
 
 export async function cancelOrder(orderId: number) {
   const db = await getDb();
-  if (!db) throw new Error("DB not available");
+  if (!db) return cancelMockOrder(orderId);
   await db.update(orders).set({ status: "cancelled" }).where(eq(orders.id, orderId));
 }
 
 export async function expireStaleOrders(): Promise<number> {
   const db = await getDb();
-  if (!db) return 0;
+  if (!db) return expireMockStaleOrders();
   const now = new Date();
   const result = await db
     .update(orders)
@@ -1276,26 +1367,26 @@ export async function expireStaleOrders(): Promise<number> {
 
 export async function createPayment(data: typeof payments.$inferInsert) {
   const db = await getDb();
-  if (!db) throw new Error("DB not available");
+  if (!db) return createMockPayment(data);
   await db.insert(payments).values(data);
 }
 
 export async function updatePayment(id: number, data: Partial<typeof payments.$inferInsert>) {
   const db = await getDb();
-  if (!db) throw new Error("DB not available");
+  if (!db) return updateMockPayment(id, data);
   await db.update(payments).set(data).where(eq(payments.id, id));
 }
 
 export async function getPaymentById(id: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockPaymentById(id);
   const rows = await db.select().from(payments).where(eq(payments.id, id)).limit(1);
   return rows[0] || null;
 }
 
 export async function getPaymentsByOrderId(orderId: number) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return getMockPaymentsByOrderId(orderId);
   return db
     .select()
     .from(payments)
@@ -1305,7 +1396,7 @@ export async function getPaymentsByOrderId(orderId: number) {
 
 export async function getActivePaymentByOrderId(orderId: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) return getMockActivePaymentByOrderId(orderId);
   const rows = await db
     .select()
     .from(payments)
@@ -1317,7 +1408,7 @@ export async function getActivePaymentByOrderId(orderId: number) {
 
 export async function listPendingUsdtPayments() {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return listMockPendingUsdtPayments();
   return db
     .select()
     .from(payments)
@@ -1401,8 +1492,8 @@ export async function updateUserPassword(userId: number, passwordHash: string) {
 // (actual implementation is in server/_core/verification.ts)
 export async function createVerificationCode(opts: {
   target: string;
-  targetType: string;
-  purpose: string;
+  targetType: VerificationTargetType;
+  purpose: VerificationPurpose;
   ip?: string;
 }): Promise<{ ok: boolean; code?: string; error?: string }> {
   const { createVerificationCode: _create } = await import("./_core/verification");
@@ -1414,6 +1505,7 @@ export async function createVerificationCode(opts: {
 // ============================================================
 export async function listSiteEntries(params?: { enabled?: boolean; all?: boolean }) {
   const db = await getDb();
+  if (!db) return listMockSiteEntries(params);
   const { siteEntries } = schema;
   let query = db.select().from(siteEntries).$dynamic();
   if (!params?.all && params?.enabled !== undefined) {
@@ -1427,18 +1519,21 @@ export async function listSiteEntries(params?: { enabled?: boolean; all?: boolea
 
 export async function createSiteEntry(data: typeof schema.siteEntries.$inferInsert) {
   const db = await getDb();
+  if (!db) return createMockSiteEntry(data);
   const result = await db.insert(schema.siteEntries).values(data);
   return { ok: true, id: (result as any)[0]?.insertId };
 }
 
 export async function updateSiteEntry(id: number, data: Partial<typeof schema.siteEntries.$inferInsert>) {
   const db = await getDb();
+  if (!db) return updateMockSiteEntry(id, data);
   await db.update(schema.siteEntries).set(data).where(eq(schema.siteEntries.id, id));
   return { ok: true };
 }
 
 export async function deleteSiteEntry(id: number) {
   const db = await getDb();
+  if (!db) return deleteMockSiteEntry(id);
   await db.delete(schema.siteEntries).where(eq(schema.siteEntries.id, id));
   return { ok: true };
 }

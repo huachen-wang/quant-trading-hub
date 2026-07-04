@@ -2,6 +2,12 @@ import { useEffect, useState } from "react";
 import { View, Text, TextInput, Platform, StyleSheet } from "react-native";
 import { useColors } from "@/hooks/use-colors";
 
+const TIPTAP_REACT_MODULE = "@tiptap/react";
+const TIPTAP_STARTER_KIT_MODULE = "@tiptap/starter-kit";
+const TIPTAP_LINK_MODULE = "@tiptap/extension-link";
+const TIPTAP_IMAGE_MODULE = "@tiptap/extension-image";
+const TIPTAP_CORE_MODULE = "@tiptap/core";
+
 /**
  * 富文本编辑器（admin 用）
  *
@@ -79,22 +85,36 @@ function WebTiptapEditor({
 }: TiptapEditorProps) {
   const colors = useColors();
   const [editor, setEditor] = useState<any>(null);
+  const [EditorContentComp, setEditorContentComp] = useState<any>(null);
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+    import(TIPTAP_REACT_MODULE)
+      .then((m) => {
+        if (!cancelled) setEditorContentComp(() => m.EditorContent);
+      })
+      .catch((err) => {
+        console.error("[TiptapEditor] failed to load editor content:", err);
+        if (!cancelled) setHasError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let createdEditor: any = null;
     (async () => {
       try {
-        const { useEditor, EditorContent } = await import("@tiptap/react");
-        const StarterKit = (await import("@tiptap/starter-kit")).default;
-        const Link = (await import("@tiptap/extension-link")).default;
-        const Image = (await import("@tiptap/extension-image")).default;
+        const StarterKit = (await import(TIPTAP_STARTER_KIT_MODULE)).default;
+        const Link = (await import(TIPTAP_LINK_MODULE)).default;
+        const Image = (await import(TIPTAP_IMAGE_MODULE)).default;
 
         // 注：useEditor 是 hook，不能在这里调用，需要用 EditorContent 渲染
         // 改用 Editor class 直接 new
-        const { Editor } = await import("@tiptap/core");
-
-        if (cancelled) return;
+        const { Editor } = await import(TIPTAP_CORE_MODULE);
 
         const ed = new Editor({
           extensions: [
@@ -103,11 +123,17 @@ function WebTiptapEditor({
             Image,
           ],
           content: value || "<p></p>",
-          onUpdate: ({ editor }) => {
+          onUpdate: ({ editor }: { editor: any }) => {
             onChange(editor.getHTML());
           },
         });
 
+        if (cancelled) {
+          ed.destroy();
+          return;
+        }
+
+        createdEditor = ed;
         setEditor(ed);
       } catch (err) {
         console.error("[TiptapEditor] failed to load tiptap:", err);
@@ -117,6 +143,7 @@ function WebTiptapEditor({
 
     return () => {
       cancelled = true;
+      createdEditor?.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -199,12 +226,6 @@ function WebTiptapEditor({
       <ToolbarBtn label="↷" tooltip="重做" onClick={() => editor.chain().focus().redo().run()} />
     </View>
   );
-
-  // 加载 EditorContent 组件
-  const [EditorContentComp, setEditorContentComp] = useState<any>(null);
-  useEffect(() => {
-    import("@tiptap/react").then((m) => setEditorContentComp(() => m.EditorContent));
-  }, []);
 
   if (!EditorContentComp) {
     return (

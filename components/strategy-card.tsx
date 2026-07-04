@@ -100,6 +100,11 @@ export function StrategyCard({
   const originalPriceNum = parseFloat(originalPrice || "") || 0;
   const hasDiscount = !isFree && originalPriceNum > 0 && originalPriceNum > priceNum;
   const discountPercent = hasDiscount ? Math.round((1 - priceNum / originalPriceNum) * 100) : 0;
+  const returnText = `${isPositive ? "+" : ""}${totalReturn}%`;
+  const priceText = `¥${price}`;
+  const originalPriceText = originalPrice ? `¥${originalPrice}` : "";
+  const viewText = `👁 ${viewCount}`;
+  const downloadText = `💾 ${downloadCount + virtualDownloads}`;
 
   // 解析标签
   const tagList = tags ? tags.split(",").map(t => t.trim()).filter(Boolean).slice(0, 2) : [];
@@ -192,15 +197,14 @@ export function StrategyCard({
             isFeatured ? { top: 34 } : {},
           ]}>
             <Text style={[styles.platformText, { color: isFeatured ? "#A8895A" : gradientColors[1] }]}>
-              {platform}
-              {productTypeLabel ? ` · ${productTypeLabel}` : ""}
+              {productTypeLabel ? `${platform} · ${productTypeLabel}` : platform}
             </Text>
           </View>
 
           {/* 折扣标签 */}
           {hasDiscount && discountPercent > 0 && (
             <View style={styles.discountBadge}>
-              <Text style={styles.discountText}>-{discountPercent}%</Text>
+              <Text style={styles.discountText}>{`-${discountPercent}%`}</Text>
             </View>
           )}
 
@@ -220,9 +224,7 @@ export function StrategyCard({
 
           {/* 收益率浮层 */}
           <View style={[styles.returnOverlay, { backgroundColor: isPositive ? "rgba(16,185,129,0.9)" : "rgba(239,68,68,0.9)" }]}>
-            <Text style={styles.returnOverlayText}>
-              {isPositive ? "+" : ""}{totalReturn}%
-            </Text>
+            <Text style={styles.returnOverlayText}>{returnText}</Text>
           </View>
         </View>
 
@@ -247,29 +249,38 @@ export function StrategyCard({
             </View>
           )}
 
-          {/* 价格 + 胜率 + 下载量 一行 */}
+          {/* 价格 + 下载量 */}
           <View style={styles.bottomRow}>
-            <View style={styles.bottomLeft}>
+            <View style={styles.priceSlot}>
               {isFree ? (
                 <Text style={[styles.freePrice, { color: colors.success, fontSize: priceSize }]}>免费</Text>
               ) : (
                 <View style={styles.priceGroup}>
-                  <Text style={[styles.price, { color: "#C9A96E", fontSize: priceSize }]}>¥{price}</Text>
+                  <Text style={[styles.price, { color: "#C9A96E", fontSize: priceSize }]} numberOfLines={1}>
+                    {priceText}
+                  </Text>
                   {hasDiscount && (
-                    <Text style={[styles.originalPrice, { color: colors.muted, fontSize: metaSize }]}>¥{originalPrice}</Text>
+                    <Text style={[styles.originalPrice, { color: colors.muted, fontSize: metaSize }]} numberOfLines={1}>
+                      {originalPriceText}
+                    </Text>
                   )}
                 </View>
               )}
-              <Text style={[styles.winRateInline, { color: colors.muted, fontSize: isDesktop ? 11 : 10 }]}>
-                胜率 <Text style={{ color: colors.primary, fontWeight: "700" }}>{winRate}%</Text>
-              </Text>
             </View>
             <View style={styles.bottomRight}>
               {isDesktop && viewCount > 0 && (
-                <Text style={[styles.metaText, { color: colors.muted, fontSize: metaSize }]}>👁 {viewCount}</Text>
+                <Text style={[styles.metaText, { color: colors.muted, fontSize: metaSize }]}>{viewText}</Text>
               )}
-              <Text style={[styles.metaText, { color: colors.muted, fontSize: metaSize }]}>💾 {downloadCount + virtualDownloads}</Text>
+              <Text style={[styles.metaText, { color: colors.muted, fontSize: metaSize }]}>{downloadText}</Text>
             </View>
+          </View>
+          <View style={styles.winRateInline}>
+            <Text style={[styles.winRateLabel, { color: colors.muted, fontSize: isDesktop ? 11 : 10 }]} numberOfLines={1}>
+              胜率
+            </Text>
+            <Text style={[styles.winRateValue, { color: colors.primary, fontSize: isDesktop ? 11 : 10 }]} numberOfLines={1}>
+              {`${winRate}%`}
+            </Text>
           </View>
         </View>
       </View>
@@ -397,8 +408,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 8,
   },
-  bottomLeft: {
+  priceSlot: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -407,11 +421,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    flexShrink: 0,
   },
   priceGroup: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    minWidth: 0,
+    flexShrink: 1,
   },
   freePrice: {
     fontWeight: "700",
@@ -423,7 +440,21 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
     fontWeight: "400",
   },
-  winRateInline: {},
+  winRateInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 3,
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  winRateLabel: {
+    lineHeight: 14,
+  },
+  winRateValue: {
+    fontWeight: "700",
+    lineHeight: 14,
+  },
   metaText: {
     lineHeight: 14,
   },

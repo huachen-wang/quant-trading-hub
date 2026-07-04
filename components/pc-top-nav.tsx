@@ -13,8 +13,8 @@ import { useAuth } from "@/hooks/use-auth";
 /**
  * 全端统一顶部导航 - 响应式 + 用户状态
  *
- * 桌面（≥1024px）：完整显示 EAXAU + Logo + 5 个链接 + 用户区
- * 手机（<1024px）：金色 Logo + 用户区 + ☰ 汉堡菜单
+ * 桌面（≥1024px）：完整显示 EAXAU 字标 + 5 个链接 + 用户区
+ * 手机（<1024px）：EAXAU 字标 + 用户区；导航交给全局悬浮侧边栏
  *
  * 用户区状态：
  * - 未登录：[登录/注册] 按钮
@@ -26,7 +26,6 @@ export function PcTopNav() {
   const { user, isAuthenticated, logout, loading } = useAuth();
 
   const [windowWidth, setWindowWidth] = useState(0);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -65,16 +64,15 @@ export function PcTopNav() {
     { href: "/cooperation", label: "合作授权" },
     { href: "/promo", label: "限时促销" },
   ];
+  const brandLetters = ["E", "A", "X", "A", "U"];
 
   const goTo = (href: string) => {
-    setDrawerOpen(false);
     setUserMenuOpen(false);
     router.push(href as any);
   };
 
   const handleLogout = async () => {
     setUserMenuOpen(false);
-    setDrawerOpen(false);
     try {
       await logout();
       router.replace("/(tabs)" as any);
@@ -110,7 +108,7 @@ export function PcTopNav() {
     // 已登录
     return (
       <Pressable
-        onPress={() => setUserMenuOpen((v) => !v)}
+        onPress={() => (isMobile ? goTo("/(tabs)/profile") : setUserMenuOpen((v) => !v))}
         style={[styles.userPill, isMobile && styles.userPillMobile]}
       >
         <View style={styles.avatar}>
@@ -133,14 +131,23 @@ export function PcTopNav() {
       <View style={styles.topbar}>
         <View style={[styles.inner, isMobile && styles.innerMobile]}>
           {/* Logo */}
-          <Pressable style={styles.logo} onPress={() => goTo("/(tabs)")}>
-            <View style={styles.logoMark}>
-              <Text style={styles.logoMarkText}>EX</Text>
-            </View>
-            <View style={{ flexDirection: "column", marginLeft: 8 }}>
-              <Text style={styles.logoBrand}>EAXAU</Text>
-              <Text style={styles.logoSub}>· 量化军火库 ·</Text>
-            </View>
+          <Pressable
+            style={[styles.logo, isMobile && styles.logoMobile]}
+            onPress={() => goTo("/(tabs)")}
+            accessibilityLabel="EAXAU"
+          >
+            {brandLetters.map((letter, index) => (
+              <Text
+                key={`${letter}-${index}`}
+                style={[
+                  styles.logoLetter,
+                  index === 2 && styles.logoLetterAccent,
+                  isMobile && styles.logoLetterMobile,
+                ]}
+              >
+                {letter}
+              </Text>
+            ))}
           </Pressable>
 
           {/* 桌面端：内联 5 个导航 */}
@@ -166,21 +173,9 @@ export function PcTopNav() {
           {/* 手机端 spacer */}
           {isMobile && <View style={{ flex: 1 }} />}
 
-          {/* 右侧：用户区 + 汉堡 */}
+          {/* 右侧：用户区 */}
           <View style={styles.right}>
             {renderUserArea()}
-
-            {isMobile && (
-              <Pressable
-                onPress={() => {
-                  setUserMenuOpen(false);
-                  setDrawerOpen((v) => !v);
-                }}
-                style={styles.hamburger}
-              >
-                <Text style={styles.hamburgerIcon}>{drawerOpen ? "✕" : "☰"}</Text>
-              </Pressable>
-            )}
           </View>
         </View>
       </View>
@@ -227,81 +222,6 @@ export function PcTopNav() {
           </View>
         </>
       )}
-
-      {/* 手机端抽屉 */}
-      {isMobile && drawerOpen && (
-        <>
-          <Pressable style={styles.drawerBackdrop} onPress={() => setDrawerOpen(false)} />
-          <View style={styles.drawer}>
-            {/* 已登录时显示用户信息 */}
-            {isAuthenticated && (
-              <View style={styles.drawerUserHeader}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{avatarLetter}</Text>
-                </View>
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.drawerUserName} numberOfLines={1}>
-                    {displayName}
-                  </Text>
-                  <Text style={styles.drawerUserEmail} numberOfLines={1}>
-                    {user?.email}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* 导航项 */}
-            {navItems.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Pressable
-                  key={item.href}
-                  onPress={() => goTo(item.href)}
-                  style={[styles.drawerItem, active && styles.drawerItemActive]}
-                >
-                  <Text
-                    style={[styles.drawerItemText, active && styles.drawerItemTextActive]}
-                  >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-
-            {/* 已登录时显示用户操作 */}
-            {isAuthenticated && (
-              <>
-                <View style={{ height: 8 }} />
-                <Pressable
-                  style={styles.drawerItem}
-                  onPress={() => goTo("/(tabs)/profile")}
-                >
-                  <Text style={styles.drawerItemText}>👤  个人中心</Text>
-                </Pressable>
-                <Pressable style={styles.drawerItem} onPress={() => goTo("/(tabs)/profile")}>
-                  <Text style={styles.drawerItemText}>📦  我的订单</Text>
-                </Pressable>
-                <Pressable
-                  style={styles.drawerItem}
-                  onPress={() => goTo("/(tabs)/favorites")}
-                >
-                  <Text style={styles.drawerItemText}>⭐  我的收藏</Text>
-                </Pressable>
-                {user?.role === "admin" && (
-                  <Pressable style={styles.drawerItem} onPress={() => goTo("/admin")}>
-                    <Text style={styles.drawerItemText}>🛠  管理后台</Text>
-                  </Pressable>
-                )}
-                <Pressable style={styles.drawerItem} onPress={handleLogout}>
-                  <Text style={[styles.drawerItemText, { color: "#F87171" }]}>
-                    🚪  退出登录
-                  </Text>
-                </Pressable>
-              </>
-            )}
-          </View>
-        </>
-      )}
     </>
   );
 }
@@ -330,23 +250,33 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 10,
   },
-  logo: { flexDirection: "row", alignItems: "center", flexShrink: 0 },
-  logoMark: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "#C9A96E",
+  logo: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    flexShrink: 0,
+    gap: 2,
+    minHeight: 38,
+    paddingHorizontal: 2,
   },
-  logoMarkText: {
-    color: "#0A1628",
-    fontSize: 13,
+  logoMobile: {
+    minHeight: 36,
+  },
+  logoLetter: {
+    color: "#F8FAFC",
+    fontSize: 23,
     fontWeight: "900",
-    letterSpacing: -0.5,
+    lineHeight: 28,
+    textShadowColor: "rgba(201,169,110,0.24)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 10,
   },
-  logoBrand: { color: "#F1F5F9", fontSize: 17, fontWeight: "900", letterSpacing: 0.4 },
-  logoSub: { color: "#D8BC83", fontSize: 10, fontWeight: "600", letterSpacing: 1.6, marginTop: 2 },
+  logoLetterAccent: {
+    color: "#D8BC83",
+  },
+  logoLetterMobile: {
+    fontSize: 21,
+    lineHeight: 26,
+  },
   nav: { flex: 1, flexDirection: "row", gap: 4 },
   navLink: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
   navLinkActive: { backgroundColor: "rgba(245,158,11,0.08)" },
@@ -397,18 +327,6 @@ const styles = StyleSheet.create({
   userName: { color: "#F1F5F9", fontSize: 13, fontWeight: "600", maxWidth: 120 },
   userArrow: { color: "#94A3B8", fontSize: 10 },
 
-  hamburger: {
-    width: 38,
-    height: 38,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: 1,
-    borderColor: "rgba(148,163,184,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  hamburgerIcon: { color: "#F1F5F9", fontSize: 18, fontWeight: "700" },
-
   // 桌面用户下拉菜单
   menuBackdrop: {
     position: "absolute" as any,
@@ -455,45 +373,4 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
 
-  // 手机抽屉
-  drawerBackdrop: {
-    position: "absolute" as any,
-    top: 60,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    zIndex: 99,
-  },
-  drawer: {
-    position: "absolute" as any,
-    top: 60,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(10,14,26,0.98)",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(148,163,184,0.12)",
-    paddingVertical: 8,
-    zIndex: 100,
-  },
-  drawerUserHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(148,163,184,0.12)",
-    marginBottom: 4,
-  },
-  drawerUserName: { color: "#F1F5F9", fontSize: 15, fontWeight: "700" },
-  drawerUserEmail: { color: "#94A3B8", fontSize: 12, marginTop: 2 },
-  drawerItem: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(148,163,184,0.06)",
-  },
-  drawerItemActive: { backgroundColor: "rgba(245,158,11,0.08)" },
-  drawerItemText: { color: "#F1F5F9", fontSize: 15, fontWeight: "500" },
-  drawerItemTextActive: { color: "#D8BC83", fontWeight: "700" },
 });

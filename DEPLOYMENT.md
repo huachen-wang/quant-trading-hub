@@ -28,8 +28,10 @@ Vercel是最简单快速的部署方式,免费且支持自动HTTPS。
 4. **配置环境变量**
    在Vercel项目设置中添加:
    ```
-   DATABASE_URL=mysql://root:Fred1013@database-1.cduwuyyc4o2z.ap-southeast-2.rds.amazonaws.com:3306/ea_market
-   JWT_SECRET=your-production-secret-here
+   DATABASE_URL=mysql://USER:PASSWORD@HOST:3306/DATABASE
+   JWT_SECRET=replace-with-a-long-random-secret
+   COOKIE_SECRET=replace-with-a-long-random-secret
+   DOWNLOAD_SIGNING_SECRET=replace-with-a-long-random-secret
    NODE_ENV=production
    ```
 
@@ -112,8 +114,8 @@ Vercel是最简单快速的部署方式,免费且支持自动HTTPS。
 
 4. **配置环境变量**
    ```bash
-   cp .env.production.example .env.production
-   nano .env.production
+   cp .env.example .env
+   nano .env
    # 填入数据库连接和JWT密钥
    ```
 

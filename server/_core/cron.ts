@@ -15,7 +15,7 @@ import { expireStaleOrders } from "../db";
 import { cleanupExpiredCodes } from "./verification";
 
 let started = false;
-let intervals: NodeJS.Timeout[] = [];
+let intervals: ReturnType<typeof setInterval>[] = [];
 
 /**
  * 启动 cron 调度

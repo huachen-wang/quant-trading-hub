@@ -1,6 +1,6 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const.js";
 import type { Express, Request, Response } from "express";
-import { createUser, getUserByEmail, getUserByOpenId, updateUser, upsertUser } from "../db";
+import { createUser, getUserByEmail, getUserByOpenId, getUserByPhone, updateUser, upsertUser } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 import { hashPassword, verifyPassword } from "./password";
@@ -75,6 +75,7 @@ export function registerOAuthRoutes(app: Express) {
     const email = typeof req.body?.email === "string" ? normalizeEmail(req.body.email) : "";
     const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
     const password = typeof req.body?.password === "string" ? req.body.password : "";
+    const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
 
     if (!email || !isValidEmail(email)) {
       res.status(400).json({ error: "Valid email is required" });
@@ -91,6 +92,13 @@ export function registerOAuthRoutes(app: Express) {
         res.status(409).json({ error: "Email already registered" });
         return;
       }
+      if (phone) {
+        const phoneOwner = await getUserByPhone(phone);
+        if (phoneOwner) {
+          res.status(409).json({ error: "Phone already registered" });
+          return;
+        }
+      }
 
       const displayName = name || email.split("@")[0];
       const openId = `email:${email}`;
@@ -100,6 +108,7 @@ export function registerOAuthRoutes(app: Express) {
         openId,
         name: displayName,
         email,
+        phone: phone || null,
         passwordHash: hashPassword(password),
         loginMethod: "email",
         lastSignedIn,

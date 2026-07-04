@@ -51,14 +51,16 @@ $ cd quant-trading-hub
 # 2. 安装依赖
 $ pnpm install
 
-# 3. 启动数据库 (需要Docker)
-# 你需要在 .env 文件中配置数据库连接信息
+# 3. 准备环境变量
+$ cp .env.example .env
+
+# 4. 启动本地 MySQL 数据库
 $ docker-compose up -d
 
-# 4. 运行数据库迁移
+# 5. 运行数据库迁移
 $ pnpm db:push
 
-# 5. 启动开发服务器 (Web + Backend)
+# 6. 启动开发服务器 (Web + Backend)
 $ pnpm dev
 ```
 

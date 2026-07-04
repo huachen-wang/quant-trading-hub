@@ -1,31 +1,35 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
   ActivityIndicator,
-  Linking,
   Alert,
-  StyleSheet,
+  Linking,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
   useWindowDimensions,
-  Modal,
-  Dimensions,
+  View,
 } from "react-native";
-import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { ScreenContainer } from "@/components/screen-container";
-import { PurchaseActions } from "@/components/purchase-actions";
-import { RichTextRenderer } from "@/components/rich-text-renderer";
 import { ContactModal } from "@/components/contact-modal";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 import { SubscribeModal } from "@/components/subscribe-modal";
+import { AdminNotesSection } from "@/components/strategy-detail/admin-notes-section";
+import { PlatformGuideSection } from "@/components/strategy-detail/platform-guide-section";
+import { BrokerRecommendationModal, VpsRecommendationModal } from "@/components/strategy-detail/recommendation-modals";
+import { AllReviewsModal, ReviewComposerModal } from "@/components/strategy-detail/review-modals";
+import { StrategyHeader } from "@/components/strategy-detail/strategy-header";
+import { StrategyMedia } from "@/components/strategy-detail/strategy-media";
+import { StrategyMetrics } from "@/components/strategy-detail/strategy-metrics";
+import { StrategyPurchasePanel } from "@/components/strategy-detail/strategy-purchase-panel";
+import { TradingEnvironmentSection } from "@/components/strategy-detail/trading-environment-section";
+import { UserReviewsSection } from "@/components/strategy-detail/user-reviews-section";
+import type { StrategyComment, StrategyReview } from "@/components/strategy-detail/types";
 
 export default function StrategyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -39,16 +43,11 @@ export default function StrategyDetailScreen() {
   const [showVpsModal, setShowVpsModal] = useState(false);
   const [showBrokerModal, setShowBrokerModal] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
-  // 用户评价弹窗
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewNickname, setReviewNickname] = useState("");
   const [reviewContent, setReviewContent] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [showReviewSuccess, setShowReviewSuccess] = useState(false);
-  // 图片画廊
-  const [galleryIndex, setGalleryIndex] = useState(0);
-  const [showGalleryModal, setShowGalleryModal] = useState(false);
-  const galleryScrollRef = useRef<ScrollView>(null);
 
   const strategyId = parseInt(id || "0");
   const isDesktop = Platform.OS === "web" && width >= 768;
@@ -120,14 +119,6 @@ export default function StrategyDetailScreen() {
     }
   };
 
-  const handleContact = (type: "telegram" | "qq") => {
-    if (type === "telegram" && strategy?.telegramGroup) {
-      Linking.openURL(strategy.telegramGroup);
-    } else if (type === "qq" && strategy?.qqGroup) {
-      Alert.alert("QQ群", `QQ群号: ${strategy.qqGroup}`, [{ text: "确定" }]);
-    }
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -165,55 +156,47 @@ export default function StrategyDetailScreen() {
   }
 
   const gradientColors: readonly [string, string, ...string[]] =
-    (strategy as any).isFeatured
+    strategy.isFeatured
       ? ["#92400E", "#A8895A"]
       : strategy.platform === "MT4" ? ["#1E3A8A", "#3B82F6"] : ["#7C3AED", "#A78BFA"];
 
   const returnValue = parseFloat(strategy.totalReturn) || 0;
   const isPositive = returnValue >= 0;
   const isAdmin = user?.role === "admin";
-
   const hasDownloadUrl = !!strategy.downloadUrl;
-  const hasTelegram = !!strategy.telegramGroup;
-  const hasQQ = !!strategy.qqGroup;
 
-  // 新字段（安全取值）
-  const originalPrice = (strategy as any).originalPrice;
-  const tags = (strategy as any).tags;
-  const productType = (strategy as any).productType;
-  const galleryImagesRaw = (strategy as any).galleryImages;
-  const isFeatured = (strategy as any).isFeatured;
-  const featuredLink = (strategy as any).featuredLink;
+  const originalPrice = strategy.originalPrice;
+  const tags = strategy.tags;
+  const productType = strategy.productType;
+  const galleryImagesRaw = strategy.galleryImages;
+  const isFeatured = !!strategy.isFeatured;
+  const featuredLink = strategy.featuredLink;
 
-  // 解析画廊图片
   let galleryImages: string[] = [];
   try {
-    if (galleryImagesRaw) {
-      galleryImages = JSON.parse(galleryImagesRaw);
+    const parsed = typeof galleryImagesRaw === "string"
+      ? JSON.parse(galleryImagesRaw)
+      : galleryImagesRaw;
+    if (Array.isArray(parsed)) {
+      galleryImages = parsed.filter((img): img is string => typeof img === "string" && img.length > 0);
     }
   } catch {}
-  // 如果有封面图，也加入画廊
+
   const allImages = strategy.coverImage
-    ? [strategy.coverImage, ...galleryImages.filter(img => img !== strategy.coverImage)]
+    ? [strategy.coverImage, ...galleryImages.filter((img) => img !== strategy.coverImage)]
     : galleryImages;
 
-  // 解析标签
-  const tagList = tags ? tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [];
+  const tagList = typeof tags === "string"
+    ? tags.split(",").map((tag) => tag.trim()).filter(Boolean)
+    : [];
 
-  // 价格锚点
   const priceNum = parseFloat(strategy.price) || 0;
   const originalPriceNum = parseFloat(originalPrice || "") || 0;
   const hasDiscount = !strategy.isFree && originalPriceNum > 0 && originalPriceNum > priceNum;
   const discountPercent = hasDiscount ? Math.round((1 - priceNum / originalPriceNum) * 100) : 0;
-
-  // 产品类型
   const productTypeLabel = productType === "indicator" ? "指标" : productType === "tool" ? "工具" : "EA";
-
-  // 用户评价最多显示3条
-  const displayReviews = userReviews ? userReviews.slice(0, 3) : [];
-  const hasMoreReviews = userReviews && userReviews.length > 3;
-
-  const galleryWidth = Math.min(width - 32, 688);
+  const reviews = (userReviews || []) as StrategyReview[];
+  const displayReviews = reviews.slice(0, 3);
 
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
@@ -222,180 +205,28 @@ export default function StrategyDetailScreen() {
         onClose={() => setShowSubscribeModal(false)}
         strategyTitle={strategy.title}
       />
-
-      {/* 用户评价弹窗 */}
-      <Modal
+      <ReviewComposerModal
         visible={showReviewModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowReviewModal(false)}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setShowReviewModal(false)}
-          style={styles.modalOverlay}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-            style={[styles.modalContent, { backgroundColor: colors.background }]}
-          >
-            <View style={styles.modalHandle} />
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>发表评价</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.muted }]}>匿名留言，无需登录</Text>
-
-            {showReviewSuccess && (
-              <View style={[styles.successBanner, { backgroundColor: colors.success + "15" }]}>
-                <Text style={[styles.successText, { color: colors.success }]}>
-                  ✅ 评价已提交，审核通过后将显示
-                </Text>
-              </View>
-            )}
-
-            <TextInput
-              style={[styles.modalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              placeholder="昵称（可选，默认匿名）"
-              placeholderTextColor={colors.muted}
-              value={reviewNickname}
-              onChangeText={setReviewNickname}
-              maxLength={100}
-            />
-            <TextInput
-              style={[styles.modalTextarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
-              placeholder="分享你的使用体验..."
-              placeholderTextColor={colors.muted}
-              value={reviewContent}
-              onChangeText={setReviewContent}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              maxLength={1000}
-            />
-            <View style={styles.modalBtnRow}>
-              <TouchableOpacity
-                onPress={() => setShowReviewModal(false)}
-                style={[styles.modalCancelBtn, { borderColor: colors.border }]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.modalCancelText, { color: colors.muted }]}>取消</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleSubmitReview}
-                disabled={isSubmittingReview || !reviewContent.trim()}
-                style={[
-                  styles.modalSubmitBtn,
-                  { backgroundColor: isSubmittingReview || !reviewContent.trim() ? colors.muted : colors.primary },
-                ]}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.modalSubmitText}>
-                  {isSubmittingReview ? "提交中..." : "发表评价"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* 查看全部评价弹窗 */}
-      <Modal
+        colors={colors}
+        nickname={reviewNickname}
+        content={reviewContent}
+        isSubmitting={isSubmittingReview}
+        showSuccess={showReviewSuccess}
+        onClose={() => setShowReviewModal(false)}
+        onChangeNickname={setReviewNickname}
+        onChangeContent={setReviewContent}
+        onSubmit={handleSubmitReview}
+      />
+      <AllReviewsModal
         visible={showAllComments}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowAllComments(false)}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setShowAllComments(false)}
-          style={styles.modalOverlay}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-            style={[styles.allCommentsModal, { backgroundColor: colors.background }]}
-          >
-            <View style={styles.modalHandle} />
-            <View style={styles.allCommentsHeader}>
-              <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-                全部评价 ({userReviews?.length || 0})
-              </Text>
-              <TouchableOpacity onPress={() => setShowAllComments(false)}>
-                <Text style={[{ fontSize: 18, color: colors.muted }]}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.allCommentsList} showsVerticalScrollIndicator={false}>
-              {userReviews && userReviews.length > 0 ? (
-                userReviews.map((review: any) => (
-                  <View key={review.id} style={[styles.reviewCard, { backgroundColor: colors.surface }]}>
-                    <View style={styles.reviewHeader}>
-                      <View style={[styles.reviewAvatar, { backgroundColor: colors.primary + "15" }]}>
-                        <Text style={[styles.reviewAvatarText, { color: colors.primary }]}>
-                          {(review.nickname || "匿名")[0]}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.reviewNickname, { color: colors.foreground }]}>
-                          {review.nickname || "匿名用户"}
-                        </Text>
-                        <Text style={[styles.reviewTime, { color: colors.muted }]}>
-                          {formatDate(String(review.createdAt))}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.reviewContent, { color: colors.foreground }]}>
-                      {review.content}
-                    </Text>
-                  </View>
-                ))
-              ) : (
-                <View style={styles.emptyReviews}>
-                  <Text style={{ color: colors.muted, textAlign: "center" }}>暂无评价</Text>
-                </View>
-              )}
-              <View style={{ height: 20 }} />
-            </ScrollView>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* 图片画廊全屏弹窗 */}
-      <Modal
-        visible={showGalleryModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowGalleryModal(false)}
-      >
-        <View style={styles.galleryModalOverlay}>
-          <TouchableOpacity
-            onPress={() => setShowGalleryModal(false)}
-            style={styles.galleryCloseBtn}
-          >
-            <Text style={styles.galleryCloseText}>✕</Text>
-          </TouchableOpacity>
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            contentOffset={{ x: galleryIndex * width, y: 0 }}
-          >
-            {allImages.map((img, i) => (
-              <View key={i} style={{ width, justifyContent: "center", alignItems: "center" }}>
-                <Image
-                  source={{ uri: img }}
-                  style={{ width: width - 40, height: width - 40 }}
-                  contentFit="contain"
-                  transition={200}
-                />
-              </View>
-            ))}
-          </ScrollView>
-          <Text style={styles.galleryCounter}>{galleryIndex + 1} / {allImages.length}</Text>
-        </View>
-      </Modal>
+        colors={colors}
+        reviews={reviews}
+        formatDate={formatDate}
+        onClose={() => setShowAllComments(false)}
+      />
 
       <ScrollView className="flex-1" contentContainerStyle={isDesktop ? styles.desktopContainer : undefined}>
         <View style={isDesktop ? [styles.desktopContent, { maxWidth: maxContentWidth }] : undefined}>
-          {/* 顶部导航栏 */}
           <View style={styles.topBar}>
             <TouchableOpacity
               onPress={() => router.back()}
@@ -414,525 +245,82 @@ export default function StrategyDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* 封面 / 图片画廊 */}
-          {allImages.length > 1 ? (
-            <View style={[styles.galleryContainer, isDesktop && styles.coverDesktop]}>
-              <ScrollView
-                ref={galleryScrollRef}
-                horizontal
-                pagingEnabled
-                showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={(e) => {
-                  const idx = Math.round(e.nativeEvent.contentOffset.x / galleryWidth);
-                  setGalleryIndex(idx);
-                }}
-                style={{ width: galleryWidth }}
-              >
-                {allImages.map((img, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => { setGalleryIndex(i); setShowGalleryModal(true); }}
-                    activeOpacity={0.9}
-                    style={{ width: galleryWidth }}
-                  >
-                    <Image
-                      source={{ uri: img }}
-                      style={{ width: galleryWidth, height: isDesktop ? 220 : 180, borderRadius: 20 }}
-                      contentFit="cover"
-                      transition={300}
-                      cachePolicy="memory-disk"
-                    />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              {/* 画廊指示器 */}
-              <View style={styles.galleryIndicatorRow}>
-                {allImages.map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.galleryIndicator,
-                      {
-                        backgroundColor: i === galleryIndex ? "#fff" : "rgba(255,255,255,0.4)",
-                        width: i === galleryIndex ? 16 : 6,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
-              {/* 平台标签 */}
-              <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
-                <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform} · {productTypeLabel}</Text>
-              </View>
-              {/* 旗舰标签 */}
-              {isFeatured && (
-                <View style={styles.featuredDetailBadge}>
-                  <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.featuredDetailGradient}>
-                    <Text style={styles.featuredDetailText}>⭐ 官方旗舰</Text>
-                  </LinearGradient>
-                </View>
-              )}
-            </View>
-          ) : strategy.coverImage ? (
-            <View style={[styles.coverGradient, isDesktop && styles.coverDesktop, { overflow: 'hidden' }]}>
-              <TouchableOpacity
-                onPress={() => { setGalleryIndex(0); setShowGalleryModal(true); }}
-                activeOpacity={0.9}
-                style={{ width: '100%', height: '100%' }}
-              >
-                <Image
-                  source={{ uri: strategy.coverImage }}
-                  style={{ width: '100%', height: '100%' }}
-                  placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
-                  contentFit="cover"
-                  transition={300}
-                  cachePolicy="memory-disk"
-                />
-              </TouchableOpacity>
-              <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
-                <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform} · {productTypeLabel}</Text>
-              </View>
-              {isFeatured && (
-                <View style={styles.featuredDetailBadge}>
-                  <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.featuredDetailGradient}>
-                    <Text style={styles.featuredDetailText}>⭐ 官方旗舰</Text>
-                  </LinearGradient>
-                </View>
-              )}
-            </View>
-          ) : (
-            <LinearGradient
-              colors={gradientColors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[styles.coverGradient, isDesktop && styles.coverDesktop]}
-            >
-              <Text style={styles.coverEmoji}>📈</Text>
-              <View style={[styles.platformBadge, { backgroundColor: "rgba(255,255,255,0.9)" }]}>
-                <Text style={[styles.platformText, { color: gradientColors[1] }]}>{strategy.platform} · {productTypeLabel}</Text>
-              </View>
-            </LinearGradient>
-          )}
-
-          {/* 标题和描述 */}
-          <View style={styles.titleSection}>
-            <View style={styles.titleRow}>
-              <Text style={[styles.title, { color: isFeatured ? "#A8895A" : colors.foreground, flex: 1 }]}>{strategy.title}</Text>
-            </View>
-            {/* 标签 */}
-            {tagList.length > 0 && (
-              <View style={styles.tagRow}>
-                {tagList.map((tag: string, i: number) => (
-                  <View key={i} style={[styles.tagChip, { backgroundColor: colors.primary + "15" }]}>
-                    <Text style={[styles.tagText, { color: colors.primary }]}>{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            <RichTextRenderer
-              html={(strategy as any).richDescription}
-              fallback={strategy.description}
-            />
-          </View>
-
-          {/* 核心数据 */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>实盘数据</Text>
-            <View
-              style={[styles.statsCard, { backgroundColor: colors.surface }]}
-            >
-              <View style={styles.statsRow}>
-                <View style={styles.statItem}>
-                  <Text style={[styles.statLabel, { color: colors.muted }]}>总收益率</Text>
-                  <Text style={[styles.statValue, { color: isPositive ? colors.success : colors.error }]}>
-                    {isPositive ? "+" : ""}{strategy.totalReturn}%
-                  </Text>
-                </View>
-                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.statItem}>
-                  <Text style={[styles.statLabel, { color: colors.muted }]}>胜率</Text>
-                  <Text style={[styles.statValue, { color: colors.primary }]}>{strategy.winRate}%</Text>
-                </View>
-                <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-                <View style={styles.statItem}>
-                  <Text style={[styles.statLabel, { color: colors.muted }]}>最大回撤</Text>
-                  <Text style={[styles.statValue, { color: colors.error }]}>{strategy.maxDrawdown}%</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* 交易信息 */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>交易信息</Text>
-            <View
-              style={[styles.infoCard, { backgroundColor: colors.surface }]}
-            >
-              <View style={styles.infoRow}>
-                <View style={styles.infoItem}>
-                  <Text style={[styles.infoLabel, { color: colors.muted }]}>交易对</Text>
-                  <Text style={[styles.infoValue, { color: colors.foreground }]}>{strategy.pairs || "—"}</Text>
-                </View>
-                <View style={styles.infoItem}>
-                  <Text style={[styles.infoLabel, { color: colors.muted }]}>时间周期</Text>
-                  <Text style={[styles.infoValue, { color: colors.foreground }]}>{strategy.timeframe || "—"}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* 价格和操作 */}
-          <View style={styles.section}>
-            <View
-              style={[styles.actionCard, { backgroundColor: colors.surface }]}
-            >
-              <View style={styles.priceRow}>
-                <View>
-                  <Text style={[styles.priceLabel, { color: colors.muted }]}>价格</Text>
-                  {strategy.isFree ? (
-                    <Text style={[styles.priceValue, { color: colors.success }]}>免费</Text>
-                  ) : (
-                    <View style={styles.priceDisplayRow}>
-                      <Text style={[styles.priceValue, { color: "#C9A96E" }]}>¥{strategy.price}</Text>
-                      {hasDiscount && (
-                        <View style={styles.priceAnchor}>
-                          <Text style={[styles.originalPriceText, { color: colors.muted }]}>¥{originalPrice}</Text>
-                          <View style={styles.discountBadge}>
-                            <Text style={styles.discountText}>-{discountPercent}%</Text>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  )}
-                </View>
-                <View style={styles.priceRight}>
-                  <Text style={[styles.downloadLabel, { color: colors.muted }]}>下载量</Text>
-                  <Text style={[styles.downloadValue, { color: colors.foreground }]}>💾 {(strategy.downloadCount || 0) + (strategy.virtualDownloads || 0)}</Text>
-                </View>
-              </View>
-
-              {/* A.2: saleMode 双分支 */}
-              {(strategy as any).saleMode === "direct" && strategy.isFree && hasDownloadUrl ? (
-                <TouchableOpacity
-                  onPress={handleDownload}
-                  style={[styles.downloadBtn, { backgroundColor: colors.primary }]}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.downloadBtnText, { color: "#fff" }]}>⚡ 立即下载</Text>
-                </TouchableOpacity>
-              ) : (
-                <PurchaseActions
-                  saleMode={(strategy as any).saleMode || "inquiry"}
-                  productId={strategy.id}
-                  productKind="strategy"
-                  price={strategy.price}
-                  originalPrice={(strategy as any).originalPrice}
-                  isFree={strategy.isFree}
-                  telegramGroup={strategy.telegramGroup}
-                  qqGroup={strategy.qqGroup}
-                  featuredLink={isFeatured ? featuredLink : null}
-                  hasDownloadUrl={hasDownloadUrl}
-                />
-              )}
-            </View>
-          </View>
-
-          {/* 推荐经纪商 & VPS */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>推荐交易环境</Text>
-            <View style={styles.recommendRow}>
-              <TouchableOpacity
-                onPress={() => setShowBrokerModal(true)}
-                style={[styles.recommendCard, { backgroundColor: colors.surface }]}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.recommendEmoji}>🏦</Text>
-                <Text style={[styles.recommendTitle, { color: colors.foreground }]}>Blueberry Markets</Text>
-                <Text style={[styles.recommendDesc, { color: colors.muted }]}>推荐经纪商 · 低点差</Text>
-                <View style={[styles.recommendBadge, { backgroundColor: colors.success + "15" }]}>
-                  <Text style={[styles.recommendBadgeText, { color: colors.success }]}>官方合作</Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowVpsModal(true)}
-                style={[styles.recommendCard, { backgroundColor: colors.surface }]}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.recommendEmoji}>🖥️</Text>
-                <Text style={[styles.recommendTitle, { color: colors.foreground }]}>VPS 服务器</Text>
-                <Text style={[styles.recommendDesc, { color: colors.muted }]}>推荐可靠VPS · 可申请免费</Text>
-                <View style={[styles.recommendBadge, { backgroundColor: colors.primary + "15" }]}>
-                  <Text style={[styles.recommendBadgeText, { color: colors.primary }]}>稳定可靠</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* 管理员备注区 */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>备注说明</Text>
-
-            {isAdmin && (
-              <View style={[styles.adminInput, { backgroundColor: colors.surface }]}>
-                <TextInput
-                  value={commentText}
-                  onChangeText={setCommentText}
-                  placeholder="添加备注或说明..."
-                  placeholderTextColor={colors.muted}
-                  multiline
-                  numberOfLines={3}
-                  style={[styles.textInput, { color: colors.foreground }]}
-                />
-                <TouchableOpacity
-                  onPress={handleAddComment}
-                  disabled={!commentText.trim() || createCommentMutation.isPending}
-                  style={[styles.postBtn, { backgroundColor: commentText.trim() ? colors.primary : colors.border }]}
-                  activeOpacity={0.8}
-                >
-                  {createCommentMutation.isPending ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={[styles.postBtnText, { color: commentText.trim() ? "#fff" : colors.muted }]}>发布备注</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {comments && comments.length > 0 ? (
-              comments.map((comment: { id: number; user?: { name?: string }; content: string; createdAt: Date }) => (
-                <View key={comment.id} style={[styles.commentCard, { backgroundColor: colors.surface }]}>
-                  <View style={styles.commentHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.commentAuthor, { color: colors.foreground }]}>
-                        {comment.user?.name || "管理员"}
-                      </Text>
-                      <Text style={[styles.commentDate, { color: colors.muted }]}>
-                        {new Date(comment.createdAt).toLocaleDateString("zh-CN", {
-                          year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit",
-                        })}
-                      </Text>
-                    </View>
-                    {isAdmin && (
-                      <TouchableOpacity onPress={() => handleDeleteComment(comment.id)} style={{ marginLeft: 8 }}>
-                        <IconSymbol name="trash" size={18} color={colors.error} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  <Text style={[styles.commentContent, { color: colors.foreground }]}>{comment.content}</Text>
-                </View>
-              ))
-            ) : (
-              <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
-                <Text style={{ color: colors.muted }}>暂无备注说明</Text>
-              </View>
-            )}
-          </View>
-
-          {/* 用户评价区 */}
-          <View style={styles.section}>
-            <View style={styles.reviewSectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>
-                💬 用户评价 {userReviews && userReviews.length > 0 ? `(${userReviews.length})` : ""}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setShowReviewModal(true)}
-                style={[styles.writeReviewBtn, { backgroundColor: colors.primary }]}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.writeReviewBtnText}>写评价</Text>
-              </TouchableOpacity>
-            </View>
-
-            {showReviewSuccess && (
-              <View style={[styles.successBanner, { backgroundColor: colors.success + "15", marginBottom: 10 }]}>
-                <Text style={[styles.successText, { color: colors.success }]}>
-                  ✅ 评价已提交，审核通过后将显示
-                </Text>
-              </View>
-            )}
-
-            {displayReviews.length > 0 ? (
-              <>
-                {displayReviews.map((review: any) => (
-                  <View key={review.id} style={[styles.reviewCard, { backgroundColor: colors.surface }]}>
-                    <View style={styles.reviewHeader}>
-                      <View style={[styles.reviewAvatar, { backgroundColor: colors.primary + "15" }]}>
-                        <Text style={[styles.reviewAvatarText, { color: colors.primary }]}>
-                          {(review.nickname || "匿名")[0]}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.reviewNickname, { color: colors.foreground }]}>
-                          {review.nickname || "匿名用户"}
-                        </Text>
-                        <Text style={[styles.reviewTime, { color: colors.muted }]}>
-                          {formatDate(String(review.createdAt))}
-                        </Text>
-                      </View>
-                    </View>
-                    <Text style={[styles.reviewContent, { color: colors.foreground }]} numberOfLines={3}>
-                      {review.content}
-                    </Text>
-                  </View>
-                ))}
-
-                {hasMoreReviews && (
-                  <TouchableOpacity
-                    onPress={() => setShowAllComments(true)}
-                    style={[styles.viewAllBtn, { borderColor: colors.border }]}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.viewAllText, { color: colors.primary }]}>
-                      查看全部 {userReviews?.length} 条评价 →
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            ) : (
-              <View style={[styles.emptyReviews, { backgroundColor: colors.surface }]}>
-                <Text style={{ color: colors.muted, textAlign: "center", fontSize: 14 }}>
-                  暂无评价，快来抢沙发吧~
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* 平台匹配引导 */}
-          <View style={styles.section}>
-            <TouchableOpacity
-              onPress={() => setShowContactModal(true)}
-              activeOpacity={0.85}
-              style={[styles.platformGuide, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}
-            >
-              <View style={styles.platformGuideContent}>
-                <Text style={styles.platformGuideEmoji}>🎯</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.platformGuideTitle, { color: colors.foreground }]}>需要交易环境支持？</Text>
-                  <Text style={[styles.platformGuideDesc, { color: colors.muted }]}>
-                    量化军火库帮你匹配最适合这款EA的合规交易平台，让策略发挥最大价值
-                  </Text>
-                </View>
-                <Text style={[styles.platformGuideArrow, { color: colors.primary }]}>→</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+          <StrategyMedia
+            strategy={strategy}
+            allImages={allImages}
+            gradientColors={gradientColors}
+            productTypeLabel={productTypeLabel}
+            isFeatured={isFeatured}
+            isDesktop={isDesktop}
+            width={width}
+          />
+          <StrategyHeader
+            strategy={strategy}
+            colors={colors}
+            isFeatured={isFeatured}
+            tagList={tagList}
+          />
+          <StrategyMetrics
+            strategy={strategy}
+            colors={colors}
+            isPositive={isPositive}
+          />
+          <StrategyPurchasePanel
+            strategy={strategy}
+            colors={colors}
+            originalPrice={originalPrice}
+            hasDiscount={hasDiscount}
+            discountPercent={discountPercent}
+            hasDownloadUrl={hasDownloadUrl}
+            isFeatured={isFeatured}
+            featuredLink={featuredLink}
+            onDownload={handleDownload}
+          />
+          <TradingEnvironmentSection
+            colors={colors}
+            onOpenBroker={() => setShowBrokerModal(true)}
+            onOpenVps={() => setShowVpsModal(true)}
+          />
+          <AdminNotesSection
+            colors={colors}
+            comments={comments as StrategyComment[] | undefined}
+            isAdmin={isAdmin}
+            commentText={commentText}
+            isPosting={createCommentMutation.isPending}
+            onChangeCommentText={setCommentText}
+            onAddComment={handleAddComment}
+            onDeleteComment={handleDeleteComment}
+          />
+          <UserReviewsSection
+            colors={colors}
+            reviews={reviews}
+            displayReviews={displayReviews}
+            hasMoreReviews={reviews.length > 3}
+            showReviewSuccess={showReviewSuccess}
+            formatDate={formatDate}
+            onOpenReview={() => setShowReviewModal(true)}
+            onOpenAllReviews={() => setShowAllComments(true)}
+          />
+          <PlatformGuideSection
+            colors={colors}
+            onPress={() => setShowContactModal(true)}
+          />
 
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
+
       <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
-
-      {/* Blueberry Markets 经纪商弹窗 */}
-      <Modal
+      <BrokerRecommendationModal
         visible={showBrokerModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowBrokerModal(false)}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setShowBrokerModal(false)}
-          style={styles.modalOverlay}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-            style={[styles.modalContent, { backgroundColor: colors.background, maxWidth: 420 }]}
-          >
-            <View style={styles.modalHandle} />
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>🫐 Blueberry Markets</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.muted, marginBottom: 16 }]}>澳洲 ASIC 全牌照监管 · 官方合作经纪商</Text>
-
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 10 }}>🛡️ 平台核心优势</Text>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {[
-                  { icon: "🔒", title: "资金安全", desc: "不碰客户本金，审计严格" },
-                  { icon: "🏛️", title: "ASIC全牌照", desc: "澳洲政府颁发MM牌照" },
-                  { icon: "💰", title: "大资金出入", desc: "月交易量2500亿美金+" },
-                  { icon: "⚡", title: "极速出金", desc: "2-5小时到账" },
-                ].map((item, i) => (
-                  <View key={i} style={{ width: "48%", backgroundColor: colors.background, borderRadius: 10, padding: 12, borderWidth: 1, borderColor: colors.border }}>
-                    <Text style={{ fontSize: 20, marginBottom: 4 }}>{item.icon}</Text>
-                    <Text style={{ color: colors.foreground, fontSize: 13, fontWeight: "600", marginBottom: 2 }}>{item.title}</Text>
-                    <Text style={{ color: colors.muted, fontSize: 11, lineHeight: 16 }}>{item.desc}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>📊 账户与交易成本</Text>
-              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>{"标准账户：点差约29，最高返佣20\n直接账户（ECN）：点差约7\n支持美金账户 & 美分账户\n最低入金：50U"}</Text>
-            </View>
-
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>🏆 监管与资质</Text>
-              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>{"澳洲ASIC MM全牌照（政府颁发）\n2019-2025年仅5-6家获得此牌照\n牌照市场价值约600万美金\n盈利正常出金，从不拖延"}</Text>
-            </View>
-
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>📞 开户咨询</Text>
-              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>{"微信1号：oooiniooo0624\n微信2号：xau6000\nQQ1号：1226426670\nQQ2号：3832001817\nTelegram：@xau6000\n\n添加客服即可获取专属开户链接与返佣方案"}</Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => setShowBrokerModal(false)}
-              style={{ backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: "center" }}
-              activeOpacity={0.8}
-            >
-              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>我知道了</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* VPS 推荐弹窗 */}
-      <Modal
+        colors={colors}
+        onClose={() => setShowBrokerModal(false)}
+      />
+      <VpsRecommendationModal
         visible={showVpsModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowVpsModal(false)}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => setShowVpsModal(false)}
-          style={styles.modalOverlay}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={(e) => e.stopPropagation()}
-            style={[styles.modalContent, { backgroundColor: colors.background, maxWidth: 400 }]}
-          >
-            <View style={styles.modalHandle} />
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>🖥️ VPS 服务器推荐</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.muted, marginBottom: 16 }]}>EA 全天候稳定运行的必备基础设施</Text>
-
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>为什么需要 VPS？</Text>
-              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>EA 需要 7×24 小时不间断运行，家用电脑无法保证稳定性。专业外汇 VPS 提供低延迟、高可用的服务器环境，确保您的 EA 策略不错过任何交易机会。</Text>
-            </View>
-
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>🎁 免费 VPS 申请</Text>
-              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>通过我们的合作经纪商开户并达到一定交易量，即可申请免费 VPS 服务。详情请联系客服咨询。</Text>
-            </View>
-
-            <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
-              <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>📞 联系方式</Text>
-              <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>微信1号：oooiniooo0624{"\n"}微信2号：xau6000{"\n"}QQ1号：1226426670{"\n"}QQ2号：3832001817{"\n"}Telegram：@xau6000{"\n"}添加客服咨询可靠 VPS 推荐及免费申请方案</Text>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => setShowVpsModal(false)}
-              style={{ backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: "center" }}
-              activeOpacity={0.8}
-            >
-              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>我知道了</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+        colors={colors}
+        onClose={() => setShowVpsModal(false)}
+      />
     </ScreenContainer>
   );
 }
@@ -970,540 +358,5 @@ const styles = StyleSheet.create({
   subscribeTopText: {
     fontSize: 14,
     fontWeight: "600",
-  },
-  coverGradient: {
-    marginHorizontal: 16,
-    height: 180,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  coverDesktop: {
-    height: 220,
-  },
-  coverEmoji: {
-    fontSize: 48,
-  },
-  // 画廊容器
-  galleryContainer: {
-    marginHorizontal: 16,
-    height: 180,
-    borderRadius: 20,
-    overflow: "hidden",
-    marginBottom: 16,
-    position: "relative",
-  },
-  galleryIndicatorRow: {
-    position: "absolute",
-    bottom: 10,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 4,
-  },
-  galleryIndicator: {
-    height: 4,
-    borderRadius: 2,
-  },
-  // 画廊全屏弹窗
-  galleryModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.95)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  galleryCloseBtn: {
-    position: "absolute",
-    top: 60,
-    right: 20,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  galleryCloseText: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: "700",
-  },
-  galleryCounter: {
-    position: "absolute",
-    bottom: 60,
-    alignSelf: "center",
-    color: "rgba(255,255,255,0.95)",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  // 旗舰标签
-  featuredDetailBadge: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    borderBottomRightRadius: 12,
-    overflow: "hidden",
-  },
-  featuredDetailGradient: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-  },
-  featuredDetailText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  platformBadge: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  platformText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  titleSection: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "800",
-    lineHeight: 32,
-  },
-  tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 8,
-  },
-  tagChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  tagText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  section: {
-    paddingHorizontal: 16,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-  statsCard: {
-    borderRadius: 16,
-    padding: 16,
-  },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statDivider: {
-    width: 1,
-    height: 36,
-  },
-  statLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  infoCard: {
-    borderRadius: 16,
-    padding: 16,
-  },
-  infoRow: {
-    flexDirection: "row",
-  },
-  infoItem: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  actionCard: {
-    borderRadius: 16,
-    padding: 16,
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 14,
-  },
-  priceLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  priceValue: {
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  priceDisplayRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  priceAnchor: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  originalPriceText: {
-    fontSize: 14,
-    textDecorationLine: "line-through",
-  },
-  discountBadge: {
-    backgroundColor: "#EF4444",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  discountText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  priceRight: {
-    alignItems: "flex-end",
-  },
-  downloadLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  downloadValue: {
-    fontSize: 15,
-  },
-  downloadBtn: {
-    borderRadius: 24,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  downloadBtnText: {
-    fontWeight: "700",
-    fontSize: 16,
-    color: "#fff",
-  },
-  contactRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  contactBtn: {
-    flex: 1,
-    borderRadius: 20,
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  contactBtnText: {
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  // 推荐交易环境
-  recommendRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  recommendCard: {
-    flex: 1,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: "center",
-  },
-  recommendEmoji: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  recommendTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  recommendDesc: {
-    fontSize: 11,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  recommendBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  recommendBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  adminInput: {
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-  },
-  textInput: {
-    fontSize: 14,
-    minHeight: 70,
-    textAlignVertical: "top",
-    marginBottom: 10,
-  },
-  postBtn: {
-    borderRadius: 20,
-    paddingVertical: 8,
-    alignItems: "center",
-  },
-  postBtnText: {
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  commentCard: {
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
-  },
-  commentHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  commentAuthor: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  commentDate: {
-    fontSize: 12,
-  },
-  commentContent: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  emptyCard: {
-    borderRadius: 14,
-    padding: 20,
-    alignItems: "center",
-  },
-  // 用户评价区
-  reviewSectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  writeReviewBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  writeReviewBtnText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  reviewCard: {
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
-  },
-  reviewHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    gap: 10,
-  },
-  reviewAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  reviewAvatarText: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  reviewNickname: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  reviewTime: {
-    fontSize: 11,
-    marginTop: 1,
-  },
-  reviewContent: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  viewAllBtn: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  emptyReviews: {
-    borderRadius: 14,
-    padding: 24,
-    alignItems: "center",
-  },
-  // 弹窗
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 36,
-  },
-  allCommentsModal: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 36,
-    maxHeight: "80%",
-  },
-  allCommentsHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  allCommentsList: {
-    flex: 1,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#ccc",
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  modalSubtitle: {
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    marginBottom: 10,
-  },
-  modalTextarea: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    marginBottom: 16,
-    minHeight: 100,
-  },
-  modalBtnRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  modalCancelBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    fontWeight: "600",
-    fontSize: 15,
-  },
-  modalSubmitBtn: {
-    flex: 2,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  modalSubmitText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  successBanner: {
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-  },
-  successText: {
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  // 平台匹配引导
-  platformGuide: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
-  },
-  platformGuideContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  platformGuideEmoji: {
-    fontSize: 28,
-    marginRight: 12,
-  },
-  platformGuideTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 3,
-  },
-  platformGuideDesc: {
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  platformGuideArrow: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginLeft: 8,
   },
 });

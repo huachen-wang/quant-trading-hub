@@ -24,6 +24,7 @@ export function UserAuthCard({ title, subtitle, children, footer }: UserAuthCard
   const colors = useColors();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
+  const brandLetters = ["E", "A", "X", "A", "U"];
 
   useEffect(() => {
     Animated.parallel([
@@ -40,7 +41,9 @@ export function UserAuthCard({ title, subtitle, children, footer }: UserAuthCard
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
-      />
+      >
+        <View style={StyleSheet.absoluteFill} />
+      </LinearGradient>
 
       {/* 装饰粒子 */}
       <View style={[styles.particle, { top: "12%", right: "18%", backgroundColor: "rgba(251,191,36,0.4)" }]} />
@@ -61,8 +64,14 @@ export function UserAuthCard({ title, subtitle, children, footer }: UserAuthCard
         {/* 标题 */}
         <View style={styles.header}>
           <View style={styles.brand}>
-            <View style={styles.brandDot} />
-            <Text style={styles.brandText}>EAXAU · 量化军火库</Text>
+            {brandLetters.map((letter, index) => (
+              <Text
+                key={`${letter}-${index}`}
+                style={[styles.brandLetter, index === 2 && styles.brandLetterAccent]}
+              >
+                {letter}
+              </Text>
+            ))}
           </View>
           <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
           {subtitle ? <Text style={[styles.subtitle, { color: colors.muted }]}>{subtitle}</Text> : null}
@@ -76,11 +85,13 @@ export function UserAuthCard({ title, subtitle, children, footer }: UserAuthCard
 
         {/* 底部金色光带 */}
         <LinearGradient
-          colors={["transparent", "rgba(245,158,11,0.4)", "transparent"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.bottomGlow}
-        />
+        colors={["transparent", "rgba(245,158,11,0.4)", "transparent"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.bottomGlow}
+        >
+          <View style={styles.gradientFill} />
+        </LinearGradient>
       </Animated.View>
     </View>
   );
@@ -115,20 +126,20 @@ const styles = StyleSheet.create({
   brand: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 2,
     marginBottom: 16,
   },
-  brandDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#34D399",
+  brandLetter: {
+    fontSize: 18,
+    lineHeight: 24,
+    color: "#F8FAFC",
+    fontWeight: "900",
+    textShadowColor: "rgba(201,169,110,0.24)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
   },
-  brandText: {
-    fontSize: 11,
+  brandLetterAccent: {
     color: "#D8BC83",
-    letterSpacing: 0.16 * 11,
-    fontWeight: "700",
   },
   title: {
     fontSize: 28,
@@ -155,5 +166,8 @@ const styles = StyleSheet.create({
     left: 24,
     right: 24,
     height: 1,
+  },
+  gradientFill: {
+    flex: 1,
   },
 });

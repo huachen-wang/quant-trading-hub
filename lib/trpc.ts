@@ -1,6 +1,8 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
+import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 import type { AppRouter } from "@/server/routers";
 import { getApiBaseUrl } from "@/constants/oauth";
 import * as Auth from "@/lib/_core/auth";
@@ -13,6 +15,13 @@ import * as Auth from "@/lib/_core/auth";
  * use the same serialization format (superjson).
  */
 export const trpc = createTRPCReact<AppRouter>();
+
+async function getAdminToken() {
+  if (Platform.OS === "web") {
+    return typeof localStorage === "undefined" ? null : localStorage.getItem("admin_token");
+  }
+  return SecureStore.getItemAsync("admin_token");
+}
 
 /**
  * Creates the tRPC client with proper configuration.
@@ -27,7 +36,11 @@ export function createTRPCClient() {
         transformer: superjson,
         async headers() {
           const token = await Auth.getSessionToken();
-          return token ? { Authorization: `Bearer ${token}` } : {};
+          const adminToken = await getAdminToken();
+          const headers: Record<string, string> = {};
+          if (token) headers.Authorization = `Bearer ${token}`;
+          if (adminToken) headers["X-Admin-Token"] = adminToken;
+          return headers;
         },
         // Custom fetch to include credentials for cookie-based auth
         fetch(url, options) {

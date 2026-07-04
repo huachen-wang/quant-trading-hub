@@ -36,6 +36,8 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
         bio: null,
         loginMethod: "jwt",
         role: "admin",
+        phone: null,
+        phoneVerified: false,
         createdAt: new Date(),
         updatedAt: new Date(),
         lastSignedIn: new Date(),
