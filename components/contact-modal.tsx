@@ -10,6 +10,14 @@ interface ContactModalProps {
   onClose: () => void;
 }
 
+const CONTACT_FALLBACKS = {
+  telegram: "@xau6000",
+  telegramLink: "https://t.me/xau6000",
+  qq: "1226426670 / 3832001817",
+  wechat: "oooiniooo0624 / xau6000",
+  description: "咨询时请备注策略名称，客服会确认文件版本、部署要求与交付方式。",
+};
+
 export function ContactModal({ visible, onClose }: ContactModalProps) {
   const colors = useColors();
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
@@ -29,13 +37,13 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
     enabled: visible,
   });
 
-  const telegram = contactData?.contact_telegram || "";
-  const telegramLink = contactData?.contact_telegram_link || "";
-  const qq = contactData?.contact_qq || "";
-  const wechat = contactData?.contact_wechat || "";
-  const description = contactData?.contact_description || "";
-  const title = contactData?.contact_title || "联系我们";
-  const subtitle = contactData?.contact_subtitle || "上架EA策略 | 代挂合作服务";
+  const telegram = contactData?.contact_telegram?.trim() || CONTACT_FALLBACKS.telegram;
+  const telegramLink = contactData?.contact_telegram_link?.trim() || CONTACT_FALLBACKS.telegramLink;
+  const qq = contactData?.contact_qq?.trim() || CONTACT_FALLBACKS.qq;
+  const wechat = contactData?.contact_wechat?.trim() || CONTACT_FALLBACKS.wechat;
+  const description = contactData?.contact_description?.trim() || CONTACT_FALLBACKS.description;
+  const title = contactData?.contact_title?.trim() || "联系 EAXAU";
+  const subtitle = contactData?.contact_subtitle?.trim() || "获取 EA 文件 · 部署支持 · 商务授权";
 
   const contactMethods = [
     ...(telegram ? [{
@@ -105,12 +113,12 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
             <>
               {/* 联系方式列表 */}
               <View style={styles.contactList}>
-                {contactMethods.map((method, index) => (
+                {contactMethods.map((method) => (
                   <TouchableOpacity
-                    key={index}
+                    key={method.label}
                     onPress={() => handlePress(method.link)}
                     style={[styles.contactItem, { backgroundColor: Platform.OS === "web" ? "rgba(30,41,59,0.5)" : colors.surface }, glassStyle("subtle") as any]}
-                    activeOpacity={0.7}
+                    activeOpacity={method.link ? 0.7 : 1}
                   >
                     <View style={[styles.contactIcon, { backgroundColor: colors.primary + "15" }]}>
                       <IconSymbol name={method.icon} size={24} color={colors.primary} />
@@ -161,7 +169,7 @@ const styles = StyleSheet.create({
   modalContent: {
     width: "100%",
     maxWidth: 400,
-    borderRadius: 24,
+    borderRadius: 8,
     padding: 24,
   },
   headerSection: { alignItems: "center", marginBottom: 20 },
@@ -172,14 +180,14 @@ const styles = StyleSheet.create({
   contactItem: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 16,
+    borderRadius: 6,
     padding: 14,
     marginBottom: 10,
   },
   contactIcon: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
@@ -187,8 +195,8 @@ const styles = StyleSheet.create({
   contactInfo: { flex: 1 },
   contactLabel: { fontSize: 12, marginBottom: 2 },
   contactValue: { fontSize: 16, fontWeight: "700" },
-  descBox: { borderRadius: 14, padding: 14, marginBottom: 16 },
+  descBox: { borderRadius: 6, padding: 14, marginBottom: 16 },
   descText: { fontSize: 14, lineHeight: 22 },
-  closeBtn: { borderRadius: 24, paddingVertical: 14, alignItems: "center" },
+  closeBtn: { borderRadius: 6, paddingVertical: 14, alignItems: "center" },
   closeBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
 });

@@ -8,10 +8,11 @@ type StrategyPurchasePanelProps = {
   originalPrice?: string | number | null;
   hasDiscount: boolean;
   discountPercent: number;
-  hasDownloadUrl: boolean;
+  downloadRequiresContact: boolean;
   isFeatured: boolean;
   featuredLink?: string | null;
   onDownload: () => void;
+  onContact: () => void;
 };
 
 export function StrategyPurchasePanel({
@@ -20,10 +21,11 @@ export function StrategyPurchasePanel({
   originalPrice,
   hasDiscount,
   discountPercent,
-  hasDownloadUrl,
+  downloadRequiresContact,
   isFeatured,
   featuredLink,
   onDownload,
+  onContact,
 }: StrategyPurchasePanelProps) {
   return (
     <View style={styles.section}>
@@ -55,13 +57,15 @@ export function StrategyPurchasePanel({
           </View>
         </View>
 
-        {strategy.saleMode === "direct" && strategy.isFree && hasDownloadUrl ? (
+        {strategy.saleMode === "direct" && strategy.isFree ? (
           <TouchableOpacity
-            onPress={onDownload}
+            onPress={downloadRequiresContact ? onContact : onDownload}
             style={[styles.downloadBtn, { backgroundColor: colors.primary }]}
             activeOpacity={0.8}
           >
-            <Text style={[styles.downloadBtnText, { color: "#fff" }]}>立即下载</Text>
+            <Text style={[styles.downloadBtnText, { color: "#fff" }]}>
+              {downloadRequiresContact ? "联系获取 EA" : "立即下载"}
+            </Text>
           </TouchableOpacity>
         ) : (
           <PurchaseActions
@@ -71,10 +75,9 @@ export function StrategyPurchasePanel({
             price={strategy.price}
             originalPrice={strategy.originalPrice}
             isFree={strategy.isFree}
-            telegramGroup={strategy.telegramGroup}
-            qqGroup={strategy.qqGroup}
             featuredLink={isFeatured ? featuredLink || null : null}
-            hasDownloadUrl={hasDownloadUrl}
+            downloadRequiresContact={downloadRequiresContact}
+            onContact={onContact}
           />
         )}
       </View>

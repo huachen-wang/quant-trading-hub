@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { trpc } from "@/lib/trpc";
 import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
+import { shouldUseContactForDownload } from "@/lib/download-links";
+import { ContactModal } from "@/components/contact-modal";
 import { ScreenContainer } from "@/components/screen-container";
 
 /**
@@ -36,6 +38,7 @@ export default function CheckoutSuccessScreen() {
   const orderNo = params.orderNo || params.out_trade_no;
 
   const checkAnim = useRef(new Animated.Value(0)).current;
+  const [showContactModal, setShowContactModal] = useState(false);
 
   const { data: order, isLoading, error: orderError } = trpc.orders.detail.useQuery(
     { orderNo: orderNo! },
@@ -109,34 +112,6 @@ export default function CheckoutSuccessScreen() {
     );
   }
 
-  if (!order) {
-    const needsLogin = /login|unauthorized|10001/i.test(orderError?.message || "");
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyIcon}>!</Text>
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          {needsLogin ? "需要登录" : "订单不存在"}
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>
-          {needsLogin ? "请先登录后查看支付结果，或返回首页重新选择商品。" : "没有找到支付结果，请返回首页重新选择商品。"}
-        </Text>
-        <TouchableOpacity
-          onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)}
-          style={styles.cta}
-        >
-          <LinearGradient
-            colors={["#A8895A", "#C9A96E"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.ctaInner}
-          >
-            <Text style={styles.ctaText}>{needsLogin ? "去登录" : "返回首页"}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   // 仍在等待支付确认
   if (order.status === "pending") {
     return (
@@ -179,16 +154,19 @@ export default function CheckoutSuccessScreen() {
   }
 
   // ─── 已支付 ───
+  const downloadRequiresContact = shouldUseContactForDownload(order.downloadUrl);
+
   return (
     <ScreenContainer>
-    <View style={styles.successWrap}>
-      <Animated.View
-        style={[
-          styles.successCard,
-          glassStyle("strong") as any,
-          { transform: [{ scale: checkAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }] },
-        ]}
-      >
+      <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
+      <View style={styles.successWrap}>
+        <Animated.View
+          style={[
+            styles.successCard,
+            glassStyle("strong") as any,
+            { transform: [{ scale: checkAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }] },
+          ]}
+        >
         {/* 大对勾 */}
         <Animated.View
           style={[
@@ -231,26 +209,27 @@ export default function CheckoutSuccessScreen() {
           </View>
         </View>
 
-        {/* 下载按钮（如果是直购 EA） */}
-        {order.downloadUrl ? (
-          <TouchableOpacity
-            onPress={() => {
-              if (Platform.OS === "web") window.open(order.downloadUrl!, "_blank");
-              else Linking.openURL(order.downloadUrl!);
-            }}
-            style={styles.cta}
-            activeOpacity={0.85}
+        <TouchableOpacity
+          onPress={() => {
+            if (downloadRequiresContact) {
+              setShowContactModal(true);
+              return;
+            }
+            if (Platform.OS === "web") window.open(order.downloadUrl!, "_blank");
+            else Linking.openURL(order.downloadUrl!);
+          }}
+          style={styles.cta}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={downloadRequiresContact ? ["#A8895A", "#C9A96E"] : ["#10B981", "#34D399"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.ctaInner}
           >
-            <LinearGradient
-              colors={["#10B981", "#34D399"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.ctaInner}
-            >
-              <Text style={styles.ctaText}>立即下载</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        ) : null}
+            <Text style={styles.ctaText}>{downloadRequiresContact ? "联系获取文件" : "立即下载"}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
 
         <View style={styles.btnRow}>
           <TouchableOpacity
@@ -270,8 +249,8 @@ export default function CheckoutSuccessScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </Animated.View>
-    </View>
+        </Animated.View>
+      </View>
     </ScreenContainer>
   );
 }

@@ -3,7 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Linking }
 import { Image } from "expo-image";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
+import { useRouter } from "expo-router";
 import { useResponsive } from "@/hooks/use-responsive";
+import { getInternalStrategyRoute } from "@/lib/download-links";
 import * as Haptics from "expo-haptics";
 
 // 默认 blurhash 占位符 - 深色渐变风格，适合金融/交易类封面
@@ -54,6 +56,7 @@ export function StrategyCard({
   onSubscribePress,
 }: StrategyCardProps) {
   const colors = useColors();
+  const router = useRouter();
   const { numColumns, isDesktop } = useResponsive();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -77,9 +80,14 @@ export function StrategyCard({
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    // 旗舰产品且有外部链接时，跳转外部
+    // 旗舰产品既支持站内策略路径，也支持真正的外部官网。
     if (isFeatured && featuredLink) {
-      Linking.openURL(featuredLink);
+      const internalRoute = getInternalStrategyRoute(featuredLink);
+      if (internalRoute) {
+        router.push(internalRoute as any);
+      } else {
+        Linking.openURL(featuredLink);
+      }
       return;
     }
     onPress();

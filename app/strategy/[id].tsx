@@ -18,6 +18,7 @@ import { PcTopNav } from "@/components/pc-top-nav";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
+import { shouldUseContactForDownload } from "@/lib/download-links";
 import { trpc } from "@/lib/trpc";
 import { SubscribeModal } from "@/components/subscribe-modal";
 import { AdminNotesSection } from "@/components/strategy-detail/admin-notes-section";
@@ -114,9 +115,16 @@ export default function StrategyDetailScreen() {
     }
   };
 
-  const handleDownload = () => {
-    if (strategy?.downloadUrl) {
-      Linking.openURL(strategy.downloadUrl);
+  const handleDownload = async () => {
+    if (shouldUseContactForDownload(strategy?.downloadUrl)) {
+      setShowContactModal(true);
+      return;
+    }
+
+    try {
+      await Linking.openURL(strategy!.downloadUrl!);
+    } catch {
+      setShowContactModal(true);
     }
   };
 
@@ -164,7 +172,7 @@ export default function StrategyDetailScreen() {
   const returnValue = parseFloat(strategy.totalReturn) || 0;
   const isPositive = returnValue >= 0;
   const isAdmin = user?.role === "admin";
-  const hasDownloadUrl = !!strategy.downloadUrl;
+  const downloadRequiresContact = shouldUseContactForDownload(strategy.downloadUrl);
 
   const originalPrice = strategy.originalPrice;
   const tags = strategy.tags;
@@ -278,10 +286,11 @@ export default function StrategyDetailScreen() {
                   originalPrice={originalPrice}
                   hasDiscount={hasDiscount}
                   discountPercent={discountPercent}
-                  hasDownloadUrl={hasDownloadUrl}
+                  downloadRequiresContact={downloadRequiresContact}
                   isFeatured={isFeatured}
                   featuredLink={featuredLink}
                   onDownload={handleDownload}
+                  onContact={() => setShowContactModal(true)}
                 />
                 <TradingEnvironmentSection
                   colors={colors}
@@ -318,10 +327,11 @@ export default function StrategyDetailScreen() {
                 originalPrice={originalPrice}
                 hasDiscount={hasDiscount}
                 discountPercent={discountPercent}
-                hasDownloadUrl={hasDownloadUrl}
+                downloadRequiresContact={downloadRequiresContact}
                 isFeatured={isFeatured}
                 featuredLink={featuredLink}
                 onDownload={handleDownload}
+                onContact={() => setShowContactModal(true)}
               />
               <TradingEnvironmentSection
                 colors={colors}
