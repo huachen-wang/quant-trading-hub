@@ -1,34 +1,37 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useResponsive } from "@/hooks/use-responsive";
 
 type CustomEABannerProps = {
   onPress: () => void;
 };
 
 export function CustomEABanner({ onPress }: CustomEABannerProps) {
+  const { isDesktop } = useResponsive();
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
-      style={styles.outer}
+      style={[styles.outer, isDesktop && styles.outerDesktop]}
     >
       <LinearGradient
         colors={["#0A1628", "#1A1410", "#2A1F0E"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.container}
+        style={[styles.container, isDesktop && styles.containerDesktop]}
       >
         <View style={styles.gridLine1} />
         <View style={styles.gridLine2} />
 
-        <View style={styles.iconWrap}>
-          <Text style={{ fontSize: 28 }}>🔓</Text>
+        <View style={[styles.iconWrap, isDesktop && styles.iconWrapDesktop]}>
+          <Text style={styles.iconText}>EA</Text>
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.title}>EA 破解网 · 专属 EA 破解</Text>
+          <Text style={[styles.title, isDesktop && styles.titleDesktop]}>私有 EA 交付 · 源码授权</Text>
           <Text style={styles.desc} numberOfLines={2}>
-            联系定制 · 专业团队
+            定制命名 · 参数调优 · 工作室交付
           </Text>
         </View>
 
@@ -50,12 +53,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(139,92,246,0.25)",
   },
+  outerDesktop: {
+    marginHorizontal: 0,
+    marginTop: 0,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderColor: "rgba(216,188,131,0.22)",
+  },
   container: {
     flexDirection: "row",
     alignItems: "center",
     padding: 12,
     position: "relative",
     overflow: "hidden",
+  },
+  containerDesktop: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   gridLine1: {
     position: "absolute",
@@ -76,6 +90,21 @@ const styles = StyleSheet.create({
   iconWrap: {
     marginRight: 14,
   },
+  iconWrapDesktop: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(216,188,131,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.18)",
+  },
+  iconText: {
+    color: "#D8BC83",
+    fontSize: 13,
+    fontWeight: "900",
+  },
   content: {
     flex: 1,
   },
@@ -84,7 +113,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
     marginBottom: 2,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
+  },
+  titleDesktop: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   desc: {
     color: "#F1F5F9",
@@ -93,9 +126,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   arrow: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
     backgroundColor: "rgba(217,119,6,0.12)",
     justifyContent: "center",
     alignItems: "center",

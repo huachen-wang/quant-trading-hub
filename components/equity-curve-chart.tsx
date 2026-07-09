@@ -72,7 +72,7 @@ export function EquityCurveChart({ data }: EquityCurveChartProps) {
         
         <View className="mt-4 p-3 bg-background rounded-lg">
           <Text className="text-xs text-muted text-center">
-            💡 移动端可查看完整权益曲线图表
+            移动端可查看完整权益曲线图表
           </Text>
         </View>
       </View>

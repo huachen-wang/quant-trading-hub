@@ -53,7 +53,7 @@ export function ReviewComposerModal({
           {showSuccess && (
             <View style={[styles.successBanner, { backgroundColor: colors.success + "15" }]}>
               <Text style={[styles.successText, { color: colors.success }]}>
-                ✅ 评价已提交，审核通过后将显示
+                评价已提交，审核通过后将显示
               </Text>
             </View>
           )}

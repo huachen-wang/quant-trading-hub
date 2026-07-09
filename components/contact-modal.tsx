@@ -20,8 +20,8 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
       scaleAnim.setValue(0.9);
       opacityAnim.setValue(0);
       Animated.parallel([
-        Animated.timing(scaleAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.timing(scaleAnim, { toValue: 1, duration: 250, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: Platform.OS !== "web" }),
       ]).start();
     }
   }, [visible]);

@@ -24,8 +24,8 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
       scaleAnim.setValue(0.9);
       opacityAnim.setValue(0);
       Animated.parallel([
-        Animated.timing(scaleAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.timing(scaleAnim, { toValue: 1, duration: 250, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: Platform.OS !== "web" }),
       ]).start();
     }
   }, [visible]);
@@ -117,7 +117,7 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
         >
           {success ? (
             <View style={styles.successBox}>
-              <Text style={styles.successEmoji}>🎉</Text>
+              <Text style={styles.successCode}>OK</Text>
               <Text style={[styles.successTitle, { color: colors.foreground }]}>提交成功</Text>
               <Text style={[styles.successDesc, { color: colors.muted }]}>
                 我们会尽快与您联系，感谢您的关注！
@@ -127,7 +127,7 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
             <>
               {/* 标题 */}
               <View style={styles.headerSection}>
-                <Text style={{ fontSize: 36 }}>📬</Text>
+                <Text style={styles.headerCode}>ACC</Text>
                 <Text style={[styles.modalTitle, { color: colors.foreground }]}>获取技术支持</Text>
                 <Text style={[styles.modalSubtitle, { color: colors.muted }]}>
                   {strategyTitle
@@ -160,7 +160,7 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
               {/* 提示 */}
               <View style={[styles.tipBox, { backgroundColor: "rgba(59,130,246,0.06)" }]}>
                 <Text style={[styles.tipText, { color: colors.muted }]}>
-                  💡 推荐留下微信号，我们的策略顾问将为您提供一对一技术支持和EA部署指导
+                  推荐留下微信号，我们的策略顾问将为您提供一对一技术支持和EA部署指导
                 </Text>
               </View>
 
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   modalContent: {
     width: "100%",
     maxWidth: 400,
-    borderRadius: 24,
+    borderRadius: 12,
     padding: 24,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
@@ -210,22 +210,35 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 22, fontWeight: "800", marginTop: 8, marginBottom: 6 },
   modalSubtitle: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   inputSection: { marginBottom: 12 },
+  headerCode: {
+    color: "#D8BC83",
+    fontSize: 15,
+    fontWeight: "900",
+    letterSpacing: 0,
+    marginBottom: 2,
+  },
   input: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
     marginBottom: 10,
   },
-  tipBox: { borderRadius: 12, padding: 12, marginBottom: 16 },
+  tipBox: { borderRadius: 8, padding: 12, marginBottom: 16 },
   tipText: { fontSize: 13, lineHeight: 20 },
-  submitBtn: { borderRadius: 24, paddingVertical: 14, alignItems: "center", marginBottom: 10 },
+  submitBtn: { borderRadius: 7, paddingVertical: 14, alignItems: "center", marginBottom: 10 },
   submitBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   cancelBtn: { alignItems: "center", paddingVertical: 8 },
   cancelBtnText: { fontSize: 14 },
   successBox: { alignItems: "center", paddingVertical: 20 },
-  successEmoji: { fontSize: 48, marginBottom: 12 },
+  successCode: {
+    color: "#34D399",
+    fontSize: 15,
+    fontWeight: "900",
+    letterSpacing: 0,
+    marginBottom: 12,
+  },
   successTitle: { fontSize: 20, fontWeight: "800", marginBottom: 8 },
   successDesc: { fontSize: 14, textAlign: "center" },
 });

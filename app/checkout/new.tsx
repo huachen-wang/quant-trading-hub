@@ -67,7 +67,7 @@ export default function CheckoutNewScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={{ fontSize: 36, marginBottom: 12 }}>⚠️</Text>
+        <Text style={styles.errorCode}>ERR</Text>
         <Text style={[styles.errorTitle, { color: colors.foreground }]}>下单失败</Text>
         <Text style={[styles.errorMsg, { color: colors.muted }]}>{error}</Text>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -93,6 +93,13 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   loadingText: { marginTop: 16, fontSize: 14 },
+  errorCode: {
+    color: "#F87171",
+    fontSize: 15,
+    fontWeight: "900",
+    letterSpacing: 0,
+    marginBottom: 12,
+  },
   errorTitle: { fontSize: 20, fontWeight: "800", marginBottom: 6 },
   errorMsg: { fontSize: 14, marginBottom: 24, textAlign: "center", maxWidth: 320 },
   backBtn: {

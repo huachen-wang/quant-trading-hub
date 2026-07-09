@@ -14,6 +14,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { ContactModal } from "@/components/contact-modal";
+import { PcTopNav } from "@/components/pc-top-nav";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
@@ -50,8 +51,8 @@ export default function StrategyDetailScreen() {
   const [showReviewSuccess, setShowReviewSuccess] = useState(false);
 
   const strategyId = parseInt(id || "0");
-  const isDesktop = Platform.OS === "web" && width >= 768;
-  const maxContentWidth = isDesktop ? 720 : width;
+  const isDesktop = Platform.OS === "web" && width >= 1024;
+  const maxContentWidth = isDesktop ? Math.min(width - 56, 1320) : width;
 
   const { data: strategy, isLoading } = trpc.strategies.detail.useQuery({ id: strategyId });
   const { data: comments, refetch: refetchComments } = trpc.comments.list.useQuery({ strategyId });
@@ -157,8 +158,8 @@ export default function StrategyDetailScreen() {
 
   const gradientColors: readonly [string, string, ...string[]] =
     strategy.isFeatured
-      ? ["#92400E", "#A8895A"]
-      : strategy.platform === "MT4" ? ["#1E3A8A", "#3B82F6"] : ["#7C3AED", "#A78BFA"];
+      ? ["#0A0E1A", "#1E293B", "#A8895A"]
+      : strategy.platform === "MT4" ? ["#06101D", "#11233A", "#41607A"] : ["#06140F", "#12382B", "#34D399"];
 
   const returnValue = parseFloat(strategy.totalReturn) || 0;
   const isPositive = returnValue >= 0;
@@ -200,6 +201,7 @@ export default function StrategyDetailScreen() {
 
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
+      <PcTopNav />
       <SubscribeModal
         visible={showSubscribeModal}
         onClose={() => setShowSubscribeModal(false)}
@@ -227,10 +229,10 @@ export default function StrategyDetailScreen() {
 
       <ScrollView className="flex-1" contentContainerStyle={isDesktop ? styles.desktopContainer : undefined}>
         <View style={isDesktop ? [styles.desktopContent, { maxWidth: maxContentWidth }] : undefined}>
-          <View style={styles.topBar}>
+          <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
             <TouchableOpacity
               onPress={() => router.back()}
-              style={[styles.backBtn, { backgroundColor: colors.surface }]}
+              style={[styles.backBtn, isDesktop && styles.backBtnDesktopHidden, { backgroundColor: colors.surface }]}
               activeOpacity={0.7}
             >
               <IconSymbol name="chevron.left" size={22} color={colors.foreground} />
@@ -240,47 +242,94 @@ export default function StrategyDetailScreen() {
               style={[styles.subscribeTopBtn, { backgroundColor: colors.primary + "15" }]}
               activeOpacity={0.7}
             >
-              <Text style={{ fontSize: 16 }}>📬</Text>
+              <Text style={styles.subscribeTopCode}>SUP</Text>
               <Text style={[styles.subscribeTopText, { color: colors.primary }]}>获取支持</Text>
             </TouchableOpacity>
           </View>
 
-          <StrategyMedia
-            strategy={strategy}
-            allImages={allImages}
-            gradientColors={gradientColors}
-            productTypeLabel={productTypeLabel}
-            isFeatured={isFeatured}
-            isDesktop={isDesktop}
-            width={width}
-          />
-          <StrategyHeader
-            strategy={strategy}
-            colors={colors}
-            isFeatured={isFeatured}
-            tagList={tagList}
-          />
-          <StrategyMetrics
-            strategy={strategy}
-            colors={colors}
-            isPositive={isPositive}
-          />
-          <StrategyPurchasePanel
-            strategy={strategy}
-            colors={colors}
-            originalPrice={originalPrice}
-            hasDiscount={hasDiscount}
-            discountPercent={discountPercent}
-            hasDownloadUrl={hasDownloadUrl}
-            isFeatured={isFeatured}
-            featuredLink={featuredLink}
-            onDownload={handleDownload}
-          />
-          <TradingEnvironmentSection
-            colors={colors}
-            onOpenBroker={() => setShowBrokerModal(true)}
-            onOpenVps={() => setShowVpsModal(true)}
-          />
+          {isDesktop ? (
+            <View style={styles.desktopHeroGrid}>
+              <View style={styles.desktopHeroMain}>
+                <StrategyMedia
+                  strategy={strategy}
+                  allImages={allImages}
+                  gradientColors={gradientColors}
+                  productTypeLabel={productTypeLabel}
+                  isFeatured={isFeatured}
+                  isDesktop={isDesktop}
+                  width={width}
+                />
+                <StrategyHeader
+                  strategy={strategy}
+                  colors={colors}
+                  isFeatured={isFeatured}
+                  tagList={tagList}
+                />
+                <StrategyMetrics
+                  strategy={strategy}
+                  colors={colors}
+                  isPositive={isPositive}
+                />
+              </View>
+              <View style={styles.desktopHeroSide}>
+                <StrategyPurchasePanel
+                  strategy={strategy}
+                  colors={colors}
+                  originalPrice={originalPrice}
+                  hasDiscount={hasDiscount}
+                  discountPercent={discountPercent}
+                  hasDownloadUrl={hasDownloadUrl}
+                  isFeatured={isFeatured}
+                  featuredLink={featuredLink}
+                  onDownload={handleDownload}
+                />
+                <TradingEnvironmentSection
+                  colors={colors}
+                  onOpenBroker={() => setShowBrokerModal(true)}
+                  onOpenVps={() => setShowVpsModal(true)}
+                />
+              </View>
+            </View>
+          ) : (
+            <>
+              <StrategyMedia
+                strategy={strategy}
+                allImages={allImages}
+                gradientColors={gradientColors}
+                productTypeLabel={productTypeLabel}
+                isFeatured={isFeatured}
+                isDesktop={isDesktop}
+                width={width}
+              />
+              <StrategyHeader
+                strategy={strategy}
+                colors={colors}
+                isFeatured={isFeatured}
+                tagList={tagList}
+              />
+              <StrategyMetrics
+                strategy={strategy}
+                colors={colors}
+                isPositive={isPositive}
+              />
+              <StrategyPurchasePanel
+                strategy={strategy}
+                colors={colors}
+                originalPrice={originalPrice}
+                hasDiscount={hasDiscount}
+                discountPercent={discountPercent}
+                hasDownloadUrl={hasDownloadUrl}
+                isFeatured={isFeatured}
+                featuredLink={featuredLink}
+                onDownload={handleDownload}
+              />
+              <TradingEnvironmentSection
+                colors={colors}
+                onOpenBroker={() => setShowBrokerModal(true)}
+                onOpenVps={() => setShowVpsModal(true)}
+              />
+            </>
+          )}
           <AdminNotesSection
             colors={colors}
             comments={comments as StrategyComment[] | undefined}
@@ -328,10 +377,27 @@ export default function StrategyDetailScreen() {
 const styles = StyleSheet.create({
   desktopContainer: {
     alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
   desktopContent: {
     width: "100%",
+  },
+  desktopHeroGrid: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+  },
+  desktopHeroMain: {
+    flex: 1,
+    minWidth: 0,
+    borderRadius: 8,
+    paddingTop: 2,
+    backgroundColor: "rgba(15,23,42,0.42)",
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.12)",
+  },
+  desktopHeroSide: {
+    width: 372,
   },
   topBar: {
     flexDirection: "row",
@@ -340,20 +406,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  topBarDesktop: {
+    paddingHorizontal: 0,
+    marginBottom: 8,
+  },
   backBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
+  },
+  backBtnDesktopHidden: {
+    display: "none",
   },
   subscribeTopBtn: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 6,
     gap: 6,
+  },
+  subscribeTopCode: {
+    color: "#D8BC83",
+    fontSize: 10,
+    fontWeight: "900",
   },
   subscribeTopText: {
     fontSize: 14,

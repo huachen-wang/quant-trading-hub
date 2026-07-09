@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import { Animated, Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { useResponsive } from "@/hooks/use-responsive";
+import { BrandWordmark } from "@/components/brand-wordmark";
 
 type HeroCount = {
   ea: number;
@@ -9,15 +11,16 @@ type HeroCount = {
 };
 
 export function HomeHero() {
-  const heroFade = useRef(new Animated.Value(0)).current;
-  const heroSlide = useRef(new Animated.Value(20)).current;
-  const countAnim = useRef(new Animated.Value(0)).current;
-  const [displayCount, setDisplayCount] = useState<HeroCount>({ ea: 0, studio: 0, exclusive: 0 });
+  const { isDesktop } = useResponsive();
+  const heroFade = useRef(new Animated.Value(1)).current;
+  const heroSlide = useRef(new Animated.Value(0)).current;
+  const countAnim = useRef(new Animated.Value(1)).current;
+  const [displayCount, setDisplayCount] = useState<HeroCount>({ ea: 200, studio: 30, exclusive: 50 });
 
   useEffect(() => {
     const entranceAnimation = Animated.parallel([
-      Animated.timing(heroFade, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.timing(heroSlide, { toValue: 0, duration: 800, useNativeDriver: true }),
+      Animated.timing(heroFade, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== "web" }),
+      Animated.timing(heroSlide, { toValue: 0, duration: 800, useNativeDriver: Platform.OS !== "web" }),
     ]);
 
     const countAnimation = Animated.timing(countAnim, { toValue: 1, duration: 1500, useNativeDriver: false });
@@ -40,12 +43,12 @@ export function HomeHero() {
   }, [countAnim, heroFade, heroSlide]);
 
   return (
-    <Animated.View style={[styles.container, { opacity: heroFade, transform: [{ translateY: heroSlide }] }]}>
+    <Animated.View style={[styles.container, isDesktop && styles.containerDesktop, { opacity: heroFade, transform: [{ translateY: heroSlide }] }]}>
       <LinearGradient
-        colors={["#050810", "#0A0E1A", "#0D1525", "#0A0E1A"]}
+        colors={["#050810", "#0A0E1A", "#101827", "#0A0E1A"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.gradient}
+        style={[styles.gradient, isDesktop && styles.gradientDesktop]}
       >
         {[...Array(5)].map((_, i) => (
           <View key={`vl${i}`} style={[styles.gridLineV, { right: 30 + i * 60, opacity: 0.03 - i * 0.004 }]} />
@@ -54,29 +57,54 @@ export function HomeHero() {
           <View key={`hl${i}`} style={[styles.gridLineH, { top: 20 + i * 40, opacity: 0.03 - i * 0.005 }]} />
         ))}
 
-        <View style={styles.brandRow}>
-          <View style={styles.liveDotOuter}>
-            <View style={styles.liveDot} />
-          </View>
-          <Text style={styles.brandText}>量化军火库</Text>
-          <View style={styles.brandDivider} />
-          <Text style={styles.brandSub}>eaxau.com</Text>
-        </View>
-
-        <Text style={styles.title}>全网EA源头提货</Text>
-        <Text style={styles.tagline}>200+源码库 · 100%破解能力 · 独家调优</Text>
-
-        <View style={styles.statsRow}>
-          {[
-            { num: `${displayCount.ea}+`, label: "EA源码", color: "#D8BC83", bgColor: "rgba(251,191,36,0.08)" },
-            { num: `${displayCount.studio}+`, label: "合作工作室", color: "#60A5FA", bgColor: "rgba(96,165,250,0.08)" },
-            { num: `${displayCount.exclusive}+`, label: "独家版", color: "#34D399", bgColor: "rgba(52,211,153,0.08)" },
-          ].map((stat) => (
-            <View key={stat.label} style={[styles.statItem, { backgroundColor: stat.bgColor }]}>
-              <Text style={[styles.statNum, { color: stat.color }]}>{stat.num}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
+        <View style={[styles.heroBody, isDesktop && styles.heroBodyDesktop]}>
+          <View style={styles.heroMain}>
+            <View style={styles.brandRow}>
+              <BrandWordmark size="sm" />
             </View>
-          ))}
+
+            <Text style={[styles.title, isDesktop && styles.titleDesktop]}>全网EA源头提货</Text>
+            <Text style={[styles.tagline, isDesktop && styles.taglineDesktop]}>200+ 源码库 · 100% 破解能力 · 独家调优</Text>
+
+            <View style={[styles.statsRow, isDesktop && styles.statsRowDesktop]}>
+              {[
+                { num: `${displayCount.ea}+`, label: "EA源码", color: "#D8BC83", bgColor: "rgba(251,191,36,0.08)" },
+                { num: `${displayCount.studio}+`, label: "合作工作室", color: "#60A5FA", bgColor: "rgba(96,165,250,0.08)" },
+                { num: `${displayCount.exclusive}+`, label: "独家版", color: "#34D399", bgColor: "rgba(52,211,153,0.08)" },
+              ].map((stat) => (
+                <View key={stat.label} style={[styles.statItem, isDesktop && styles.statItemDesktop, { backgroundColor: stat.bgColor }]}>
+                  <Text style={[styles.statNum, isDesktop && styles.statNumDesktop, { color: stat.color }]}>{stat.num}</Text>
+                  <Text style={styles.statLabel}>{stat.label}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {isDesktop && (
+            <View style={styles.terminalPanel}>
+              <View style={styles.terminalHeader}>
+                <Text style={styles.terminalKicker}>SOURCE DESK</Text>
+                <Text style={styles.terminalStatus}>LIVE</Text>
+              </View>
+              {[
+                { label: "策略入库", value: "T+0", tone: "#D8BC83" },
+                { label: "实盘观测", value: "24H", tone: "#60A5FA" },
+                { label: "授权交付", value: "1:1", tone: "#34D399" },
+              ].map((row) => (
+                <View key={row.label} style={styles.terminalRow}>
+                  <Text style={styles.terminalLabel}>{row.label}</Text>
+                  <Text style={[styles.terminalValue, { color: row.tone }]}>{row.value}</Text>
+                </View>
+              ))}
+              <View style={styles.signalStrip}>
+                <View style={[styles.signalBar, { height: 22, backgroundColor: "#34D399" }]} />
+                <View style={[styles.signalBar, { height: 36, backgroundColor: "#D8BC83" }]} />
+                <View style={[styles.signalBar, { height: 28, backgroundColor: "#60A5FA" }]} />
+                <View style={[styles.signalBar, { height: 44, backgroundColor: "#D8BC83" }]} />
+                <View style={[styles.signalBar, { height: 31, backgroundColor: "#34D399" }]} />
+              </View>
+            </View>
+          )}
         </View>
       </LinearGradient>
     </Animated.View>
@@ -87,6 +115,10 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 6,
   },
+  containerDesktop: {
+    marginTop: 10,
+    marginBottom: 8,
+  },
   gradient: {
     paddingHorizontal: 14,
     paddingTop: 14,
@@ -95,6 +127,25 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
     overflow: "hidden",
     position: "relative",
+  },
+  gradientDesktop: {
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    minHeight: 168,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.18)",
+  },
+  heroBody: {},
+  heroBodyDesktop: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    justifyContent: "space-between",
+    gap: 18,
+  },
+  heroMain: {
+    flex: 1,
+    minWidth: 0,
   },
   gridLineV: {
     position: "absolute",
@@ -134,7 +185,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "800",
-    letterSpacing: 1.5,
+    letterSpacing: 0,
   },
   brandDivider: {
     width: 1,
@@ -146,25 +197,41 @@ const styles = StyleSheet.create({
     color: "rgba(251,191,36,0.7)",
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   title: {
     color: "#FFFFFF",
     fontSize: 22,
     fontWeight: "900",
-    letterSpacing: 1.5,
+    letterSpacing: 0,
     marginBottom: 3,
+  },
+  titleDesktop: {
+    fontSize: 31,
+    lineHeight: 37,
+    marginTop: 3,
+    marginBottom: 5,
   },
   tagline: {
     color: "rgba(251,191,36,0.85)",
     fontSize: 11,
     fontWeight: "600",
-    letterSpacing: 0.5,
+    letterSpacing: 0,
     marginBottom: 10,
+  },
+  taglineDesktop: {
+    color: "rgba(226,232,240,0.82)",
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 12,
   },
   statsRow: {
     flexDirection: "row",
     gap: 8,
+  },
+  statsRowDesktop: {
+    maxWidth: 660,
+    gap: 9,
   },
   statItem: {
     flex: 1,
@@ -174,15 +241,87 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
+  statItemDesktop: {
+    alignItems: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
   statNum: {
     fontSize: 18,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0,
+  },
+  statNumDesktop: {
+    fontSize: 23,
+    lineHeight: 27,
   },
   statLabel: {
     color: "rgba(255,255,255,0.9)",
     fontSize: 10,
     fontWeight: "600",
     marginTop: 3,
+  },
+  terminalPanel: {
+    width: 272,
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "rgba(2,6,23,0.58)",
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.18)",
+  },
+  terminalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  terminalKicker: {
+    color: "rgba(148,163,184,0.78)",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0,
+  },
+  terminalStatus: {
+    color: "#34D399",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  terminalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(148,163,184,0.10)",
+  },
+  terminalLabel: {
+    color: "rgba(226,232,240,0.78)",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  terminalValue: {
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  signalStrip: {
+    height: 46,
+    marginTop: 8,
+    borderRadius: 6,
+    backgroundColor: "rgba(15,23,42,0.78)",
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.12)",
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-around",
+    paddingHorizontal: 18,
+    paddingBottom: 7,
+  },
+  signalBar: {
+    width: 10,
+    borderRadius: 6,
+    opacity: 0.84,
   },
 });

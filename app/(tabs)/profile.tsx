@@ -17,6 +17,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 import { useColors } from "@/hooks/use-colors";
+import { useResponsive } from "@/hooks/use-responsive";
 import { glassStyle } from "@/lib/glass-styles";
 import * as SecureStore from "expo-secure-store";
 import { EventEmitter } from "@/lib/event-emitter";
@@ -24,6 +25,7 @@ import { EventEmitter } from "@/lib/event-emitter";
 export default function ProfileScreen() {
   const { user, isAuthenticated, loading: authLoading, logout, refresh } = useAuth();
   const colors = useColors();
+  const { isDesktop } = useResponsive();
   const [showSettings, setShowSettings] = useState(false);
   const [showVerifyEmailModal, setShowVerifyEmailModal] = useState(false);
   const [showBindPhoneModal, setShowBindPhoneModal] = useState(false);
@@ -172,7 +174,7 @@ export default function ProfileScreen() {
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ padding: 20 }}>
+        <View style={[styles.pageContent, isDesktop && styles.pageContentDesktop]}>
           {/* 顶部：设置按钮 */}
           <View style={{ flexDirection: "row", justifyContent: "flex-end", marginBottom: 12 }}>
             <TouchableOpacity
@@ -189,7 +191,7 @@ export default function ProfileScreen() {
           </View>
 
           {/* 头像 + 名字 + 福利徽章 */}
-          <View style={{ alignItems: "center", marginBottom: 24 }}>
+          <View style={[styles.profileHeader, isDesktop && styles.profileHeaderDesktop]}>
             <View
               style={{
                 width: 84,
@@ -208,7 +210,7 @@ export default function ProfileScreen() {
               </Text>
               {isFullMember && (
                 <View style={styles.crownBadge}>
-                  <Text style={{ fontSize: 16 }}>👑</Text>
+                  <Text style={{ fontSize: 10, color: "#07111F", fontWeight: "900" }}>VIP</Text>
                 </View>
               )}
             </View>
@@ -222,7 +224,7 @@ export default function ProfileScreen() {
             )}
             {isFullMember ? (
               <View style={styles.memberBadge}>
-                <Text style={styles.memberBadgeText}>👑 完整福利会员</Text>
+                <Text style={styles.memberBadgeText}>完整福利会员</Text>
               </View>
             ) : (
               <View style={styles.normalBadge}>
@@ -263,7 +265,7 @@ export default function ProfileScreen() {
                     marginRight: 12,
                   }}
                 >
-                  <Text style={{ color: "#fff", fontSize: 20 }}>⚙️</Text>
+                  <Text style={{ color: "#fff", fontSize: 11, fontWeight: "900" }}>ADM</Text>
                 </View>
                 <View>
                   <Text style={{ color: "#fff", fontWeight: "800", fontSize: 15 }}>
@@ -274,7 +276,7 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
               </View>
-              <Text style={{ color: "#fff", fontSize: 22, zIndex: 1 }}>→</Text>
+              <Text style={{ color: "#fff", fontSize: 18, zIndex: 1 }}>→</Text>
             </TouchableOpacity>
           )}
 
@@ -288,7 +290,7 @@ export default function ProfileScreen() {
                 style={StyleSheet.absoluteFillObject}
               />
               <View style={styles.welfareHeader}>
-                <Text style={styles.welfareTitle}>🎁 解锁完整福利</Text>
+                <Text style={styles.welfareTitle}>解锁完整福利</Text>
                 <Text style={[styles.welfareSubtitle, { color: colors.muted }]}>
                   完成下方任务，享受会员专属权益
                 </Text>
@@ -424,7 +426,7 @@ export default function ProfileScreen() {
           </View>
 
           {/* A.3: 我的订单 */}
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>📋 我的订单</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>我的订单</Text>
           {myOrders && myOrders.length > 0 ? (
             myOrders.slice(0, 5).map((order: any) => {
               const statusColors: Record<string, string> = { pending: "#D8BC83", paid: "#34D399", cancelled: "#94A3B8", expired: "#F87171" };
@@ -451,13 +453,12 @@ export default function ProfileScreen() {
             })
           ) : (
             <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
-              <Text style={{ fontSize: 32, marginBottom: 6 }}>📋</Text>
               <Text style={{ color: colors.foreground, fontWeight: "700" }}>暂无订单</Text>
               <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>浏览策略广场，开始你的第一笔交易</Text>
             </View>
           )}
           {/* 我的下载 */}
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>📥 我的下载</Text>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>我的下载</Text>
           {downloads && downloads.length > 0 ? (
             downloads.slice(0, 5).map((item: any) => (
               <TouchableOpacity
@@ -475,7 +476,6 @@ export default function ProfileScreen() {
             ))
           ) : (
             <View style={[styles.emptyCard, { backgroundColor: colors.surface }]}>
-              <Text style={{ fontSize: 32, marginBottom: 6 }}>📥</Text>
               <Text style={{ color: colors.foreground, fontWeight: "700" }}>暂无下载记录</Text>
               <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
                 浏览策略广场开始探索
@@ -643,6 +643,28 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  pageContent: {
+    padding: 20,
+  },
+  pageContentDesktop: {
+    width: "100%",
+    maxWidth: 1180,
+    alignSelf: "center",
+    paddingHorizontal: 22,
+    paddingTop: 18,
+  },
+  profileHeader: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  profileHeaderDesktop: {
+    alignItems: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.16)",
+    backgroundColor: "rgba(9,15,28,0.82)",
+    borderRadius: 6,
+    padding: 15,
+  },
   crownBadge: {
     position: "absolute",
     bottom: -4,
@@ -675,9 +697,9 @@ const styles = StyleSheet.create({
   },
   normalBadgeText: { color: "#94A3B8", fontWeight: "600", fontSize: 12 },
   welfareCard: {
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
+    borderRadius: 6,
+    padding: 15,
+    marginBottom: 12,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(245,158,11,0.25)",
@@ -707,20 +729,20 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: "row",
     backgroundColor: "rgba(30,41,59,0.4)",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
+    borderRadius: 6,
+    padding: 12,
+    marginBottom: 16,
   },
   statItem: { flex: 1, alignItems: "center" },
   statNum: { fontSize: 24, fontWeight: "900" },
   statLabel: { fontSize: 11, marginTop: 4, fontWeight: "600" },
   statDivider: { width: 1, opacity: 0.3 },
   sectionTitle: { fontSize: 16, fontWeight: "800", marginBottom: 12 },
-  itemCard: { borderRadius: 12, padding: 14, marginBottom: 10 },
+  itemCard: { borderRadius: 6, padding: 12, marginBottom: 8 },
   itemTitle: { fontSize: 14, fontWeight: "700" },
   emptyCard: {
-    borderRadius: 12,
-    padding: 28,
+    borderRadius: 6,
+    padding: 24,
     alignItems: "center",
   },
 });

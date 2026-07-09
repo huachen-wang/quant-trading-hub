@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, Platform, Alert } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, StyleSheet, Platform, Alert, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { ScreenContainer } from "@/components/screen-container";
@@ -9,6 +9,8 @@ import { useState, useEffect, useCallback } from "react";
 export default function AdminStrategies() {
   const router = useRouter();
   const colors = useColors();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 1024;
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [strategies, setStrategies] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,13 +61,19 @@ export default function AdminStrategies() {
     { label: "已发布", value: "published" },
     { label: "已归档", value: "archived" },
   ];
+  const publishedCount = strategies.filter((item) => item.status === "published").length;
+  const draftCount = strategies.filter((item) => item.status === "draft").length;
+  const archivedCount = strategies.filter((item) => item.status === "archived").length;
 
   return (
     <ScreenContainer>
-      <View style={{ flex: 1 }}>
-        <View style={[s.filterBar, { borderBottomColor: colors.border }]}>
+      <View style={s.pageShell}>
+        <View style={[s.filterBar, { borderColor: colors.border }]}>
           <View style={s.filterHeader}>
-            <Text style={[s.title, { color: colors.foreground }]}>策略列表</Text>
+            <View>
+              <Text style={s.kicker}>STRATEGY INVENTORY</Text>
+              <Text style={[s.title, { color: colors.foreground }]}>策略列表</Text>
+            </View>
             <TouchableOpacity
               onPress={() => router.push("/admin/strategy-form?mode=create" as any)}
               style={[s.addBtn, { backgroundColor: colors.primary }]}
@@ -73,6 +81,19 @@ export default function AdminStrategies() {
             >
               <Text style={s.addBtnText}>+ 添加策略</Text>
             </TouchableOpacity>
+          </View>
+          <View style={s.statsRow}>
+            {[
+              ["TOTAL", strategies.length],
+              ["PUBLISHED", publishedCount],
+              ["DRAFT", draftCount],
+              ["ARCHIVED", archivedCount],
+            ].map(([label, value]) => (
+              <View key={label} style={[s.statCell, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <Text style={s.statLabel}>{label}</Text>
+                <Text style={[s.statValue, { color: colors.foreground }]}>{value}</Text>
+              </View>
+            ))}
           </View>
           <View style={s.filterRow}>
             {statusOptions.map((opt) => (
@@ -97,8 +118,8 @@ export default function AdminStrategies() {
             data={strategies}
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
-              <View style={[s.card, { borderBottomColor: colors.border }]}>
-                <View style={s.cardHeader}>
+              <View style={[s.card, isDesktop && s.cardDesktop, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <View style={[s.cardHeader, isDesktop && s.cardHeaderDesktop]}>
                   <View style={{ flex: 1, marginRight: 10 }}>
                     <View style={s.titleRow}>
                       <Text style={[s.cardTitle, { color: colors.foreground }]}>{item.title}</Text>
@@ -122,24 +143,24 @@ export default function AdminStrategies() {
                     </Text>
                   </View>
                 </View>
-                <View style={s.actions}>
+                <View style={[s.actions, isDesktop && s.actionsDesktop]}>
                   <TouchableOpacity
                     onPress={() => router.push(`/admin/strategy-form?mode=edit&id=${item.id}` as any)}
-                    style={[s.actionBtn, { backgroundColor: colors.primary + "12" }]}
+                    style={[s.actionBtn, isDesktop && s.actionBtnDesktop, { backgroundColor: colors.primary + "12" }]}
                     activeOpacity={0.7}
                   >
                     <Text style={{ color: colors.primary, fontWeight: "600", fontSize: 13 }}>编辑</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => router.push(`/admin/backtest-data?strategyId=${item.id}&title=${encodeURIComponent(item.title)}` as any)}
-                    style={[s.actionBtn, { backgroundColor: colors.success + "12" }]}
+                    style={[s.actionBtn, isDesktop && s.actionBtnDesktop, { backgroundColor: colors.success + "12" }]}
                     activeOpacity={0.7}
                   >
                     <Text style={{ color: colors.success, fontWeight: "600", fontSize: 13 }}>回测数据</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleDelete(item.id, item.title)}
-                    style={[s.actionBtn, { backgroundColor: colors.error + "12" }]}
+                    style={[s.actionBtn, isDesktop && s.actionBtnDesktop, { backgroundColor: colors.error + "12" }]}
                     activeOpacity={0.7}
                   >
                     <Text style={{ color: colors.error, fontWeight: "600", fontSize: 13 }}>删除</Text>
@@ -148,7 +169,7 @@ export default function AdminStrategies() {
               </View>
             )}
             ListEmptyComponent={<View style={s.empty}><Text style={{ color: colors.muted, fontSize: 15 }}>暂无策略</Text></View>}
-            contentContainerStyle={{ paddingBottom: 32 }}
+            contentContainerStyle={s.listContent}
           />
         )}
       </View>
@@ -157,16 +178,25 @@ export default function AdminStrategies() {
 }
 
 const s = StyleSheet.create({
-  filterBar: { padding: 16, borderBottomWidth: 0.5 },
-  filterHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-  title: { fontSize: 18, fontWeight: "700" },
-  addBtn: { borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
+  pageShell: { flex: 1, width: "100%", maxWidth: 1360, alignSelf: "center", paddingHorizontal: 22, paddingTop: 18 },
+  filterBar: { padding: 13, borderWidth: 1, borderRadius: 6, marginBottom: 10, backgroundColor: "rgba(9,15,28,0.82)" },
+  filterHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  kicker: { color: "#D8BC83", fontSize: 11, fontWeight: "900", marginBottom: 4 },
+  title: { fontSize: 22, fontWeight: "900" },
+  addBtn: { borderRadius: 6, paddingHorizontal: 14, paddingVertical: 9 },
   addBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  statsRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
+  statCell: { flex: 1, borderWidth: 1, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 10 },
+  statLabel: { color: "rgba(148,163,184,0.72)", fontSize: 10, fontWeight: "900", marginBottom: 4 },
+  statValue: { fontSize: 19, fontWeight: "900" },
   filterRow: { flexDirection: "row", gap: 8 },
-  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  card: { padding: 16, borderBottomWidth: 0.5 },
+  listContent: { paddingBottom: 32, gap: 10 },
+  card: { padding: 12, borderWidth: 1, borderRadius: 6 },
+  cardDesktop: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 10 },
   cardHeader: { flexDirection: "row", alignItems: "flex-start", marginBottom: 8 },
+  cardHeaderDesktop: { flex: 1, marginBottom: 0 },
   titleRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
   cardTitle: { fontSize: 15, fontWeight: "600" },
   platformBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
@@ -174,6 +204,8 @@ const s = StyleSheet.create({
   meta: { fontSize: 12 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   actions: { flexDirection: "row", gap: 8 },
-  actionBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center" },
+  actionsDesktop: { flexShrink: 0, alignItems: "center" },
+  actionBtn: { minWidth: 110, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6, alignItems: "center" },
+  actionBtnDesktop: { minWidth: 0, paddingHorizontal: 12, paddingVertical: 7 },
   empty: { padding: 32, alignItems: "center" },
 });

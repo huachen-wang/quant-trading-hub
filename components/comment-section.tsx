@@ -77,13 +77,13 @@ export function CommentSection({ strategyId }: CommentSectionProps) {
   return (
     <View style={styles.container}>
       {/* 标题 */}
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>💬 用户评价</Text>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>用户评价</Text>
 
       {/* 审核成功提示 */}
       {showSuccess && (
         <View style={[styles.successBanner, { backgroundColor: colors.success + "15" }]}>
           <Text style={[styles.successText, { color: colors.success }]}>
-            ✅ 留言已提交，审核通过后将显示在评论区
+            留言已提交，审核通过后将显示在评论区
           </Text>
         </View>
       )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useRouter, usePathname } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
+import { BrandWordmark } from "@/components/brand-wordmark";
 
 /**
  * 全端统一顶部导航 - 响应式 + 用户状态
@@ -58,14 +59,12 @@ export function PcTopNav() {
   };
 
   const navItems = [
-    { href: "/(tabs)", label: "策略广场" },
-    { href: "/(tabs)/group-buy", label: "合购" },
-    { href: "/(tabs)/subscribe", label: "订阅" },
-    { href: "/cooperation", label: "合作授权" },
-    { href: "/promo", label: "限时促销" },
+    { href: "/(tabs)", label: "策略广场", code: "MKT" },
+    { href: "/(tabs)/group-buy", label: "合购", code: "GB" },
+    { href: "/(tabs)/subscribe", label: "订阅", code: "ACC" },
+    { href: "/cooperation", label: "合作授权", code: "B2B" },
+    { href: "/promo", label: "限时促销", code: "PRM" },
   ];
-  const brandLetters = ["E", "A", "X", "A", "U"];
-
   const goTo = (href: string) => {
     setUserMenuOpen(false);
     router.push(href as any);
@@ -136,18 +135,7 @@ export function PcTopNav() {
             onPress={() => goTo("/(tabs)")}
             accessibilityLabel="EAXAU"
           >
-            {brandLetters.map((letter, index) => (
-              <Text
-                key={`${letter}-${index}`}
-                style={[
-                  styles.logoLetter,
-                  index === 2 && styles.logoLetterAccent,
-                  isMobile && styles.logoLetterMobile,
-                ]}
-              >
-                {letter}
-              </Text>
-            ))}
+            <BrandWordmark size={isMobile ? "sm" : "md"} />
           </Pressable>
 
           {/* 桌面端：内联 5 个导航 */}
@@ -161,6 +149,7 @@ export function PcTopNav() {
                     onPress={() => goTo(item.href)}
                     style={[styles.navLink, active && styles.navLinkActive]}
                   >
+                    <Text style={[styles.navCode, active && styles.navCodeActive]}>{item.code}</Text>
                     <Text style={[styles.navLinkText, active && styles.navLinkTextActive]}>
                       {item.label}
                     </Text>
@@ -172,6 +161,13 @@ export function PcTopNav() {
 
           {/* 手机端 spacer */}
           {isMobile && <View style={{ flex: 1 }} />}
+
+          {isDesktop && (
+            <View style={styles.marketStatus}>
+              <View style={styles.marketDot} />
+              <Text style={styles.marketStatusText}>LIVE SOURCE DESK</Text>
+            </View>
+          )}
 
           {/* 右侧：用户区 */}
           <View style={styles.right}>
@@ -197,26 +193,26 @@ export function PcTopNav() {
               style={styles.userMenuItem}
               onPress={() => goTo("/(tabs)/profile")}
             >
-              <Text style={styles.userMenuItemText}>👤  个人中心</Text>
+              <Text style={styles.userMenuItemText}>个人中心</Text>
             </Pressable>
             <Pressable style={styles.userMenuItem} onPress={() => goTo("/(tabs)/profile")}>
-              <Text style={styles.userMenuItemText}>📦  我的订单</Text>
+              <Text style={styles.userMenuItemText}>我的订单</Text>
             </Pressable>
             <Pressable
               style={styles.userMenuItem}
               onPress={() => goTo("/(tabs)/favorites")}
             >
-              <Text style={styles.userMenuItemText}>⭐  我的收藏</Text>
+              <Text style={styles.userMenuItemText}>我的收藏</Text>
             </Pressable>
             {user?.role === "admin" && (
               <Pressable style={styles.userMenuItem} onPress={() => goTo("/admin")}>
-                <Text style={styles.userMenuItemText}>🛠  管理后台</Text>
+                <Text style={styles.userMenuItemText}>管理后台</Text>
               </Pressable>
             )}
             <View style={styles.userMenuDivider} />
             <Pressable style={styles.userMenuItem} onPress={handleLogout}>
               <Text style={[styles.userMenuItemText, { color: "#F87171" }]}>
-                🚪  退出登录
+                退出登录
               </Text>
             </Pressable>
           </View>
@@ -231,19 +227,24 @@ const styles = StyleSheet.create({
     position: Platform.OS === "web" ? ("sticky" as any) : "relative",
     top: 0,
     zIndex: 100,
-    backgroundColor: "rgba(10,14,26,0.95)",
+    backgroundColor: "rgba(3,7,18,0.96)",
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(148,163,184,0.12)",
+    borderBottomColor: "rgba(216,188,131,0.20)",
+    ...(Platform.OS === "web"
+      ? {
+          backdropFilter: "saturate(1.25) blur(14px)",
+        }
+      : {}),
   },
   inner: {
-    maxWidth: 1400,
+    maxWidth: 1360,
     width: "100%",
     alignSelf: "center",
-    paddingHorizontal: 32,
-    paddingVertical: 14,
+    paddingHorizontal: 22,
+    paddingVertical: 8,
     flexDirection: "row",
     alignItems: "center",
-    gap: 28,
+    gap: 10,
   },
   innerMobile: {
     paddingHorizontal: 14,
@@ -251,43 +252,82 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   logo: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
+    justifyContent: "center",
     flexShrink: 0,
-    gap: 2,
-    minHeight: 38,
-    paddingHorizontal: 2,
+    minHeight: 40,
+    minWidth: 134,
+    paddingHorizontal: 0,
   },
   logoMobile: {
     minHeight: 36,
+    minWidth: 88,
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    paddingHorizontal: 0,
   },
-  logoLetter: {
-    color: "#F8FAFC",
-    fontSize: 23,
+  nav: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.16)",
+    backgroundColor: "rgba(8,15,28,0.78)",
+  },
+  navLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  navLinkActive: {
+    backgroundColor: "rgba(216,188,131,0.12)",
+    borderColor: "rgba(216,188,131,0.30)",
+  },
+  navCode: {
+    color: "rgba(148,163,184,0.62)",
+    fontSize: 9,
     fontWeight: "900",
-    lineHeight: 28,
-    textShadowColor: "rgba(201,169,110,0.24)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 10,
   },
-  logoLetterAccent: {
+  navCodeActive: {
     color: "#D8BC83",
   },
-  logoLetterMobile: {
-    fontSize: 21,
-    lineHeight: 26,
+  navLinkText: { color: "#A7B0C0", fontSize: 12, fontWeight: "700" },
+  navLinkTextActive: { color: "#F2D99B", fontWeight: "800" },
+  marketStatus: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(52,211,153,0.18)",
+    backgroundColor: "rgba(6,78,59,0.10)",
   },
-  nav: { flex: 1, flexDirection: "row", gap: 4 },
-  navLink: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
-  navLinkActive: { backgroundColor: "rgba(245,158,11,0.08)" },
-  navLinkText: { color: "#94A3B8", fontSize: 14, fontWeight: "500" },
-  navLinkTextActive: { color: "#D8BC83", fontWeight: "700" },
+  marketDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#34D399",
+  },
+  marketStatusText: {
+    color: "#9AE6C1",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0,
+  },
   right: { flexDirection: "row", alignItems: "center", gap: 8 },
 
   loginBtn: {
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 4,
     backgroundColor: "#C9A96E",
   },
   loginBtnMobile: { paddingHorizontal: 12, paddingVertical: 7 },
@@ -307,8 +347,8 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingLeft: 4,
     paddingRight: 12,
-    paddingVertical: 4,
-    borderRadius: 999,
+    paddingVertical: 3,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: "rgba(148,163,184,0.18)",
     backgroundColor: "rgba(255,255,255,0.04)",

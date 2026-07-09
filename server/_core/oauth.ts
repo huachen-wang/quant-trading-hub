@@ -70,6 +70,12 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function hasSessionCookie(req: Request) {
+  return req.headers.cookie
+    ?.split(";")
+    .some((cookie) => cookie.trim().startsWith(`${COOKIE_NAME}=`));
+}
+
 export function registerOAuthRoutes(app: Express) {
   app.post("/api/auth/register", async (req: Request, res: Response) => {
     const email = typeof req.body?.email === "string" ? normalizeEmail(req.body.email) : "";
@@ -264,7 +270,7 @@ export function registerOAuthRoutes(app: Express) {
 
   app.post("/api/auth/logout", (req: Request, res: Response) => {
     const cookieOptions = getSessionCookieOptions(req);
-    res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    res.clearCookie(COOKIE_NAME, cookieOptions);
     res.json({ success: true });
   });
 
@@ -273,8 +279,11 @@ export function registerOAuthRoutes(app: Express) {
     try {
       const user = await sdk.authenticateRequest(req);
       res.json({ user: buildUserResponse(user) });
-    } catch (error) {
-      console.error("[Auth] /api/auth/me failed:", error);
+    } catch {
+      if (hasSessionCookie(req)) {
+        const cookieOptions = getSessionCookieOptions(req);
+        res.clearCookie(COOKIE_NAME, cookieOptions);
+      }
       res.status(401).json({ error: "Not authenticated", user: null });
     }
   });

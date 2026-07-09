@@ -26,7 +26,7 @@ export function UserReviewsSection({
     <View style={styles.section}>
       <View style={styles.reviewSectionHeader}>
         <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>
-          💬 用户评价 {reviews && reviews.length > 0 ? `(${reviews.length})` : ""}
+          用户评价 {reviews && reviews.length > 0 ? `(${reviews.length})` : ""}
         </Text>
         <TouchableOpacity
           onPress={onOpenReview}
@@ -40,7 +40,7 @@ export function UserReviewsSection({
       {showReviewSuccess && (
         <View style={[styles.successBanner, { backgroundColor: colors.success + "15", marginBottom: 10 }]}>
           <Text style={[styles.successText, { color: colors.success }]}>
-            ✅ 评价已提交，审核通过后将显示
+            评价已提交，审核通过后将显示
           </Text>
         </View>
       )}

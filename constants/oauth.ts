@@ -1,5 +1,6 @@
 import * as Linking from "expo-linking";
 import * as ReactNative from "react-native";
+import { resolveWebApiBaseUrl } from "./api-base-url";
 
 // Extract scheme from bundle ID (last segment timestamp, prefixed with "manus")
 // e.g., "space.manus.my.app.t20240115103045" -> "manus20240115103045"
@@ -30,37 +31,8 @@ export const API_BASE_URL = env.apiBaseUrl;
  * URL pattern: https://PORT-sandboxid.region.domain
  */
 export function getApiBaseUrl(): string {
-  // Production safeguard: for eaxau domains, always use same-origin relative API path.
-  // This avoids cross-origin preflight/redirect issues between apex and www.
   if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
-    const { hostname } = window.location;
-    if (hostname === "eaxau.com" || hostname === "www.eaxau.com") {
-      return "";
-    }
-  }
-
-  // If API_BASE_URL is set, use it
-  if (API_BASE_URL) {
-    return API_BASE_URL.replace(/\/$/, "");
-  }
-
-  // On web, derive from current hostname
-  if (ReactNative.Platform.OS === "web" && typeof window !== "undefined" && window.location) {
-    const { protocol, hostname } = window.location;
-    
-    // Development: localhost
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-      return `${protocol}//${hostname}:3000`;
-    }
-    
-    // Development: Manus sandbox pattern (8081-sandboxid.region.domain -> 3000-sandboxid.region.domain)
-    if (hostname.startsWith("8081-")) {
-      const apiHostname = hostname.replace(/^8081-/, "3000-");
-      return `${protocol}//${apiHostname}`;
-    }
-    
-    // Production: use current domain (API server is on the same domain)
-    return `${protocol}//${hostname}`;
+    return resolveWebApiBaseUrl(window.location, API_BASE_URL);
   }
 
   // Fallback to empty (will use relative URL)

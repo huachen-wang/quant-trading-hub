@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Platform, Modal, Pressable, ActivityIndicator } from "react-native";
-import { ScreenContainer } from "@/components/screen-container";
+import { AdminPageChrome, AdminSection } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { getApiBaseUrl } from "@/constants/oauth";
 import * as SecureStore from "expo-secure-store";
@@ -115,15 +115,32 @@ export default function CooperationManage() {
   };
 
   if (loading) {
-    return <ScreenContainer className="items-center justify-center"><ActivityIndicator size="large" color={colors.primary} /></ScreenContainer>;
+    return (
+      <AdminPageChrome eyebrow="COOPERATION OPS" title="合作方案管理" subtitle="加载合作数据" maxWidth={1280}>
+        <View style={{ minHeight: 260, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </AdminPageChrome>
+    );
   }
 
   return (
-    <ScreenContainer>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: colors.foreground, marginBottom: 4 }}>🤝 合作方案管理</Text>
-        <Text style={{ fontSize: 13, color: colors.muted, marginBottom: 16 }}>管理面向工作室/客户的合作展示卡片和合作模式</Text>
-
+    <AdminPageChrome
+      eyebrow="COOPERATION OPS"
+      title="合作方案管理"
+      subtitle="管理面向工作室和客户的合作展示卡片与合作模式"
+      metrics={[
+        { label: "策略卡片", value: cards.length, tone: colors.primary },
+        { label: "合作模式", value: plans.length, tone: "#60A5FA" },
+        { label: "当前视图", value: tab === "cards" ? "卡片" : "模式", tone: colors.success },
+      ]}
+      action={
+        <TouchableOpacity onPress={openCreate} style={{ backgroundColor: colors.primary, paddingVertical: 9, paddingHorizontal: 16, borderRadius: 6, alignItems: "center" }}>
+          <Text style={{ color: "#07111F", fontWeight: "900", fontSize: 13 }}>新增{tab === "cards" ? "策略卡片" : "合作模式"}</Text>
+        </TouchableOpacity>
+      }
+      maxWidth={1280}
+    >
         {/* Tab 切换 */}
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
           {(["cards", "plans"] as Tab[]).map((t) => (
@@ -133,23 +150,21 @@ export default function CooperationManage() {
               style={{
                 flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center",
                 backgroundColor: tab === t ? colors.primary : colors.surface,
+                borderWidth: 1,
+                borderColor: tab === t ? colors.primary : colors.border,
               }}
             >
-              <Text style={{ color: tab === t ? "#fff" : colors.foreground, fontWeight: "700" }}>
+              <Text style={{ color: tab === t ? "#07111F" : colors.foreground, fontWeight: "800" }}>
                 {t === "cards" ? "策略卡片" : "合作模式"}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* 新增按钮 */}
-        <TouchableOpacity onPress={openCreate} style={{ backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 10, alignItems: "center", marginBottom: 16 }}>
-          <Text style={{ color: "#fff", fontWeight: "700" }}>+ 新增{tab === "cards" ? "策略卡片" : "合作模式"}</Text>
-        </TouchableOpacity>
-
+      <AdminSection title={tab === "cards" ? "策略卡片" : "合作模式"} meta="COOPERATION CONTENT">
         {/* 列表 */}
         {tab === "cards" && cards.map((card) => (
-          <View key={card.id} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+          <View key={card.id} style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 14, marginBottom: 10 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>{card.title}</Text>
@@ -173,7 +188,7 @@ export default function CooperationManage() {
         ))}
 
         {tab === "plans" && plans.map((plan) => (
-          <View key={plan.id} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+          <View key={plan.id} style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 14, marginBottom: 10 }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>{plan.title}</Text>
@@ -197,7 +212,7 @@ export default function CooperationManage() {
             <Text style={{ color: colors.muted, fontSize: 14 }}>暂无数据，点击上方按钮新增</Text>
           </View>
         )}
-      </ScrollView>
+      </AdminSection>
 
       {/* 编辑弹窗 */}
       <Modal visible={showForm} transparent animationType="fade">
@@ -248,7 +263,7 @@ export default function CooperationManage() {
           </Pressable>
         </Pressable>
       </Modal>
-    </ScreenContainer>
+    </AdminPageChrome>
   );
 
   function renderField(label: string, key: string, multiline?: boolean) {

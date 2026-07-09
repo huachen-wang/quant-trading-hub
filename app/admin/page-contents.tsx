@@ -64,10 +64,10 @@ export default function PageContentsAdmin() {
   const renderItem = ({ item }: { item: ContentItem }) => (
     <View style={[st.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={st.cardHeader}>
-        <Text style={{ fontSize: 20 }}>{item.icon || "📄"}</Text>
+        <Text style={{ color: "#D8BC83", fontSize: 11, fontWeight: "900" }}>{item.icon || "DOC"}</Text>
         <View style={{ flex: 1 }}>
           <Text style={[st.cardTitle, { color: colors.foreground }]}>{item.title}</Text>
-          <Text style={[st.cardMeta, { color: colors.muted }]}>排序: {item.sortOrder} | {item.isVisible ? "✅ 可见" : "🚫 隐藏"}</Text>
+          <Text style={[st.cardMeta, { color: colors.muted }]}>排序: {item.sortOrder} | {item.isVisible ? "可见" : "隐藏"}</Text>
         </View>
       </View>
       <Text style={[st.cardContent, { color: colors.muted }]} numberOfLines={3}>{item.content}</Text>
@@ -91,7 +91,10 @@ export default function PageContentsAdmin() {
         contentContainerStyle={st.listContainer}
         ListHeaderComponent={
           <View style={st.header}>
-            <Text style={[st.pageTitle, { color: colors.foreground }]}>📬 订阅页面内容管理</Text>
+            <View>
+              <Text style={st.kicker}>SUBSCRIBE CONTENT OPS</Text>
+              <Text style={[st.pageTitle, { color: colors.foreground }]}>订阅页面内容管理</Text>
+            </View>
             <TouchableOpacity onPress={openCreateModal} style={[st.addBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}>
               <Text style={st.addBtnText}>+ 添加内容</Text>
             </TouchableOpacity>
@@ -108,8 +111,8 @@ export default function PageContentsAdmin() {
           <View style={[st.modalContent, { backgroundColor: colors.background }]}>
             <Text style={[st.modalTitle, { color: colors.foreground }]}>{editingItem ? "编辑内容" : "添加内容"}</Text>
             <View style={st.formGroup}>
-              <Text style={[st.formLabel, { color: colors.foreground }]}>图标 (emoji)</Text>
-              <TextInput value={form.icon} onChangeText={(t) => setForm({ ...form, icon: t })} placeholder="如: 🛠️" placeholderTextColor={colors.muted} style={[st.formInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} />
+              <Text style={[st.formLabel, { color: colors.foreground }]}>图标代码</Text>
+              <TextInput value={form.icon} onChangeText={(t) => setForm({ ...form, icon: t })} placeholder="如: EA" placeholderTextColor={colors.muted} style={[st.formInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]} />
             </View>
             <View style={st.formGroup}>
               <Text style={[st.formLabel, { color: colors.foreground }]}>标题</Text>
@@ -127,7 +130,7 @@ export default function PageContentsAdmin() {
               <View style={[st.formGroup, { flex: 1 }]}>
                 <Text style={[st.formLabel, { color: colors.foreground }]}>可见</Text>
                 <TouchableOpacity onPress={() => setForm({ ...form, isVisible: !form.isVisible })} style={[st.toggleBtn, { backgroundColor: form.isVisible ? colors.success + "20" : colors.error + "20", borderColor: form.isVisible ? colors.success : colors.error }]} activeOpacity={0.7}>
-                  <Text style={{ color: form.isVisible ? colors.success : colors.error, fontWeight: "600" }}>{form.isVisible ? "✅ 可见" : "🚫 隐藏"}</Text>
+                  <Text style={{ color: form.isVisible ? colors.success : colors.error, fontWeight: "600" }}>{form.isVisible ? "可见" : "隐藏"}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -147,18 +150,29 @@ export default function PageContentsAdmin() {
 }
 
 const st = StyleSheet.create({
-  listContainer: { padding: 16, paddingBottom: 40 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  pageTitle: { fontSize: 20, fontWeight: "800" },
-  addBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
+  listContainer: { padding: 24, paddingBottom: 40, maxWidth: 1320, alignSelf: "center" as any, width: "100%" as any },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.14)",
+    borderRadius: 8,
+    padding: 16,
+    backgroundColor: "rgba(15,23,42,0.68)",
+  },
+  kicker: { color: "#D8BC83", fontSize: 11, fontWeight: "900", marginBottom: 4 },
+  pageTitle: { fontSize: 22, fontWeight: "900" },
+  addBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 6 },
   addBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 16, marginBottom: 12 },
+  card: { borderRadius: 8, borderWidth: 1, padding: 16, marginBottom: 10 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 },
   cardTitle: { fontSize: 16, fontWeight: "700" },
   cardMeta: { fontSize: 12, marginTop: 2 },
   cardContent: { fontSize: 13, lineHeight: 20, marginBottom: 12 },
   cardActions: { flexDirection: "row", gap: 8 },
-  actionBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
+  actionBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 },
   emptyText: { textAlign: "center", marginTop: 40, fontSize: 14 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 20 },
   modalContent: { borderRadius: 16, padding: 24, maxHeight: "90%" as any },

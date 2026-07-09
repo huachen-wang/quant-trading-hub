@@ -11,10 +11,9 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { EmptyState } from "@/components/empty-state";
-import { ScreenContainer } from "@/components/screen-container";
+import { AdminPageChrome, AdminSection } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
@@ -38,7 +37,6 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function AdminOrdersScreen() {
   const colors = useColors();
-  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [confirmOrder, setConfirmOrder] = useState<any | null>(null);
   const [txHash, setTxHash] = useState("");
@@ -80,21 +78,22 @@ export default function AdminOrdersScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        {/* 顶部：返回按钮 + 标题 */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={{ color: colors.foreground, fontSize: 18 }}>←</Text>
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>订单管理</Text>
-        </View>
-
+    <AdminPageChrome
+      eyebrow="ORDER LEDGER"
+      title="订单管理"
+      subtitle="支付确认、订单状态和用户交易记录集中处理"
+      metrics={[
+        { label: "订单总量", value: orders?.length ?? "-", tone: colors.primary },
+        { label: "待收 USDT", value: pendingUsdt?.length ?? 0, tone: "#D8BC83" },
+        { label: "当前筛选", value: labelForStatus(statusFilter), tone: "#60A5FA" },
+      ]}
+      maxWidth={1320}
+    >
         {/* 待确认 USDT 提示卡 */}
         {pendingUsdt && pendingUsdt.length > 0 ? (
           <View style={[styles.pendingCard, { borderColor: "rgba(245, 158, 11, 0.4)" }]}>
             <Text style={{ color: "#D8BC83", fontWeight: "800", fontSize: 14 }}>
-              ⚠️ 有 {pendingUsdt.length} 笔 USDT 转账等待确认
+              USDT 转账等待确认：{pendingUsdt.length} 笔
             </Text>
             <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
               核对客服收到的截图后，点击下方对应订单的「确认收款」按钮
@@ -102,119 +101,113 @@ export default function AdminOrdersScreen() {
           </View>
         ) : null}
 
-        {/* 状态筛选 */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 6, paddingVertical: 8 }}
-        >
-          {STATUS_OPTIONS.map((opt) => {
-            const isActive = statusFilter === opt.value;
-            return (
-              <TouchableOpacity
-                key={opt.value}
-                onPress={() => setStatusFilter(opt.value)}
-                style={[
-                  styles.filterChip,
-                  isActive
-                    ? { backgroundColor: "#A8895A", borderColor: "#A8895A" }
-                    : { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-              >
-                <Text
-                  style={{
-                    color: isActive ? "#fff" : colors.muted,
-                    fontSize: 12,
-                    fontWeight: "700",
-                  }}
+        <AdminSection title="订单流水" meta="STATUS FILTER">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterContent}
+          >
+            {STATUS_OPTIONS.map((opt) => {
+              const isActive = statusFilter === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => setStatusFilter(opt.value)}
+                  style={[
+                    styles.filterChip,
+                    isActive
+                      ? { backgroundColor: "#A8895A", borderColor: "#A8895A" }
+                      : { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
                 >
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    style={{
+                      color: isActive ? "#07111F" : colors.muted,
+                      fontSize: 12,
+                      fontWeight: "800",
+                    }}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
-        {/* 订单列表 */}
-        {isLoading ? (
-          <ActivityIndicator color="#D8BC83" style={{ marginTop: 40 }} />
-        ) : !orders || orders.length === 0 ? (
-          <EmptyState
-            emoji="📭"
-            title={statusFilter === "all" ? "暂无订单" : `暂无${STATUS_OPTIONS.find((opt) => opt.value === statusFilter)?.label || ""}订单`}
-            subtitle="本地预览会显示样例订单；真实部署后这里会连接线上数据库订单。"
-          />
-        ) : (
-          orders.map((order: any) => {
-            const statusColor = STATUS_COLORS[order.status] || colors.muted;
-            const isPendingUsdt = pendingUsdt?.some((p: any) => p.orderId === order.id);
-            return (
-              <View
-                key={order.id}
-                style={[styles.orderCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              >
-                <View style={styles.orderTop}>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[styles.orderTitle, { color: colors.foreground }]}
-                      numberOfLines={1}
-                    >
-                      {order.productTitle}
-                    </Text>
-                    <Text style={[styles.orderNo, { color: colors.muted }]}>
-                      {order.orderNo}
-                    </Text>
-                  </View>
+          {isLoading ? (
+            <ActivityIndicator color="#D8BC83" style={{ marginTop: 40 }} />
+          ) : !orders || orders.length === 0 ? (
+            <EmptyState
+              emoji=""
+              title={statusFilter === "all" ? "暂无订单" : `暂无${STATUS_OPTIONS.find((opt) => opt.value === statusFilter)?.label || ""}订单`}
+              subtitle="本地预览会显示样例订单；真实部署后这里会连接线上数据库订单。"
+            />
+          ) : (
+            <View style={[styles.tablePanel, { borderColor: colors.border }]}>
+              {orders.map((order: any) => {
+                const statusColor = STATUS_COLORS[order.status] || colors.muted;
+                const isPendingUsdt = pendingUsdt?.some((p: any) => p.orderId === order.id);
+                return (
                   <View
-                    style={[
-                      styles.statusPill,
-                      { backgroundColor: statusColor + "20", borderColor: statusColor + "60" },
-                    ]}
+                    key={order.id}
+                    style={[styles.orderRow, { borderBottomColor: colors.border }]}
                   >
-                    <Text style={{ color: statusColor, fontSize: 11, fontWeight: "700" }}>
-                      {labelForStatus(order.status)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.orderMeta}>
-                  <Text style={[styles.metaItem, { color: colors.muted }]}>
-                    💰 ¥{order.amount}
-                  </Text>
-                  <Text style={[styles.metaItem, { color: colors.muted }]}>
-                    👤 用户 #{order.userId}
-                  </Text>
-                  <Text style={[styles.metaItem, { color: colors.muted }]}>
-                    {order.paymentMethod ? `📱 ${labelForMethod(order.paymentMethod)}` : "📱 未选支付"}
-                  </Text>
-                  <Text style={[styles.metaItem, { color: colors.muted }]}>
-                    {fmtDate(order.createdAt)}
-                  </Text>
-                </View>
-
-                {isPendingUsdt ? (
-                  <TouchableOpacity
-                    onPress={() => setConfirmOrder(order)}
-                    style={styles.confirmBtn}
-                    activeOpacity={0.85}
-                  >
-                    <LinearGradient
-                      colors={["#A8895A", "#C9A96E"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.confirmBtnInner}
-                    >
-                      <Text style={{ color: "#0A1628", fontWeight: "800", fontSize: 13 }}>
-                        ✓ 确认 USDT 收款
+                    <View style={styles.orderMain}>
+                      <Text
+                        style={[styles.orderTitle, { color: colors.foreground }]}
+                        numberOfLines={1}
+                      >
+                        {order.productTitle}
                       </Text>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
+                      <Text style={[styles.orderNo, { color: colors.muted }]}>
+                        {order.orderNo}
+                      </Text>
+                    </View>
+                    <View style={styles.orderMeta}>
+                      <Text style={[styles.metaItem, { color: colors.muted }]}>¥{order.amount}</Text>
+                      <Text style={[styles.metaItem, { color: colors.muted }]}>用户 #{order.userId}</Text>
+                      <Text style={[styles.metaItem, { color: colors.muted }]}>
+                        {order.paymentMethod ? labelForMethod(order.paymentMethod) : "未选支付"}
+                      </Text>
+                      <Text style={[styles.metaItem, { color: colors.muted }]}>
+                        {fmtDate(order.createdAt)}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.statusPill,
+                        { backgroundColor: statusColor + "20", borderColor: statusColor + "60" },
+                      ]}
+                    >
+                      <Text style={{ color: statusColor, fontSize: 11, fontWeight: "800" }}>
+                        {labelForStatus(order.status)}
+                      </Text>
+                    </View>
+
+                    {isPendingUsdt ? (
+                      <TouchableOpacity
+                        onPress={() => setConfirmOrder(order)}
+                        style={styles.confirmBtn}
+                        activeOpacity={0.85}
+                      >
+                        <LinearGradient
+                          colors={["#A8895A", "#C9A96E"]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.confirmBtnInner}
+                        >
+                          <Text style={{ color: "#07111F", fontWeight: "900", fontSize: 12 }}>
+                            确认收款
+                          </Text>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </AdminSection>
 
       {/* USDT 确认 Modal */}
       <Modal
@@ -287,7 +280,7 @@ export default function AdminOrdersScreen() {
           </View>
         </View>
       </Modal>
-    </ScreenContainer>
+    </AdminPageChrome>
   );
 }
 
@@ -312,58 +305,61 @@ function fmtDate(d: any): string {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 8 },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(148, 163, 184, 0.08)",
-  },
-  headerTitle: { fontSize: 20, fontWeight: "900" },
   pendingCard: {
     backgroundColor: "rgba(245, 158, 11, 0.06)",
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 12,
-    marginBottom: 8,
+    marginBottom: 16,
+  },
+  filterContent: {
+    gap: 8,
+    paddingBottom: 12,
   },
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 7,
-    borderRadius: 999,
+    borderRadius: 6,
     borderWidth: 1,
   },
-  orderCard: {
-    borderRadius: 12,
-    padding: 14,
+  tablePanel: {
     borderWidth: 1,
-    marginBottom: 10,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "rgba(15,23,42,0.56)",
   },
-  orderTop: {
+  orderRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    marginBottom: 8,
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  orderTitle: { fontSize: 14, fontWeight: "700" },
-  orderNo: { fontSize: 11, marginTop: 2 },
+  orderMain: {
+    flex: 1.4,
+    minWidth: 180,
+  },
+  orderTitle: { fontSize: 13, fontWeight: "800" },
+  orderNo: { fontSize: 11, marginTop: 3, fontFamily: Platform.OS === "web" ? "monospace" : undefined },
   statusPill: {
+    minWidth: 66,
+    alignItems: "center",
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,
     borderRadius: 4,
     borderWidth: 1,
   },
   orderMeta: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 6,
+    gap: 10,
+    flex: 1.2,
+    minWidth: 220,
   },
   metaItem: { fontSize: 11, fontWeight: "500" },
-  confirmBtn: { borderRadius: 8, overflow: "hidden", marginTop: 8 },
-  confirmBtnInner: { paddingVertical: 10, alignItems: "center" },
+  confirmBtn: { width: 92, borderRadius: 6, overflow: "hidden" },
+  confirmBtnInner: { paddingVertical: 8, alignItems: "center" },
 });
 
 const modalStyles = StyleSheet.create({

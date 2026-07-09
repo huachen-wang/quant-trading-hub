@@ -14,6 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { trpc } from "@/lib/trpc";
 import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
+import { ScreenContainer } from "@/components/screen-container";
 
 /**
  * 支付成功页
@@ -40,8 +41,9 @@ export default function CheckoutSuccessScreen() {
     { orderNo: orderNo! },
     {
       enabled: !!orderNo,
-      // 订单 paid 之前持续轮询，paid 之后停止
-      refetchInterval: (data: any) => (data?.status === "paid" ? false : 3000),
+      retry: false,
+      // 只有待支付订单需要轮询；未登录、订单不存在和终态都立即停止。
+      refetchInterval: (query) => query.state.data?.status === "pending" ? 3000 : false,
     }
   );
 
@@ -49,7 +51,7 @@ export default function CheckoutSuccessScreen() {
     if (order?.status === "paid") {
       Animated.spring(checkAnim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== "web",
         damping: 12,
         stiffness: 180,
       }).start();
@@ -58,18 +60,52 @@ export default function CheckoutSuccessScreen() {
 
   if (!orderNo) {
     return (
-      <View style={styles.center}>
-        <Text style={{ color: colors.muted }}>订单号缺失</Text>
-      </View>
+      <ScreenContainer>
+        <View style={styles.center}>
+          <Text style={{ color: colors.muted }}>订单号缺失</Text>
+        </View>
+      </ScreenContainer>
     );
   }
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#D8BC83" />
-        <Text style={{ color: colors.muted, marginTop: 16 }}>加载订单中...</Text>
-      </View>
+      <ScreenContainer>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#D8BC83" />
+          <Text style={{ color: colors.muted, marginTop: 16 }}>加载订单中...</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (!order) {
+    const needsLogin = /login|unauthorized|10001/i.test(orderError?.message || "");
+    return (
+      <ScreenContainer>
+        <View style={styles.center}>
+          <Text style={styles.emptyIcon}>!</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>
+            {needsLogin ? "需要登录" : "订单不存在"}
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>
+            {needsLogin ? "请先登录后查看支付结果，或返回首页重新选择商品。" : "没有找到支付结果，请返回首页重新选择商品。"}
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)}
+            style={styles.cta}
+          >
+            <LinearGradient
+              colors={["#A8895A", "#C9A96E"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.ctaInner}
+            >
+              <Text style={styles.ctaText}>{needsLogin ? "去登录" : "返回首页"}</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </ScreenContainer>
     );
   }
 
@@ -104,49 +140,48 @@ export default function CheckoutSuccessScreen() {
   // 仍在等待支付确认
   if (order.status === "pending") {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#D8BC83" />
-        <Text style={[styles.title, { color: colors.foreground, marginTop: 24 }]}>
-          支付确认中...
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>
-          请稍候，我们正在等待网关回调（最多约 30 秒）
-        </Text>
-      </View>
+      <ScreenContainer>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#D8BC83" />
+          <Text style={[styles.title, { color: colors.foreground, marginTop: 24 }]}>
+            支付确认中...
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>
+            请稍候，我们正在等待网关回调（最多约 30 秒）
+          </Text>
+        </View>
+      </ScreenContainer>
     );
   }
 
   // 已取消/过期
   if (order.status === "cancelled" || order.status === "expired") {
     return (
-      <View style={styles.center}>
-        <Text style={{ fontSize: 56, marginBottom: 16 }}>😞</Text>
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          订单已{order.status === "cancelled" ? "取消" : "过期"}
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>请重新下单</Text>
-        <TouchableOpacity onPress={() => router.replace("/(tabs)" as any)} style={styles.cta}>
-          <LinearGradient
-            colors={["#A8895A", "#C9A96E"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.ctaInner}
-          >
-            <Text style={styles.ctaText}>返回首页</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+      <ScreenContainer>
+        <View style={styles.center}>
+          <Text style={[styles.title, { color: colors.foreground }]}>
+            订单已{order.status === "cancelled" ? "取消" : "过期"}
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>请重新下单</Text>
+          <TouchableOpacity onPress={() => router.replace("/(tabs)" as any)} style={styles.cta}>
+            <LinearGradient
+              colors={["#A8895A", "#C9A96E"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.ctaInner}
+            >
+              <Text style={styles.ctaText}>返回首页</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </ScreenContainer>
     );
   }
 
   // ─── 已支付 ───
   return (
+    <ScreenContainer>
     <View style={styles.successWrap}>
-      {/* 装饰粒子 */}
-      <View style={[styles.particle, { top: "15%", right: "20%", backgroundColor: "rgba(251,191,36,0.5)" }]} />
-      <View style={[styles.particle, { top: "30%", left: "15%", backgroundColor: "rgba(96,165,250,0.4)" }]} />
-      <View style={[styles.particle, { bottom: "25%", right: "12%", backgroundColor: "rgba(52,211,153,0.4)" }]} />
-
       <Animated.View
         style={[
           styles.successCard,
@@ -212,7 +247,7 @@ export default function CheckoutSuccessScreen() {
               end={{ x: 1, y: 0 }}
               style={styles.ctaInner}
             >
-              <Text style={styles.ctaText}>⚡ 立即下载</Text>
+              <Text style={styles.ctaText}>立即下载</Text>
             </LinearGradient>
           </TouchableOpacity>
         ) : null}
@@ -237,6 +272,7 @@ export default function CheckoutSuccessScreen() {
         </View>
       </Animated.View>
     </View>
+    </ScreenContainer>
   );
 }
 
@@ -277,12 +313,6 @@ const styles = StyleSheet.create({
     padding: 16,
     minHeight: "100%" as any,
   },
-  particle: {
-    position: "absolute",
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
   successCard: {
     width: "100%",
     maxWidth: 480,
@@ -312,7 +342,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: "900",
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   },
   subtitle: {
     fontSize: 14,
@@ -349,7 +379,7 @@ const styles = StyleSheet.create({
     color: "#0A1628",
     fontSize: 15,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   btnRow: {
     flexDirection: "row",

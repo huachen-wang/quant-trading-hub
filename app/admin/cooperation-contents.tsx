@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, TouchableOpacity, FlatList, TextInput, Modal, ActivityIndicator, StyleSheet, Alert, Platform, ScrollView } from "react-native";
-import { ScreenContainer } from "@/components/screen-container";
+import { View, Text, TouchableOpacity, TextInput, Modal, ActivityIndicator, StyleSheet, Alert, Platform, ScrollView } from "react-native";
+import { AdminPageChrome, AdminSection } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { getAdminPageContents, createPageContent, updatePageContent, deletePageContent } from "@/lib/admin-api";
 
@@ -8,10 +8,10 @@ type ContentItem = { id: number; pageKey: string; sectionKey: string; title: str
 
 // 合作页面的三大板块
 const SECTION_OPTIONS = [
-  { key: "compliance", label: "🛡️ 合规支持" },
-  { key: "technology", label: "⚡ 技术支持" },
-  { key: "business", label: "🚀 业务支持" },
-  { key: "custom", label: "📄 自定义板块" },
+  { key: "compliance", label: "合规支持" },
+  { key: "technology", label: "技术支持" },
+  { key: "business", label: "业务支持" },
+  { key: "custom", label: "自定义板块" },
 ];
 
 export default function CooperationContentsAdmin() {
@@ -152,9 +152,11 @@ export default function CooperationContentsAdmin() {
   };
 
   const renderItem = ({ item }: { item: ContentItem }) => (
-    <View style={[st.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[st.card, { borderBottomColor: colors.border }]}>
       <View style={st.cardHeader}>
-        <Text style={{ fontSize: 20 }}>{item.icon || "📄"}</Text>
+        <View style={st.contentCode}>
+          <Text style={st.contentCodeText}>{item.sectionKey.slice(0, 3).toUpperCase()}</Text>
+        </View>
         <View style={{ flex: 1 }}>
           <Text style={[st.cardTitle, { color: colors.foreground }]}>{item.title}</Text>
           <View style={st.cardMetaRow}>
@@ -164,7 +166,7 @@ export default function CooperationContentsAdmin() {
               </Text>
             </View>
             <Text style={[st.cardMeta, { color: colors.muted }]}>
-              排序: {item.sortOrder} | {item.isVisible ? "✅ 可见" : "🚫 隐藏"}
+              排序: {item.sortOrder} | {item.isVisible ? "可见" : "隐藏"}
             </Text>
           </View>
         </View>
@@ -182,63 +184,60 @@ export default function CooperationContentsAdmin() {
   );
 
   return (
-    <ScreenContainer>
-      <FlatList
-        data={filteredContents}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderItem}
-        contentContainerStyle={st.listContainer}
-        ListHeaderComponent={
-          <View>
-            <View style={st.header}>
-              <Text style={[st.pageTitle, { color: colors.foreground }]}>🏗️ 合作页面管理</Text>
-              <TouchableOpacity onPress={openCreateModal} style={[st.addBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}>
-                <Text style={st.addBtnText}>+ 添加内容</Text>
-              </TouchableOpacity>
-            </View>
+    <AdminPageChrome
+      eyebrow="COOPERATION PAGE CMS"
+      title="合作页面管理"
+      subtitle="管理合作页服务内容，按合规、技术、业务板块分组展示"
+      metrics={[
+        { label: "内容总数", value: contents.length, tone: colors.primary },
+        { label: "当前筛选", value: selectedSection === "all" ? "全部" : getSectionLabel(selectedSection), tone: "#60A5FA" },
+        { label: "可见内容", value: contents.filter((item) => item.isVisible).length, tone: colors.success },
+      ]}
+      action={
+        <TouchableOpacity onPress={openCreateModal} style={[st.addBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}>
+          <Text style={st.addBtnText}>添加内容</Text>
+        </TouchableOpacity>
+      }
+      maxWidth={1240}
+    >
+      <AdminSection title="内容板块" meta="FILTER">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={st.filterRow}>
+          <TouchableOpacity
+            onPress={() => setSelectedSection("all")}
+            style={[st.filterChip, { backgroundColor: selectedSection === "all" ? colors.primary : colors.surface, borderColor: colors.border }]}
+            activeOpacity={0.7}
+          >
+            <Text style={{ color: selectedSection === "all" ? "#07111F" : colors.foreground, fontSize: 13, fontWeight: "700" }}>全部</Text>
+          </TouchableOpacity>
+          {SECTION_OPTIONS.map(s => (
+            <TouchableOpacity
+              key={s.key}
+              onPress={() => setSelectedSection(s.key)}
+              style={[st.filterChip, { backgroundColor: selectedSection === s.key ? getSectionColor(s.key) : colors.surface, borderColor: colors.border }]}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: selectedSection === s.key ? "#fff" : colors.foreground, fontSize: 13, fontWeight: "700" }}>{s.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-            {/* 说明 */}
-            <View style={[st.infoBox, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}>
-              <Text style={[st.infoText, { color: colors.muted }]}>
-                在此管理合作页面的服务内容。每条内容归属一个板块（合规/技术/业务），前端会按板块分组展示。{"\n"}
-                如果某个板块没有后台数据，前端将显示默认内容。添加后台数据后将覆盖默认内容。
-              </Text>
-            </View>
-
-            {/* 板块筛选 */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={st.filterRow}>
-              <TouchableOpacity
-                onPress={() => setSelectedSection("all")}
-                style={[st.filterChip, { backgroundColor: selectedSection === "all" ? colors.primary : colors.surface, borderColor: colors.border }]}
-                activeOpacity={0.7}
-              >
-                <Text style={{ color: selectedSection === "all" ? "#fff" : colors.foreground, fontSize: 13, fontWeight: "600" }}>全部</Text>
-              </TouchableOpacity>
-              {SECTION_OPTIONS.map(s => (
-                <TouchableOpacity
-                  key={s.key}
-                  onPress={() => setSelectedSection(s.key)}
-                  style={[st.filterChip, { backgroundColor: selectedSection === s.key ? getSectionColor(s.key) : colors.surface, borderColor: colors.border }]}
-                  activeOpacity={0.7}
-                >
-                  <Text style={{ color: selectedSection === s.key ? "#fff" : colors.foreground, fontSize: 13, fontWeight: "600" }}>{s.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+        {isLoading ? (
+          <View style={st.loadingBox}><ActivityIndicator size="large" color={colors.primary} /></View>
+        ) : filteredContents.length > 0 ? (
+          <View style={[st.tablePanel, { borderColor: colors.border }]}>
+            {filteredContents.map((item) => renderItem({ item }))}
           </View>
-        }
-        ListEmptyComponent={
-          isLoading ? <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} /> :
+        ) : (
           <View style={st.emptyContainer}>
             <Text style={[st.emptyText, { color: colors.muted }]}>
               暂无自定义内容{"\n"}当前使用默认内容展示
             </Text>
             <Text style={[st.emptyHint, { color: colors.primary }]}>
-              点击"+ 添加内容"来自定义合作页面
+              点击添加内容来自定义合作页面
             </Text>
           </View>
-        }
-      />
+        )}
+      </AdminSection>
 
       {/* 编辑弹窗 */}
       <Modal visible={showModal} animationType="slide" transparent>
@@ -277,11 +276,11 @@ export default function CooperationContentsAdmin() {
               )}
 
               <View style={st.formGroup}>
-                <Text style={[st.formLabel, { color: colors.foreground }]}>图标 (emoji)</Text>
+                <Text style={[st.formLabel, { color: colors.foreground }]}>图标代码</Text>
                 <TextInput
                   value={form.icon}
                   onChangeText={(t) => setForm({ ...form, icon: t })}
-                  placeholder="如: 🛡️ 📋 ⚡"
+                  placeholder="如: SAFE / PLAN / FAST"
                   placeholderTextColor={colors.muted}
                   style={[st.formInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.foreground }]}
                 />
@@ -330,7 +329,7 @@ export default function CooperationContentsAdmin() {
                     activeOpacity={0.7}
                   >
                     <Text style={{ color: form.isVisible ? colors.success : colors.error, fontWeight: "600" }}>
-                      {form.isVisible ? "✅ 可见" : "🚫 隐藏"}
+                      {form.isVisible ? "可见" : "隐藏"}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -348,22 +347,21 @@ export default function CooperationContentsAdmin() {
           </ScrollView>
         </View>
       </Modal>
-    </ScreenContainer>
+    </AdminPageChrome>
   );
 }
 
 const st = StyleSheet.create({
-  listContainer: { padding: 16, paddingBottom: 40 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  pageTitle: { fontSize: 20, fontWeight: "800" },
-  addBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10 },
-  addBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  infoBox: { borderRadius: 12, borderWidth: 1, padding: 14, marginBottom: 14 },
-  infoText: { fontSize: 12, lineHeight: 18 },
+  addBtn: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 6 },
+  addBtnText: { color: "#07111F", fontWeight: "900", fontSize: 13 },
   filterRow: { marginBottom: 16 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 0.5, marginRight: 8 },
-  card: { borderRadius: 14, borderWidth: 1, padding: 16, marginBottom: 12 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6, borderWidth: 1, marginRight: 8 },
+  loadingBox: { minHeight: 220, alignItems: "center", justifyContent: "center" },
+  tablePanel: { borderWidth: 1, borderRadius: 8, overflow: "hidden", backgroundColor: "rgba(15,23,42,0.56)" },
+  card: { padding: 16, borderBottomWidth: 1 },
   cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 8 },
+  contentCode: { width: 42, height: 32, borderRadius: 4, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(216,188,131,0.12)", borderWidth: 1, borderColor: "rgba(216,188,131,0.24)" },
+  contentCodeText: { color: "#D8BC83", fontSize: 10, fontWeight: "900" },
   cardTitle: { fontSize: 16, fontWeight: "700" },
   cardMetaRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
   sectionTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
@@ -371,7 +369,7 @@ const st = StyleSheet.create({
   cardMeta: { fontSize: 12 },
   cardContent: { fontSize: 13, lineHeight: 20, marginBottom: 12 },
   cardActions: { flexDirection: "row", gap: 8 },
-  actionBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
+  actionBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 },
   emptyContainer: { alignItems: "center", marginTop: 40 },
   emptyText: { textAlign: "center", fontSize: 14, lineHeight: 22, marginBottom: 8 },
   emptyHint: { fontSize: 13, fontWeight: "600" },

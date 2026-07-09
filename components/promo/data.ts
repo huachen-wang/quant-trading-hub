@@ -1,7 +1,7 @@
 import type { PromoCategory, PromoProduct } from "./types";
 
 export const PROMO_CATEGORIES: PromoCategory[] = [
-  { key: "", label: "🔥 全部精选", icon: "diamond" },
+  { key: "", label: "全部精选", icon: "diamond" },
   { key: "ea", label: "EA策略", icon: "trending-up" },
   { key: "indicator", label: "指标工具", icon: "analytics" },
   { key: "tool", label: "辅助工具", icon: "construct" },
@@ -9,10 +9,10 @@ export const PROMO_CATEGORIES: PromoCategory[] = [
 ];
 
 export const PROMO_ANNOUNCEMENTS = [
-  "🔥 Gold Scalper Pro 限时3折，仅剩6份",
-  "⚡ 新品 Trend Rider EA 首发特惠",
-  "💎 全网EA源码直供，价格低至1折",
-  "🛡️ 正版授权 · 终身售后 · 源头直供",
+  "Gold Scalper Pro 限时3折，仅剩6份",
+  "新品 Trend Rider EA 首发特惠",
+  "全网EA源码直供，价格低至1折",
+  "正版授权 · 终身售后 · 源头直供",
 ];
 
 export const PLACEHOLDER_PROMO_PRODUCTS: PromoProduct[] = [

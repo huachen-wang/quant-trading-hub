@@ -30,6 +30,7 @@ const MAPPING = {
   "bell.fill": "notifications",
   "message.fill": "chat",
   "bubble.left.fill": "chat-bubble",
+  "line.3.horizontal": "menu",
   "trash": "delete",
   "hand.thumbsup": "thumb-up",
   "xmark": "close",

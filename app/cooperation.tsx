@@ -7,23 +7,24 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenContainer } from "@/components/screen-container";
+import { PcTopNav } from "@/components/pc-top-nav";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
 const { width: SW } = Dimensions.get("window");
-const isDesktop = SW >= 768;
-const CONTENT_W = Math.min(SW, 960);
+const isDesktop = SW >= 1024;
+const CONTENT_W = Math.min(SW - (isDesktop ? 56 : 0), 1320);
 
 // ─── 卡片主题配色 ───
 const CARD_THEMES = [
-  { gradient: ["#1a0a2e", "#2d1b69", "#44318d"] as const, accent: "#e9c46a", glow: "rgba(233,196,106,0.15)" },
-  { gradient: ["#0a192f", "#112240", "#1d3557"] as const, accent: "#64ffda", glow: "rgba(100,255,218,0.15)" },
-  { gradient: ["#1a1a2e", "#16213e", "#0f3460"] as const, accent: "#e94560", glow: "rgba(233,69,96,0.15)" },
-  { gradient: ["#0d1b2a", "#1b263b", "#415a77"] as const, accent: "#f77f00", glow: "rgba(247,127,0,0.15)" },
-  { gradient: ["#2d0a0a", "#4a1010", "#6b1d1d"] as const, accent: "#ffd700", glow: "rgba(255,215,0,0.15)" },
-  { gradient: ["#0a2e1a", "#1b4332", "#2d6a4f"] as const, accent: "#95d5b2", glow: "rgba(149,213,178,0.15)" },
-  { gradient: ["#1a0a1e", "#2e1a3e", "#4a2c6e"] as const, accent: "#c77dff", glow: "rgba(199,125,255,0.15)" },
-  { gradient: ["#1e1a0a", "#3e2e1a", "#6e4a2c"] as const, accent: "#ffb703", glow: "rgba(255,183,3,0.15)" },
+  { gradient: ["#080B12", "#17140C", "#2A2112"] as const, accent: "#D8BC83", glow: "rgba(216,188,131,0.14)" },
+  { gradient: ["#07111F", "#0E1B2E", "#183A5A"] as const, accent: "#7AA2C7", glow: "rgba(122,162,199,0.13)" },
+  { gradient: ["#06140F", "#10271E", "#164A37"] as const, accent: "#6EE7B7", glow: "rgba(110,231,183,0.12)" },
+  { gradient: ["#0A0E1A", "#172033", "#303B4F"] as const, accent: "#C7D2FE", glow: "rgba(199,210,254,0.11)" },
+  { gradient: ["#120B08", "#241612", "#4A2A20"] as const, accent: "#F0C16A", glow: "rgba(240,193,106,0.12)" },
+  { gradient: ["#061316", "#10292E", "#20505A"] as const, accent: "#67E8F9", glow: "rgba(103,232,249,0.12)" },
+  { gradient: ["#0B1018", "#161F2D", "#334155"] as const, accent: "#CBD5E1", glow: "rgba(203,213,225,0.10)" },
+  { gradient: ["#100D07", "#21190D", "#5A421A"] as const, accent: "#E7C978", glow: "rgba(231,201,120,0.12)" },
 ];
 
 // ─── 默认策略档案（后台无数据时展示） ───
@@ -31,35 +32,35 @@ const DEFAULT_CARDS: any[] = [
   {
     id: -1, title: "极限黄金对冲 Pro", subtitle: "日均几百~几千单 · 回撤稳定",
     description: "专业级对冲策略，多账户分散风险，回撤可控。已有多个工作室实盘运行超过6个月，经历多次极端行情考验。",
-    badge: "🔥 热门", badgeColor: "red", strategyType: "对冲策略", platform: "MT4",
+    badge: "热门", badgeColor: "red", strategyType: "对冲策略", platform: "MT4",
     observeNote: "私聊备注「极限对冲」获取观摩账户",
     coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/ZHsaMQOjNNmhOyDO.png", galleryImages: null,
   },
   {
     id: -2, title: "一单一结（武汉小艺）", subtitle: "日均20-80单 · 历史零爆仓",
     description: "极致安全的一次一单策略，历史零爆仓记录。适合风险厌恶型客户和保守型工作室，口碑极佳。",
-    badge: "🛡️ 零爆仓", badgeColor: "green", strategyType: "一次一单", platform: "MT5",
+    badge: "零爆仓", badgeColor: "green", strategyType: "一次一单", platform: "MT5",
     observeNote: "私聊备注「一单一结」获取观摩账户",
     coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/UVwvYYtrcWTlJENF.png", galleryImages: null,
   },
   {
     id: -3, title: "超级黄金调优 2026", subtitle: "两个月战绩600%",
     description: "主力网格策略，经过深度参数调优。高收益高风险，适合激进型工作室。已有多个实盘账户验证。",
-    badge: "⚡ 主力", badgeColor: "gold", strategyType: "网格策略", platform: "MT4",
+    badge: "主力", badgeColor: "gold", strategyType: "网格策略", platform: "MT4",
     observeNote: "私聊备注「超级调优」获取观摩账户",
     coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/LXzzcgHZcdfIghSr.png", galleryImages: null,
   },
   {
-    id: -4, title: "趋势刷单 · 军火库独家版", subtitle: "单边1000点暴跌不爆仓",
+    id: -4, title: "趋势刷单 · EAXAU独家版", subtitle: "单边1000点暴跌不爆仓",
     description: "趋势马丁策略，抗单能力极强。独家调优版本，市面无同款。经过2024年多次极端行情验证。",
-    badge: "💎 独家", badgeColor: "gold", strategyType: "趋势马丁", platform: "MT4",
+    badge: "独家", badgeColor: "gold", strategyType: "趋势马丁", platform: "MT4",
     observeNote: "私聊备注「趋势刷单」获取观摩账户",
     coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/vNtkFswQtKnMDizI.png", galleryImages: null,
   },
   {
     id: -5, title: "点金订单流", subtitle: "四维共振 · 专业机构选择",
     description: "机构级订单流分析系统，四维共振信号。适合专业交易团队和工作室，是我们的旗舰产品。",
-    badge: "👑 旗舰", badgeColor: "gold", strategyType: "订单流", platform: "MT4/MT5",
+    badge: "旗舰", badgeColor: "gold", strategyType: "订单流", platform: "MT4/MT5",
     observeNote: "私聊备注「点金订单流」获取观摩账户",
     coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/wjERAPAgIuvumwkn.png", galleryImages: null,
   },
@@ -73,12 +74,12 @@ export default function CooperationPage() {
   const [showGallery, setShowGallery] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== "web" }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: Platform.OS !== "web" }),
     ]).start();
   }, []);
 
@@ -91,7 +92,10 @@ export default function CooperationPage() {
   const qq2 = contactSettings?.qq || "3832001817";
   const wechat1 = "oooiniooo0624";
   const wechat2 = "xau6000";
-  const cards = (backendCards && backendCards.length > 0) ? backendCards : DEFAULT_CARDS;
+  const sourceCards = (backendCards && backendCards.length > 0) ? backendCards : DEFAULT_CARDS;
+  const cards = isDesktop && sourceCards.length < 3
+    ? [...sourceCards, ...DEFAULT_CARDS.slice(0, 3 - sourceCards.length)]
+    : sourceCards;
 
   const parseGallery = (g?: string | null): string[] => {
     if (!g) return []; try { return JSON.parse(g); } catch { return []; }
@@ -111,6 +115,7 @@ export default function CooperationPage() {
 
   return (
     <ScreenContainer>
+      <PcTopNav />
       <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
         {/* 返回按钮 */}
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
@@ -123,7 +128,7 @@ export default function CooperationPage() {
             <View style={s.heroAccent} />
             <View style={s.heroBadge}>
               <View style={s.liveDot} />
-              <Text style={s.heroBadgeText}>量化军火库 · 策略源头</Text>
+              <Text style={s.heroBadgeText}>EAXAU · 策略源头</Text>
             </View>
             <Text style={s.heroTitle}>工作室深度合作</Text>
             <Text style={s.heroTagline}>源码掌控 · 独家优化 · 源头直供</Text>
@@ -167,107 +172,109 @@ export default function CooperationPage() {
           </View>
 
           {/* ═══ 策略卡片 - 全新视觉设计 ═══ */}
-          {cards.map((card: any, index: number) => {
-            const theme = getTheme(index);
-            const gallery = parseGallery(card.galleryImages);
-            const hasCover = !!card.coverImage;
+          <View style={s.cardsGrid}>
+            {cards.map((card: any, index: number) => {
+              const theme = getTheme(index);
+              const gallery = parseGallery(card.galleryImages);
+              const hasCover = !!card.coverImage;
 
-            return (
-              <TouchableOpacity
-                key={card.id}
-                style={s.cardOuter}
-                onPress={() => setSelectedCard(card)}
-                activeOpacity={0.92}
-              >
-                {/* 外发光层 */}
-                <View style={[s.cardGlow, { backgroundColor: theme.glow }]} />
-
-                <LinearGradient
-                  colors={[...theme.gradient]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.cardContainer}
+              return (
+                <TouchableOpacity
+                  key={card.id}
+                  style={s.cardOuter}
+                  onPress={() => setSelectedCard(card)}
+                  activeOpacity={0.92}
                 >
-                  {/* 序号水印 */}
-                  <Text style={[s.cardWatermark, { color: theme.accent }]}>
-                    {String(index + 1).padStart(2, "0")}
-                  </Text>
+                  {/* 外发光层 */}
+                  <View style={[s.cardGlow, { backgroundColor: theme.glow }]} />
 
-                  {/* 顶部区域：封面图 + 信息 */}
-                  <View style={s.cardTopSection}>
-                    {/* 封面图区域 */}
-                    <View style={s.coverSection}>
-                      {hasCover ? (
-                        <Image source={{ uri: card.coverImage }} style={s.coverImage} resizeMode="cover" />
-                      ) : (
-                        <LinearGradient
-                          colors={[`${theme.accent}15`, `${theme.accent}05`]}
-                          style={s.coverPlaceholder}
-                        >
-                          <View style={[s.coverIconRing, { borderColor: `${theme.accent}40` }]}>
-                            <Ionicons name="trending-up" size={28} color={`${theme.accent}60`} />
+                  <LinearGradient
+                    colors={[...theme.gradient]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={s.cardContainer}
+                  >
+                    {/* 序号水印 */}
+                    <Text style={[s.cardWatermark, { color: theme.accent }]}>
+                      {String(index + 1).padStart(2, "0")}
+                    </Text>
+
+                    {/* 顶部区域：封面图 + 信息 */}
+                    <View style={s.cardTopSection}>
+                      {/* 封面图区域 */}
+                      <View style={s.coverSection}>
+                        {hasCover ? (
+                          <Image source={{ uri: card.coverImage }} style={s.coverImage} resizeMode="cover" />
+                        ) : (
+                          <LinearGradient
+                            colors={[`${theme.accent}15`, `${theme.accent}05`]}
+                            style={s.coverPlaceholder}
+                          >
+                            <View style={[s.coverIconRing, { borderColor: `${theme.accent}40` }]}>
+                              <Ionicons name="trending-up" size={28} color={`${theme.accent}60`} />
+                            </View>
+                          </LinearGradient>
+                        )}
+                        {/* 封面上的角标 */}
+                        {card.badge && (
+                          <View style={[s.coverBadge, { backgroundColor: theme.accent }]}>
+                            <Text style={s.coverBadgeText}>{card.badge}</Text>
                           </View>
-                        </LinearGradient>
-                      )}
-                      {/* 封面上的角标 */}
-                      {card.badge && (
-                        <View style={[s.coverBadge, { backgroundColor: theme.accent }]}>
-                          <Text style={s.coverBadgeText}>{card.badge}</Text>
-                        </View>
-                      )}
-                      {/* 平台标签 */}
-                      {card.platform && (
-                        <View style={s.coverPlatform}>
-                          <Text style={s.coverPlatformText}>{card.platform}</Text>
-                        </View>
-                      )}
+                        )}
+                        {/* 平台标签 */}
+                        {card.platform && (
+                          <View style={s.coverPlatform}>
+                            <Text style={s.coverPlatformText}>{card.platform}</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* 右侧信息区 */}
+                      <View style={s.cardInfoSection}>
+                        {/* 策略类型 */}
+                        {card.strategyType && (
+                          <View style={[s.typeTag, { borderColor: `${theme.accent}50` }]}>
+                            <View style={[s.typeDot, { backgroundColor: theme.accent }]} />
+                            <Text style={[s.typeTagText, { color: theme.accent }]}>{card.strategyType}</Text>
+                          </View>
+                        )}
+
+                        {/* 标题 */}
+                        <Text style={s.cardTitle} numberOfLines={2}>{card.title}</Text>
+
+                        {/* 副标题 */}
+                        {card.subtitle && (
+                          <Text style={[s.cardSubtitle, { color: theme.accent }]} numberOfLines={1}>
+                            {card.subtitle}
+                          </Text>
+                        )}
+
+                        {/* 描述 */}
+                        <Text style={s.cardDesc} numberOfLines={2}>{card.description}</Text>
+                      </View>
                     </View>
 
-                    {/* 右侧信息区 */}
-                    <View style={s.cardInfoSection}>
-                      {/* 策略类型 */}
-                      {card.strategyType && (
-                        <View style={[s.typeTag, { borderColor: `${theme.accent}50` }]}>
-                          <View style={[s.typeDot, { backgroundColor: theme.accent }]} />
-                          <Text style={[s.typeTagText, { color: theme.accent }]}>{card.strategyType}</Text>
-                        </View>
-                      )}
+                    {/* 分隔线 */}
+                    <View style={[s.cardDivider, { backgroundColor: `${theme.accent}20` }]} />
 
-                      {/* 标题 */}
-                      <Text style={s.cardTitle} numberOfLines={2}>{card.title}</Text>
-
-                      {/* 副标题 */}
-                      {card.subtitle && (
-                        <Text style={[s.cardSubtitle, { color: theme.accent }]} numberOfLines={1}>
-                          {card.subtitle}
+                    {/* 底部操作栏 */}
+                    <View style={s.cardBottom}>
+                      <View style={s.cardBottomLeft}>
+                        <Ionicons name="eye-outline" size={14} color="#F1F5F9" />
+                        <Text style={s.cardObserveText}>
+                          {gallery.length > 0 ? `${gallery.length}张观摩截图` : "可获取观摩账户"}
                         </Text>
-                      )}
-
-                      {/* 描述 */}
-                      <Text style={s.cardDesc} numberOfLines={2}>{card.description}</Text>
+                      </View>
+                      <View style={[s.cardViewBtn, { backgroundColor: `${theme.accent}18`, borderColor: `${theme.accent}50` }]}>
+                        <Text style={[s.cardViewBtnText, { color: theme.accent }]}>查看详情</Text>
+                        <Ionicons name="arrow-forward" size={13} color={theme.accent} />
+                      </View>
                     </View>
-                  </View>
-
-                  {/* 分隔线 */}
-                  <View style={[s.cardDivider, { backgroundColor: `${theme.accent}20` }]} />
-
-                  {/* 底部操作栏 */}
-                  <View style={s.cardBottom}>
-                    <View style={s.cardBottomLeft}>
-                      <Ionicons name="eye-outline" size={14} color="#F1F5F9" />
-                      <Text style={s.cardObserveText}>
-                        {gallery.length > 0 ? `${gallery.length}张观摩截图` : "可获取观摩账户"}
-                      </Text>
-                    </View>
-                    <View style={[s.cardViewBtn, { backgroundColor: `${theme.accent}18`, borderColor: `${theme.accent}50` }]}>
-                      <Text style={[s.cardViewBtnText, { color: theme.accent }]}>查看详情</Text>
-                      <Ionicons name="arrow-forward" size={13} color={theme.accent} />
-                    </View>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
-            );
-          })}
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         {/* ═══════════════════ 工作室扶持 ═══════════════════ */}
@@ -281,7 +288,7 @@ export default function CooperationPage() {
 
           <View style={s.supportGrid}>
             {[
-              { icon: "diamond", title: "策略选型", desc: "根据资金量、风险偏好、客户类型，精准推荐最适合的策略组合", color: "#8B5CF6" },
+              { icon: "diamond", title: "策略选型", desc: "根据资金量、风险偏好、客户类型，精准推荐最适合的策略组合", color: "#D8BC83" },
               { icon: "construct", title: "深度调优", desc: "针对合作平台的点差、杠杆、延迟进行专属参数优化", color: "#3B82F6" },
               { icon: "analytics", title: "实盘观摩", desc: "所有策略均提供实盘观摩账户，数据透明可查，眼见为实", color: "#10B981" },
               { icon: "headset", title: "1对1陪跑", desc: "专属技术顾问，7×24小时响应，从部署到运维全程陪跑", color: "#EF4444" },
@@ -409,7 +416,7 @@ export default function CooperationPage() {
 
         {/* 底部免责 */}
         <View style={s.footer}>
-          <View style={s.footerBrand}><View style={s.liveDot} /><Text style={s.footerBrandText}>量化军火库</Text></View>
+          <View style={s.footerBrand}><View style={s.liveDot} /><Text style={s.footerBrandText}>EAXAU</Text></View>
           <Text style={s.footerSlogan}>源头价直供 · 策略持续更新 · 全方位技术支持</Text>
           <Text style={s.footerDisclaimer}>免责声明：不同平台行情、点差、延迟存在差异，策略表现因此可能不同。我们不作收益保证，不做本金承诺，仅提供优质工具。</Text>
         </View>
@@ -551,52 +558,92 @@ export default function CooperationPage() {
 }
 
 // ═══════════════════ 样式 ═══════════════════
-const COVER_SIZE = isDesktop ? 180 : 130;
+const COVER_SIZE = isDesktop ? 136 : 130;
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#0A1628" },
   loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0A1628" },
-  backBtn: { position: "absolute", top: 16, left: 16, zIndex: 10, padding: 8, backgroundColor: "rgba(10,14,26,0.7)", borderRadius: 20 },
+  backBtn: {
+    position: "absolute",
+    top: 16,
+    left: 16,
+    zIndex: 10,
+    padding: 8,
+    backgroundColor: "rgba(10,14,26,0.7)",
+    borderRadius: 20,
+    ...(isDesktop ? { display: "none" as any } : {}),
+  },
 
   // Hero
-  hero: { paddingTop: 72, paddingBottom: 36, paddingHorizontal: 20, alignItems: "center" },
-  heroAccent: { width: 60, height: 3, backgroundColor: "#A8895A", borderRadius: 2, marginBottom: 24 },
-  heroBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, marginBottom: 20, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
+  hero: {
+    paddingTop: isDesktop ? 24 : 72,
+    paddingBottom: isDesktop ? 24 : 36,
+    paddingHorizontal: isDesktop ? 28 : 20,
+    alignItems: "center",
+    ...(isDesktop
+      ? {
+          width: CONTENT_W,
+          alignSelf: "center" as any,
+          marginTop: 12,
+          borderRadius: 8,
+          borderWidth: 1,
+          borderColor: "rgba(168,137,90,0.24)",
+          overflow: "hidden" as any,
+        }
+      : {}),
+  },
+  heroAccent: { width: 58, height: 2, backgroundColor: "#A8895A", borderRadius: 1, marginBottom: isDesktop ? 12 : 24 },
+  heroBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: isDesktop ? 5 : 20, marginBottom: isDesktop ? 12 : 20, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#A8895A", marginRight: 8 },
-  heroBadgeText: { color: "#A8895A", fontSize: 12, fontWeight: "700", letterSpacing: 1 },
-  heroTitle: { color: "#FFFFFF", fontSize: 32, fontWeight: "900", marginBottom: 8, textAlign: "center", letterSpacing: 1 },
-  heroTagline: { color: "#A8895A", fontSize: 14, fontWeight: "700", marginBottom: 16, letterSpacing: 2 },
-  heroDesc: { color: "#F1F5F9", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 28 },
-  statsRow: { flexDirection: "row", gap: 0, marginBottom: 28, width: "100%", maxWidth: 500 },
+  heroBadgeText: { color: "#A8895A", fontSize: 12, fontWeight: "700", letterSpacing: 0 },
+  heroTitle: { color: "#FFFFFF", fontSize: isDesktop ? 31 : 32, fontWeight: "900", marginBottom: 7, textAlign: "center", letterSpacing: 0 },
+  heroTagline: { color: "#A8895A", fontSize: 13, fontWeight: "700", marginBottom: isDesktop ? 12 : 16, letterSpacing: 0 },
+  heroDesc: { color: "#F1F5F9", fontSize: 13, lineHeight: 20, textAlign: "center", marginBottom: isDesktop ? 14 : 28 },
+  statsRow: { flexDirection: "row", gap: 0, marginBottom: isDesktop ? 14 : 28, width: "100%", maxWidth: isDesktop ? 520 : 500 },
   statItem: { flex: 1, alignItems: "center", borderRightWidth: 1, borderRightColor: "#1E293B" },
-  statNum: { color: "#FFFFFF", fontSize: 22, fontWeight: "900", marginBottom: 2 },
+  statNum: { color: "#FFFFFF", fontSize: isDesktop ? 20 : 22, fontWeight: "900", marginBottom: 2 },
   statLabel: { color: "#F1F5F9", fontSize: 11 },
-  heroCTA: { borderRadius: 28, overflow: "hidden" },
-  heroCTAInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14 },
+  heroCTA: { borderRadius: 7, overflow: "hidden" },
+  heroCTAInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 24, paddingVertical: 12 },
   heroCTAText: { color: "#0A0E1A", fontSize: 15, fontWeight: "800" },
 
   // Section
-  section: { marginTop: 12, paddingHorizontal: 16 },
-  sectionHeader: { alignItems: "center", marginBottom: 24, paddingTop: 20 },
-  sectionLine: { width: 40, height: 2, backgroundColor: "#A8895A", borderRadius: 1, marginBottom: 16 },
-  sectionLabel: { color: "#F1F5F9", fontSize: 11, fontWeight: "700", letterSpacing: 3, marginBottom: 8 },
+  section: {
+    marginTop: 10,
+    paddingHorizontal: isDesktop ? 0 : 16,
+    ...(isDesktop ? { width: CONTENT_W, alignSelf: "center" as any } : {}),
+  },
+  sectionHeader: { alignItems: isDesktop ? "flex-start" : "center", marginBottom: isDesktop ? 12 : 24, paddingTop: isDesktop ? 10 : 20 },
+  sectionLine: { width: 40, height: 2, backgroundColor: "#A8895A", borderRadius: 1, marginBottom: isDesktop ? 12 : 16 },
+  sectionLabel: { color: "#F1F5F9", fontSize: 11, fontWeight: "700", letterSpacing: 0, marginBottom: 8 },
   sectionTitle: { color: "#FFFFFF", fontSize: 24, fontWeight: "900", marginBottom: 6 },
   sectionSubtitle: { color: "#F1F5F9", fontSize: 13 },
 
   // ═══ 全新策略卡片样式 ═══
+  cardsGrid: {
+    gap: isDesktop ? 12 : 0,
+    ...(isDesktop
+      ? {
+          flexDirection: "row" as any,
+          flexWrap: "wrap" as any,
+          justifyContent: "flex-start" as any,
+        }
+      : {}),
+  },
   cardOuter: {
-    marginBottom: 20,
-    borderRadius: 18,
+    width: isDesktop ? "32.55%" as any : "100%",
+    marginBottom: isDesktop ? 0 : 20,
+    borderRadius: 8,
     position: "relative",
   },
   cardGlow: {
     position: "absolute",
     top: 4, left: 4, right: 4, bottom: 4,
-    borderRadius: 18,
+    borderRadius: 8,
     // 外发光效果
   },
   cardContainer: {
-    borderRadius: 18,
+    borderRadius: 8,
     padding: 0,
     overflow: "hidden",
     borderWidth: 1,
@@ -623,7 +670,7 @@ const s = StyleSheet.create({
   coverSection: {
     width: COVER_SIZE,
     height: COVER_SIZE,
-    borderRadius: 14,
+    borderRadius: 8,
     overflow: "hidden",
     position: "relative",
     // 添加内阴影效果
@@ -636,12 +683,12 @@ const s = StyleSheet.create({
   coverImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 14,
+    borderRadius: 8,
   },
   coverPlaceholder: {
     width: "100%",
     height: "100%",
-    borderRadius: 14,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -713,7 +760,7 @@ const s = StyleSheet.create({
     fontSize: isDesktop ? 20 : 17,
     fontWeight: "900",
     marginBottom: 4,
-    letterSpacing: 0.3,
+    letterSpacing: 0,
   },
   cardSubtitle: {
     fontSize: 13,
@@ -766,14 +813,14 @@ const s = StyleSheet.create({
 
   // Support Grid
   supportGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 16 },
-  supportCard: { width: isDesktop ? "31%" : "47%", flexGrow: 1, backgroundColor: "#1E293B", borderRadius: 14, padding: 18, borderWidth: 1, borderColor: "rgba(148,163,184,0.10)" },
-  supportIconWrap: { width: 42, height: 42, borderRadius: 12, justifyContent: "center", alignItems: "center", marginBottom: 12 },
+  supportCard: { width: isDesktop ? "31%" : "47%", flexGrow: 1, backgroundColor: "#1E293B", borderRadius: 8, padding: 16, borderWidth: 1, borderColor: "rgba(148,163,184,0.10)" },
+  supportIconWrap: { width: 40, height: 40, borderRadius: 8, justifyContent: "center", alignItems: "center", marginBottom: 10 },
   supportTitle: { color: "#FFFFFF", fontSize: 15, fontWeight: "800", marginBottom: 6 },
   supportDesc: { color: "#F1F5F9", fontSize: 12, lineHeight: 18 },
 
   // Plans
   plansRow: { flexDirection: isDesktop ? "row" : "column", gap: 12, marginBottom: 20 },
-  planCard: { flex: isDesktop ? 1 : undefined, backgroundColor: "#1E293B", borderRadius: 16, padding: 24, borderWidth: 1, borderColor: "rgba(148,163,184,0.12)" },
+  planCard: { flex: isDesktop ? 1 : undefined, backgroundColor: "#1E293B", borderRadius: 8, padding: isDesktop ? 18 : 24, borderWidth: 1, borderColor: "rgba(148,163,184,0.12)" },
   planCardMain: { borderColor: "#A8895A", borderWidth: 2, position: "relative" },
   planRibbon: { position: "absolute", top: 0, right: 24, paddingHorizontal: 14, paddingVertical: 4, borderBottomLeftRadius: 8, borderBottomRightRadius: 8 },
   planRibbonText: { color: "#0A0E1A", fontSize: 12, fontWeight: "800" },
@@ -790,16 +837,28 @@ const s = StyleSheet.create({
   planCTAText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
 
   // Bottom CTA
-  bottomCTA: { margin: 16 },
-  bottomCTAInner: { borderRadius: 16, padding: 28, alignItems: "center", borderWidth: 1, borderColor: "#A8895A" },
+  bottomCTA: {
+    margin: isDesktop ? 0 : 16,
+    marginTop: 16,
+    marginBottom: 16,
+    ...(isDesktop ? { width: CONTENT_W, alignSelf: "center" as any } : {}),
+  },
+  bottomCTAInner: { borderRadius: 8, padding: isDesktop ? 22 : 28, alignItems: "center", borderWidth: 1, borderColor: "#A8895A" },
   bottomCTATitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginBottom: 8 },
   bottomCTADesc: { color: "#F1F5F9", fontSize: 13, marginBottom: 20, textAlign: "center" },
-  bottomCTABtnWrap: { borderRadius: 28, overflow: "hidden" },
+  bottomCTABtnWrap: { borderRadius: 7, overflow: "hidden" },
   bottomCTABtnInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14 },
   bottomCTABtnText: { color: "#0A0E1A", fontSize: 15, fontWeight: "800" },
 
   // Footer
-  footer: { paddingVertical: 32, paddingHorizontal: 20, alignItems: "center", borderTopWidth: 1, borderTopColor: "#1E293B" },
+  footer: {
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "#1E293B",
+    ...(isDesktop ? { width: CONTENT_W, alignSelf: "center" as any } : {}),
+  },
   footerBrand: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   footerBrandText: { color: "#A8895A", fontSize: 16, fontWeight: "700", marginLeft: 6 },
   footerSlogan: { color: "#F1F5F9", fontSize: 13, marginBottom: 16 },
@@ -847,9 +906,9 @@ const s = StyleSheet.create({
   galleryCounter: { color: "#fff", fontSize: 14 },
 
   // 专属EA定制服务
-  customEABlock: { marginHorizontal: 4, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(217,119,6,0.2)" },
+  customEABlock: { marginHorizontal: 4, borderRadius: 8, overflow: "hidden", borderWidth: 1, borderColor: "rgba(217,119,6,0.2)" },
   customEAInner: { padding: 24, alignItems: "center" },
-  customEABadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: 16, marginBottom: 16, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
+  customEABadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: 6, marginBottom: 16, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
   customEABadgeText: { color: "#A8895A", fontSize: 12, fontWeight: "700" },
   customEATitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginBottom: 10, textAlign: "center" },
   customEADesc: { color: "#F1F5F9", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20 },
@@ -857,7 +916,7 @@ const s = StyleSheet.create({
   customEAFeatureRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   customEAFeatureIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: "rgba(217,119,6,0.1)", justifyContent: "center", alignItems: "center" },
   customEAFeatureText: { color: "#CBD5E1", fontSize: 13, lineHeight: 20, flex: 1 },
-  customEACTA: { borderRadius: 24, overflow: "hidden" },
+  customEACTA: { borderRadius: 7, overflow: "hidden" },
   customEACTAInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 12 },
   customEACTAText: { color: "#0A0E1A", fontSize: 14, fontWeight: "800" },
 });

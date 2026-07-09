@@ -57,7 +57,7 @@ export function PromoProductDetailModal({
               </LinearGradient>
             )}
 
-            <LinearGradient colors={["#7F1D1D", "#991B1B"]} style={s.modalPriceBox}>
+            <LinearGradient colors={["#120D08", "#49351C"]} style={s.modalPriceBox}>
               <View style={s.modalPriceRow}>
                 <Text style={s.modalPromoPrice}>{`$${formatMoney(product.promoPrice)}`}</Text>
                 {hasOriginalPrice && (

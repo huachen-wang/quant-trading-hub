@@ -252,6 +252,8 @@ https://你的域名/api/health
 - Expo lint
 - 后端 build
 - Web export
+- 本地生产预览启动
+- 首页、详情页、合作、促销、订阅、合购、登录、注册、后台登录、后台首页路由巡检
 - Git 空白检查
 - 顶层 tRPC 路由兼容性检查
 

@@ -26,12 +26,12 @@ import { trpc } from "@/lib/trpc";
 
 // ===== 动画 =====
 function FadeInView({ children, delay = 0, style }: { children: React.ReactNode; delay?: number; style?: any }) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(30)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 600, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 600, delay, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 600, delay, useNativeDriver: Platform.OS !== "web" }),
+      Animated.timing(translateY, { toValue: 0, duration: 600, delay, useNativeDriver: Platform.OS !== "web" }),
     ]).start();
   }, []);
   return <Animated.View style={[{ opacity: fadeAnim, transform: [{ translateY }] }, style]}>{children}</Animated.View>;
@@ -71,7 +71,7 @@ const pricingTiers = [
   },
   {
     id: "premium",
-    name: "军火库·精选会员",
+    name: "EAXAU 精选会员",
     priceLabel: "免费试用一款",
     period: "",
     description: "先体验再决定 · 零风险入场",
@@ -125,18 +125,17 @@ export default function CooperationScreen() {
 
   // Banner 脉冲动画
   const pulseAnim = useRef(new Animated.Value(0)).current;
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.loop(
+    const pulseAnimation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 0, duration: 2000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(pulseAnim, { toValue: 0, duration: 2000, useNativeDriver: Platform.OS !== "web" }),
       ])
-    ).start();
-    Animated.loop(
-      Animated.timing(shimmerAnim, { toValue: 1, duration: 3000, useNativeDriver: true })
-    ).start();
+    );
+    pulseAnimation.start();
+
+    return () => pulseAnimation.stop();
   }, []);
 
   const pageContentsQuery = trpc.pageContents.get.useQuery({ pageKey: "cooperation" });
@@ -148,7 +147,7 @@ export default function CooperationScreen() {
   }, []);
 
   const handleConsult = () => setShowContactModal(true);
-  const maxContentWidth = 960;
+  const maxContentWidth = isDesktop ? 1260 : 960;
 
   // 脉冲透明度插值
   const pulseOpacity = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 0.8] });
@@ -169,12 +168,12 @@ export default function CooperationScreen() {
               ═══════════════════════════════════════════════════════════ */}
           <FadeInView delay={0}>
             <TouchableOpacity
-              style={[styles.coopBanner, { maxWidth: maxContentWidth }]}
+              style={[styles.coopBanner, isDesktop && styles.coopBannerDesktop, { maxWidth: maxContentWidth }]}
               activeOpacity={0.88}
               onPress={() => router.push("/cooperation" as any)}
             >
               <LinearGradient
-                colors={["#0A0E1A", "#1A0E2E", "#2D1B69", "#1A0E2E"]}
+                colors={["#070B14", "#101827", "#1E293B", "#0A0E1A"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.coopBannerGradient}
@@ -190,11 +189,11 @@ export default function CooperationScreen() {
                 ))}
 
                 {/* 内容 */}
-                <View style={styles.bannerContent}>
+                  <View style={[styles.bannerContent, isDesktop && styles.bannerContentDesktop]}>
                   {/* 左侧：图标 + 文字 */}
-                  <View style={styles.bannerLeft}>
+                    <View style={[styles.bannerLeft, isDesktop && styles.bannerLeftDesktop]}>
                     <View style={styles.bannerIconWrap}>
-                      <LinearGradient colors={["#7C3AED", "#A855F7"]} style={styles.bannerIconGradient}>
+                      <LinearGradient colors={["#A8895A", "#D8BC83"]} style={styles.bannerIconGradient}>
                         <Ionicons name="diamond" size={24} color="#fff" />
                       </LinearGradient>
                       {/* 图标外圈光晕 */}
@@ -217,7 +216,7 @@ export default function CooperationScreen() {
                       <View style={styles.bannerStats}>
                         {[
                           { num: "200+", label: "EA源码", color: "#D8BC83" },
-                          { num: "30+", label: "合作工作室", color: "#A78BFA" },
+                          { num: "30+", label: "合作工作室", color: "#60A5FA" },
                           { num: "50+", label: "独家版", color: "#34D399" },
                         ].map((s, i) => (
                           <View key={i} style={styles.bannerStatItem}>
@@ -230,16 +229,20 @@ export default function CooperationScreen() {
                   </View>
 
                   {/* 右侧：箭头 */}
-                  <View style={styles.bannerArrowWrap}>
-                    <LinearGradient colors={["rgba(168,85,247,0.2)", "rgba(168,85,247,0.05)"]} style={styles.bannerArrowBg}>
-                      <Ionicons name="arrow-forward" size={20} color="#A855F7" />
+                    <View style={[styles.bannerArrowWrap, isDesktop && styles.bannerArrowWrapDesktop]}>
+                    <LinearGradient
+                      colors={["rgba(216,188,131,0.16)", "rgba(216,188,131,0.05)"]}
+                      style={[styles.bannerArrowBg, isDesktop && styles.bannerArrowBgDesktop]}
+                    >
+                      {isDesktop && <Text style={styles.bannerArrowText}>策略档案</Text>}
+                      <Ionicons name="arrow-forward" size={20} color="#D8BC83" />
                     </LinearGradient>
                   </View>
                 </View>
 
                 {/* 底部装饰线 */}
                 <LinearGradient
-                  colors={["transparent", "rgba(168,85,247,0.3)", "transparent"]}
+                  colors={["transparent", "rgba(216,188,131,0.32)", "transparent"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.bannerBottomLine}
@@ -252,7 +255,7 @@ export default function CooperationScreen() {
               2. 选择方案（定价）
               ═══════════════════════════════════════════════════════════ */}
           <FadeInView delay={100}>
-            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 20 }]}>
+            <View style={[styles.sectionWrapper, isDesktop && styles.sectionWrapperDesktop, { maxWidth: maxContentWidth, marginTop: 20 }]}>
               <View style={styles.sectionTag}>
                 <Text style={styles.sectionTagText}>选择方案</Text>
               </View>
@@ -267,7 +270,7 @@ export default function CooperationScreen() {
           </FadeInView>
 
           <FadeInView delay={150}>
-            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 16 }]}>
+            <View style={[styles.sectionWrapper, isDesktop && styles.sectionWrapperDesktop, { maxWidth: maxContentWidth, marginTop: 16 }]}>
               <View style={{ flexDirection: isMobile ? "column" : "row", gap: isMobile ? 16 : 14, alignItems: isMobile ? "stretch" : "flex-start", justifyContent: "center" }}>
                 {pricingTiers.map((tier) => (
                   <View
@@ -323,7 +326,7 @@ export default function CooperationScreen() {
               3. 免费引流
               ═══════════════════════════════════════════════════════════ */}
           <FadeInView delay={200}>
-            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 32 }]}>
+            <View style={[styles.sectionWrapper, isDesktop && styles.sectionWrapperDesktop, { maxWidth: maxContentWidth, marginTop: 32 }]}>
               <View style={styles.freeTag}>
                 <Text style={styles.freeTagText}>完全免费 · 直接送EA</Text>
               </View>
@@ -337,7 +340,7 @@ export default function CooperationScreen() {
                   <View key={i} style={[styles.freeCard, { width: isMobile ? "100%" : "48%" }]}>
                     {item.viral && <View style={styles.viralBadge}><Text style={styles.viralBadgeText}>热门</Text></View>}
                     <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-                      <View style={styles.freeIconBox}><Text style={{ fontSize: 18 }}>🎁</Text></View>
+                      <View style={styles.freeIconBox}><Text style={styles.freeIconText}>EA</Text></View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.freeItemName}>{item.name}</Text>
                         <Text style={styles.freeItemDesc}>{item.desc}</Text>
@@ -351,7 +354,6 @@ export default function CooperationScreen() {
               <View style={{ alignItems: "center", marginTop: 28 }}>
                 <TouchableOpacity onPress={handleConsult} activeOpacity={0.85}>
                   <LinearGradient colors={["#C9A96E", "#A8895A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.freeCTAGradient}>
-                    <Text style={{ fontSize: 18 }}>🎁</Text>
                     <Text style={styles.freeCTAText}>立即免费领取全部</Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -364,12 +366,12 @@ export default function CooperationScreen() {
               3.5 专属EA定制服务
               ═══════════════════════════════════════════════════════ */}
           <FadeInView delay={250}>
-            <View style={[styles.sectionWrapper, { maxWidth: maxContentWidth, marginTop: 32 }]}>
+            <View style={[styles.sectionWrapper, isDesktop && styles.sectionWrapperDesktop, { maxWidth: maxContentWidth, marginTop: 32 }]}>
               <View style={styles.customEABanner}>
-                <LinearGradient colors={["#1E1B4B", "#312E81", "#1E1B4B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.customEAInner}>
+                <LinearGradient colors={["#0A0E1A", "#111827", "#1E293B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.customEAInner}>
                   <View style={styles.customEAGlow} />
                   <View style={styles.customEABadge}>
-                    <Text style={{ fontSize: 14 }}>🛠️</Text>
+                    <Text style={styles.customEABadgeCode}>DEV</Text>
                     <Text style={styles.customEABadgeText}>专属EA定制服务</Text>
                   </View>
                   <Text style={styles.customEATitle}>你的策略，你的品牌</Text>
@@ -432,17 +434,20 @@ const styles = StyleSheet.create({
   coopBanner: {
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 20,
+    borderRadius: 8,
     overflow: "hidden",
     alignSelf: "center",
     width: "100%",
     ...(Platform.OS === "web"
-      ? { boxShadow: "0 4px 30px rgba(168,85,247,0.15), 0 0 60px rgba(168,85,247,0.05)" }
-      : { shadowColor: "#A855F7", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 12 }),
+      ? { boxShadow: "0 14px 40px rgba(0,0,0,0.28)" }
+      : { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.22, shadowRadius: 20, elevation: 12 }),
+  },
+  coopBannerDesktop: {
+    marginTop: 18,
   },
   coopBannerGradient: {
-    padding: 20,
-    paddingVertical: 24,
+    padding: 18,
+    paddingVertical: 20,
     position: "relative",
     overflow: "hidden",
   },
@@ -450,36 +455,32 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 12,
     left: 12,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(168,85,247,0.05)",
+    width: 72,
+    height: 1,
+    backgroundColor: "rgba(216,188,131,0.22)",
   },
   bannerDecorBR: {
     position: "absolute",
     bottom: 12,
     right: 12,
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: "rgba(124,58,237,0.04)",
+    width: 96,
+    height: 1,
+    backgroundColor: "rgba(52,211,153,0.16)",
   },
   bannerGlow: {
     position: "absolute",
-    top: "50%",
-    left: "50%",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(168,85,247,0.08)",
-    transform: [{ translateX: -100 }, { translateY: -100 }],
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(216,188,131,0.45)",
   },
   bannerGridLine: {
     position: "absolute",
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(168,85,247,0.15)",
+    backgroundColor: "rgba(216,188,131,0.10)",
   },
   bannerContent: {
     flexDirection: "row",
@@ -487,11 +488,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     zIndex: 1,
   },
+  bannerContentDesktop: {
+    minHeight: 132,
+  },
   bannerLeft: {
     flexDirection: "row",
     alignItems: "flex-start",
     flex: 1,
     gap: 14,
+  },
+  bannerLeftDesktop: {
+    alignItems: "center",
+    gap: 18,
   },
   bannerIconWrap: {
     position: "relative",
@@ -499,7 +507,7 @@ const styles = StyleSheet.create({
   bannerIconGradient: {
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -509,9 +517,9 @@ const styles = StyleSheet.create({
     left: -4,
     right: -4,
     bottom: -4,
-    borderRadius: 18,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(168,85,247,0.3)",
+    borderColor: "rgba(216,188,131,0.28)",
   },
   bannerTextArea: {
     flex: 1,
@@ -526,12 +534,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#A855F7",
+    backgroundColor: "#34D399",
   },
   bannerTagText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#A855F7",
+    color: "#D8BC83",
     letterSpacing: 1,
     textTransform: "uppercase",
   },
@@ -541,6 +549,9 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     marginBottom: 4,
     ...(Platform.OS === "web" ? { fontFamily: "system-ui, -apple-system, sans-serif" } : {}),
+  },
+  bannerArrowWrapDesktop: {
+    marginRight: 8,
   },
   bannerSubtitle: {
     fontSize: 12,
@@ -570,9 +581,22 @@ const styles = StyleSheet.create({
   bannerArrowBg: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.28)",
+  },
+  bannerArrowBgDesktop: {
+    width: 104,
+    height: 38,
+    flexDirection: "row",
+    gap: 7,
+  },
+  bannerArrowText: {
+    color: "#D8BC83",
+    fontSize: 12,
+    fontWeight: "800",
   },
   bannerBottomLine: {
     position: "absolute",
@@ -585,15 +609,18 @@ const styles = StyleSheet.create({
   // ===== Section =====
   sectionWrapper: {
     paddingHorizontal: 16,
-    marginTop: 40,
+    marginTop: 32,
     alignSelf: "center",
     width: "100%",
     alignItems: "center",
   },
+  sectionWrapperDesktop: {
+    paddingHorizontal: 22,
+  },
   sectionTag: {
     borderWidth: 1,
     borderColor: GOLD_BORDER,
-    borderRadius: 20,
+    borderRadius: 6,
     paddingHorizontal: 16,
     paddingVertical: 6,
   },
@@ -622,8 +649,8 @@ const styles = StyleSheet.create({
 
   // ===== 定价卡片 =====
   pricingCard: {
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 6,
+    padding: 14,
     alignItems: "center",
   },
   pricingCardNormal: {
@@ -633,7 +660,7 @@ const styles = StyleSheet.create({
   },
   pricingCardHighlight: {
     backgroundColor: "rgba(245,158,11,0.08)",
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: "rgba(245,158,11,0.3)",
   },
   popularBadge: {
@@ -643,7 +670,7 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD,
     paddingHorizontal: 14,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 6,
   },
   popularBadgeText: {
     color: DARK_BG,
@@ -683,7 +710,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pricingCTAHighlight: {
-    borderRadius: 10,
+    borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: "center",
@@ -695,7 +722,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   pricingCTAFree: {
-    borderRadius: 10,
+    borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: "center",
@@ -709,7 +736,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   pricingCTADefault: {
-    borderRadius: 10,
+    borderRadius: 6,
     paddingVertical: 10,
     paddingHorizontal: 16,
     alignItems: "center",
@@ -728,7 +755,7 @@ const styles = StyleSheet.create({
     backgroundColor: CARD_BG,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.35)",
-    borderRadius: 14,
+    borderRadius: 6,
     width: "100%",
     maxWidth: 640,
   },
@@ -744,7 +771,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(245,158,11,0.15)",
     borderWidth: 1,
     borderColor: "rgba(245,158,11,0.25)",
-    borderRadius: 20,
+    borderRadius: 6,
     paddingHorizontal: 16,
     paddingVertical: 6,
   },
@@ -759,8 +786,8 @@ const styles = StyleSheet.create({
     backgroundColor: CARD_BG,
     borderWidth: 1,
     borderColor: CARD_BORDER,
-    borderRadius: 16,
-    padding: 18,
+    borderRadius: 6,
+    padding: 15,
   },
   viralBadge: {
     position: "absolute",
@@ -779,10 +806,16 @@ const styles = StyleSheet.create({
   freeIconBox: {
     width: 36,
     height: 36,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor: GOLD_BG,
     alignItems: "center",
     justifyContent: "center",
+  },
+  freeIconText: {
+    color: GOLD,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0,
   },
   freeItemName: {
     fontSize: 14,
@@ -805,9 +838,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 28,
-    paddingVertical: 16,
-    borderRadius: 14,
+    paddingHorizontal: 22,
+    paddingVertical: 13,
+    borderRadius: 6,
     ...(Platform.OS === "web" ? { boxShadow: "0 0 30px rgba(245,158,11,0.3)" } : {}),
   },
   freeCTAText: {
@@ -823,7 +856,7 @@ const styles = StyleSheet.create({
 
   // ===== CTA =====
   ctaWrapper: {
-    marginTop: 48,
+    marginTop: 36,
     alignItems: "center",
     paddingHorizontal: 16,
     alignSelf: "center",
@@ -834,7 +867,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   ctaPrimary: {
-    borderRadius: 14,
+    borderRadius: 6,
     overflow: "hidden",
     ...(Platform.OS === "web"
       ? { boxShadow: "0 0 40px rgba(245,158,11,0.15)" }
@@ -843,8 +876,8 @@ const styles = StyleSheet.create({
   ctaPrimaryGradient: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 28,
-    paddingVertical: 16,
+    paddingHorizontal: 22,
+    paddingVertical: 13,
     gap: 8,
   },
   ctaPrimaryText: {
@@ -861,9 +894,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.35)",
     backgroundColor: "rgba(255,255,255,0.05)",
-    borderRadius: 14,
-    paddingHorizontal: 28,
-    paddingVertical: 16,
+    borderRadius: 6,
+    paddingHorizontal: 22,
+    paddingVertical: 13,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -876,13 +909,13 @@ const styles = StyleSheet.create({
 
   // 专属EA定制服务
   customEABanner: {
-    borderRadius: 16,
+    borderRadius: 6,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(139,92,246,0.25)",
+    borderColor: "rgba(216,188,131,0.20)",
   },
   customEAInner: {
-    padding: 24,
+    padding: 18,
     alignItems: "center",
     position: "relative",
     overflow: "hidden",
@@ -891,27 +924,32 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 12,
     right: 12,
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "rgba(139,92,246,0.08)",
+    width: 120,
+    height: 1,
+    backgroundColor: "rgba(216,188,131,0.24)",
   },
   customEABadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(139,92,246,0.15)",
+    backgroundColor: "rgba(216,188,131,0.10)",
     paddingHorizontal: 14,
     paddingVertical: 5,
-    borderRadius: 16,
+    borderRadius: 6,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: "rgba(139,92,246,0.3)",
+    borderColor: "rgba(216,188,131,0.22)",
   },
   customEABadgeText: {
-    color: "#A78BFA",
+    color: "#D8BC83",
     fontSize: 12,
     fontWeight: "700",
+  },
+  customEABadgeCode: {
+    color: "#D8BC83",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0,
   },
   customEATitle: {
     color: "#FFFFFF",
@@ -939,13 +977,13 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   customEACTA: {
-    borderRadius: 24,
+    borderRadius: 8,
     overflow: "hidden",
   },
   customEACTAGradient: {
     paddingHorizontal: 28,
     paddingVertical: 12,
-    borderRadius: 24,
+    borderRadius: 8,
   },
   customEACTAText: {
     color: "#0A0E1A",

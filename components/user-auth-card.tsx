@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Animated, Platform, Dimensions } from "react-na
 import { LinearGradient } from "expo-linear-gradient";
 import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
+import { BrandWordmark } from "@/components/brand-wordmark";
 
 interface UserAuthCardProps {
   title: string;
@@ -24,12 +25,11 @@ export function UserAuthCard({ title, subtitle, children, footer }: UserAuthCard
   const colors = useColors();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
-  const brandLetters = ["E", "A", "X", "A", "U"];
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: Platform.OS !== "web" }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: Platform.OS !== "web" }),
     ]).start();
   }, []);
 
@@ -63,16 +63,7 @@ export function UserAuthCard({ title, subtitle, children, footer }: UserAuthCard
       >
         {/* 标题 */}
         <View style={styles.header}>
-          <View style={styles.brand}>
-            {brandLetters.map((letter, index) => (
-              <Text
-                key={`${letter}-${index}`}
-                style={[styles.brandLetter, index === 2 && styles.brandLetterAccent]}
-              >
-                {letter}
-              </Text>
-            ))}
-          </View>
+          <BrandWordmark size="sm" style={styles.brand} />
           <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
           {subtitle ? <Text style={[styles.subtitle, { color: colors.muted }]}>{subtitle}</Text> : null}
         </View>
@@ -124,27 +115,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   brand: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
     marginBottom: 16,
-  },
-  brandLetter: {
-    fontSize: 18,
-    lineHeight: 24,
-    color: "#F8FAFC",
-    fontWeight: "900",
-    textShadowColor: "rgba(201,169,110,0.24)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
-  },
-  brandLetterAccent: {
-    color: "#D8BC83",
   },
   title: {
     fontSize: 28,
     fontWeight: "900",
-    letterSpacing: -0.5,
+    letterSpacing: 0,
     marginBottom: 6,
   },
   subtitle: {

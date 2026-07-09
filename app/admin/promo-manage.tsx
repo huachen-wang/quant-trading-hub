@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, Alert, Platform, Modal, Pressable, ActivityIndicator } from "react-native";
-import { ScreenContainer } from "@/components/screen-container";
+import { AdminPageChrome, AdminSection } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { getApiBaseUrl } from "@/constants/oauth";
 import * as SecureStore from "expo-secure-store";
@@ -117,20 +117,33 @@ export default function PromoManage() {
   };
 
   if (loading) {
-    return <ScreenContainer className="items-center justify-center"><ActivityIndicator size="large" color={colors.primary} /></ScreenContainer>;
+    return (
+      <AdminPageChrome eyebrow="PROMO CATALOG" title="促销商城管理" subtitle="加载商品数据" maxWidth={1280}>
+        <View style={{ minHeight: 260, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </AdminPageChrome>
+    );
   }
 
   return (
-    <ScreenContainer>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <Text style={{ fontSize: 24, fontWeight: "800", color: colors.foreground, marginBottom: 4 }}>💰 促销商城管理</Text>
-        <Text style={{ fontSize: 13, color: colors.muted, marginBottom: 16 }}>管理限时促销商品、价格、库存和促销标签</Text>
-
-        {/* 新增按钮 */}
-        <TouchableOpacity onPress={openCreate} style={{ backgroundColor: colors.primary, paddingVertical: 12, borderRadius: 10, alignItems: "center", marginBottom: 16 }}>
-          <Text style={{ color: "#fff", fontWeight: "700" }}>+ 新增促销商品</Text>
+    <AdminPageChrome
+      eyebrow="PROMO CATALOG"
+      title="促销商城管理"
+      subtitle="管理限时促销商品、价格、库存和促销标签"
+      metrics={[
+        { label: "商品总数", value: products.length, tone: colors.primary },
+        { label: "活跃", value: products.filter((item) => item.status === "active").length, tone: colors.success },
+        { label: "已售罄", value: products.filter((item) => item.status === "soldout").length, tone: colors.error },
+      ]}
+      action={
+        <TouchableOpacity onPress={openCreate} style={{ backgroundColor: colors.primary, paddingVertical: 9, paddingHorizontal: 16, borderRadius: 6, alignItems: "center" }}>
+          <Text style={{ color: "#07111F", fontWeight: "900", fontSize: 13 }}>新增促销商品</Text>
         </TouchableOpacity>
-
+      }
+      maxWidth={1280}
+    >
+      <AdminSection title="商品列表" meta="PROMO PRODUCTS">
         {/* 商品列表 */}
         {products.map((product) => {
           const statusInfo = STATUSES.find(s => s.key === product.status) || STATUSES[0];
@@ -140,7 +153,7 @@ export default function PromoManage() {
             ? Math.round((1 - promoPrice / origPrice) * 100)
             : 0;
           return (
-            <View key={product.id} style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+            <View key={product.id} style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, borderRadius: 8, padding: 14, marginBottom: 10 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={{ fontSize: 16, fontWeight: "700", color: colors.foreground }}>{product.title}</Text>
@@ -195,7 +208,7 @@ export default function PromoManage() {
             <Text style={{ color: colors.muted, fontSize: 14 }}>暂无促销商品，点击上方按钮新增</Text>
           </View>
         )}
-      </ScrollView>
+      </AdminSection>
 
       {/* 编辑弹窗 */}
       <Modal visible={showForm} transparent animationType="fade">
@@ -284,7 +297,7 @@ export default function PromoManage() {
           </Pressable>
         </Pressable>
       </Modal>
-    </ScreenContainer>
+    </AdminPageChrome>
   );
 
   function renderField(label: string, key: string, multiline?: boolean) {

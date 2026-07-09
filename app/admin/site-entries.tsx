@@ -4,13 +4,12 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
   Platform,
   StyleSheet,
 } from "react-native";
-import { ScreenContainer } from "@/components/screen-container";
+import { AdminPageChrome, AdminSection } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 
@@ -98,17 +97,19 @@ export default function AdminSiteEntries() {
   };
 
   return (
-    <ScreenContainer>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 64 }}>
-        <Text className="text-2xl font-bold text-foreground mb-2">🧭 侧边栏入口管理</Text>
-        <Text className="text-sm text-muted mb-6">
-          管理悬浮侧边栏「更多入口」区域显示的 emoji + 文字快捷链接。
-        </Text>
-
-        {/* 新建表单 */}
+    <AdminPageChrome
+      eyebrow="NAV CONFIG"
+      title="侧边栏入口管理"
+      subtitle="管理悬浮导航里展示的快捷链接和排序"
+      metrics={[
+        { label: "入口总数", value: listQuery.data?.length ?? "-", tone: colors.primary },
+        { label: "已启用", value: listQuery.data?.filter((item: any) => item.enabled).length ?? "-", tone: colors.success },
+        { label: "最高排序", value: listQuery.data?.[0]?.sortOrder ?? "-", tone: "#60A5FA" },
+      ]}
+      maxWidth={1160}
+    >
+        <AdminSection title="新增入口" meta="CREATE">
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.foreground }]}>+ 新增入口</Text>
-
           <View style={styles.formRow}>
             <View style={{ flex: 1, marginRight: 8 }}>
               <Text style={[styles.label, { color: colors.muted }]}>Emoji</Text>
@@ -168,32 +169,32 @@ export default function AdminSiteEntries() {
             )}
           </TouchableOpacity>
         </View>
+        </AdminSection>
 
-        {/* 列表 */}
-        <Text style={[styles.cardTitle, { color: colors.foreground, marginTop: 24, marginBottom: 12 }]}>
-          所有入口（{listQuery.data?.length ?? 0}）
-        </Text>
+        <AdminSection title={`所有入口 (${listQuery.data?.length ?? 0})`} meta="SORTED">
 
         {listQuery.isLoading && <ActivityIndicator color={colors.accent} style={{ marginTop: 16 }} />}
 
-        {listQuery.data?.map((entry: any) => (
-          <SiteEntryRow
-            key={entry.id}
-            entry={entry}
-            colors={colors}
-            onToggle={() => handleToggleEnabled(entry.id, entry.enabled)}
-            onDelete={() => handleDelete(entry.id, entry.label)}
-            onUpdate={(patch) => updateMutation.mutate({ id: entry.id, ...patch })}
-          />
-        ))}
+        <View style={[styles.tablePanel, { borderColor: colors.border }]}>
+          {listQuery.data?.map((entry: any) => (
+            <SiteEntryRow
+              key={entry.id}
+              entry={entry}
+              colors={colors}
+              onToggle={() => handleToggleEnabled(entry.id, entry.enabled)}
+              onDelete={() => handleDelete(entry.id, entry.label)}
+              onUpdate={(patch) => updateMutation.mutate({ id: entry.id, ...patch })}
+            />
+          ))}
+        </View>
 
         {listQuery.data?.length === 0 && !listQuery.isLoading && (
           <View style={{ padding: 24, alignItems: "center" }}>
-            <Text style={{ color: colors.muted }}>暂无入口，添加第一个吧 ☝️</Text>
+            <Text style={{ color: colors.muted }}>暂无入口</Text>
           </View>
         )}
-      </ScrollView>
-    </ScreenContainer>
+        </AdminSection>
+    </AdminPageChrome>
   );
 }
 
@@ -263,9 +264,11 @@ function SiteEntryRow({
   }
 
   return (
-    <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border, opacity: entry.enabled ? 1 : 0.5 }]}>
+    <View style={[styles.row, { borderBottomColor: colors.border, opacity: entry.enabled ? 1 : 0.5 }]}>
       <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <Text style={{ fontSize: 24, marginRight: 12 }}>{entry.emoji}</Text>
+        <View style={styles.entryCode}>
+          <Text style={styles.entryCodeText}>{String(entry.label || "NAV").slice(0, 3).toUpperCase()}</Text>
+        </View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600" }}>
             {entry.label}
@@ -297,7 +300,7 @@ function SiteEntryRow({
 const styles = StyleSheet.create({
   card: {
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
   },
   cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12 },
@@ -312,14 +315,14 @@ const styles = StyleSheet.create({
   },
   cta: {
     backgroundColor: "#C9A96E",
-    borderRadius: 8,
+    borderRadius: 6,
     paddingVertical: 12,
     alignItems: "center",
     marginTop: 12,
   },
   ctaText: { color: "#0A1628", fontSize: 14, fontWeight: "700" },
   ctaGhost: {
-    borderRadius: 8,
+    borderRadius: 6,
     paddingVertical: 10,
     alignItems: "center",
     backgroundColor: "rgba(148,163,184,0.06)",
@@ -327,8 +330,28 @@ const styles = StyleSheet.create({
   ctaGhostText: { fontSize: 13, fontWeight: "600" },
   row: {
     padding: 14,
-    borderRadius: 12,
+    borderBottomWidth: 1,
+  },
+  tablePanel: {
     borderWidth: 1,
-    marginBottom: 10,
+    borderRadius: 8,
+    overflow: "hidden",
+    backgroundColor: "rgba(15,23,42,0.56)",
+  },
+  entryCode: {
+    width: 42,
+    height: 34,
+    borderRadius: 4,
+    marginRight: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(216,188,131,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.24)",
+  },
+  entryCodeText: {
+    color: "#D8BC83",
+    fontSize: 10,
+    fontWeight: "900",
   },
 });

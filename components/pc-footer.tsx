@@ -54,12 +54,12 @@ export function PcFooter() {
           <Text style={styles.sitesLabel}>EAXAU 项目矩阵</Text>
           <View style={[styles.sitePill, styles.sitePillActive]}>
             <Text style={[styles.sitePillText, { color: "#D8BC83" }]}>
-              EA 军火库 · eaxau.com
+              EAXAU · eaxau.com
             </Text>
           </View>
           <View style={styles.sitePill}>
             <Text style={[styles.sitePillText, { color: "#94A3B8" }]}>
-              EA 破解网 · 即将上线
+              源码研究台 · 即将上线
             </Text>
           </View>
           <Pressable
@@ -144,7 +144,7 @@ export function PcFooter() {
 
         {/* 版权 */}
         <View style={styles.bottom}>
-          <Text style={styles.copy}>© 2026 EAXAU · 量化军火库. All rights reserved.</Text>
+          <Text style={styles.copy}>© 2026 EAXAU · Quant Source Desk. All rights reserved.</Text>
           <Text style={styles.copy}>沪 ICP 备 XXXXXXXX 号</Text>
         </View>
       </View>

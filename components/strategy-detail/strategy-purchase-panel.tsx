@@ -50,7 +50,7 @@ export function StrategyPurchasePanel({
           <View style={styles.priceRight}>
             <Text style={[styles.downloadLabel, { color: colors.muted }]}>下载量</Text>
             <Text style={[styles.downloadValue, { color: colors.foreground }]}>
-              💾 {(strategy.downloadCount || 0) + (strategy.virtualDownloads || 0)}
+              DL {(strategy.downloadCount || 0) + (strategy.virtualDownloads || 0)}
             </Text>
           </View>
         </View>
@@ -61,7 +61,7 @@ export function StrategyPurchasePanel({
             style={[styles.downloadBtn, { backgroundColor: colors.primary }]}
             activeOpacity={0.8}
           >
-            <Text style={[styles.downloadBtnText, { color: "#fff" }]}>⚡ 立即下载</Text>
+            <Text style={[styles.downloadBtnText, { color: "#fff" }]}>立即下载</Text>
           </TouchableOpacity>
         ) : (
           <PurchaseActions
@@ -88,8 +88,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   actionCard: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 8,
+    padding: 14,
   },
   priceRow: {
     flexDirection: "row",
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   downloadBtn: {
-    borderRadius: 24,
+    borderRadius: 6,
     paddingVertical: 12,
     alignItems: "center",
     marginBottom: 10,

@@ -1,12 +1,13 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity,
-  ActivityIndicator, Animated, useWindowDimensions,
+  ActivityIndicator, Animated, Platform, useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenContainer } from "@/components/screen-container";
+import { PcTopNav } from "@/components/pc-top-nav";
 import { PromoContactModal } from "@/components/promo/contact-modal";
 import { PLACEHOLDER_PROMO_PRODUCTS, PROMO_ANNOUNCEMENTS, PROMO_CATEGORIES } from "@/components/promo/data";
 import { PromoGalleryModal } from "@/components/promo/gallery-modal";
@@ -20,7 +21,7 @@ export default function PromoPage() {
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
   const isDesktop = screenWidth >= 768;
-  const cardWidth = isDesktop ? (Math.min(screenWidth, 1200) - 80) / 3 : "100%";
+  const cardWidth = isDesktop ? (Math.min(screenWidth, 1320) - 96) / 3 : "100%";
   const s = useMemo(
     () => createPromoStyles({ screenWidth, isDesktop, cardWidth }),
     [cardWidth, isDesktop, screenWidth],
@@ -34,32 +35,35 @@ export default function PromoPage() {
   const [announcementIndex, setAnnouncementIndex] = useState(0);
 
   // 动画
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(40)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const announceFade = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== "web" }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: Platform.OS !== "web" }),
     ]).start();
 
     // 脉冲动画
-    Animated.loop(
+    const pulseAnimation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1500, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.05, duration: 1500, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1500, useNativeDriver: Platform.OS !== "web" }),
       ])
-    ).start();
+    );
+    pulseAnimation.start();
+
+    return () => pulseAnimation.stop();
   }, []);
 
   // 公告轮播
   useEffect(() => {
     const timer = setInterval(() => {
-      Animated.timing(announceFade, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+      Animated.timing(announceFade, { toValue: 0, duration: 300, useNativeDriver: Platform.OS !== "web" }).start(() => {
         setAnnouncementIndex(prev => (prev + 1) % PROMO_ANNOUNCEMENTS.length);
-        Animated.timing(announceFade, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+        Animated.timing(announceFade, { toValue: 1, duration: 300, useNativeDriver: Platform.OS !== "web" }).start();
       });
     }, 3000);
     return () => clearInterval(timer);
@@ -113,6 +117,7 @@ export default function PromoPage() {
 
   return (
     <ScreenContainer>
+      <PcTopNav />
       <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
         {/* 返回按钮 */}
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
@@ -217,6 +222,26 @@ export default function PromoPage() {
               onPress={openProductDetail}
             />
           ))}
+          {isDesktop && products.length < 3 && (
+            <View style={s.procurementPanel}>
+              <Text style={s.procurementKicker}>PROCUREMENT DESK</Text>
+              <Text style={s.procurementTitle}>找不到目标 EA？</Text>
+              <Text style={s.procurementDesc}>
+                提供名称、截图或官网链接，我们按源头库检索版本、授权方式与可交付范围。
+              </Text>
+              <View style={s.procurementRows}>
+                {["版本核验", "源码/授权确认", "报价与交付清单"].map((item) => (
+                  <View key={item} style={s.procurementRow}>
+                    <View style={s.procurementDot} />
+                    <Text style={s.procurementRowText}>{item}</Text>
+                  </View>
+                ))}
+              </View>
+              <TouchableOpacity style={s.procurementBtn} onPress={() => setShowContact(true)}>
+                <Text style={s.procurementBtnText}>提交采购需求</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* 空状态 */}
@@ -236,8 +261,8 @@ export default function PromoPage() {
               { icon: "diamond", title: "源头直供", desc: "持有全网主流EA源码\n非二手倒卖", color: "#A8895A" },
               { icon: "shield-checkmark", title: "正版保障", desc: "官方授权或源码编译\n杜绝后门木马", color: "#22C55E" },
               { icon: "rocket", title: "极速发货", desc: "付款后即时交付\n紧急需求可加急", color: "#3B82F6" },
-              { icon: "build", title: "专属EA定制", desc: "自定义名称与调优模式\n无限授权 · 版权归属工作室", color: "#8B5CF6" },
-              { icon: "headset", title: "终身售后", desc: "免费更新迭代\n技术问题随时响应", color: "#EC4899" },
+              { icon: "build", title: "专属EA定制", desc: "自定义名称与调优模式\n无限授权 · 版权归属工作室", color: "#7AA2C7" },
+              { icon: "headset", title: "终身售后", desc: "免费更新迭代\n技术问题随时响应", color: "#34D399" },
               { icon: "cash", title: "全网最低", desc: "源头价格\n比任何渠道都便宜", color: "#EF4444" },
             ].map((item, i) => (
               <View key={i} style={s.whyItem}>

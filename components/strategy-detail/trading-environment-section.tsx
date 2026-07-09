@@ -21,7 +21,7 @@ export function TradingEnvironmentSection({
           style={[styles.recommendCard, { backgroundColor: colors.surface }]}
           activeOpacity={0.8}
         >
-          <Text style={styles.recommendEmoji}>🏦</Text>
+          <Text style={styles.recommendCode}>BROKER</Text>
           <Text style={[styles.recommendTitle, { color: colors.foreground }]}>Blueberry Markets</Text>
           <Text style={[styles.recommendDesc, { color: colors.muted }]}>推荐经纪商 · 低点差</Text>
           <View style={[styles.recommendBadge, { backgroundColor: colors.success + "15" }]}>
@@ -33,7 +33,7 @@ export function TradingEnvironmentSection({
           style={[styles.recommendCard, { backgroundColor: colors.surface }]}
           activeOpacity={0.8}
         >
-          <Text style={styles.recommendEmoji}>🖥️</Text>
+          <Text style={styles.recommendCode}>VPS</Text>
           <Text style={[styles.recommendTitle, { color: colors.foreground }]}>VPS 服务器</Text>
           <Text style={[styles.recommendDesc, { color: colors.muted }]}>推荐可靠VPS · 可申请免费</Text>
           <View style={[styles.recommendBadge, { backgroundColor: colors.primary + "15" }]}>
@@ -61,12 +61,14 @@ const styles = StyleSheet.create({
   },
   recommendCard: {
     flex: 1,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 8,
+    padding: 14,
     alignItems: "center",
   },
-  recommendEmoji: {
-    fontSize: 32,
+  recommendCode: {
+    color: "#D8BC83",
+    fontSize: 10,
+    fontWeight: "900",
     marginBottom: 8,
   },
   recommendTitle: {

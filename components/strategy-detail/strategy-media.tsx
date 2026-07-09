@@ -25,9 +25,14 @@ export function StrategyMedia({
 }: StrategyMediaProps) {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
+  const [coverLoadFailed, setCoverLoadFailed] = useState(false);
   const hasGalleryImages = allImages.length > 0;
   const galleryWidth = Math.max(1, Math.min(width - 32, 688));
   const fullImageSize = Math.max(1, width - 40);
+
+  useEffect(() => {
+    setCoverLoadFailed(false);
+  }, [strategy.coverImage]);
 
   useEffect(() => {
     if (!hasGalleryImages) {
@@ -51,7 +56,7 @@ export function StrategyMedia({
   return (
     <>
       {allImages.length > 1 ? (
-        <View style={[styles.galleryContainer, isDesktop && styles.coverDesktop]}>
+        <View style={[styles.galleryContainer, isDesktop && styles.galleryContainerDesktop]}>
           <ScrollView
             horizontal
             pagingEnabled
@@ -69,13 +74,26 @@ export function StrategyMedia({
                 activeOpacity={0.9}
                 style={{ width: galleryWidth }}
               >
-                <Image
-                  source={{ uri: img }}
-                  style={{ width: galleryWidth, height: isDesktop ? 220 : 180, borderRadius: 20 }}
-                  contentFit="cover"
-                  transition={300}
-                  cachePolicy="memory-disk"
-                />
+                <View style={{ width: galleryWidth, height: isDesktop ? 196 : 180, borderRadius: isDesktop ? 8 : 14, overflow: "hidden" }}>
+                  <LinearGradient
+                    colors={gradientColors}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFillObject}
+                  >
+                    <View style={styles.placeholderPanel}>
+                      <Text style={styles.placeholderKicker}>STRATEGY PROFILE</Text>
+                      <Text style={styles.placeholderTitle} numberOfLines={2}>{strategy.title}</Text>
+                    </View>
+                  </LinearGradient>
+                  <Image
+                    source={{ uri: img }}
+                    style={StyleSheet.absoluteFillObject}
+                    contentFit="cover"
+                    transition={300}
+                    cachePolicy="memory-disk"
+                  />
+                </View>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -101,7 +119,7 @@ export function StrategyMedia({
           />
           {isFeatured && <FeaturedBadge />}
         </View>
-      ) : strategy.coverImage ? (
+      ) : strategy.coverImage && !coverLoadFailed ? (
         <View style={[styles.coverGradient, isDesktop && styles.coverDesktop, { overflow: "hidden" }]}>
           <TouchableOpacity
             onPress={() => openGallery(0)}
@@ -115,6 +133,7 @@ export function StrategyMedia({
               contentFit="cover"
               transition={300}
               cachePolicy="memory-disk"
+              onError={() => setCoverLoadFailed(true)}
             />
           </TouchableOpacity>
           <PlatformBadge
@@ -130,7 +149,20 @@ export function StrategyMedia({
           end={{ x: 1, y: 1 }}
           style={[styles.coverGradient, isDesktop && styles.coverDesktop]}
         >
-          <Text style={styles.coverEmoji}>📈</Text>
+          <View style={styles.placeholderPanel}>
+            <Text style={styles.placeholderKicker}>STRATEGY PROFILE</Text>
+            <Text style={styles.placeholderTitle} numberOfLines={2}>{strategy.title}</Text>
+            <View style={styles.placeholderMetrics}>
+              <View style={styles.placeholderMetric}>
+                <Text style={styles.placeholderMetricLabel}>收益率</Text>
+                <Text style={styles.placeholderMetricValue}>{strategy.totalReturn}%</Text>
+              </View>
+              <View style={styles.placeholderMetric}>
+                <Text style={styles.placeholderMetricLabel}>胜率</Text>
+                <Text style={styles.placeholderMetricValue}>{strategy.winRate}%</Text>
+              </View>
+            </View>
+          </View>
           <PlatformBadge
             label={`${strategy.platform} · ${productTypeLabel}`}
             color={gradientColors[1]}
@@ -196,7 +228,7 @@ function FeaturedBadge() {
         end={{ x: 1, y: 0 }}
         style={styles.featuredDetailGradient}
       >
-        <Text style={styles.featuredDetailText}>⭐ 官方旗舰</Text>
+        <Text style={styles.featuredDetailText}>官方旗舰</Text>
       </LinearGradient>
     </View>
   );
@@ -206,24 +238,73 @@ const styles = StyleSheet.create({
   coverGradient: {
     marginHorizontal: 16,
     height: 180,
-    borderRadius: 20,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
   coverDesktop: {
-    height: 220,
+    height: 196,
+    borderRadius: 8,
+    marginHorizontal: 0,
+    marginBottom: 10,
   },
-  coverEmoji: {
-    fontSize: 48,
+  placeholderPanel: {
+    width: "100%",
+    height: "100%",
+    padding: 22,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(5,8,16,0.24)",
+  },
+  placeholderKicker: {
+    color: "rgba(255,255,255,0.72)",
+    fontSize: 10,
+    fontWeight: "900",
+    marginBottom: 8,
+  },
+  placeholderTitle: {
+    color: "#F8FAFC",
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "900",
+    marginBottom: 16,
+  },
+  placeholderMetrics: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  placeholderMetric: {
+    minWidth: 108,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(5,8,16,0.34)",
+  },
+  placeholderMetricLabel: {
+    color: "rgba(226,232,240,0.62)",
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
+  placeholderMetricValue: {
+    color: "#F8FAFC",
+    fontSize: 15,
+    fontWeight: "900",
   },
   galleryContainer: {
     marginHorizontal: 16,
     height: 180,
-    borderRadius: 20,
+    borderRadius: 14,
     overflow: "hidden",
     marginBottom: 16,
     position: "relative",
+  },
+  galleryContainerDesktop: {
+    marginHorizontal: 0,
+    height: 196,
+    borderRadius: 8,
+    marginBottom: 10,
   },
   galleryIndicatorRow: {
     position: "absolute",
@@ -291,7 +372,7 @@ const styles = StyleSheet.create({
     right: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   platformText: {
     fontSize: 12,

@@ -1,17 +1,17 @@
-import { useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { StrategyCard } from "@/components/strategy-card";
 import { useColors } from "@/hooks/use-colors";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useResponsive } from "@/hooks/use-responsive";
 import * as Haptics from "expo-haptics";
-import { Platform } from "react-native";
 
 export default function FavoritesScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { favorites, loading, isFavorite, toggleFavorite, clearFavorites } = useFavorites();
+  const { numColumns, isDesktop } = useResponsive();
+  const { favorites, loading, toggleFavorite, clearFavorites } = useFavorites();
 
   const handleStrategyPress = (id: number) => {
     router.push(`/strategy/${id}` as any);
@@ -40,38 +40,36 @@ export default function FavoritesScreen() {
   };
 
   const renderHeader = () => (
-    <View className="mb-4">
-      <View className="flex-row items-center justify-between mb-4">
+    <View style={[styles.headerPanel, { borderColor: colors.border }]}>
         <View>
-            <Text className="text-3xl font-bold text-foreground">❤️ 我的收藏</Text>
-          <Text className="text-sm text-muted mt-1">
+          <Text style={[styles.kicker, { color: colors.primary }]}>FAVORITE WATCHLIST</Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>我的收藏</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>
             {favorites.length > 0 ? `共 ${favorites.length} 个策略` : "还没有收藏任何策略"}
           </Text>
         </View>
         {favorites.length > 0 && (
           <TouchableOpacity
             onPress={handleClearAll}
-            className="px-4 py-2 bg-error/10 rounded-full"
+            style={[styles.clearAllBtn, { backgroundColor: colors.error + "14", borderColor: colors.error + "35" }]}
             activeOpacity={0.7}
           >
-            <Text className="text-error font-semibold text-sm">清空</Text>
+            <Text style={{ color: colors.error, fontWeight: "800", fontSize: 13 }}>清空</Text>
           </TouchableOpacity>
         )}
-      </View>
     </View>
   );
 
   const renderEmpty = () => (
-    <View className="items-center justify-center py-16">
-      <Text style={{ fontSize: 56 }}>💫</Text>
-      <Text className="text-foreground text-lg font-bold mt-4">还没有收藏任何策略</Text>
-      <Text className="text-muted text-sm mt-2">点击策略卡片上的❤️收藏感兴趣的EA</Text>
+    <View style={styles.emptyState}>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>还没有收藏任何策略</Text>
+      <Text style={[styles.emptyText, { color: colors.muted }]}>收藏感兴趣的 EA 后，这里会形成你的策略观察列表。</Text>
       <TouchableOpacity
         onPress={() => router.push("/(tabs)" as any)}
-        className="mt-6 bg-primary px-6 py-3 rounded-full"
+        style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
         activeOpacity={0.8}
       >
-        <Text className="text-background font-semibold">去逛逛</Text>
+        <Text style={styles.primaryBtnText}>去策略广场</Text>
       </TouchableOpacity>
     </View>
   );
@@ -89,7 +87,8 @@ export default function FavoritesScreen() {
       <FlatList
         data={favorites}
         keyExtractor={(item) => item.id.toString()}
-        numColumns={2}
+        numColumns={numColumns}
+        key={numColumns}
         renderItem={({ item }) => (
           <StrategyCard
             id={item.id}
@@ -106,9 +105,62 @@ export default function FavoritesScreen() {
         )}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
-        columnWrapperStyle={favorites.length > 0 ? { justifyContent: "space-between" } : undefined}
-        contentContainerStyle={{ padding: 16, paddingBottom: 32, flexGrow: 1 }}
+        columnWrapperStyle={favorites.length > 0 && numColumns > 1 ? { justifyContent: "flex-start" } : undefined}
+        contentContainerStyle={[
+          styles.listContent,
+          isDesktop && styles.listContentDesktop,
+          { flexGrow: 1 },
+        ]}
       />
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  listContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  listContentDesktop: {
+    width: "100%",
+    maxWidth: 1360,
+    alignSelf: "center",
+    paddingHorizontal: 22,
+    paddingTop: 18,
+  },
+  headerPanel: {
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 15,
+    marginBottom: 14,
+    backgroundColor: "rgba(9,15,28,0.84)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  kicker: { fontSize: 11, fontWeight: "900", marginBottom: 6 },
+  title: { fontSize: 25, lineHeight: 31, fontWeight: "900", marginBottom: 5 },
+  subtitle: { fontSize: 13, lineHeight: 20 },
+  clearAllBtn: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  emptyState: {
+    minHeight: 320,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 52,
+  },
+  emptyTitle: { fontSize: 18, fontWeight: "900", marginBottom: 8 },
+  emptyText: { fontSize: 13, lineHeight: 20, textAlign: "center", maxWidth: 380 },
+  primaryBtn: {
+    marginTop: 20,
+    borderRadius: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+  },
+  primaryBtnText: { color: "#07111F", fontWeight: "900", fontSize: 14 },
+});

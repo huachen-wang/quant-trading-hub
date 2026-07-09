@@ -33,7 +33,7 @@ interface PurchaseActionsProps {
  * saleMode === "inquiry" → 显示「商务咨询授权」按钮 + 弹出联系方式 modal
  *                          有 Telegram/QQ 直接展示，没有就提示先去客服
  *
- * featuredLink 非空 → 优先级最高，渲染为「⭐ 前往官网了解详情」外链
+ * featuredLink 非空 → 优先级最高，渲染为「前往官网了解详情」外链
  */
 export function PurchaseActions({
   saleMode,
@@ -66,7 +66,7 @@ export function PurchaseActions({
         activeOpacity={0.85}
       >
         <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
-          <Text style={styles.ctaText}>⭐ 前往官网了解详情</Text>
+          <Text style={styles.ctaText}>前往官网了解详情</Text>
         </LinearGradient>
       </TouchableOpacity>
     );
@@ -92,7 +92,7 @@ export function PurchaseActions({
             colors={hasDownloadUrl ? ["#10B981", "#34D399"] : ["#475569", "#64748B"]}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}
           >
-            <Text style={styles.ctaText}>{hasDownloadUrl ? "⚡ 免费下载" : "暂无下载链接"}</Text>
+            <Text style={styles.ctaText}>{hasDownloadUrl ? "免费下载" : "暂无下载链接"}</Text>
           </LinearGradient>
         </TouchableOpacity>
       );
@@ -128,12 +128,12 @@ export function PurchaseActions({
             end={{ x: 1, y: 0 }}
             style={styles.ctaInner}
           >
-            <Text style={styles.ctaText}>⚡ 立即购买</Text>
+            <Text style={styles.ctaText}>立即购买</Text>
           </LinearGradient>
         </TouchableOpacity>
 
         <Text style={[styles.priceFootnote, { color: colors.muted }]}>
-          🔒 支付后立即解锁下载 · 支持支付宝/微信/USDT
+          支付后立即解锁下载 · 支持支付宝/微信/USDT
         </Text>
       </View>
     );
@@ -148,7 +148,7 @@ export function PurchaseActions({
     <View style={styles.priceBox}>
       <View style={[styles.inquiryBanner, { borderColor: "rgba(245,158,11,0.3)" }]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <Text style={{ fontSize: 16 }}>🤝</Text>
+          <Text style={styles.inquiryCode}>B2B</Text>
           <Text style={[styles.inquiryTitle, { color: "#D8BC83" }]}>商务授权合作</Text>
         </View>
         <Text style={[styles.inquiryDesc, { color: colors.muted }]}>
@@ -167,7 +167,7 @@ export function PurchaseActions({
           end={{ x: 1, y: 0 }}
           style={styles.ctaInner}
         >
-          <Text style={styles.ctaText}>💬 联系客服咨询授权</Text>
+          <Text style={styles.ctaText}>联系客服咨询授权</Text>
         </LinearGradient>
       </TouchableOpacity>
 
@@ -179,7 +179,7 @@ export function PurchaseActions({
               onPress={() => Linking.openURL(telegramGroup!)}
               style={[styles.contactBtn, { backgroundColor: colors.primary + "12" }]}
             >
-              <Text style={{ fontSize: 18 }}>📱</Text>
+              <Text style={styles.contactCode}>TG</Text>
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={[styles.contactLabel, { color: colors.foreground }]}>Telegram</Text>
                 <Text style={[styles.contactValue, { color: colors.muted }]} numberOfLines={1}>
@@ -194,7 +194,7 @@ export function PurchaseActions({
               onPress={() => Linking.openURL(qqGroup!)}
               style={[styles.contactBtn, { backgroundColor: colors.primary + "12" }]}
             >
-              <Text style={{ fontSize: 18 }}>👥</Text>
+              <Text style={styles.contactCode}>QQ</Text>
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={[styles.contactLabel, { color: colors.foreground }]}>QQ 群</Text>
                 <Text style={[styles.contactValue, { color: colors.muted }]} numberOfLines={1}>
@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: "900",
     color: "#D8BC83",
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   },
   priceOrig: {
     fontSize: 14,
@@ -245,17 +245,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cta: {
-    borderRadius: 14,
+    borderRadius: 7,
     overflow: "hidden",
   },
   ctaDisabled: {
     opacity: 0.5,
   },
   ctaInner: {
-    paddingVertical: 16,
+    paddingVertical: 15,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 14,
+    borderRadius: 7,
   },
   ctaText: {
     color: "#0A1628",
@@ -266,8 +266,14 @@ const styles = StyleSheet.create({
   inquiryBanner: {
     backgroundColor: "rgba(245,158,11,0.08)",
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 14,
+  },
+  inquiryCode: {
+    color: "#D8BC83",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0,
   },
   inquiryTitle: {
     fontSize: 14,
@@ -286,7 +292,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 8,
+  },
+  contactCode: {
+    width: 24,
+    color: "#D8BC83",
+    fontSize: 10,
+    fontWeight: "900",
+    textAlign: "center",
+    letterSpacing: 0,
   },
   contactLabel: {
     fontSize: 13,

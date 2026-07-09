@@ -6,9 +6,12 @@ import {
   StyleSheet,
   Platform,
   ScrollView,
+  useWindowDimensions,
 } from "react-native";
 import { useRouter, usePathname } from "expo-router";
 import { trpc } from "@/lib/trpc";
+import { BrandWordmark } from "@/components/brand-wordmark";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 /**
  * 悬浮侧边栏 v3
@@ -21,9 +24,10 @@ import { trpc } from "@/lib/trpc";
 export function FloatingSideNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const { width } = useWindowDimensions();
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const brandLetters = ["E", "A", "X", "A", "U"];
+  const isCompact = width < 768;
 
   // Hooks 必须在条件之前
   const customEntriesQuery = trpc.siteEntries.list.useQuery(
@@ -51,19 +55,19 @@ export function FloatingSideNav() {
 
   // ==== 快捷跳转 ====
   const quickLinks = [
-    { emoji: "📊", label: "策略广场", sub: "浏览全部 EA 策略", href: "/(tabs)", matchPaths: ["/", "/(tabs)"] },
-    { emoji: "🤝", label: "合购", sub: "拼单更优惠", href: "/(tabs)/group-buy", matchPaths: ["/(tabs)/group-buy", "/group-buy"] },
-    { emoji: "📬", label: "订阅", sub: "月度精选 EA 推送", href: "/(tabs)/subscribe", matchPaths: ["/(tabs)/subscribe", "/subscribe"] },
-    { emoji: "🏢", label: "合作授权", sub: "工作室合作 / 渠道", href: "/cooperation", matchPaths: ["/cooperation"] },
-    { emoji: "🔥", label: "限时促销", sub: "特价 EA 抢购中", href: "/promo", matchPaths: ["/promo"], badge: true },
+    { code: "MKT", label: "策略广场", sub: "浏览全部 EA 策略", href: "/(tabs)", matchPaths: ["/", "/(tabs)"] },
+    { code: "GB", label: "合购", sub: "拼单更优惠", href: "/(tabs)/group-buy", matchPaths: ["/(tabs)/group-buy", "/group-buy"] },
+    { code: "ACC", label: "订阅", sub: "月度精选 EA 推送", href: "/(tabs)/subscribe", matchPaths: ["/(tabs)/subscribe", "/subscribe"] },
+    { code: "B2B", label: "合作授权", sub: "工作室合作 / 渠道", href: "/cooperation", matchPaths: ["/cooperation"] },
+    { code: "PRM", label: "限时促销", sub: "特价 EA 抢购中", href: "/promo", matchPaths: ["/promo"], badge: true },
   ];
 
   // ==== 项目矩阵 ====
   const matrixSites = [
-    { emoji: "🎯", label: "EA 军火库", sub: "eaxau.com", current: true },
-    { emoji: "🌟", label: "EA 破解网", sub: "即将上线", disabled: true },
-    { emoji: "💰", label: "点金", sub: "ddxau.com", url: "https://ddxau.com" },
-    { emoji: "⚖️", label: "量化风云榜", sub: "eaea.ai", url: "https://eaea.ai" },
+    { code: "EAX", label: "EAXAU", sub: "eaxau.com", current: true },
+    { code: "SRC", label: "源码研究台", sub: "即将上线", disabled: true },
+    { code: "XAU", label: "点金", sub: "ddxau.com", url: "https://ddxau.com" },
+    { code: "AI", label: "量化风云榜", sub: "eaea.ai", url: "https://eaea.ai" },
   ];
 
   return (
@@ -74,11 +78,10 @@ export function FloatingSideNav() {
           onPress={() => setIsOpen(true)}
           onHoverIn={() => setIsHovered(true)}
           onHoverOut={() => setIsHovered(false)}
-          style={[styles.fab, isHovered && styles.fabHover]}
+          style={[styles.fab, isCompact && styles.fabCompact, isHovered && styles.fabHover]}
           accessibilityLabel="打开导航"
         >
-          <Text style={styles.fabIcon}>☰</Text>
-          <Text style={styles.fabLabel}>导航</Text>
+          <IconSymbol name="line.3.horizontal" size={isCompact ? 20 : 17} color="#C9A96E" />
         </Pressable>
       )}
 
@@ -92,22 +95,13 @@ export function FloatingSideNav() {
 
       {/* 抽屉 */}
       {isOpen && (
-        <View style={styles.drawer}>
+        <View style={[styles.drawer, isCompact && styles.drawerCompact]}>
           {/* 抽屉头 */}
           <View style={styles.drawerHeader}>
             <Pressable onPress={() => setIsOpen(false)} style={styles.closeBtn}>
               <Text style={styles.closeBtnIcon}>✕</Text>
             </Pressable>
-            <View style={styles.brand}>
-              {brandLetters.map((letter, index) => (
-                <Text
-                  key={`${letter}-${index}`}
-                  style={[styles.brandLetter, index === 2 && styles.brandLetterAccent]}
-                >
-                  {letter}
-                </Text>
-              ))}
-            </View>
+            <BrandWordmark size="sm" style={styles.brand} />
           </View>
 
           <ScrollView
@@ -131,7 +125,7 @@ export function FloatingSideNav() {
                     ]}
                   >
                     {isActive && <View style={styles.activeBar} />}
-                    <Text style={styles.itemEmoji}>{item.emoji}</Text>
+                    <Text style={styles.itemCode}>{item.code}</Text>
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: "row", alignItems: "center" }}>
                         <Text style={[styles.itemLabel, isActive && { color: "#C9A96E", fontWeight: "600" }]}>
@@ -168,7 +162,7 @@ export function FloatingSideNav() {
                     hovered && !s.current && !s.disabled && styles.listItemHover,
                   ]}
                 >
-                  <Text style={[styles.matrixEmoji, s.disabled && { opacity: 0.5 }]}>{s.emoji}</Text>
+                  <Text style={[styles.matrixCode, s.disabled && { opacity: 0.5 }]}>{s.code}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={[
                       styles.matrixLabel,
@@ -209,7 +203,7 @@ export function FloatingSideNav() {
                         hovered && styles.resourceCellHover,
                       ]}
                     >
-                      <Text style={styles.resourceEmoji}>{entry.emoji}</Text>
+                      <Text style={styles.resourceCode}>RES</Text>
                       <View style={{ flex: 1, marginLeft: 10 }}>
                         <Text style={styles.resourceLabel} numberOfLines={1}>
                           {entry.label}
@@ -224,7 +218,7 @@ export function FloatingSideNav() {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>EAXAU © 2026 · 量化军火库</Text>
+            <Text style={styles.footerText}>EAXAU © 2026 · Quant Source Desk</Text>
           </View>
         </View>
       )}
@@ -249,12 +243,15 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute" as any,
     bottom: 24,
-    left: 20, // 左下贴角
+    left: 8,
+    width: 44,
+    height: 44,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 24, // 胶囊形
+    justifyContent: "center",
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderRadius: 6,
     backgroundColor: "rgba(15,30,51,0.95)",
     borderWidth: 1.2,
     borderColor: "#C9A96E",
@@ -268,21 +265,18 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(201,169,110,0.12)",
     borderColor: "#D8BC83",
   },
-  fabIcon: {
-    color: "#C9A96E",
-    fontSize: 16,
-    fontWeight: "700",
-    lineHeight: 18,
-    marginRight: 8,
+  fabCompact: {
+    left: "auto" as any,
+    right: 116,
+    top: 8,
+    bottom: "auto" as any,
+    width: 40,
+    height: 40,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderRadius: 6,
+    justifyContent: "center",
   },
-  fabLabel: {
-    color: "#F4F6FB",
-    fontSize: 13,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-    lineHeight: 16,
-  },
-
   // 遮罩
   backdrop: {
     position: "absolute" as any,
@@ -306,6 +300,10 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     flexDirection: "column",
   },
+  drawerCompact: {
+    width: "88%" as any,
+    maxWidth: 320,
+  },
 
   drawerHeader: {
     height: 64,
@@ -327,21 +325,7 @@ const styles = StyleSheet.create({
   closeBtnIcon: { color: "#A8B3C7", fontSize: 14, fontWeight: "500", lineHeight: 16 },
 
   brand: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-  },
-  brandLetter: {
-    color: "#F4F6FB",
-    fontSize: 17,
-    fontWeight: "900",
-    lineHeight: 22,
-    textShadowColor: "rgba(201,169,110,0.22)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 8,
-  },
-  brandLetterAccent: {
-    color: "#D8BC83",
+    flexShrink: 0,
   },
 
   // 章节标题
@@ -381,7 +365,13 @@ const styles = StyleSheet.create({
     left: 0, top: 8, bottom: 8, width: 3,
     backgroundColor: "#C9A96E", borderRadius: 2,
   },
-  itemEmoji: { fontSize: 16, marginRight: 14 },
+  itemCode: {
+    width: 28,
+    color: "#C9A96E",
+    fontSize: 10,
+    fontWeight: "900",
+    marginRight: 12,
+  },
   itemLabel: { color: "#F4F6FB", fontSize: 13, fontWeight: "500", lineHeight: 16 },
   itemSub: { color: "#6B7891", fontSize: 10, marginTop: 2, lineHeight: 12 },
   badge: {
@@ -409,7 +399,13 @@ const styles = StyleSheet.create({
     borderColor: "rgba(201,169,110,0.25)",
   },
   matrixItemDisabled: { opacity: 0.6 },
-  matrixEmoji: { fontSize: 18, marginRight: 14 },
+  matrixCode: {
+    width: 30,
+    color: "#C9A96E",
+    fontSize: 10,
+    fontWeight: "900",
+    marginRight: 12,
+  },
   matrixLabel: { color: "#F4F6FB", fontSize: 13, fontWeight: "500", lineHeight: 15 },
   matrixSub: { color: "#6B7891", fontSize: 10, marginTop: 2, lineHeight: 11 },
   currentTag: {
@@ -441,7 +437,11 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.04)",
     borderColor: "rgba(201,169,110,0.2)",
   },
-  resourceEmoji: { fontSize: 14 },
+  resourceCode: {
+    color: "#C9A96E",
+    fontSize: 9,
+    fontWeight: "900",
+  },
   resourceLabel: {
     color: "#F4F6FB", fontSize: 11, fontWeight: "500", lineHeight: 13,
   },

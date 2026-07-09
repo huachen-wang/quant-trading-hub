@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 import { LinearGradient } from "expo-linear-gradient";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import type { ThemeColorPalette } from "@/constants/theme";
+import { useResponsive } from "@/hooks/use-responsive";
 
 export type PlatformFilter = "MT4" | "MT5" | undefined;
 export type OrderBy = "latest" | "return" | "hot";
@@ -55,8 +56,8 @@ const ORDER_OPTIONS: { label: string; value: OrderBy }[] = [
 
 const SALE_MODE_OPTIONS: { label: string; value: SaleModeFilter }[] = [
   { label: "全部", value: "all" },
-  { label: "💰 直购", value: "direct" },
-  { label: "🤝 商务授权", value: "inquiry" },
+  { label: "直购", value: "direct" },
+  { label: "商务授权", value: "inquiry" },
 ];
 
 export const StrategyFilters = memo(function StrategyFilters({
@@ -79,6 +80,7 @@ export const StrategyFilters = memo(function StrategyFilters({
   onUploadPress,
   onSearchPress,
 }: StrategyFiltersProps) {
+  const { isDesktop } = useResponsive();
   const hasAnyFilter = !!platformFilter || saleModeFilter !== "all" || !!categoryFilter || !!tagFilter || orderBy !== "hot";
   const rootCategories = useMemo(
     () => categories.filter((category) => category.parentId === null),
@@ -88,11 +90,11 @@ export const StrategyFilters = memo(function StrategyFilters({
     const chips: { label: string; clear: () => void }[] = [];
 
     if (platformFilter) chips.push({ label: platformFilter, clear: () => onPlatformChange(undefined) });
-    if (saleModeFilter === "direct") chips.push({ label: "💰 直购", clear: () => onSaleModeChange("all") });
-    if (saleModeFilter === "inquiry") chips.push({ label: "🤝 商务授权", clear: () => onSaleModeChange("all") });
+    if (saleModeFilter === "direct") chips.push({ label: "直购", clear: () => onSaleModeChange("all") });
+    if (saleModeFilter === "inquiry") chips.push({ label: "商务授权", clear: () => onSaleModeChange("all") });
     if (categoryFilter) {
       const cat = categories.find((category) => category.slug === categoryFilter);
-      if (cat) chips.push({ label: `${cat.icon || ""}${cat.name}`.trim(), clear: () => onCategoryChange(undefined) });
+      if (cat) chips.push({ label: cat.name, clear: () => onCategoryChange(undefined) });
     }
     if (tagFilter) {
       const tag = dynamicTags.find((item) => item.value === tagFilter);
@@ -106,11 +108,14 @@ export const StrategyFilters = memo(function StrategyFilters({
   }, [categories, categoryFilter, dynamicTags, onCategoryChange, onOrderByChange, onPlatformChange, onSaleModeChange, onTagChange, orderBy, platformFilter, saleModeFilter, tagFilter]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.titleRow}>
+    <View style={[styles.container, isDesktop && styles.containerDesktop]}>
+      <View style={[styles.titleRow, isDesktop && styles.titleRowDesktop]}>
         <View style={styles.titleLeft}>
           <View style={styles.titleAccent} />
-          <Text style={[styles.titleText, { color: colors.foreground }]}>策略广场</Text>
+          <View>
+            <Text style={[styles.titleText, isDesktop && styles.titleTextDesktop, { color: colors.foreground }]}>策略广场</Text>
+            {isDesktop && <Text style={styles.titleMeta}>EA SOURCE TERMINAL</Text>}
+          </View>
         </View>
         <View style={styles.titleRight}>
           <TouchableOpacity
@@ -132,7 +137,7 @@ export const StrategyFilters = memo(function StrategyFilters({
         </View>
       </View>
 
-      <View style={styles.filterRow}>
+      <View style={[styles.filterRow, isDesktop && styles.filterRowDesktop]}>
         <View style={styles.filterGroup}>
           {PLATFORM_OPTIONS.map((item) => {
             const isActive = platformFilter === item.value;
@@ -180,7 +185,7 @@ export const StrategyFilters = memo(function StrategyFilters({
         </View>
       </View>
 
-      <View style={[styles.filterRow, { marginTop: 8, justifyContent: "space-between" }]}>
+      <View style={[styles.filterRow, styles.secondFilterRow, isDesktop && styles.secondFilterRowDesktop]}>
         <View style={styles.filterGroup}>
           {SALE_MODE_OPTIONS.map((item) => {
             const isActive = saleModeFilter === item.value;
@@ -258,7 +263,7 @@ export const StrategyFilters = memo(function StrategyFilters({
                 </TouchableOpacity>
                 {rootCategories.map((category) => {
                   const isActive = categoryFilter === category.slug;
-                  const categoryLabel = category.icon ? `${category.icon} ${category.name}` : category.name;
+                  const categoryLabel = category.name;
                   return (
                     <TouchableOpacity key={category.slug} onPress={() => onCategoryChange(category.slug)} style={[styles.filterChip, isActive ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" } : { backgroundColor: colors.background, borderColor: colors.border }]} activeOpacity={0.7}>
                       <Text style={[styles.filterChipText, { color: isActive ? "#0A1628" : colors.muted }]}>{categoryLabel}</Text>
@@ -321,11 +326,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginBottom: 4,
   },
+  containerDesktop: {
+    marginTop: 6,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.16)",
+    backgroundColor: "rgba(9,15,28,0.82)",
+  },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 6,
+  },
+  titleRowDesktop: {
+    marginBottom: 8,
   },
   titleLeft: {
     flexDirection: "row",
@@ -333,15 +351,26 @@ const styles = StyleSheet.create({
   },
   titleAccent: {
     width: 3,
-    height: 20,
-    borderRadius: 2,
+    height: 18,
+    borderRadius: 1,
     backgroundColor: "#A8895A",
     marginRight: 8,
   },
   titleText: {
     fontSize: 20,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0,
+  },
+  titleTextDesktop: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  titleMeta: {
+    color: "rgba(148,163,184,0.72)",
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 2,
+    letterSpacing: 0,
   },
   titleRight: {
     flexDirection: "row",
@@ -349,13 +378,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   uploadBtn: {
-    borderRadius: 20,
+    borderRadius: 4,
     overflow: "hidden",
   },
   uploadBtnInner: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
   },
   uploadBtnText: {
     color: "#0A0E1A",
@@ -363,9 +392,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   searchBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 30,
+    height: 30,
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -376,15 +405,29 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     rowGap: 6,
   },
+  filterRowDesktop: {
+    marginBottom: 5,
+    rowGap: 5,
+  },
+  secondFilterRow: {
+    marginTop: 8,
+    justifyContent: "space-between",
+  },
+  secondFilterRowDesktop: {
+    marginTop: 2,
+    paddingTop: 7,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(148,163,184,0.10)",
+  },
   filterGroup: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: 5,
   },
   filterChip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
   },
   filterChipText: {
@@ -409,7 +452,7 @@ const styles = StyleSheet.create({
   tagChip: {
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 14,
+    borderRadius: 5,
     marginRight: 8,
     borderWidth: 1,
   },
@@ -422,7 +465,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 16,
+    borderRadius: 4,
     borderWidth: 1,
   },
   advancedToggleText: {
@@ -449,7 +492,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(201,169,110,0.4)",
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 14,
+    borderRadius: 5,
     marginRight: 6,
     marginBottom: 4,
   },
@@ -476,9 +519,9 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
   advancedPanel: {
-    marginTop: 10,
-    padding: 14,
-    borderRadius: 10,
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 6,
     borderWidth: 1,
   },
   advancedSectionTitle: {

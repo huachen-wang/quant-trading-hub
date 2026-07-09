@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet, useWindowDimensions } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
@@ -8,6 +8,8 @@ import { getBacktestData, createBacktestDataItem, deleteBacktestDataItem, delete
 export default function BacktestDataScreen() {
   const router = useRouter();
   const colors = useColors();
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 1024;
   const params = useLocalSearchParams<{ strategyId: string; title?: string }>();
   const strategyId = parseInt(params.strategyId || "0");
   const strategyTitle = params.title || `策略 #${strategyId}`;
@@ -139,49 +141,56 @@ export default function BacktestDataScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, maxWidth: 700, alignSelf: "center" as any, width: "100%" as any }}>
+      <ScrollView contentContainerStyle={[s.scrollContent, isDesktop && s.scrollContentDesktop]}>
         <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 12 }}>
           <Text style={{ color: colors.primary, fontSize: 15 }}>← 返回策略列表</Text>
         </TouchableOpacity>
 
-        <Text style={[s.pageTitle, { color: colors.foreground }]}>回测数据管理</Text>
-        <Text style={[s.subtitle, { color: colors.muted }]}>{strategyTitle}</Text>
-
-        {/* 生成模拟数据 */}
-        <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[s.cardTitle, { color: colors.foreground }]}>生成模拟回测数据</Text>
-          <View style={s.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.foreground }]}>天数</Text>
-              <TextInput value={genDays} onChangeText={setGenDays} keyboardType="numeric" style={inputStyle} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.foreground }]}>年化收益(%)</Text>
-              <TextInput value={genReturn} onChangeText={setGenReturn} keyboardType="numeric" style={inputStyle} />
-            </View>
-          </View>
-          <View style={s.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.foreground }]}>波动率(%)</Text>
-              <TextInput value={genVolatility} onChangeText={setGenVolatility} keyboardType="numeric" style={inputStyle} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.label, { color: colors.foreground }]}>初始资金</Text>
-              <TextInput value={genInitial} onChangeText={setGenInitial} keyboardType="numeric" style={inputStyle} />
-            </View>
-          </View>
-          <TouchableOpacity
-            onPress={handleGenerate}
-            disabled={isSubmitting}
-            style={[s.btn, { backgroundColor: isSubmitting ? colors.muted : colors.primary }]}
-            activeOpacity={0.8}
-          >
-            <Text style={s.btnText}>{isSubmitting ? "生成中..." : "生成数据"}</Text>
-          </TouchableOpacity>
+        <View style={s.headerPanel}>
+          <Text style={s.kicker}>BACKTEST DATA TERMINAL</Text>
+          <Text style={[s.pageTitle, { color: colors.foreground }]}>回测数据管理</Text>
+          <Text style={[s.subtitle, { color: colors.muted }]}>{strategyTitle}</Text>
         </View>
 
-        {/* 数据列表 */}
-        <View style={[s.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View style={[s.contentGrid, isDesktop && s.contentGridDesktop]}>
+          {/* 生成模拟数据 */}
+          <View style={[s.card, isDesktop && s.generatorCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[s.cardTitle, { color: colors.foreground }]}>生成模拟回测数据</Text>
+            <View style={s.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.label, { color: colors.foreground }]}>天数</Text>
+                <TextInput value={genDays} onChangeText={setGenDays} keyboardType="numeric" style={inputStyle} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.label, { color: colors.foreground }]}>年化收益(%)</Text>
+                <TextInput value={genReturn} onChangeText={setGenReturn} keyboardType="numeric" style={inputStyle} />
+              </View>
+            </View>
+            <View style={s.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.label, { color: colors.foreground }]}>波动率(%)</Text>
+                <TextInput value={genVolatility} onChangeText={setGenVolatility} keyboardType="numeric" style={inputStyle} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.label, { color: colors.foreground }]}>初始资金</Text>
+                <TextInput value={genInitial} onChangeText={setGenInitial} keyboardType="numeric" style={inputStyle} />
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={handleGenerate}
+              disabled={isSubmitting}
+              style={[s.btn, { backgroundColor: isSubmitting ? colors.muted : colors.primary }]}
+              activeOpacity={0.8}
+            >
+              <Text style={s.btnText}>{isSubmitting ? "生成中..." : "生成数据"}</Text>
+            </TouchableOpacity>
+            <View style={s.auditBox}>
+              <Text style={s.auditText}>模拟数据只用于页面曲线预览，不会替代真实实盘记录。</Text>
+            </View>
+          </View>
+
+          {/* 数据列表 */}
+          <View style={[s.card, isDesktop && s.dataCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={s.cardHeader}>
             <Text style={[s.cardTitle, { color: colors.foreground }]}>
               数据列表 ({data.length} 条)
@@ -221,6 +230,7 @@ export default function BacktestDataScreen() {
               仅显示前20条，共 {data.length} 条数据
             </Text>
           )}
+          </View>
         </View>
       </ScrollView>
     </ScreenContainer>
@@ -228,16 +238,33 @@ export default function BacktestDataScreen() {
 }
 
 const s = StyleSheet.create({
+  scrollContent: { padding: 16, paddingBottom: 32, maxWidth: 760, alignSelf: "center" as any, width: "100%" as any },
+  scrollContentDesktop: { maxWidth: 1260, paddingHorizontal: 22, paddingTop: 18 },
+  headerPanel: {
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.16)",
+    borderRadius: 6,
+    padding: 15,
+    marginBottom: 12,
+    backgroundColor: "rgba(9,15,28,0.82)",
+  },
+  kicker: { color: "#D8BC83", fontSize: 11, fontWeight: "900", marginBottom: 6 },
   pageTitle: { fontSize: 22, fontWeight: "800", marginBottom: 4 },
   subtitle: { fontSize: 14, marginBottom: 16 },
-  card: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 16 },
+  contentGrid: { gap: 10 },
+  contentGridDesktop: { flexDirection: "row", alignItems: "flex-start" },
+  generatorCard: { width: 410 },
+  dataCard: { flex: 1 },
+  card: { borderWidth: 1, borderRadius: 6, padding: 13, marginBottom: 12 },
   cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 12 },
   cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   label: { fontSize: 13, fontWeight: "500", marginBottom: 4 },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, marginBottom: 8 },
+  input: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, marginBottom: 8 },
   row: { flexDirection: "row", gap: 10 },
-  btn: { paddingVertical: 12, borderRadius: 12, alignItems: "center", marginTop: 8 },
+  btn: { paddingVertical: 11, borderRadius: 6, alignItems: "center", marginTop: 8 },
   btnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  auditBox: { marginTop: 12, padding: 12, borderRadius: 6, backgroundColor: "rgba(216,188,131,0.08)" },
+  auditText: { color: "rgba(226,232,240,0.72)", fontSize: 12, lineHeight: 18 },
   smallBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   dataRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 0.5 },
   dataDate: { fontSize: 14, fontWeight: "600", marginBottom: 2 },

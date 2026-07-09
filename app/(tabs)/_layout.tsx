@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { View, Text, StyleSheet, Platform, TouchableOpacity, Animated } from "react-native";
+import { View, Text, StyleSheet, Platform, TouchableOpacity, Animated, useWindowDimensions } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { ContactModal } from "@/components/contact-modal";
@@ -9,10 +9,11 @@ import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
 import { PcTopNav } from "@/components/pc-top-nav";
 import { FloatingSideNav } from "@/components/floating-side-nav";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 // 自定义Tab图标组件 - 支持高亮和置灰
-function TabIcon({ emoji, label, focused, activeColor, inactiveColor }: {
-  emoji: string;
+function TabIcon({ code, label, focused, activeColor, inactiveColor }: {
+  code: string;
   label: string;
   focused: boolean;
   activeColor: string;
@@ -25,10 +26,10 @@ function TabIcon({ emoji, label, focused, activeColor, inactiveColor }: {
         focused && { backgroundColor: activeColor + "15" },
       ]}>
         <Text style={[
-          styles.tabEmoji,
+          styles.tabCode,
           { opacity: focused ? 1 : 0.45 },
         ]}>
-          {emoji}
+          {code}
         </Text>
       </View>
       <Text style={[
@@ -48,33 +49,55 @@ function TabIcon({ emoji, label, focused, activeColor, inactiveColor }: {
 }
 
 // 全局悬浮咨询按钮
-function FloatingConsultButton() {
+function FloatingConsultButton({
+  compact,
+  dockInHeader,
+  isWeb,
+}: {
+  compact: boolean;
+  dockInHeader: boolean;
+  isWeb: boolean;
+}) {
   const colors = useColors();
   const [showContactModal, setShowContactModal] = useState(false);
   const [scaleAnim] = useState(new Animated.Value(1));
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, { toValue: 0.9, useNativeDriver: true }).start();
+    Animated.spring(scaleAnim, { toValue: 0.9, useNativeDriver: Platform.OS !== "web" }).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true }).start();
+    Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: Platform.OS !== "web" }).start();
   };
 
   return (
     <>
       <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
-      <Animated.View style={[styles.floatingBtnWrapper, { transform: [{ scale: scaleAnim }] }]}>
+      <Animated.View
+        style={[
+          styles.floatingBtnWrapper,
+          isWeb && styles.floatingBtnWrapperWeb,
+          dockInHeader && styles.floatingBtnWrapperHeader,
+          { transform: [{ scale: scaleAnim }] },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => setShowContactModal(true)}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={0.9}
-          style={[styles.floatingBtn, { backgroundColor: colors.primary, shadowColor: colors.primary }, glassStyle("btn") as any]}
+          style={[
+            styles.floatingBtn,
+            compact && styles.floatingBtnCompact,
+            dockInHeader && styles.floatingBtnHeader,
+            { backgroundColor: colors.primary, shadowColor: colors.primary },
+            glassStyle("btn") as any,
+          ]}
+          accessibilityLabel="联系咨询"
 
         >
-          <Text style={styles.floatingBtnEmoji}>💬</Text>
-          <Text style={styles.floatingBtnText}>咨询</Text>
+          <IconSymbol name="bubble.left.fill" size={compact ? 19 : 16} color="#fff" />
+          {!compact && <Text style={styles.floatingBtnText}>咨询</Text>}
         </TouchableOpacity>
       </Animated.View>
     </>
@@ -84,7 +107,9 @@ function FloatingConsultButton() {
 export default function TabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const isWeb = Platform.OS === "web";
+  const isCompactWeb = isWeb && width < 768;
   const bottomPadding = isWeb ? 4 : Math.max(insets.bottom, 4);
   const tabBarHeight = (isWeb ? 72 : 56) + bottomPadding;
 
@@ -118,7 +143,7 @@ export default function TabLayout() {
           options={{
             title: "策略",
             tabBarIcon: ({ focused }) => (
-              <TabIcon emoji="📈" label="策略" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
+              <TabIcon code="EA" label="策略" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
             ),
           }}
         />
@@ -127,7 +152,7 @@ export default function TabLayout() {
           options={{
             title: "合作",
             tabBarIcon: ({ focused }) => (
-              <TabIcon emoji="🤝" label="合作" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
+              <TabIcon code="B2B" label="合作" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
             ),
           }}
         />
@@ -136,7 +161,7 @@ export default function TabLayout() {
           options={{
             title: "合购",
             tabBarIcon: ({ focused }) => (
-              <TabIcon emoji="🛒" label="合购" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
+              <TabIcon code="GB" label="合购" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
             ),
           }}
         />
@@ -145,7 +170,7 @@ export default function TabLayout() {
           options={{
             title: "订阅",
             tabBarIcon: ({ focused }) => (
-              <TabIcon emoji="📬" label="订阅" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
+              <TabIcon code="ACC" label="订阅" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
             ),
           }}
         />
@@ -154,7 +179,7 @@ export default function TabLayout() {
         <Tabs.Screen name="profile" options={{ href: null }} />
       </Tabs>
       {/* 全局悬浮咋询按钮 */}
-      <FloatingConsultButton />
+      <FloatingConsultButton compact={isWeb} dockInHeader={isCompactWeb} isWeb={isWeb} />
     </View>
   );
 }
@@ -174,9 +199,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 1,
   },
-  tabEmoji: {
-    fontSize: 18,
-    lineHeight: 22,
+  tabCode: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "900",
+    letterSpacing: 0,
   },
   tabLabel: {
     fontSize: 10,
@@ -195,6 +222,15 @@ const styles = StyleSheet.create({
     bottom: 80,
     zIndex: 999,
   },
+  floatingBtnWrapperWeb: {
+    right: 8,
+    bottom: 24,
+  },
+  floatingBtnWrapperHeader: {
+    right: 68,
+    top: 8,
+    bottom: "auto" as any,
+  },
   floatingBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -207,8 +243,17 @@ const styles = StyleSheet.create({
     elevation: 8,
     gap: 4,
   },
-  floatingBtnEmoji: {
-    fontSize: 16,
+  floatingBtnCompact: {
+    width: 44,
+    height: 44,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderRadius: 6,
+    justifyContent: "center",
+  },
+  floatingBtnHeader: {
+    width: 40,
+    height: 40,
   },
   floatingBtnText: {
     color: "#fff",

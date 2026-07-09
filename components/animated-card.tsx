@@ -22,12 +22,12 @@ export function AnimatedCard({ index = 0, delay = 0, children, style, ...props }
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 350,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
         Animated.timing(translateY, {
           toValue: 0,
           duration: 350,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== "web",
         }),
       ]).start();
     }, staggerDelay);

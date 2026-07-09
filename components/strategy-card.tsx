@@ -61,7 +61,7 @@ export function StrategyCard({
     Animated.timing(scaleAnim, {
       toValue: 0.97,
       duration: 80,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
     }).start();
   };
 
@@ -69,7 +69,7 @@ export function StrategyCard({
     Animated.timing(scaleAnim, {
       toValue: 1,
       duration: 150,
-      useNativeDriver: true,
+      useNativeDriver: Platform.OS !== "web",
     }).start();
   };
 
@@ -87,10 +87,10 @@ export function StrategyCard({
 
   const gradientColors: readonly [string, string, ...string[]] =
     isFeatured
-      ? ["#92400E", "#A8895A", "#E8CC97"] // 金色渐变 - 旗舰产品
+      ? ["#100D07", "#2A2112", "#C9A96E"]
       : platform === "MT4"
-        ? ["#1a365d", "#2563eb", "#60a5fa"]
-        : ["#4c1d95", "#7c3aed", "#a78bfa"];
+        ? ["#06101D", "#11233A", "#41607A"]
+        : ["#06140F", "#12382B", "#34D399"];
 
   const returnValue = parseFloat(totalReturn) || 0;
   const isPositive = returnValue >= 0;
@@ -103,8 +103,8 @@ export function StrategyCard({
   const returnText = `${isPositive ? "+" : ""}${totalReturn}%`;
   const priceText = `¥${price}`;
   const originalPriceText = originalPrice ? `¥${originalPrice}` : "";
-  const viewText = `👁 ${viewCount}`;
-  const downloadText = `💾 ${downloadCount + virtualDownloads}`;
+  const viewText = `VIEW ${viewCount}`;
+  const downloadText = `DL ${downloadCount + virtualDownloads}`;
 
   // 解析标签
   const tagList = tags ? tags.split(",").map(t => t.trim()).filter(Boolean).slice(0, 2) : [];
@@ -112,18 +112,19 @@ export function StrategyCard({
   // 产品类型标签
   const productTypeLabel = productType === "indicator" ? "指标" : productType === "tool" ? "工具" : null;
 
-  const gap = numColumns >= 4 ? 12 : numColumns >= 3 ? 10 : 8;
+  const gap = numColumns >= 5 ? 10 : numColumns >= 4 ? 12 : numColumns >= 3 ? 10 : 8;
   const cardMargin = gap / 2;
 
   // 封面高度
-  const coverHeight = isDesktop ? 180 : numColumns >= 3 ? 150 : 130;
+  const coverHeight = isDesktop ? 128 : numColumns >= 3 ? 150 : 130;
 
   // 响应式尺寸
   const titleSize = isDesktop ? 14 : 13;
-  const priceSize = isDesktop ? 13 : 12;
+  const priceSize = isDesktop ? 14 : 12;
   const metaSize = isDesktop ? 10 : 9;
-  const infoPadH = isDesktop ? 12 : 8;
-  const infoPadV = isDesktop ? 10 : 6;
+  const infoPadH = isDesktop ? 11 : 8;
+  const infoPadV = isDesktop ? 9 : 6;
+  const coverCode = isFeatured ? "PRO" : productType === "indicator" ? "IND" : productType === "tool" ? "TOOL" : "EA";
 
   return (
     <TouchableOpacity
@@ -170,9 +171,10 @@ export function StrategyCard({
               end={{ x: 1, y: 1 }}
               style={[styles.gradient, { height: coverHeight }]}
             >
-              <Text style={styles.coverEmoji}>
-                {isFeatured ? "🏆" : productType === "indicator" ? "📊" : productType === "tool" ? "🔧" : "📈"}
-              </Text>
+              <View style={styles.coverCodePanel}>
+                <Text style={styles.coverCodeText}>{coverCode}</Text>
+                <Text style={styles.coverCodeSub}>{platform} SOURCE</Text>
+              </View>
             </LinearGradient>
           )}
 
@@ -185,7 +187,7 @@ export function StrategyCard({
                 end={{ x: 1, y: 0 }}
                 style={styles.featuredGradient}
               >
-                <Text style={styles.featuredText}>⭐ 官方旗舰</Text>
+                <Text style={styles.featuredText}>官方旗舰</Text>
               </LinearGradient>
             </View>
           )}
@@ -218,7 +220,7 @@ export function StrategyCard({
               style={[styles.subscribeBtn, { backgroundColor: `${colors.primary}E6` }]}
               activeOpacity={0.7}
             >
-              <Text style={styles.subscribeBtnIcon}>📬</Text>
+              <Text style={styles.subscribeBtnIcon}>SUB</Text>
             </TouchableOpacity>
           )}
 
@@ -292,9 +294,9 @@ export function StrategyCard({
 const styles = StyleSheet.create({
   cardWrapper: {},
   card: {
-    borderRadius: 14,
+    borderRadius: 6,
     overflow: "hidden",
-    borderWidth: 0.5,
+    borderWidth: 1,
   },
   coverContainer: {
     position: "relative",
@@ -308,8 +310,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  coverEmoji: {
-    fontSize: 48,
+  coverCodePanel: {
+    minWidth: 78,
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(2,6,23,0.28)",
+  },
+  coverCodeText: {
+    color: "#F8FAFC",
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: "900",
+  },
+  coverCodeSub: {
+    color: "rgba(226,232,240,0.72)",
+    fontSize: 9,
+    lineHeight: 12,
+    fontWeight: "800",
+    marginTop: 2,
   },
   // 旗舰标签
   featuredBadge: {
@@ -334,7 +355,7 @@ const styles = StyleSheet.create({
     left: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 3,
   },
   platformText: {
     fontSize: 11,
@@ -359,14 +380,17 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    minWidth: 34,
+    height: 24,
+    borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 7,
   },
   subscribeBtnIcon: {
-    fontSize: 14,
+    color: "#0A1628",
+    fontSize: 10,
+    fontWeight: "900",
   },
   returnOverlay: {
     position: "absolute",
@@ -374,7 +398,7 @@ const styles = StyleSheet.create({
     right: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 3,
   },
   returnOverlayText: {
     color: "#fff",
@@ -385,8 +409,8 @@ const styles = StyleSheet.create({
     // padding set dynamically
   },
   title: {
-    fontWeight: "700",
-    marginBottom: 3,
+    fontWeight: "800",
+    marginBottom: 4,
     lineHeight: 18,
   },
   // 标签行
@@ -399,7 +423,7 @@ const styles = StyleSheet.create({
   tagChip: {
     paddingHorizontal: 6,
     paddingVertical: 1,
-    borderRadius: 4,
+    borderRadius: 3,
   },
   tagText: {
     fontWeight: "600",
@@ -409,6 +433,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
+    paddingTop: 3,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(148,163,184,0.10)",
   },
   priceSlot: {
     flex: 1,
@@ -444,7 +471,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginTop: 3,
+    marginTop: 4,
     minWidth: 0,
     flexShrink: 1,
   },

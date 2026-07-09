@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, RefreshControl, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Platform, RefreshControl, StyleSheet, Text, View } from "react-native";
 import type { ListRenderItem } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
@@ -10,6 +10,7 @@ import { HomeHero } from "@/components/home/home-hero";
 import { StrategyFilters, type OrderBy, type PlatformFilter, type SaleModeFilter } from "@/components/home/strategy-filters";
 import { StrategyListItem } from "@/components/home/strategy-list-item";
 import { StrategyListEmpty, StrategyListFooter } from "@/components/home/strategy-list-states";
+import { LOCAL_PREVIEW_STRATEGIES } from "@/components/home/preview-strategies";
 import type { HomeStrategy } from "@/components/home/types";
 import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
@@ -17,16 +18,16 @@ import { trpc } from "@/lib/trpc";
 
 const PAGE_SIZE = 12;
 const PRODUCT_TYPE_OPTIONS = [
-  { name: "EA", slug: "ea", icon: "🤖", parentId: null },
-  { name: "指标", slug: "indicator", icon: "📈", parentId: null },
-  { name: "工具", slug: "tool", icon: "🧰", parentId: null },
+  { name: "EA", slug: "ea", icon: null, parentId: null },
+  { name: "指标", slug: "indicator", icon: null, parentId: null },
+  { name: "工具", slug: "tool", icon: null, parentId: null },
 ];
 const PRODUCT_TYPE_SLUGS = new Set(PRODUCT_TYPE_OPTIONS.map((item) => item.slug));
 
 export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { numColumns } = useResponsive();
+  const { numColumns, isDesktop } = useResponsive();
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(undefined);
   const [orderBy, setOrderBy] = useState<OrderBy>("hot");
   const [tagFilter, setTagFilter] = useState("");
@@ -54,9 +55,36 @@ export default function HomeScreen() {
     return productTypeCategories.length > 0 ? productTypeCategories : PRODUCT_TYPE_OPTIONS;
   }, [categoriesData]);
 
+  const listFilters = useMemo(() => ({
+    platform: platformFilter,
+    orderBy,
+    tag: tagFilter || undefined,
+    productType: productTypeFilter,
+    saleMode: activeSaleMode,
+  }), [activeSaleMode, orderBy, platformFilter, productTypeFilter, tagFilter]);
+
+  const { data: initialData, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
+    ...listFilters,
+    limit: PAGE_SIZE,
+    offset: 0,
+  });
+
+  const isLocalPreview = useMemo(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return false;
+    return ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname);
+  }, []);
+
+  const displayStrategies = useMemo(() => {
+    if (allStrategies.length > 0) return allStrategies;
+    if (isLocalPreview && !isLoading) return LOCAL_PREVIEW_STRATEGIES;
+    return allStrategies;
+  }, [allStrategies, isLoading, isLocalPreview]);
+
+  const isShowingPreviewCatalog = isLocalPreview && allStrategies.length === 0 && displayStrategies.length > 0;
+
   const dynamicTags = useMemo(() => {
     const tagCountMap = new Map<string, number>();
-    allStrategies.forEach((strategy) => {
+    displayStrategies.forEach((strategy) => {
       if (strategy.tags) {
         strategy.tags
           .split(",")
@@ -72,21 +100,7 @@ export default function HomeScreen() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([tag]) => ({ label: tag, value: tag }));
-  }, [allStrategies]);
-
-  const listFilters = useMemo(() => ({
-    platform: platformFilter,
-    orderBy,
-    tag: tagFilter || undefined,
-    productType: productTypeFilter,
-    saleMode: activeSaleMode,
-  }), [activeSaleMode, orderBy, platformFilter, productTypeFilter, tagFilter]);
-
-  const { data: initialData, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
-    ...listFilters,
-    limit: PAGE_SIZE,
-    offset: 0,
-  });
+  }, [displayStrategies]);
 
   useEffect(() => {
     if (initialData) {
@@ -120,7 +134,7 @@ export default function HomeScreen() {
   }, []);
 
   const handleLoadMore = useCallback(async () => {
-    if (!hasMore || isLoadingMore || isLoading) return;
+    if (isShowingPreviewCatalog || !hasMore || isLoadingMore || isLoading) return;
     setIsLoadingMore(true);
     try {
       const result = await refetchLoadMore();
@@ -140,7 +154,7 @@ export default function HomeScreen() {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [hasMore, isLoadingMore, isLoading, refetchLoadMore]);
+  }, [hasMore, isLoadingMore, isLoading, isShowingPreviewCatalog, refetchLoadMore]);
 
   const handleRefresh = useCallback(async () => {
     setOffset(0);
@@ -154,13 +168,31 @@ export default function HomeScreen() {
   }, []);
 
   const handleStrategyPress = useCallback((id: number) => {
+    if (id < 0) {
+      openContactModal();
+      return;
+    }
     router.push(`/strategy/${id}` as any);
-  }, [router]);
+  }, [openContactModal, router]);
 
   const renderHeader = useCallback(() => (
-    <View style={{ marginBottom: 4 }}>
-      <HomeHero />
-      <CustomEABanner onPress={openContactModal} />
+    <View style={styles.headerBlock}>
+      {isDesktop ? (
+        <View style={styles.desktopHeroGrid}>
+          <View style={styles.desktopHeroMain}>
+            <HomeHero />
+          </View>
+          <View style={styles.desktopHeroSide}>
+            <CustomEABanner onPress={openContactModal} />
+            <DesktopBriefPanel itemCount={allStrategies.length} />
+          </View>
+        </View>
+      ) : (
+        <>
+          <HomeHero />
+          <CustomEABanner onPress={openContactModal} />
+        </>
+      )}
       <StrategyFilters
         colors={colors}
         platformFilter={platformFilter}
@@ -181,8 +213,9 @@ export default function HomeScreen() {
         onUploadPress={openContactModal}
         onSearchPress={openSearch}
       />
+      {isShowingPreviewCatalog ? <LocalPreviewStrip /> : null}
     </View>
-  ), [categoryFilter, categoriesForFilters, clearAllFilters, colors, dynamicTags, openContactModal, openSearch, orderBy, platformFilter, saleModeFilter, showAdvancedFilters, tagFilter, toggleAdvancedFilters]);
+  ), [allStrategies.length, categoryFilter, categoriesForFilters, clearAllFilters, colors, dynamicTags, isDesktop, isShowingPreviewCatalog, openContactModal, openSearch, orderBy, platformFilter, saleModeFilter, showAdvancedFilters, tagFilter, toggleAdvancedFilters]);
 
   const renderEmpty = useCallback(() => (
     <StrategyListEmpty
@@ -195,10 +228,10 @@ export default function HomeScreen() {
     <StrategyListFooter
       colors={colors}
       isLoadingMore={isLoadingMore}
-      hasMore={hasMore}
-      itemCount={allStrategies.length}
+      hasMore={isShowingPreviewCatalog ? false : hasMore}
+      itemCount={displayStrategies.length}
     />
-  ), [allStrategies.length, colors, hasMore, isLoadingMore]);
+  ), [colors, displayStrategies.length, hasMore, isLoadingMore, isShowingPreviewCatalog]);
 
   const renderStrategyItem = useCallback<ListRenderItem<HomeStrategy>>(({ item }) => (
     <StrategyListItem
@@ -225,7 +258,7 @@ export default function HomeScreen() {
       <ContactModal visible={showContactModal} onClose={closeContactModal} />
       <SubscribeModal visible={showSubscribeModal} onClose={closeSubscribeModal} strategyTitle={selectedStrategyTitle} />
       <FlatList
-        data={allStrategies}
+        data={displayStrategies}
         keyExtractor={keyExtractor}
         key={numColumns}
         numColumns={numColumns}
@@ -233,8 +266,8 @@ export default function HomeScreen() {
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
         ListFooterComponent={renderFooter}
-        columnWrapperStyle={{ justifyContent: "flex-start" }}
-        contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 20 }}
+        columnWrapperStyle={styles.columnWrapper}
+        contentContainerStyle={[styles.listContent, isDesktop && styles.listContentDesktop]}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} tintColor="#A8895A" />}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
@@ -246,3 +279,184 @@ export default function HomeScreen() {
     </ScreenContainer>
   );
 }
+
+function LocalPreviewStrip() {
+  return (
+    <View style={styles.previewStrip}>
+      <View style={styles.previewStripRail} />
+      <Text style={styles.previewStripKicker}>LOCAL PREVIEW</Text>
+      <Text style={styles.previewStripText}>本地样板策略 · 正式域名自动读取真实数据库</Text>
+    </View>
+  );
+}
+
+function DesktopBriefPanel({ itemCount }: { itemCount: number }) {
+  const rows = [
+    { label: "可浏览策略", value: `${itemCount || 200}+`, tone: "#D8BC83" },
+    { label: "交付模式", value: "DIRECT / B2B", tone: "#60A5FA" },
+    { label: "源头审核", value: "MANUAL", tone: "#34D399" },
+  ];
+
+  return (
+    <View style={styles.briefPanel}>
+      <View style={styles.briefHeader}>
+        <Text style={styles.briefKicker}>INSTITUTIONAL VIEW</Text>
+        <Text style={styles.briefTime}>EAXAU</Text>
+      </View>
+      {rows.map((row) => (
+        <View key={row.label} style={styles.briefRow}>
+          <Text style={styles.briefLabel}>{row.label}</Text>
+          <Text style={[styles.briefValue, { color: row.tone }]}>{row.value}</Text>
+        </View>
+      ))}
+      <View style={styles.briefDivider} />
+      <View style={styles.briefGrid}>
+        <View style={styles.briefMetric}>
+          <Text style={styles.briefMetricValue}>MT4/MT5</Text>
+          <Text style={styles.briefMetricLabel}>平台覆盖</Text>
+        </View>
+        <View style={styles.briefMetric}>
+          <Text style={styles.briefMetricValue}>T+0</Text>
+          <Text style={styles.briefMetricLabel}>咨询响应</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  listContent: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: 24,
+  },
+  listContentDesktop: {
+    width: "100%",
+    maxWidth: 1360,
+    alignSelf: "center",
+    paddingHorizontal: 22,
+    paddingBottom: 36,
+  },
+  headerBlock: {
+    marginBottom: 4,
+  },
+  desktopHeroGrid: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  desktopHeroMain: {
+    flex: 1.72,
+    minWidth: 0,
+  },
+  desktopHeroSide: {
+    flex: 0.92,
+    minWidth: 310,
+    gap: 7,
+  },
+  previewStrip: {
+    marginTop: 10,
+    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.18)",
+    backgroundColor: "rgba(9,13,24,0.72)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  previewStripRail: {
+    width: 3,
+    height: 22,
+    backgroundColor: "#D8BC83",
+  },
+  previewStripKicker: {
+    color: "#D8BC83",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0,
+  },
+  previewStripText: {
+    color: "rgba(226,232,240,0.72)",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  briefPanel: {
+    flex: 1,
+    minHeight: 132,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.14)",
+    backgroundColor: "rgba(7,12,24,0.92)",
+  },
+  briefHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  briefKicker: {
+    color: "rgba(216,188,131,0.78)",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0,
+  },
+  briefTime: {
+    color: "rgba(226,232,240,0.52)",
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  briefRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(148,163,184,0.08)",
+  },
+  briefLabel: {
+    color: "rgba(226,232,240,0.68)",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  briefValue: {
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  briefDivider: {
+    height: 1,
+    backgroundColor: "rgba(216,188,131,0.14)",
+    marginTop: 9,
+    marginBottom: 9,
+  },
+  briefGrid: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  briefMetric: {
+    flex: 1,
+    padding: 7,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.12)",
+    backgroundColor: "rgba(15,23,42,0.66)",
+  },
+  briefMetricValue: {
+    color: "#F8FAFC",
+    fontSize: 13,
+    fontWeight: "900",
+    marginBottom: 3,
+  },
+  briefMetricLabel: {
+    color: "rgba(148,163,184,0.82)",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  columnWrapper: {
+    justifyContent: "flex-start",
+  },
+});

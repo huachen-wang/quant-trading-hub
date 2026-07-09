@@ -1,4 +1,4 @@
-import { StyleSheet, View, type ViewProps } from "react-native";
+import { Platform, StyleSheet, View, useWindowDimensions, type ViewProps } from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
 import { SchemeColors } from "@/constants/theme";
@@ -48,12 +48,23 @@ export function ScreenContainer({
   style,
   ...props
 }: ScreenContainerProps) {
+  const { width } = useWindowDimensions();
+  const isDesktopWeb = Platform.OS === "web" && width >= 1024;
+
   return (
     <View
       style={styles.container}
       className={containerClassName ? cn(containerClassName) : undefined}
       {...props}
     >
+      {isDesktopWeb && (
+        <>
+          <View pointerEvents="none" style={styles.desktopGrid} />
+          <View pointerEvents="none" style={styles.desktopTopRule} />
+          <View pointerEvents="none" style={[styles.desktopRail, styles.desktopRailLeft]} />
+          <View pointerEvents="none" style={[styles.desktopRail, styles.desktopRailRight]} />
+        </>
+      )}
       <SafeAreaView
         edges={edges}
         className={safeAreaClassName ? cn(safeAreaClassName) : undefined}
@@ -71,9 +82,48 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: SchemeColors.dark.background,
+    position: "relative",
+  },
+  desktopGrid: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    opacity: 0.48,
+    ...(Platform.OS === "web"
+      ? {
+          backgroundImage:
+            "linear-gradient(rgba(148,163,184,0.050) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.045) 1px, transparent 1px), linear-gradient(rgba(216,188,131,0.028) 1px, transparent 1px)",
+          backgroundSize: "72px 72px, 72px 72px, 100% 1px",
+        }
+      : {}),
+  } as any,
+  desktopTopRule: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: "rgba(216,188,131,0.18)",
+  },
+  desktopRail: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: "rgba(216,188,131,0.06)",
+  },
+  desktopRailLeft: {
+    left: 22,
+  },
+  desktopRailRight: {
+    right: 22,
   },
   safeArea: {
     flex: 1,
+    position: "relative",
+    zIndex: 1,
   },
   content: {
     flex: 1,

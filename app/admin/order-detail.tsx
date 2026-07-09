@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ScrollView,
   StyleSheet,
   ActivityIndicator,
   TextInput,
@@ -15,7 +14,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { EmptyState } from "@/components/empty-state";
-import { ScreenContainer } from "@/components/screen-container";
+import { AdminPageChrome } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { glassStyle } from "@/lib/glass-styles";
@@ -74,24 +73,24 @@ export default function AdminOrderDetailScreen() {
 
   if (isLoading) {
     return (
-      <ScreenContainer>
+      <AdminPageChrome eyebrow="ORDER DETAIL" title="订单详情" subtitle="加载订单信息" maxWidth={980}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#D8BC83" />
         </View>
-      </ScreenContainer>
+      </AdminPageChrome>
     );
   }
   if (!order) {
     return (
-      <ScreenContainer>
+      <AdminPageChrome eyebrow="ORDER DETAIL" title="订单详情" subtitle="未找到订单" maxWidth={980}>
         <EmptyState
-          emoji="🧾"
+          emoji=""
           title={params.orderNo ? "订单不存在" : "缺少订单号"}
           subtitle="请从订单管理列表进入详情页，避免手动输入错误的订单编号。"
           actionLabel="返回订单管理"
           onAction={() => router.replace("/admin/orders" as any)}
         />
-      </ScreenContainer>
+      </AdminPageChrome>
     );
   }
 
@@ -121,18 +120,25 @@ export default function AdminOrderDetailScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        {/* 顶部 */}
-        <View style={styles.header}>
+    <AdminPageChrome
+      eyebrow="ORDER DETAIL"
+      title="订单详情"
+      subtitle="订单、支付尝试和人工确认记录"
+      metrics={[
+        { label: "订单状态", value: STATUS_LABELS[order.status] || order.status, tone: statusColor },
+        { label: "实付金额", value: `¥${order.amount}`, tone: "#D8BC83" },
+        { label: "支付记录", value: order.payments?.length || 0, tone: colors.primary },
+      ]}
+      action={
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={{ color: colors.foreground, fontSize: 18 }}>←</Text>
+            <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: "900" }}>返回</Text>
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.foreground }]}>订单详情</Text>
-        </View>
+      }
+      maxWidth={980}
+    >
 
         {/* 订单基本信息 */}
-        <View style={[styles.card, { backgroundColor: colors.surface }, glassStyle("subtle") as any]}>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, glassStyle("subtle") as any]}>
           <View style={styles.cardHeader}>
             <Text style={[styles.orderNo, { color: colors.foreground }]}>{order.orderNo}</Text>
             <View
@@ -172,16 +178,16 @@ export default function AdminOrderDetailScreen() {
         </View>
 
         {/* 用户信息 */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>👤 下单用户</Text>
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>下单用户</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <InfoRow label="用户 ID" value={`#${order.userId}`} colors={colors} />
           {order.remark ? <InfoRow label="用户备注" value={order.remark} colors={colors} /> : null}
         </View>
 
         {/* 支付记录 */}
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>💳 支付记录</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>支付记录</Text>
         {!order.payments || order.payments.length === 0 ? (
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center", padding: 12 }}>
               暂无支付记录
             </Text>
@@ -192,7 +198,7 @@ export default function AdminOrderDetailScreen() {
             return (
               <View
                 key={p.id}
-                style={[styles.card, { backgroundColor: colors.surface }]}
+                style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
                 <View style={styles.cardHeader}>
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -276,12 +282,11 @@ export default function AdminOrderDetailScreen() {
               ]}
             >
               <Text style={[styles.actionBtnText, { color: "#93c5fd" }]}>
-                📥 查看商品下载链接
+                查看商品下载链接
               </Text>
             </View>
           </TouchableOpacity>
         )}
-      </ScrollView>
 
       {/* 确认 USDT Modal */}
       <Modal
@@ -345,7 +350,7 @@ export default function AdminOrderDetailScreen() {
           </View>
         </View>
       </Modal>
-    </ScreenContainer>
+    </AdminPageChrome>
   );
 }
 
@@ -398,20 +403,19 @@ function fmtDate(d: any): string {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: { flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 8 },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     backgroundColor: "rgba(148, 163, 184, 0.08)",
   },
-  title: { fontSize: 22, fontWeight: "900" },
   card: {
-    borderRadius: 12,
+    borderRadius: 8,
     padding: 14,
     marginBottom: 10,
+    borderWidth: 1,
   },
   cardHeader: {
     flexDirection: "row",

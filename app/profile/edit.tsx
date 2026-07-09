@@ -15,6 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/hooks/use-auth";
 import { useColors } from "@/hooks/use-colors";
+import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
 import { glassStyle } from "@/lib/glass-styles";
 import { getApiBaseUrl } from "@/constants/oauth";
@@ -32,6 +33,7 @@ import { getApiBaseUrl } from "@/constants/oauth";
 export default function ProfileEditScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { isDesktop } = useResponsive();
   const { user, isAuthenticated, loading, refresh } = useAuth();
 
   const [name, setName] = useState("");
@@ -115,7 +117,7 @@ export default function ProfileEditScreen() {
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, isDesktop && styles.scrollContentDesktop]}>
         {/* 顶部 */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -261,6 +263,14 @@ export default function ProfileEditScreen() {
 }
 
 const styles = StyleSheet.create({
+  scrollContent: { padding: 16, paddingBottom: 40 },
+  scrollContentDesktop: {
+    width: "100%",
+    maxWidth: 920,
+    alignSelf: "center",
+    paddingHorizontal: 28,
+    paddingTop: 22,
+  },
   header: { flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 8 },
   backBtn: {
     width: 36,

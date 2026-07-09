@@ -64,8 +64,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   statsCard: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 8,
+    padding: 14,
   },
   statsRow: {
     flexDirection: "row",
@@ -88,8 +88,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   infoCard: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 8,
+    padding: 14,
   },
   infoRow: {
     flexDirection: "row",

@@ -1,5 +1,5 @@
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, Platform, StyleSheet, TextInput, Modal, ScrollView } from "react-native";
-import { ScreenContainer } from "@/components/screen-container";
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Platform, StyleSheet, TextInput, Modal, ScrollView } from "react-native";
+import { AdminPageChrome, AdminSection } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { getAdminGroupBuys, createGroupBuy, updateGroupBuy, deleteGroupBuy } from "@/lib/admin-api";
 import { useState, useEffect, useCallback } from "react";
@@ -120,7 +120,7 @@ export default function AdminGroupBuys() {
   };
 
   const renderItem = ({ item }: { item: any }) => (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.card, { borderBottomColor: colors.border }]}>
       <View style={styles.cardHeader}>
         <Text style={[styles.cardTitle, { color: colors.foreground }]}>{item.title}</Text>
         <View style={[styles.badge, { backgroundColor: statusColors[item.status] + "20" }]}>
@@ -144,26 +144,34 @@ export default function AdminGroupBuys() {
   );
 
   return (
-    <ScreenContainer>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>🤝 合购管理 ({groupBuys.length})</Text>
+    <AdminPageChrome
+      eyebrow="GROUP BUY OPS"
+      title="合购管理"
+      subtitle="维护合购项目、目标人数、价格和联系方式"
+      metrics={[
+        { label: "全部项目", value: groupBuys.length, tone: colors.primary },
+        { label: "进行中", value: groupBuys.filter((item) => item.status === "active").length, tone: colors.success },
+        { label: "已完成", value: groupBuys.filter((item) => item.status === "completed").length, tone: "#60A5FA" },
+      ]}
+      action={
         <TouchableOpacity onPress={openCreate} style={[styles.addBtn, { backgroundColor: colors.primary }]}>
-          <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>+ 新建合购</Text>
+          <Text style={{ color: "#07111F", fontWeight: "900", fontSize: 13 }}>新建合购</Text>
         </TouchableOpacity>
-      </View>
+      }
+      maxWidth={1280}
+    >
 
-      {isLoading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
-      ) : groupBuys.length === 0 ? (
-        <View style={styles.center}><Text style={{ color: colors.muted, fontSize: 16 }}>暂无合购活动</Text></View>
-      ) : (
-        <FlatList
-          data={groupBuys}
-          renderItem={renderItem}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-        />
-      )}
+      <AdminSection title="合购项目" meta="PROJECT RECORDS">
+        {isLoading ? (
+          <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
+        ) : groupBuys.length === 0 ? (
+          <View style={styles.center}><Text style={{ color: colors.muted, fontSize: 16 }}>暂无合购活动</Text></View>
+        ) : (
+          <View style={[styles.tablePanel, { borderColor: colors.border }]}>
+            {groupBuys.map((item) => renderItem({ item }))}
+          </View>
+        )}
+      </AdminSection>
 
       {/* 表单弹窗 */}
       <Modal visible={showForm} animationType="slide" transparent>
@@ -278,20 +286,19 @@ export default function AdminGroupBuys() {
           </View>
         </View>
       </Modal>
-    </ScreenContainer>
+    </AdminPageChrome>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 16, borderBottomWidth: 0.5 },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
-  addBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  card: { borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 0.5 },
+  addBtn: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 6 },
+  center: { minHeight: 220, justifyContent: "center", alignItems: "center" },
+  tablePanel: { borderWidth: 1, borderRadius: 8, overflow: "hidden", backgroundColor: "rgba(15,23,42,0.56)" },
+  card: { padding: 16, borderBottomWidth: 1 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   cardTitle: { fontSize: 16, fontWeight: "600", flex: 1 },
   cardSub: { fontSize: 13, marginBottom: 4 },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
   badgeText: { fontSize: 12, fontWeight: "600" },
   cardActions: { flexDirection: "row", gap: 8, marginTop: 12 },
   actionBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },

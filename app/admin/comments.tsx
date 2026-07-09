@@ -1,5 +1,5 @@
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, Platform, StyleSheet, TextInput } from "react-native";
-import { ScreenContainer } from "@/components/screen-container";
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Platform, StyleSheet, TextInput } from "react-native";
+import { AdminPageChrome, AdminSection } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { adminQuery, adminMutation } from "@/lib/admin-api";
 import { useState, useEffect, useCallback } from "react";
@@ -145,31 +145,34 @@ export default function AdminComments() {
   const selectedStrategy = strategies.find((s: any) => s.id === selectedStrategyId);
 
   return (
-    <ScreenContainer>
-      <View style={{ flex: 1 }}>
-        <View style={[st.header, { borderBottomColor: colors.border }]}>
-          <Text style={[st.title, { color: colors.foreground }]}>
-            {tab === "reviews" ? "💬 评论审核" : "📝 备注管理"}
-          </Text>
-          <Text style={[st.subtitle, { color: colors.muted }]}>
-            {tab === "reviews"
-              ? (pendingCount > 0 ? `${pendingCount} 条待审核` : "暂无待审核评论")
-              : `共 ${notes.length} 条备注`}
-          </Text>
-        </View>
-
-        {/* Tab切换 */}
-        <View style={[st.tabRow, { borderBottomColor: colors.border }]}>
+    <AdminPageChrome
+      eyebrow="COMMENT OPS"
+      title={tab === "reviews" ? "评论审核" : "备注管理"}
+      subtitle="审核公开评价，维护策略备注和后台运营记录"
+      metrics={[
+        { label: "评论队列", value: comments.length, tone: colors.primary },
+        { label: "待审核", value: pendingCount, tone: colors.warning },
+        { label: "备注记录", value: notes.length, tone: "#60A5FA" },
+      ]}
+      maxWidth={1240}
+    >
+        <View style={st.tabRow}>
           <TouchableOpacity
             onPress={() => setTab("reviews")}
-            style={[st.tabBtn, tab === "reviews" && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+            style={[
+              st.tabBtn,
+              { backgroundColor: tab === "reviews" ? colors.primary + "18" : colors.surface, borderColor: tab === "reviews" ? colors.primary : colors.border },
+            ]}
             activeOpacity={0.7}
           >
             <Text style={{ fontSize: 14, fontWeight: "600", color: tab === "reviews" ? colors.primary : colors.muted }}>评论审核</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setTab("notes")}
-            style={[st.tabBtn, tab === "notes" && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+            style={[
+              st.tabBtn,
+              { backgroundColor: tab === "notes" ? colors.primary + "18" : colors.surface, borderColor: tab === "notes" ? colors.primary : colors.border },
+            ]}
             activeOpacity={0.7}
           >
             <Text style={{ fontSize: 14, fontWeight: "600", color: tab === "notes" ? colors.primary : colors.muted }}>备注管理</Text>
@@ -177,23 +180,31 @@ export default function AdminComments() {
         </View>
 
         {tab === "reviews" ? (
-          <>
-            <View style={[st.filterRow, { borderBottomColor: colors.border }]}>
+          <AdminSection title="审核队列" meta={pendingCount > 0 ? `${pendingCount} PENDING` : "CLEAR"}>
+            <View style={st.filterRow}>
               {([{ label: "全部", value: "all" }, { label: "待审核", value: "pending" }, { label: "已通过", value: "approved" }] as const).map((opt) => (
-                <TouchableOpacity key={opt.value} onPress={() => setFilter(opt.value)} style={[st.filterChip, { backgroundColor: filter === opt.value ? colors.primary : colors.surface }]} activeOpacity={0.7}>
-                  <Text style={{ fontSize: 13, fontWeight: "600", color: filter === opt.value ? "#fff" : colors.foreground }}>{opt.label}</Text>
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => setFilter(opt.value)}
+                  style={[
+                    st.filterChip,
+                    { backgroundColor: filter === opt.value ? colors.primary : colors.surface, borderColor: filter === opt.value ? colors.primary : colors.border },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "700", color: filter === opt.value ? "#07111F" : colors.foreground }}>{opt.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             {isLoading ? (
               <View style={st.center}><ActivityIndicator size="large" color={colors.primary} /></View>
+            ) : comments.length === 0 ? (
+              <View style={st.empty}><Text style={{ color: colors.muted, fontSize: 15 }}>暂无评论</Text></View>
             ) : (
-              <FlatList
-                data={comments}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <View style={[st.card, { backgroundColor: colors.surface, borderLeftColor: item.isApproved ? colors.success : colors.warning, borderLeftWidth: 3 }]}>
+              <View style={[st.queuePanel, { borderColor: colors.border }]}>
+                {comments.map((item) => (
+                  <View key={item.id} style={[st.card, { borderBottomColor: colors.border }]}>
                     <View style={st.cardHeader}>
                       <View style={{ flex: 1 }}>
                         <Text style={[st.nickname, { color: colors.foreground }]}>{item.nickname || "匿名用户"}</Text>
@@ -207,12 +218,12 @@ export default function AdminComments() {
                     </View>
                     <Text style={[st.content, { color: colors.foreground }]}>{item.content}</Text>
                     {item.rating && (
-                      <Text style={[st.rating, { color: colors.warning }]}>{"⭐".repeat(item.rating)}</Text>
+                      <Text style={[st.rating, { color: colors.warning }]}>评分 {item.rating}/5</Text>
                     )}
                     <View style={st.actions}>
                       {!item.isApproved && (
                         <TouchableOpacity onPress={() => handleApprove(item.id)} style={[st.actionBtn, { backgroundColor: colors.success + "15" }]} activeOpacity={0.7}>
-                          <Text style={{ color: colors.success, fontWeight: "600", fontSize: 13 }}>✓ 通过</Text>
+                          <Text style={{ color: colors.success, fontWeight: "700", fontSize: 13 }}>通过</Text>
                         </TouchableOpacity>
                       )}
                       <TouchableOpacity onPress={() => handleDeleteReview(item.id)} style={[st.actionBtn, { backgroundColor: colors.error + "15" }]} activeOpacity={0.7}>
@@ -220,16 +231,13 @@ export default function AdminComments() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                )}
-                ListEmptyComponent={<View style={st.empty}><Text style={{ color: colors.muted, fontSize: 15 }}>暂无评论</Text></View>}
-                contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-              />
+                ))}
+              </View>
             )}
-          </>
+          </AdminSection>
         ) : (
-          <>
-            {/* 添加备注区域 */}
-            <View style={[st.addNoteSection, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <AdminSection title="策略备注" meta="INTERNAL NOTES">
+            <View style={[st.addNoteSection, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[st.addNoteTitle, { color: colors.foreground }]}>添加备注</Text>
 
               {/* 策略选择 */}
@@ -287,12 +295,12 @@ export default function AdminComments() {
             {/* 备注列表 */}
             {isLoading ? (
               <View style={st.center}><ActivityIndicator size="large" color={colors.primary} /></View>
+            ) : notes.length === 0 ? (
+              <View style={st.empty}><Text style={{ color: colors.muted, fontSize: 15 }}>暂无备注</Text></View>
             ) : (
-              <FlatList
-                data={notes}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <View style={[st.card, { backgroundColor: colors.surface, borderLeftColor: colors.primary, borderLeftWidth: 3 }]}>
+              <View style={[st.queuePanel, { borderColor: colors.border }]}>
+                {notes.map((item) => (
+                  <View key={item.id} style={[st.card, { borderBottomColor: colors.border }]}>
                     <View style={st.cardHeader}>
                       <View style={{ flex: 1 }}>
                         <Text style={[st.nickname, { color: colors.foreground }]}>{item.user?.name || "管理员"}</Text>
@@ -311,38 +319,33 @@ export default function AdminComments() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                )}
-                ListEmptyComponent={<View style={st.empty}><Text style={{ color: colors.muted, fontSize: 15 }}>暂无备注</Text></View>}
-                contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-              />
+                ))}
+              </View>
             )}
-          </>
+          </AdminSection>
         )}
-      </View>
-    </ScreenContainer>
+    </AdminPageChrome>
   );
 }
 
 const st = StyleSheet.create({
-  header: { padding: 16, borderBottomWidth: 0.5 },
-  title: { fontSize: 20, fontWeight: "800" },
-  subtitle: { fontSize: 13, marginTop: 4 },
-  tabRow: { flexDirection: "row", borderBottomWidth: 0.5 },
-  tabBtn: { flex: 1, alignItems: "center", paddingVertical: 12 },
-  filterRow: { flexDirection: "row", gap: 8, padding: 12, borderBottomWidth: 0.5 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  card: { borderRadius: 12, padding: 14, marginBottom: 10 },
+  tabRow: { flexDirection: "row", gap: 8, marginBottom: 18 },
+  tabBtn: { flex: 1, alignItems: "center", paddingVertical: 11, borderRadius: 6, borderWidth: 1 },
+  filterRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 6, borderWidth: 1 },
+  center: { minHeight: 220, alignItems: "center", justifyContent: "center" },
+  queuePanel: { borderWidth: 1, borderRadius: 8, overflow: "hidden", backgroundColor: "rgba(15,23,42,0.56)" },
+  card: { padding: 14, borderBottomWidth: 1 },
   cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
   nickname: { fontSize: 14, fontWeight: "600" },
   meta: { fontSize: 12, marginTop: 2 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
   content: { fontSize: 14, lineHeight: 20, marginBottom: 8 },
   rating: { fontSize: 14, marginBottom: 8 },
   actions: { flexDirection: "row", gap: 8 },
-  actionBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
+  actionBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 6 },
   empty: { padding: 32, alignItems: "center" },
-  addNoteSection: { padding: 16, borderBottomWidth: 0.5 },
+  addNoteSection: { padding: 16, borderWidth: 1, borderRadius: 8, marginBottom: 14 },
   addNoteTitle: { fontSize: 15, fontWeight: "700", marginBottom: 10 },
   strategySelector: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 10 },
   pickerDropdown: { borderRadius: 8, borderWidth: 1, marginBottom: 10, maxHeight: 200, overflow: "scroll" as any },

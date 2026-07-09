@@ -1,8 +1,7 @@
 /**
  * GlassCard - 暗色卡片组件
  *
- * 使用比页面背景(#0A1628)明显更亮的背景色 + 清晰可见的边框。
- * 不使用 backdrop-filter blur，避免灰蒙蒙效果。
+ * 使用克制的深色层级和清晰边框，不使用 backdrop-filter blur。
  *
  * 三种强度等级：
  * - "subtle"  : 适合列表项、小卡片
@@ -24,22 +23,22 @@ interface GlassCardProps {
   highlight?: boolean;
 }
 
-// 使用更亮的背景和更明显的边框，确保移动端清晰可见
+// 保持终端式深色层级，避免大面积灰蓝卡片抢走正文注意力。
 const CARD_STYLES: Record<GlassIntensity, ViewStyle> = {
   subtle: {
-    backgroundColor: "#1E293B",
+    backgroundColor: "rgba(15, 23, 42, 0.88)",
     borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.35)",
+    borderColor: "rgba(148, 163, 184, 0.20)",
   },
   medium: {
-    backgroundColor: "#243247",
+    backgroundColor: "rgba(18, 29, 48, 0.94)",
     borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.40)",
+    borderColor: "rgba(148, 163, 184, 0.26)",
   },
   strong: {
-    backgroundColor: "#2A3A52",
-    borderWidth: 1.5,
-    borderColor: "rgba(148, 163, 184, 0.45)",
+    backgroundColor: "rgba(21, 36, 59, 0.98)",
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.32)",
   },
 };
 
@@ -82,7 +81,7 @@ export function GlassCard({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 16,
+    borderRadius: 8,
     overflow: "hidden",
   },
   highlightLine: {

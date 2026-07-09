@@ -4,7 +4,7 @@ import { Dimensions, Platform } from "react-native";
 export type ScreenSize = "mobile" | "tablet" | "desktop";
 
 export function useResponsive() {
-  const [screenSize, setScreenSize] = useState<ScreenSize>(getScreenSize());
+  const [windowWidth, setWindowWidth] = useState(getWindowWidth());
 
   useEffect(() => {
     if (Platform.OS !== "web") {
@@ -12,25 +12,30 @@ export function useResponsive() {
     }
 
     const handleResize = () => {
-      setScreenSize(getScreenSize());
+      setWindowWidth(getWindowWidth());
     };
 
     const subscription = Dimensions.addEventListener("change", handleResize);
     return () => subscription?.remove();
   }, []);
 
+  const screenSize = getScreenSize(windowWidth);
+
   return {
+    windowWidth,
     screenSize,
     isMobile: screenSize === "mobile",
     isTablet: screenSize === "tablet",
     isDesktop: screenSize === "desktop",
-    numColumns: getNumColumns(screenSize),
+    numColumns: getNumColumns(screenSize, windowWidth),
   };
 }
 
-function getScreenSize(): ScreenSize {
-  const { width } = Dimensions.get("window");
-  
+function getWindowWidth(): number {
+  return Dimensions.get("window").width;
+}
+
+function getScreenSize(width: number): ScreenSize {
   if (width >= 1024) {
     return "desktop";
   } else if (width >= 768) {
@@ -40,10 +45,12 @@ function getScreenSize(): ScreenSize {
   }
 }
 
-function getNumColumns(screenSize: ScreenSize): number {
+function getNumColumns(screenSize: ScreenSize, width: number): number {
   switch (screenSize) {
     case "desktop":
-      return 5; // 桌面端5列（v2: 让一行更紧凑，类似商品瀑布流）
+      if (width >= 1680) return 5;
+      if (width >= 1240) return 4;
+      return 4;
     case "tablet":
       return 3; // 平板端3列（保持）
     case "mobile":

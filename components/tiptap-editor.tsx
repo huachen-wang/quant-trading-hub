@@ -45,7 +45,7 @@ export function TiptapEditor({ value, onChange, placeholder, minHeight = 280 }: 
           ]}
         >
           <Text style={{ color: "#D8BC83", fontSize: 11, fontWeight: "700" }}>
-            💡 移动端提示
+            移动端提示
           </Text>
           <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>
             移动端使用纯文本编辑。如需富文本所见即所得，请在 PC 浏览器打开后台。
@@ -161,7 +161,7 @@ function WebTiptapEditor({
     return (
       <View>
         <Text style={{ color: "#F87171", fontSize: 11, marginBottom: 6 }}>
-          ⚠️ 富文本编辑器加载失败，已降级为纯文本编辑器。请确认已安装 @tiptap/* 依赖。
+          富文本编辑器加载失败，已降级为纯文本编辑器。请确认已安装 @tiptap/* 依赖。
         </Text>
         <TextInput
           value={value}
@@ -205,7 +205,7 @@ function WebTiptapEditor({
       <ToolbarBtn label="</>" tooltip="代码块" active={editor.isActive("codeBlock")} onClick={() => editor.chain().focus().toggleCodeBlock().run()} />
       <View style={styles.toolbarSep} />
       <ToolbarBtn
-        label="🔗"
+        label="LINK"
         tooltip="链接"
         onClick={() => {
           const url = window.prompt("输入链接地址");
@@ -214,7 +214,7 @@ function WebTiptapEditor({
         }}
       />
       <ToolbarBtn
-        label="🖼️"
+        label="IMG"
         tooltip="插入图片"
         onClick={() => {
           const url = window.prompt("输入图片 URL");

@@ -71,7 +71,7 @@ class ZpayGateway implements PaymentGateway {
       return_url: opts.returnUrl || this.returnUrl,
       name: opts.order.productTitle,
       money: Number(opts.order.amount).toFixed(2),
-      sitename: "EAXAU 量化军火库",
+      sitename: "EAXAU Source Desk",
     };
 
     const sign = this.buildSign(params);

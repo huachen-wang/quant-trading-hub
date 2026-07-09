@@ -15,11 +15,11 @@ export function PlatformGuideSection({ colors, onPress }: PlatformGuideSectionPr
         style={[styles.platformGuide, { backgroundColor: colors.primary + "08", borderColor: colors.primary + "20" }]}
       >
         <View style={styles.platformGuideContent}>
-          <Text style={styles.platformGuideEmoji}>🎯</Text>
+          <Text style={styles.platformGuideCode}>ENV</Text>
           <View style={{ flex: 1 }}>
             <Text style={[styles.platformGuideTitle, { color: colors.foreground }]}>需要交易环境支持？</Text>
             <Text style={[styles.platformGuideDesc, { color: colors.muted }]}>
-              量化军火库帮你匹配最适合这款EA的合规交易平台，让策略发挥最大价值
+              EAXAU 帮你匹配最适合这款EA的合规交易平台，让策略发挥最大价值
             </Text>
           </View>
           <Text style={[styles.platformGuideArrow, { color: colors.primary }]}>→</Text>
@@ -35,16 +35,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   platformGuide: {
-    borderRadius: 16,
+    borderRadius: 8,
     borderWidth: 1,
-    padding: 16,
+    padding: 14,
   },
   platformGuideContent: {
     flexDirection: "row",
     alignItems: "center",
   },
-  platformGuideEmoji: {
-    fontSize: 28,
+  platformGuideCode: {
+    color: "#D8BC83",
+    fontSize: 11,
+    fontWeight: "900",
     marginRight: 12,
   },
   platformGuideTitle: {

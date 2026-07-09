@@ -2,12 +2,14 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { useResponsive } from "@/hooks/use-responsive";
 import { adminQuery, createAdminStrategy, updateAdminStrategy } from "@/lib/admin-api";
 import { useState, useEffect } from "react";
 
 export default function StrategyForm() {
   const router = useRouter();
   const colors = useColors();
+  const { isDesktop } = useResponsive();
   const params = useLocalSearchParams<{ mode: "create" | "edit"; id?: string }>();
   const isEdit = params.mode === "edit";
   const strategyId = params.id ? parseInt(params.id) : undefined;
@@ -123,10 +125,18 @@ export default function StrategyForm() {
 
   return (
     <ScreenContainer>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32, maxWidth: 600, alignSelf: "center" as any, width: "100%" as any }}>
-        <Text style={[s.pageTitle, { color: colors.foreground }]}>
-          {isEdit ? "编辑策略" : "添加新策略"}
-        </Text>
+      <ScrollView contentContainerStyle={s.scrollContent}>
+        <View style={s.headerPanel}>
+          <Text style={s.kicker}>STRATEGY RECORD EDITOR</Text>
+          <Text style={[s.pageTitle, { color: colors.foreground }]}>
+            {isEdit ? "编辑策略" : "添加新策略"}
+          </Text>
+          <Text style={[s.headerMeta, { color: colors.muted }]}>
+            统一维护策略展示、价格、实盘指标、交付入口和前台运营数据。
+          </Text>
+        </View>
+
+        <View style={[s.formPanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
 
         {/* 基本信息 */}
         <Text style={[s.sectionTitle, { color: colors.foreground }]}>基本信息</Text>
@@ -135,7 +145,7 @@ export default function StrategyForm() {
         <TextInput value={formData.title} onChangeText={(t) => setFormData({ ...formData, title: t })} placeholder="输入策略名称" placeholderTextColor={colors.muted} style={inputStyle} />
 
         <Text style={[s.label, { color: colors.foreground }]}>策略描述</Text>
-        <TextInput value={formData.description} onChangeText={(t) => setFormData({ ...formData, description: t })} placeholder="详细描述策略特点" placeholderTextColor={colors.muted} multiline numberOfLines={4} style={[...inputStyle, { minHeight: 100, textAlignVertical: "top" }]} />
+        <TextInput value={formData.description} onChangeText={(t) => setFormData({ ...formData, description: t })} placeholder="详细描述策略特点" placeholderTextColor={colors.muted} multiline numberOfLines={4} style={[...inputStyle, { minHeight: isDesktop ? 76 : 100, textAlignVertical: "top" }]} />
         {/* A.2: 富文本介绍 */}
         <Text style={[s.label, { color: colors.foreground, marginTop: 8 }]}>详细介绍（富文本 HTML）</Text>
         <TextInput
@@ -145,60 +155,73 @@ export default function StrategyForm() {
           placeholderTextColor={colors.muted}
           multiline
           numberOfLines={10}
-          style={[...inputStyle, { minHeight: 200, textAlignVertical: "top", fontSize: 13 }]}
+          style={[...inputStyle, { minHeight: isDesktop ? 142 : 200, textAlignVertical: "top", fontSize: 13 }]}
         />
 
-        <Text style={[s.label, { color: colors.foreground }]}>平台</Text>
-        <View style={s.row}>
-          {(["MT4", "MT5"] as const).map((p) => (
-            <TouchableOpacity key={p} onPress={() => setFormData({ ...formData, platform: p })} style={[s.chip, { backgroundColor: formData.platform === p ? colors.primary : colors.surface }]} activeOpacity={0.7}>
-              <Text style={{ color: formData.platform === p ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{p}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={[s.fieldGrid, isDesktop && s.fieldGridDesktop]}>
+          <View style={s.fieldCell}>
+            <Text style={[s.label, { color: colors.foreground }]}>平台</Text>
+            <View style={s.row}>
+              {(["MT4", "MT5"] as const).map((p) => (
+                <TouchableOpacity key={p} onPress={() => setFormData({ ...formData, platform: p })} style={[s.chip, { backgroundColor: formData.platform === p ? colors.primary : colors.surface }]} activeOpacity={0.7}>
+                  <Text style={{ color: formData.platform === p ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{p}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={s.fieldCell}>
+            <Text style={[s.label, { color: colors.foreground }]}>产品类型</Text>
+            <View style={s.row}>
+              {([
+                { label: "EA", value: "ea" },
+                { label: "指标", value: "indicator" },
+                { label: "工具", value: "tool" },
+              ] as const).map((opt) => (
+                <TouchableOpacity key={opt.value} onPress={() => setFormData({ ...formData, productType: opt.value })} style={[s.chip, { backgroundColor: formData.productType === opt.value ? colors.primary : colors.surface }]} activeOpacity={0.7}>
+                  <Text style={{ color: formData.productType === opt.value ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={s.fieldCell}>
+            <Text style={[s.label, { color: colors.foreground }]}>销售模式</Text>
+            <View style={s.row}>
+              {([
+                { label: "私聊授权", value: "inquiry" },
+                { label: "直接购买", value: "direct" },
+              ] as const).map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => setFormData({ ...formData, saleMode: opt.value })}
+                  style={[s.chip, { backgroundColor: formData.saleMode === opt.value ? "#A8895A" : colors.surface }]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ color: formData.saleMode === opt.value ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         </View>
 
-        {/* 产品类型 */}
-        <Text style={[s.label, { color: colors.foreground }]}>产品类型</Text>
-        <View style={s.row}>
-          {([
-            { label: "EA", value: "ea" },
-            { label: "指标", value: "indicator" },
-            { label: "工具", value: "tool" },
-          ] as const).map((opt) => (
-            <TouchableOpacity key={opt.value} onPress={() => setFormData({ ...formData, productType: opt.value })} style={[s.chip, { backgroundColor: formData.productType === opt.value ? colors.primary : colors.surface }]} activeOpacity={0.7}>
-              <Text style={{ color: formData.productType === opt.value ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
+        <View style={[s.fieldGrid, isDesktop && s.fieldGridDesktop]}>
+          <View style={s.fieldCell}>
+            <Text style={[s.label, { color: colors.foreground }]}>标签 (逗号分隔)</Text>
+            <TextInput value={formData.tags} onChangeText={(t) => setFormData({ ...formData, tags: t })} placeholder="马丁,对冲,趋势,剥头皮,黄金" placeholderTextColor={colors.muted} style={inputStyle} />
+          </View>
+          <View style={s.fieldCell}>
+            <Text style={[s.label, { color: colors.foreground }]}>交易对 (逗号分隔)</Text>
+            <TextInput value={formData.pairs} onChangeText={(t) => setFormData({ ...formData, pairs: t })} placeholder="EURUSD, GBPUSD" placeholderTextColor={colors.muted} style={inputStyle} />
+          </View>
+          <View style={s.fieldCell}>
+            <Text style={[s.label, { color: colors.foreground }]}>时间周期</Text>
+            <TextInput value={formData.timeframe} onChangeText={(t) => setFormData({ ...formData, timeframe: t })} placeholder="H1, H4, D1" placeholderTextColor={colors.muted} style={inputStyle} />
+          </View>
         </View>
-
-        {/* A.2: 销售模式 */}
-        <Text style={[s.label, { color: colors.foreground, marginTop: 12 }]}>销售模式</Text>
-        <View style={s.row}>
-          {([
-            { label: "🤝 私聊授权", value: "inquiry" },
-            { label: "💰 直接购买", value: "direct" },
-          ] as const).map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              onPress={() => setFormData({ ...formData, saleMode: opt.value })}
-              style={[s.chip, { backgroundColor: formData.saleMode === opt.value ? "#A8895A" : colors.surface }]}
-              activeOpacity={0.7}
-            >
-              <Text style={{ color: formData.saleMode === opt.value ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{opt.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <Text style={[s.label, { color: colors.foreground }]}>标签 (逗号分隔)</Text>
-        <TextInput value={formData.tags} onChangeText={(t) => setFormData({ ...formData, tags: t })} placeholder="马丁,对冲,趋势,剥头皮,黄金" placeholderTextColor={colors.muted} style={inputStyle} />
-
-        <Text style={[s.label, { color: colors.foreground }]}>交易对 (逗号分隔)</Text>
-        <TextInput value={formData.pairs} onChangeText={(t) => setFormData({ ...formData, pairs: t })} placeholder="EURUSD, GBPUSD" placeholderTextColor={colors.muted} style={inputStyle} />
-
-        <Text style={[s.label, { color: colors.foreground }]}>时间周期</Text>
-        <TextInput value={formData.timeframe} onChangeText={(t) => setFormData({ ...formData, timeframe: t })} placeholder="H1, H4, D1" placeholderTextColor={colors.muted} style={inputStyle} />
 
         {/* 旗舰产品设置 */}
-        <Text style={[s.sectionTitle, { color: "#A8895A" }]}>⭐ 旗舰产品设置</Text>
+        <Text style={[s.sectionTitle, { color: "#A8895A" }]}>旗舰产品设置</Text>
         <Text style={[{ fontSize: 12, color: colors.muted, marginBottom: 8 }]}>旗舰产品将在首页置顶展示，并显示金色标签</Text>
 
         <View style={[s.row, { alignItems: "center", justifyContent: "space-between", marginBottom: 12 }]}>
@@ -317,21 +340,44 @@ export default function StrategyForm() {
             <Text style={s.submitBtnText}>{isEdit ? "保存修改" : "创建策略"}</Text>
           )}
         </TouchableOpacity>
+        </View>
       </ScrollView>
     </ScreenContainer>
   );
 }
 
 const s = StyleSheet.create({
-  pageTitle: { fontSize: 22, fontWeight: "800", marginBottom: 20 },
-  sectionTitle: { fontSize: 17, fontWeight: "700", marginBottom: 12, marginTop: 20 },
+  scrollContent: { padding: 16, paddingBottom: 32, maxWidth: 1240, alignSelf: "center" as any, width: "100%" as any },
+  headerPanel: {
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.14)",
+    borderRadius: 8,
+    padding: 18,
+    marginBottom: 14,
+    backgroundColor: "rgba(15,23,42,0.68)",
+  },
+  kicker: { color: "#D8BC83", fontSize: 11, fontWeight: "900", marginBottom: 6 },
+  pageTitle: { fontSize: 24, fontWeight: "900", marginBottom: 6 },
+  headerMeta: { fontSize: 13, lineHeight: 20 },
+  formPanel: { borderWidth: 1, borderRadius: 8, padding: 18 },
+  sectionTitle: { fontSize: 17, fontWeight: "800", marginBottom: 12, marginTop: 16 },
   label: { fontSize: 14, fontWeight: "500", marginBottom: 4 },
-  input: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, marginBottom: 12 },
+  input: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, marginBottom: 12 },
   row: { flexDirection: "row", gap: 10, marginBottom: 8 },
-  chip: { flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: "center" },
+  fieldGrid: { gap: 8 },
+  fieldGridDesktop: { flexDirection: "row", gap: 12 },
+  fieldCell: { flex: 1, minWidth: 0 },
+  chip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.20)",
+    alignItems: "center",
+  },
   toggle: { width: 44, height: 24, borderRadius: 12, justifyContent: "center" },
   toggleDot: { width: 20, height: 20, borderRadius: 10, backgroundColor: "#fff" },
-  submitBtn: { marginTop: 24, paddingVertical: 14, borderRadius: 14, alignItems: "center" },
+  submitBtn: { marginTop: 24, paddingVertical: 14, borderRadius: 6, alignItems: "center" },
   submitBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   discountPreview: { borderRadius: 10, padding: 10, marginBottom: 12, marginTop: -4 },
   discountPreviewText: { fontSize: 12, fontWeight: "600", textAlign: "center" },

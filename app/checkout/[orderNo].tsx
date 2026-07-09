@@ -17,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { trpc } from "@/lib/trpc";
 import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
+import { ScreenContainer } from "@/components/screen-container";
 
 type PayState =
   | { kind: "select" }
@@ -66,7 +67,14 @@ export default function CheckoutOrderScreen() {
     isLoading,
     error: orderError,
     refetch,
-  } = trpc.orders.detail.useQuery({ orderNo: orderNo! }, { enabled: !!orderNo, refetchInterval: 5000 });
+  } = trpc.orders.detail.useQuery(
+    { orderNo: orderNo! },
+    {
+      enabled: !!orderNo,
+      retry: false,
+      refetchInterval: (query) => query.state.data?.status === "pending" ? 5000 : false,
+    },
+  );
 
   // 支付方式列表
   const { data: methods } = trpc.payments.listMethods.useQuery();
@@ -183,9 +191,34 @@ export default function CheckoutOrderScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.centerFull}>
-        <ActivityIndicator size="large" color="#D8BC83" />
-      </View>
+      <ScreenContainer>
+        <View style={styles.centerFull}>
+          <ActivityIndicator size="large" color="#D8BC83" />
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  if (!order) {
+    const needsLogin = /login|unauthorized|10001/i.test(orderError?.message || "");
+    return (
+      <ScreenContainer>
+        <View style={styles.centerFull}>
+          <Text style={styles.emptyIcon}>!</Text>
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+            {needsLogin ? "需要登录" : "订单不存在"}
+          </Text>
+          <Text style={[styles.emptyText, { color: colors.muted }]}>
+            {needsLogin ? "请先登录后查看订单，或返回首页重新选择商品。" : "没有找到这个订单，可能已经失效或订单号有误。"}
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)}
+            style={styles.emptyBtn}
+          >
+            <Text style={styles.emptyBtnText}>{needsLogin ? "去登录" : "返回首页"}</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenContainer>
     );
   }
 
@@ -215,6 +248,7 @@ export default function CheckoutOrderScreen() {
   const isPending = order.status === "pending" && remainingSeconds > 0;
 
   return (
+    <ScreenContainer>
     <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
       <View style={{ padding: 16, maxWidth: 720, alignSelf: "center", width: "100%" }}>
         {/* 顶部品牌行 */}
@@ -355,7 +389,7 @@ export default function CheckoutOrderScreen() {
 
                 <View style={styles.usdtNote}>
                   <Text style={{ color: "#F87171", fontSize: 12, fontWeight: "700", marginBottom: 6 }}>
-                    ⚠️ 重要提示
+                    RISK 重要提示
                   </Text>
                   <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 20 }}>
                     1. 请务必使用 <Text style={{ color: "#D8BC83" }}>{payState.chain}</Text> 网络（其他网络无法到账，资金可能丢失）{"\n"}
@@ -434,6 +468,7 @@ export default function CheckoutOrderScreen() {
           )}
       </View>
     </ScrollView>
+    </ScreenContainer>
   );
 }
 
@@ -523,7 +558,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "900",
     color: "#D8BC83",
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   },
   amountOrig: {
     fontSize: 13,

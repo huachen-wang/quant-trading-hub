@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform, StyleSheet } from "react-native";
-import { ScreenContainer } from "@/components/screen-container";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, Platform, StyleSheet } from "react-native";
+import { AdminPageChrome, AdminSection } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
+import { useResponsive } from "@/hooks/use-responsive";
 import { getSiteSettings, updateSiteSetting } from "@/lib/admin-api";
 
 interface SettingField {
@@ -27,6 +28,7 @@ const VIRTUAL_FIELDS: SettingField[] = [
 
 export default function ContactSettingsScreen() {
   const colors = useColors();
+  const { isDesktop } = useResponsive();
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,24 +68,36 @@ export default function ContactSettingsScreen() {
 
   if (isLoading) {
     return (
-      <ScreenContainer style={{ alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </ScreenContainer>
+      <AdminPageChrome eyebrow="CONTACT CONFIG" title="联系方式设置" subtitle="加载配置项" maxWidth={1100}>
+        <View style={s.loadingBox}><ActivityIndicator size="large" color={colors.primary} /></View>
+      </AdminPageChrome>
     );
   }
 
   return (
-    <ScreenContainer>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-        <View style={{ marginBottom: 20 }}>
-          <Text style={[s.pageTitle, { color: colors.foreground }]}>📞 联系方式设置</Text>
-          <Text style={[s.pageDesc, { color: colors.muted }]}>
-            设置"上架EA"弹窗中显示的联系方式，修改后实时生效
-          </Text>
-        </View>
-
-        {CONTACT_FIELDS.map((field) => (
-          <View key={field.key} style={[s.fieldCard, { backgroundColor: colors.surface }]}>
+    <AdminPageChrome
+      eyebrow="CONTACT CONFIG"
+      title="联系方式设置"
+      subtitle="设置上架 EA 弹窗、商务咨询入口和订阅页运营数据"
+      metrics={[
+        { label: "联系字段", value: CONTACT_FIELDS.length, tone: colors.primary },
+        { label: "运营字段", value: VIRTUAL_FIELDS.length, tone: "#60A5FA" },
+        { label: "已配置", value: Object.values(values).filter(Boolean).length, tone: colors.success },
+      ]}
+      maxWidth={1100}
+    >
+      <AdminSection title="弹窗联系方式" meta="PUBLIC CONTACT">
+        <View style={[s.fieldsGrid, isDesktop && s.fieldsGridDesktop]}>
+          {CONTACT_FIELDS.map((field) => (
+          <View
+            key={field.key}
+            style={[
+              s.fieldCard,
+              isDesktop && s.fieldCardDesktop,
+              isDesktop && field.key === "contact_description" && s.fieldCardWide,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <Text style={[s.fieldLabel, { color: colors.foreground }]}>{field.label}</Text>
             <Text style={[s.fieldDesc, { color: colors.muted }]}>{field.description}</Text>
             <View style={s.fieldRow}>
@@ -108,18 +122,13 @@ export default function ContactSettingsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        ))}
-
-        {/* 虚拟数据设置 */}
-        <View style={{ marginTop: 24, marginBottom: 20 }}>
-          <Text style={[s.pageTitle, { color: colors.foreground }]}>📊 虚拟数据设置</Text>
-          <Text style={[s.pageDesc, { color: colors.muted }]}>
-            设置虚拟数据用于运营推广，前端显示 = 实际值 + 虚拟值
-          </Text>
+          ))}
         </View>
+      </AdminSection>
 
+      <AdminSection title="虚拟数据设置" meta="DISPLAY OFFSET">
         {VIRTUAL_FIELDS.map((field) => (
-          <View key={field.key} style={[s.fieldCard, { backgroundColor: colors.surface }]}>
+          <View key={field.key} style={[s.fieldCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[s.fieldLabel, { color: colors.foreground }]}>{field.label}</Text>
             <Text style={[s.fieldDesc, { color: colors.muted }]}>{field.description}</Text>
             <View style={s.fieldRow}>
@@ -146,19 +155,22 @@ export default function ContactSettingsScreen() {
             </View>
           </View>
         ))}
-      </ScrollView>
-    </ScreenContainer>
+      </AdminSection>
+    </AdminPageChrome>
   );
 }
 
 const s = StyleSheet.create({
-  pageTitle: { fontSize: 24, fontWeight: "800", marginBottom: 6 },
-  pageDesc: { fontSize: 14, lineHeight: 20 },
-  fieldCard: { borderRadius: 14, padding: 16, marginBottom: 12 },
+  loadingBox: { minHeight: 260, alignItems: "center", justifyContent: "center" },
+  fieldsGrid: { gap: 10 },
+  fieldsGridDesktop: { flexDirection: "row", flexWrap: "wrap" },
+  fieldCard: { borderRadius: 8, padding: 16, marginBottom: 10, borderWidth: 1 },
+  fieldCardDesktop: { width: "49%" as any, marginBottom: 0 },
+  fieldCardWide: { width: "100%" as any },
   fieldLabel: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
   fieldDesc: { fontSize: 13, marginBottom: 10 },
   fieldRow: { flexDirection: "row", gap: 10 },
   fieldInput: { flex: 1, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
-  saveBtn: { borderRadius: 10, paddingHorizontal: 18, justifyContent: "center", alignItems: "center" },
-  saveBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  saveBtn: { borderRadius: 6, paddingHorizontal: 18, justifyContent: "center", alignItems: "center" },
+  saveBtnText: { color: "#07111F", fontWeight: "900", fontSize: 14 },
 });

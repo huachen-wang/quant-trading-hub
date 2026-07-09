@@ -1,6 +1,5 @@
 import express from "express";
 import { createServer } from "http";
-import net from "net";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
@@ -17,16 +16,6 @@ import { startCron } from "./cron";
 // ES模块中获取__dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    server.listen(port, () => {
-      server.close(() => resolve(true));
-    });
-    server.on("error", () => resolve(false));
-  });
-}
 
 /**
  * SEO: 检测搜索引擎爬虫 User-Agent
@@ -50,10 +39,10 @@ async function generateStrategyMetaHtml(strategyId: number, indexHtml: string): 
     const strategy = await db.getStrategyById(strategyId);
     if (!strategy) return null;
 
-    const title = `${strategy.title} - 量化军火库`;
+    const title = `${strategy.title} - EAXAU`;
     const description = strategy.description
       ? strategy.description.substring(0, 160)
-      : `${strategy.title} - ${strategy.platform}平台EA策略，总收益率${strategy.totalReturn}%，胜率${strategy.winRate}%。量化军火库精选策略展示。`;
+      : `${strategy.title} - ${strategy.platform}平台EA策略，总收益率${strategy.totalReturn}%，胜率${strategy.winRate}%。EAXAU 精选策略展示。`;
     const url = `https://www.eaxau.com/strategy/${strategyId}`;
     const pairs = strategy.pairs || '';
 
@@ -81,7 +70,7 @@ async function generateStrategyMetaHtml(strategyId: number, indexHtml: string): 
     <meta name="twitter:description" content="${escapeHtml(description)}" />
     ${strategy.coverImage ? `<meta name="twitter:image" content="${escapeHtml(strategy.coverImage)}" />` : ''}
     <link rel="canonical" href="${url}" />
-    <meta name="keywords" content="${escapeHtml(strategy.title)},${escapeHtml(strategy.platform)},${escapeHtml(pairs)},EA策略,量化交易,量化军火库" />
+    <meta name="keywords" content="${escapeHtml(strategy.title)},${escapeHtml(strategy.platform)},${escapeHtml(pairs)},EA策略,量化交易,EAXAU,Source Desk" />
     <script type="application/ld+json">${JSON.stringify({
       "@context": "https://schema.org",
       "@type": "Product",
@@ -89,7 +78,7 @@ async function generateStrategyMetaHtml(strategyId: number, indexHtml: string): 
       "description": description,
       "url": url,
       ...(strategy.coverImage ? { "image": strategy.coverImage } : {}),
-      "brand": { "@type": "Brand", "name": "量化军火库" },
+      "brand": { "@type": "Brand", "name": "EAXAU" },
       "offers": {
         "@type": "Offer",
         "price": strategy.isFree ? "0" : (strategy.price || "0"),
@@ -119,8 +108,8 @@ async function generateHomeMetaHtml(indexHtml: string): Promise<string> {
     const itemList = {
       "@context": "https://schema.org",
       "@type": "ItemList",
-      "name": "精选EA策略",
-      "description": "量化军火库精选MT4/MT5 EA策略展示",
+      "name": "EAXAU 精选EA策略",
+      "description": "EAXAU 精选MT4/MT5 EA策略展示",
       "numberOfItems": strategies.length,
       "itemListElement": strategies.map((s: any, i: number) => ({
         "@type": "ListItem",
@@ -146,6 +135,67 @@ function escapeHtml(str: string): string {
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function collectRequiredWebAssets(indexHtml: string): string[] {
+  const assets = new Set<string>();
+  const attrRegex = /\s(?:src|href)=["']([^"']+)["']/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = attrRegex.exec(indexHtml)) !== null) {
+    const value = match[1];
+    if (value.startsWith('/_expo/static/js/') || value.startsWith('/_expo/static/css/')) {
+      assets.add(value);
+    }
+  }
+
+  return Array.from(assets);
+}
+
+function validateWebBuild(webBuildPath: string, indexPath: string, indexHtml: string): void {
+  const requiredAssets = collectRequiredWebAssets(indexHtml);
+
+  if (requiredAssets.length === 0) {
+    throw new Error('[static] index.html does not reference any required Expo JS/CSS assets');
+  }
+
+  const missingAssets = requiredAssets.filter((asset) => {
+    const assetPath = path.join(webBuildPath, asset.replace(/^\//, ''));
+    return !fs.existsSync(assetPath) || !fs.statSync(assetPath).isFile();
+  });
+
+  if (missingAssets.length > 0) {
+    throw new Error(`[static] web-build is incomplete. Missing asset(s): ${missingAssets.join(', ')}`);
+  }
+
+  const jsAssets = requiredAssets.filter((asset) => asset.endsWith('.js'));
+  const cssAssets = requiredAssets.filter((asset) => asset.endsWith('.css'));
+
+  if (jsAssets.length === 0 || cssAssets.length === 0) {
+    throw new Error(`[static] web-build is incomplete. Found ${jsAssets.length} JS asset(s) and ${cssAssets.length} CSS asset(s)`);
+  }
+
+  for (const asset of jsAssets) {
+    const assetPath = path.join(webBuildPath, asset.replace(/^\//, ''));
+    const firstBytes = fs.readFileSync(assetPath, 'utf8').slice(0, 80).trimStart();
+    if (firstBytes.startsWith('<!DOCTYPE') || firstBytes.startsWith('<html')) {
+      throw new Error(`[static] JavaScript asset resolved to HTML: ${asset}`);
+    }
+  }
+
+  console.log(`[static] verified ${requiredAssets.length} required web asset(s) from ${path.relative(process.cwd(), indexPath)}`);
+}
+
+function isStaticAssetRequest(reqPath: string): boolean {
+  return (
+    reqPath.startsWith('/_expo/') ||
+    reqPath.startsWith('/assets/') ||
+    reqPath.startsWith('/ea-covers/') ||
+    reqPath.startsWith('/charts/') ||
+    reqPath === '/favicon.ico' ||
+    reqPath === '/metadata.json' ||
+    /\.[a-zA-Z0-9]{2,8}$/.test(reqPath)
+  );
 }
 
 async function startServer() {
@@ -257,17 +307,21 @@ Sitemap: https://www.eaxau.com/sitemap.xml
   console.log(`[static] serving files from ${webBuildPath}`);
   
   // 检查web-build目录是否存在
-  if (fs.existsSync(webBuildPath)) {
+  const indexPath = path.join(webBuildPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
     console.log(`[static] web-build directory exists`);
     app.use(express.static(webBuildPath));
 
     // 读取并缓存 index.html
-    const indexPath = path.join(webBuildPath, 'index.html');
     let cachedIndexHtml = '';
     try {
       cachedIndexHtml = fs.readFileSync(indexPath, 'utf-8');
+      validateWebBuild(webBuildPath, indexPath, cachedIndexHtml);
     } catch (err) {
-      console.error('[static] Failed to read index.html:', err);
+      console.error('[static] Failed to validate web-build:', err);
+      if (process.env.NODE_ENV === 'production') {
+        throw err;
+      }
     }
     
     // SPA路由支持 - 所有非API请求返回index.html
@@ -275,6 +329,10 @@ Sitemap: https://www.eaxau.com/sitemap.xml
     app.get('*', async (req, res, next) => {
       if (req.path.startsWith('/api')) {
         return next();
+      }
+
+      if (isStaticAssetRequest(req.path)) {
+        return res.status(404).type('text/plain').send('Static asset not found');
       }
 
       const userAgent = req.headers['user-agent'] || '';
@@ -316,18 +374,13 @@ Sitemap: https://www.eaxau.com/sitemap.xml
     });
   } else {
     console.warn(`[static] web-build directory not found at ${webBuildPath}`);
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('[static] web-build/index.html not found. Run pnpm build:web before deployment.');
+    }
   }
 
   const port = parseInt(process.env.PORT || "3000");
   
-  // 开发环境：端口被占用则直接退出（Fail Fast）
-  // 生产环境：使用环境变量PORT，不会冲突
-  const isAvailable = await isPortAvailable(port);
-  if (!isAvailable) {
-    console.error(`✗ Port ${port} is already in use. Please stop the other process or use a different port.`);
-    process.exit(1);
-  }
-
   server.listen(port, () => {
     console.log(`✓ [api] server listening on port ${port}`);
   });

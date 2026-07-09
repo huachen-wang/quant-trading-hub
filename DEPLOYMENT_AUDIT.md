@@ -4,9 +4,9 @@
 
 ## 结论
 
-当前交付包在本地已通过类型检查、自动测试、lint、后端构建、Web 导出和基础静态检查。
+当前交付包在本地已通过类型检查、自动测试、lint、后端构建、Web 导出、生产预览启动、关键路由浏览器巡检和基础静态检查。
 
-从代码构建角度看，当前版本不是一推 GitHub 就直接构建失败的状态。生产环境是否正常展示真实数据，取决于 Railway 环境变量和数据库连接是否配置正确。
+从代码构建和本地生产预览角度看，当前版本不是一推 GitHub 就直接构建失败或首页黑屏的状态。生产环境是否正常展示真实数据，取决于 Railway 环境变量和数据库连接是否配置正确。
 
 ## 已执行检查
 
@@ -15,7 +15,7 @@
 命令：
 
 ```bash
-node ./node_modules/typescript/bin/tsc --noEmit
+tsc --noEmit
 ```
 
 结果：通过。
@@ -25,6 +25,12 @@ node ./node_modules/typescript/bin/tsc --noEmit
 命令：
 
 ```bash
+ADMIN_EMAIL=admin@eaxau.com \
+ADMIN_PASSWORD=local-test-password \
+JWT_SECRET=local-test-jwt-secret \
+COOKIE_SECRET=local-test-cookie-secret \
+DOWNLOAD_SIGNING_SECRET=local-test-download-secret \
+OAUTH_SERVER_URL=https://api.manus.im \
 vitest run
 ```
 
@@ -32,10 +38,10 @@ vitest run
 
 ```text
 Test Files  10 passed | 1 skipped (11)
-Tests       35 passed | 1 skipped (36)
+Tests       37 passed | 1 skipped (38)
 ```
 
-说明：`auth.logout` 有 1 个 OAuth 相关 skipped，本地未配置 `OAUTH_SERVER_URL`。这不是构建阻断项。
+说明：`auth.logout` 有 1 个已知 skipped，这不是构建阻断项。
 
 ### 3. Expo lint
 
@@ -83,7 +89,51 @@ pnpm build && npx expo export --platform web --output-dir web-build
 
 已单独验证后端 build 和 web export 均通过。
 
-### 7. tRPC 顶层路由兼容性
+### 7. 本地生产预览
+
+启动方式：
+
+```bash
+PORT=61380 \
+ADMIN_EMAIL=admin@eaxau.com \
+ADMIN_PASSWORD=local-test-password \
+JWT_SECRET=local-test-jwt-secret \
+COOKIE_SECRET=local-test-cookie-secret \
+DOWNLOAD_SIGNING_SECRET=local-test-download-secret \
+OAUTH_SERVER_URL=https://api.manus.im \
+node dist/index.mjs
+```
+
+结果：
+
+- `/` 返回 HTTP 200。
+- `/api/health` 返回 JSON。
+- 服务端日志显示 `web-build directory exists`。
+- 首页、策略详情页、后台登录页均生成生产截图，未出现纯黑空白页。
+
+### 8. 关键路由浏览器巡检
+
+已用本地生产预览服务访问以下路由：
+
+- `/`
+- `/strategy/1`
+- `/cooperation`
+- `/promo`
+- `/subscribe`
+- `/group-buy`
+- `/admin/login`
+- `/auth/login`
+- `/auth/register`
+- `/admin`（使用本地测试管理员账号登录后进入）
+
+结果：
+
+- 所有路由都有可见内容。
+- 页面标题为 `EAXAU`。
+- 未发现旧 `EX` 图标字样。
+- 浏览器控制台 error 数量为 0。
+
+### 9. tRPC 顶层路由兼容性
 
 拆分前后的 `appRouter` 顶层 key 对比：
 
@@ -102,7 +152,7 @@ favorites
 无
 ```
 
-### 8. Git 空白检查
+### 10. Git 空白检查
 
 命令：
 
@@ -112,7 +162,7 @@ git diff --check
 
 结果：通过。
 
-### 9. 裸 JSX 文本扫描
+### 11. 裸 JSX 文本扫描
 
 结果：未发现可疑裸文本节点。
 
@@ -130,6 +180,7 @@ git diff --check
 - `GITHUB_DEPLOY_GUIDE.md`
 - `AI_DEPLOY_OPERATOR_PROMPT.md`
 - `DEPLOYMENT_AUDIT.md`
+- `MANUS_PRODUCTION_FIX_AND_UI_POLISH_PROMPT.md`
 
 不要提交：
 
@@ -157,6 +208,8 @@ ADMIN_PASSWORD=<管理员强密码>
 ```
 
 如果没有 `DATABASE_URL`，项目会回退到 mock 数据。mock 适合本地预览，不适合正式生产。
+
+`EXPO_PUBLIC_API_BASE_URL` 在前后端同服务部署时建议留空。访问 `eaxau.com` 或 `www.eaxau.com` 时，前端会自动使用同域 API，避免 apex/www 跨域导致页面卡住或空白。
 
 ## 剩余风险
 

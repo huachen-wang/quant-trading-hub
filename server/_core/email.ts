@@ -86,7 +86,7 @@ export async function sendVerificationCodeEmail(to: string, code: string, purpos
   };
   const label = purposeLabel[purpose] || "账号验证";
 
-  const subject = `【EAXAU 量化军火库】您的${label}验证码：${code}`;
+  const subject = `【EAXAU】您的${label}验证码：${code}`;
 
   const html = `
 <!DOCTYPE html>
@@ -95,7 +95,7 @@ export async function sendVerificationCodeEmail(to: string, code: string, purpos
 <body style="margin:0;padding:0;background:#0A1628;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:560px;margin:0 auto;padding:40px 32px;color:#F1F5F9;">
     <div style="text-align:center;margin-bottom:32px;">
-      <div style="display:inline-block;padding:10px 20px;background:linear-gradient(135deg,#A8895A,#D8BC83);color:#0A1628;font-weight:900;font-size:18px;border-radius:8px;letter-spacing:0.04em;">EAXAU · 量化军火库</div>
+      <div style="display:inline-block;padding:10px 20px;background:linear-gradient(135deg,#A8895A,#D8BC83);color:#0A1628;font-weight:900;font-size:18px;border-radius:8px;letter-spacing:0.04em;">EAXAU · SOURCE DESK</div>
     </div>
     <div style="background:rgba(30,41,59,0.6);border:1px solid rgba(148,163,184,0.12);border-radius:16px;padding:32px;">
       <h1 style="font-size:22px;font-weight:800;margin:0 0 16px;color:#F1F5F9;">${label}验证码</h1>
@@ -106,14 +106,14 @@ export async function sendVerificationCodeEmail(to: string, code: string, purpos
       <p style="font-size:13px;color:#64748B;margin:0;line-height:1.6;">验证码 <b>5 分钟内有效</b>，请勿向任何人透露。如非本人操作，请忽略此邮件。</p>
     </div>
     <div style="text-align:center;margin-top:24px;font-size:12px;color:#64748B;">
-      <p style="margin:0 0 8px;">© 2026 EAXAU · 量化军火库</p>
+      <p style="margin:0 0 8px;">© 2026 EAXAU · Source Desk</p>
       <p style="margin:0;">本邮件由系统自动发送，请勿回复</p>
     </div>
   </div>
 </body>
 </html>`;
 
-  const text = `【EAXAU 量化军火库】${label}验证码：${code}\n\n验证码 5 分钟内有效，请勿向任何人透露。\n如非本人操作，请忽略此邮件。`;
+  const text = `【EAXAU】${label}验证码：${code}\n\n验证码 5 分钟内有效，请勿向任何人透露。\n如非本人操作，请忽略此邮件。`;
 
   return sendEmail({ to, subject, html, text });
 }

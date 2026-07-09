@@ -1,5 +1,5 @@
-import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, Alert, Platform, StyleSheet } from "react-native";
-import { ScreenContainer } from "@/components/screen-container";
+import { View, Text, TouchableOpacity, ActivityIndicator, Alert, Platform, StyleSheet } from "react-native";
+import { AdminPageChrome, AdminSection } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { getListingRequests, updateListingRequestStatus, deleteListingRequest } from "@/lib/admin-api";
 import { useState, useEffect, useCallback } from "react";
@@ -72,7 +72,7 @@ export default function AdminListings() {
   ];
 
   const renderItem = ({ item }: { item: any }) => (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.card, { borderBottomColor: colors.border }]}>
       <View style={styles.cardHeader}>
         <Text style={[styles.cardTitle, { color: colors.foreground }]}>{item.eaName}</Text>
         <View style={[styles.badge, { backgroundColor: (statusColors[item.status] || colors.muted) + "20" }]}>
@@ -121,56 +121,59 @@ export default function AdminListings() {
   );
 
   return (
-    <ScreenContainer>
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>📦 上架申请 ({listings.length})</Text>
-      </View>
+    <AdminPageChrome
+      eyebrow="LISTING INBOX"
+      title="上架申请"
+      subtitle="审核外部 EA 源、沟通联系方式和上架进度"
+      metrics={[
+        { label: "当前列表", value: listings.length, tone: colors.primary },
+        { label: "待处理", value: listings.filter((item) => item.status === "pending").length, tone: colors.warning },
+        { label: "已联系", value: listings.filter((item) => item.status === "contacted").length, tone: colors.success },
+      ]}
+      maxWidth={1280}
+    >
+      <AdminSection title="申请记录" meta="REVIEW QUEUE">
+        <View style={styles.filterRow}>
+          {filters.map((f) => (
+            <TouchableOpacity
+              key={f.label}
+              onPress={() => setStatusFilter(f.value)}
+              style={[
+                styles.filterBtn,
+                { borderColor: statusFilter === f.value ? colors.primary : colors.border, backgroundColor: statusFilter === f.value ? colors.primary + "20" : colors.surface },
+              ]}
+            >
+              <Text style={{ color: statusFilter === f.value ? colors.primary : colors.muted, fontSize: 13, fontWeight: "700" }}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      {/* 筛选 */}
-      <View style={styles.filterRow}>
-        {filters.map((f) => (
-          <TouchableOpacity
-            key={f.label}
-            onPress={() => setStatusFilter(f.value)}
-            style={[
-              styles.filterBtn,
-              statusFilter === f.value && { backgroundColor: colors.primary + "20", borderColor: colors.primary },
-            ]}
-          >
-            <Text style={{ color: statusFilter === f.value ? colors.primary : colors.muted, fontSize: 13 }}>
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {isLoading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
-      ) : listings.length === 0 ? (
-        <View style={styles.center}><Text style={{ color: colors.muted, fontSize: 16 }}>暂无上架申请</Text></View>
-      ) : (
-        <FlatList
-          data={listings}
-          renderItem={renderItem}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-        />
-      )}
-    </ScreenContainer>
+        {isLoading ? (
+          <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
+        ) : listings.length === 0 ? (
+          <View style={styles.center}><Text style={{ color: colors.muted, fontSize: 16 }}>暂无上架申请</Text></View>
+        ) : (
+          <View style={[styles.tablePanel, { borderColor: colors.border }]}>
+            {listings.map((item) => renderItem({ item }))}
+          </View>
+        )}
+      </AdminSection>
+    </AdminPageChrome>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { padding: 16, borderBottomWidth: 0.5 },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
-  filterRow: { flexDirection: "row", gap: 8, padding: 16, paddingBottom: 0 },
+  filterRow: { flexDirection: "row", gap: 8, marginBottom: 12, flexWrap: "wrap" },
   filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1, borderColor: "transparent" },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  card: { borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 0.5 },
+  center: { minHeight: 220, justifyContent: "center", alignItems: "center" },
+  tablePanel: { borderWidth: 1, borderRadius: 8, overflow: "hidden", backgroundColor: "rgba(15,23,42,0.56)" },
+  card: { padding: 16, borderBottomWidth: 1 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   cardTitle: { fontSize: 16, fontWeight: "600", flex: 1 },
   cardSub: { fontSize: 13, marginBottom: 4 },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
   badgeText: { fontSize: 12, fontWeight: "600" },
   cardActions: { flexDirection: "row", gap: 8, marginTop: 12, flexWrap: "wrap" },
   actionBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 },
