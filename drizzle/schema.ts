@@ -42,6 +42,12 @@ export const strategies = mysqlTable("strategies", {
   maxDrawdown: decimal("maxDrawdown", { precision: 10, scale: 2 }).default("0.00"),
   sharpeRatio: decimal("sharpeRatio", { precision: 10, scale: 2 }).default("0.00"),
   winRate: decimal("winRate", { precision: 5, scale: 2 }).default("0.00"),
+
+  // 数据可信状态与参考来源。estimated 允许先录入待校准数据，避免误标为已核验。
+  dataStatus: mysqlEnum("dataStatus", ["estimated", "referenced", "verified"]).default("estimated").notNull(),
+  sourceName: varchar("sourceName", { length: 120 }),
+  sourceUrl: text("sourceUrl"),
+  evidenceUrl: text("evidenceUrl"),
   
   // 下载和付费
   downloadUrl: text("downloadUrl"), // 下载链接
@@ -66,6 +72,7 @@ export const strategies = mysqlTable("strategies", {
   
   // 旗舰/置顶标记
   isFeatured: boolean("isFeatured").default(false).notNull(), // 是否为旗舰推荐
+  isCurated: boolean("isCurated").default(false).notNull(), // 是否进入首页精选排序
   featuredLink: text("featuredLink"), // 旗舰产品外部跳转链接（如 ddxau.com）
   
   // 联系方式
@@ -87,6 +94,7 @@ export const strategies = mysqlTable("strategies", {
 }, (table) => ({
   platformIdx: index("platform_idx").on(table.platform),
   statusIdx: index("status_idx").on(table.status),
+  curatedIdx: index("curated_idx").on(table.isCurated),
   totalReturnIdx: index("totalReturn_idx").on(table.totalReturn),
 }));
 

@@ -4,6 +4,7 @@
  * 使用原生 SQL 执行迁移，带有 IF NOT EXISTS 保护，可重复执行
  */
 import mysql from "mysql2/promise";
+import { syncCuratedStrategyCatalog } from "./strategy-catalog";
 
 async function runMigrations() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -38,7 +39,12 @@ async function runMigrations() {
       ["tags", "ALTER TABLE `strategies` ADD COLUMN `tags` text DEFAULT NULL"],
       ["galleryImages", "ALTER TABLE `strategies` ADD COLUMN `galleryImages` text DEFAULT NULL"],
       ["isFeatured", "ALTER TABLE `strategies` ADD COLUMN `isFeatured` boolean DEFAULT false"],
+      ["isCurated", "ALTER TABLE `strategies` ADD COLUMN `isCurated` boolean NOT NULL DEFAULT false"],
       ["featuredLink", "ALTER TABLE `strategies` ADD COLUMN `featuredLink` text DEFAULT NULL"],
+      ["dataStatus", "ALTER TABLE `strategies` ADD COLUMN `dataStatus` enum('estimated','referenced','verified') NOT NULL DEFAULT 'estimated'"],
+      ["sourceName", "ALTER TABLE `strategies` ADD COLUMN `sourceName` varchar(120) DEFAULT NULL"],
+      ["sourceUrl", "ALTER TABLE `strategies` ADD COLUMN `sourceUrl` text DEFAULT NULL"],
+      ["evidenceUrl", "ALTER TABLE `strategies` ADD COLUMN `evidenceUrl` text DEFAULT NULL"],
     ];
 
     for (const [colName, sql] of strategyMigrations) {
@@ -47,6 +53,13 @@ async function runMigrations() {
         await connection.query(sql);
         migrationsRun++;
       }
+    }
+
+    try {
+      await connection.query("CREATE INDEX `curated_idx` ON `strategies` (`isCurated`)");
+      migrationsRun++;
+    } catch {
+      // 索引已存在，忽略。
     }
 
     // group_buys 表新增字段
@@ -449,6 +462,17 @@ async function runMigrations() {
     `;
     console.log("[migrate] Ensuring user_favorites table exists...");
     await connection.query(createUserFavorites);
+
+    try {
+      const catalogChanges = await syncCuratedStrategyCatalog(connection);
+      if (catalogChanges > 0) {
+        console.log(`[migrate] Curated strategy catalog synced (${catalogChanges} record(s))`);
+        migrationsRun++;
+      }
+    } catch (error) {
+      // 内容升级失败不阻断服务启动；下一次部署会安全重试。
+      console.error("[migrate] Curated strategy catalog sync failed:", error);
+    }
 
     if (migrationsRun > 0) {
       console.log(`[migrate] \u2713 ${migrationsRun} migration(s) applied successfully`);

@@ -19,6 +19,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { shouldUseContactForDownload } from "@/lib/download-links";
+import { resolveStrategyCover } from "@/lib/strategy-covers";
 import { trpc } from "@/lib/trpc";
 import { SubscribeModal } from "@/components/subscribe-modal";
 import { AdminNotesSection } from "@/components/strategy-detail/admin-notes-section";
@@ -180,6 +181,9 @@ export default function StrategyDetailScreen() {
   const galleryImagesRaw = strategy.galleryImages;
   const isFeatured = !!strategy.isFeatured;
   const featuredLink = strategy.featuredLink;
+  const effectiveCoverImage = Platform.OS === "web"
+    ? resolveStrategyCover(strategy.title, strategy.coverImage)
+    : strategy.coverImage;
 
   let galleryImages: string[] = [];
   try {
@@ -191,9 +195,12 @@ export default function StrategyDetailScreen() {
     }
   } catch {}
 
-  const allImages = strategy.coverImage
-    ? [strategy.coverImage, ...galleryImages.filter((img) => img !== strategy.coverImage)]
+  const allImages = effectiveCoverImage
+    ? [effectiveCoverImage, ...galleryImages.filter((img) => img !== effectiveCoverImage && img !== strategy.coverImage)]
     : galleryImages;
+  const mediaStrategy = effectiveCoverImage === strategy.coverImage
+    ? strategy
+    : { ...strategy, coverImage: effectiveCoverImage };
 
   const tagList = typeof tags === "string"
     ? tags.split(",").map((tag) => tag.trim()).filter(Boolean)
@@ -259,7 +266,7 @@ export default function StrategyDetailScreen() {
             <View style={styles.desktopHeroGrid}>
               <View style={styles.desktopHeroMain}>
                 <StrategyMedia
-                  strategy={strategy}
+                  strategy={mediaStrategy}
                   allImages={allImages}
                   gradientColors={gradientColors}
                   productTypeLabel={productTypeLabel}
@@ -302,7 +309,7 @@ export default function StrategyDetailScreen() {
           ) : (
             <>
               <StrategyMedia
-                strategy={strategy}
+                strategy={mediaStrategy}
                 allImages={allImages}
                 gradientColors={gradientColors}
                 productTypeLabel={productTypeLabel}

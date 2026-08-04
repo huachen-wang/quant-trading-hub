@@ -1,15 +1,23 @@
 import { useRef } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Linking } from "react-native";
 import { Image } from "expo-image";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useResponsive } from "@/hooks/use-responsive";
 import { getInternalStrategyRoute } from "@/lib/download-links";
+import { resolveStrategyCover } from "@/lib/strategy-covers";
 import * as Haptics from "expo-haptics";
 
 // 默认 blurhash 占位符 - 深色渐变风格，适合金融/交易类封面
 const DEFAULT_BLURHASH = "L6PZfSi_.AyE_3t7t7R**0o#DgR4";
+const CURATED_COVER_PALETTES: ReadonlyArray<readonly [string, string, string]> = [
+  ["#07111D", "#12304A", "#3B82F6"],
+  ["#07150F", "#164E3A", "#34D399"],
+  ["#15100A", "#3A2814", "#C9A96E"],
+  ["#160B0B", "#4A1D1D", "#F87171"],
+];
 
 export interface StrategyCardProps {
   id: number;
@@ -30,12 +38,17 @@ export interface StrategyCardProps {
   tags?: string | null;
   productType?: string | null;
   isFeatured?: boolean;
+  isCurated?: boolean;
   featuredLink?: string | null;
+  saleMode?: "direct" | "inquiry" | null;
+  dataStatus?: "estimated" | "referenced" | "verified" | null;
+  imagePriority?: "low" | "normal" | "high";
   onPress: () => void;
   onSubscribePress?: () => void;
 }
 
 export function StrategyCard({
+  id,
   title,
   platform,
   totalReturn,
@@ -51,7 +64,11 @@ export function StrategyCard({
   tags,
   productType,
   isFeatured,
+  isCurated,
   featuredLink,
+  saleMode,
+  dataStatus = "estimated",
+  imagePriority = "normal",
   onPress,
   onSubscribePress,
 }: StrategyCardProps) {
@@ -93,9 +110,12 @@ export function StrategyCard({
     onPress();
   };
 
+  const paletteIndex = Math.abs(id) % CURATED_COVER_PALETTES.length;
   const gradientColors: readonly [string, string, ...string[]] =
     isFeatured
       ? ["#100D07", "#2A2112", "#C9A96E"]
+      : isCurated
+        ? CURATED_COVER_PALETTES[paletteIndex]
       : platform === "MT4"
         ? ["#06101D", "#11233A", "#41607A"]
         : ["#06140F", "#12382B", "#34D399"];
@@ -109,7 +129,7 @@ export function StrategyCard({
   const hasDiscount = !isFree && originalPriceNum > 0 && originalPriceNum > priceNum;
   const discountPercent = hasDiscount ? Math.round((1 - priceNum / originalPriceNum) * 100) : 0;
   const returnText = `${isPositive ? "+" : ""}${totalReturn}%`;
-  const priceText = `¥${price}`;
+  const priceText = saleMode === "inquiry" && priceNum <= 0 ? "联系咨询" : `¥${price}`;
   const originalPriceText = originalPrice ? `¥${originalPrice}` : "";
   const viewText = `VIEW ${viewCount}`;
   const downloadText = `DL ${downloadCount + virtualDownloads}`;
@@ -133,6 +153,14 @@ export function StrategyCard({
   const infoPadH = isDesktop ? 11 : 8;
   const infoPadV = isDesktop ? 9 : 6;
   const coverCode = isFeatured ? "PRO" : productType === "indicator" ? "IND" : productType === "tool" ? "TOOL" : "EA";
+  const effectiveCoverImage = Platform.OS === "web"
+    ? resolveStrategyCover(title, coverImage)
+    : coverImage || null;
+  const dataStatusMeta = dataStatus === "verified"
+    ? { label: "已核验", color: "#34D399", background: "rgba(6,78,59,0.90)" }
+    : dataStatus === "referenced"
+      ? { label: "参考估算", color: "#93C5FD", background: "rgba(30,58,138,0.90)" }
+      : { label: "待校准", color: "#FDE68A", background: "rgba(92,61,10,0.90)" };
 
   return (
     <TouchableOpacity
@@ -162,15 +190,16 @@ export function StrategyCard({
       >
         {/* 封面区域 */}
         <View style={[styles.coverContainer, { height: coverHeight }]}>
-          {coverImage ? (
+          {effectiveCoverImage ? (
             <Image
-              source={{ uri: coverImage }}
+              source={{ uri: effectiveCoverImage }}
               style={[styles.coverImage, { height: coverHeight }]}
               placeholder={{ blurhash: coverImageBlurhash || DEFAULT_BLURHASH }}
               contentFit="cover"
-              transition={300}
-              recyclingKey={coverImage}
+              transition={120}
+              recyclingKey={effectiveCoverImage}
               cachePolicy="memory-disk"
+              priority={imagePriority}
             />
           ) : (
             <LinearGradient
@@ -179,9 +208,14 @@ export function StrategyCard({
               end={{ x: 1, y: 1 }}
               style={[styles.gradient, { height: coverHeight }]}
             >
-              <View style={styles.coverCodePanel}>
-                <Text style={styles.coverCodeText}>{coverCode}</Text>
-                <Text style={styles.coverCodeSub}>{platform} SOURCE</Text>
+              <View style={styles.generatedCover}>
+                <View style={styles.generatedCoverHeader}>
+                  <Text style={styles.generatedCoverKicker}>
+                    {isCurated ? "EAXAU CURATED" : `EAXAU ${coverCode}`}
+                  </Text>
+                  <Text style={styles.generatedCoverPlatform}>{platform}</Text>
+                </View>
+                <Text style={styles.generatedCoverTitle} numberOfLines={2}>{title}</Text>
               </View>
             </LinearGradient>
           )}
@@ -201,15 +235,17 @@ export function StrategyCard({
           )}
 
           {/* 平台标签 */}
-          <View style={[
-            styles.platformBadge,
-            { backgroundColor: `${colors.background}E6` },
-            isFeatured ? { top: 34 } : {},
-          ]}>
-            <Text style={[styles.platformText, { color: isFeatured ? "#A8895A" : gradientColors[1] }]}>
-              {productTypeLabel ? `${platform} · ${productTypeLabel}` : platform}
-            </Text>
-          </View>
+          {effectiveCoverImage ? (
+            <View style={[
+              styles.platformBadge,
+              { backgroundColor: `${colors.background}E6` },
+              isFeatured ? { top: 34 } : {},
+            ]}>
+              <Text style={[styles.platformText, { color: isFeatured ? "#D8BC83" : platform === "MT4" ? "#93C5FD" : "#6EE7B7" }]}>
+                {`${productTypeLabel ? `${platform} · ${productTypeLabel}` : platform}${isCurated ? " · 精选" : ""}`}
+              </Text>
+            </View>
+          ) : null}
 
           {/* 折扣标签 */}
           {hasDiscount && discountPercent > 0 && (
@@ -225,16 +261,26 @@ export function StrategyCard({
                 e.stopPropagation();
                 onSubscribePress();
               }}
-              style={[styles.subscribeBtn, { backgroundColor: `${colors.primary}E6` }]}
+              style={[
+                styles.subscribeBtn,
+                {
+                  backgroundColor: "rgba(216,188,131,0.94)",
+                  top: hasDiscount ? 36 : effectiveCoverImage ? 8 : 34,
+                },
+              ]}
               activeOpacity={0.7}
+              accessibilityLabel="订阅策略更新"
             >
-              <Text style={styles.subscribeBtnIcon}>SUB</Text>
+              <IconSymbol name="bell.fill" size={14} color="#08111F" />
             </TouchableOpacity>
           )}
 
           {/* 收益率浮层 */}
           <View style={[styles.returnOverlay, { backgroundColor: isPositive ? "rgba(16,185,129,0.9)" : "rgba(239,68,68,0.9)" }]}>
             <Text style={styles.returnOverlayText}>{returnText}</Text>
+          </View>
+          <View style={[styles.dataStatusBadge, { backgroundColor: dataStatusMeta.background }]}>
+            <Text style={[styles.dataStatusText, { color: dataStatusMeta.color }]}>{dataStatusMeta.label}</Text>
           </View>
         </View>
 
@@ -318,27 +364,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  coverCodePanel: {
-    minWidth: 78,
-    alignItems: "center",
+  generatedCover: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "space-between",
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-    backgroundColor: "rgba(2,6,23,0.28)",
+    paddingTop: 12,
+    paddingBottom: 36,
+    backgroundColor: "rgba(2,6,23,0.14)",
   },
-  coverCodeText: {
-    color: "#F8FAFC",
-    fontSize: 24,
-    lineHeight: 28,
-    fontWeight: "900",
+  generatedCoverHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
-  coverCodeSub: {
-    color: "rgba(226,232,240,0.72)",
+  generatedCoverKicker: {
+    color: "rgba(216,188,131,0.86)",
     fontSize: 9,
     lineHeight: 12,
+    fontWeight: "900",
+  },
+  generatedCoverPlatform: {
+    color: "rgba(226,232,240,0.72)",
+    fontSize: 10,
     fontWeight: "800",
-    marginTop: 2,
+  },
+  generatedCoverTitle: {
+    color: "#F8FAFC",
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "900",
+    maxWidth: "86%",
   },
   // 旗舰标签
   featuredBadge: {
@@ -395,11 +451,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 7,
   },
-  subscribeBtnIcon: {
-    color: "#0A1628",
-    fontSize: 10,
-    fontWeight: "900",
-  },
   returnOverlay: {
     position: "absolute",
     bottom: 8,
@@ -411,6 +462,18 @@ const styles = StyleSheet.create({
   returnOverlayText: {
     color: "#fff",
     fontSize: 12,
+    fontWeight: "800",
+  },
+  dataStatusBadge: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 3,
+  },
+  dataStatusText: {
+    fontSize: 10,
     fontWeight: "800",
   },
   infoContainer: {

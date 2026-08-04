@@ -41,7 +41,12 @@ export default function StrategyForm() {
     tags: "",
     galleryImages: "",
     isFeatured: false,
+    isCurated: false,
     featuredLink: "",
+    dataStatus: "estimated" as "estimated" | "referenced" | "verified",
+    sourceName: "",
+    sourceUrl: "",
+    evidenceUrl: "",
     // A.2 新增
     saleMode: "inquiry" as "direct" | "inquiry",
     richDescription: "",
@@ -77,7 +82,12 @@ export default function StrategyForm() {
               tags: strategy.tags || "",
               galleryImages: strategy.galleryImages || "",
               isFeatured: strategy.isFeatured ?? false,
+              isCurated: strategy.isCurated ?? false,
               featuredLink: strategy.featuredLink || "",
+              dataStatus: strategy.dataStatus || "estimated",
+              sourceName: strategy.sourceName || "",
+              sourceUrl: strategy.sourceUrl || "",
+              evidenceUrl: strategy.evidenceUrl || "",
               // A.2
               saleMode: strategy.saleMode || "inquiry",
               richDescription: strategy.richDescription || "",
@@ -238,8 +248,49 @@ export default function StrategyForm() {
           </>
         )}
 
+        <View style={[s.row, { alignItems: "center", justifyContent: "space-between", marginTop: 8, marginBottom: 12 }]}>
+          <View style={{ flex: 1, paddingRight: 16 }}>
+            <Text style={[s.label, { color: colors.foreground, marginBottom: 2 }]}>首页精选</Text>
+            <Text style={{ color: colors.muted, fontSize: 12 }}>精选策略会排在普通策略之前，仍保留原有筛选与排序。</Text>
+          </View>
+          <TouchableOpacity onPress={() => setFormData({ ...formData, isCurated: !formData.isCurated })} style={[s.toggle, { backgroundColor: formData.isCurated ? colors.success : colors.muted }]} activeOpacity={0.7}>
+            <View style={[s.toggleDot, { marginLeft: formData.isCurated ? 22 : 2 }]} />
+          </TouchableOpacity>
+        </View>
+
         {/* 实盘数据 */}
-        <Text style={[s.sectionTitle, { color: colors.foreground }]}>实盘数据</Text>
+        <Text style={[s.sectionTitle, { color: colors.foreground }]}>策略数据</Text>
+        <Text style={[s.label, { color: colors.foreground }]}>数据状态</Text>
+        <View style={s.row}>
+          {([
+            { label: "待校准", value: "estimated" },
+            { label: "参考估算", value: "referenced" },
+            { label: "已核验", value: "verified" },
+          ] as const).map((opt) => (
+            <TouchableOpacity
+              key={opt.value}
+              onPress={() => setFormData({ ...formData, dataStatus: opt.value })}
+              style={[s.chip, { backgroundColor: formData.dataStatus === opt.value ? colors.primary : colors.surface }]}
+              activeOpacity={0.7}
+            >
+              <Text style={{ color: formData.dataStatus === opt.value ? "#fff" : colors.foreground, fontWeight: "600", textAlign: "center" }}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={[s.fieldGrid, isDesktop && s.fieldGridDesktop]}>
+          <View style={s.fieldCell}>
+            <Text style={[s.label, { color: colors.foreground }]}>参考来源名称</Text>
+            <TextInput value={formData.sourceName} onChangeText={(t) => setFormData({ ...formData, sourceName: t })} placeholder="例如 MQL5 Market" placeholderTextColor={colors.muted} style={inputStyle} />
+          </View>
+          <View style={s.fieldCell}>
+            <Text style={[s.label, { color: colors.foreground }]}>来源链接</Text>
+            <TextInput value={formData.sourceUrl} onChangeText={(t) => setFormData({ ...formData, sourceUrl: t })} placeholder="https://..." placeholderTextColor={colors.muted} autoCapitalize="none" style={inputStyle} />
+          </View>
+          <View style={s.fieldCell}>
+            <Text style={[s.label, { color: colors.foreground }]}>验证或观摩链接</Text>
+            <TextInput value={formData.evidenceUrl} onChangeText={(t) => setFormData({ ...formData, evidenceUrl: t })} placeholder="https://..." placeholderTextColor={colors.muted} autoCapitalize="none" style={inputStyle} />
+          </View>
+        </View>
         <View style={s.row}>
           <View style={{ flex: 1 }}>
             <Text style={[s.label, { color: colors.foreground }]}>总收益率 (%)</Text>

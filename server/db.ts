@@ -184,7 +184,7 @@ export async function getStrategies(params: {
       .select()
       .from(strategies)
       .where(whereConditions)
-      .orderBy(desc(strategies.isFeatured), orderByColumn)
+      .orderBy(desc(strategies.isFeatured), desc(strategies.isCurated), orderByColumn)
       .limit(params.limit || 20)
       .offset(params.offset || 0);
 
@@ -244,7 +244,12 @@ export async function getStrategies(params: {
       richDescription: null,
       galleryImages: null,
       isFeatured: false,
+      isCurated: false,
       featuredLink: null,
+      dataStatus: "estimated",
+      sourceName: null,
+      sourceUrl: null,
+      evidenceUrl: null,
       virtualSubscribers: 0,
       virtualDownloads: 0,
     }));

@@ -50,6 +50,7 @@ function isAssetRequest(reqPath) {
     reqPath.startsWith('/_expo/') ||
     reqPath.startsWith('/assets/') ||
     reqPath.startsWith('/ea-covers/') ||
+    reqPath.startsWith('/ea-covers-v2/') ||
     reqPath.startsWith('/charts/') ||
     reqPath === '/favicon.ico' ||
     reqPath === '/metadata.json' ||

@@ -1,3 +1,5 @@
+import { CURATED_STRATEGY_CATALOG } from "./strategy-catalog";
+
 type StrategyRecord = any;
 type CommentRecord = any;
 type OrderRecord = any;
@@ -8,12 +10,12 @@ const now = Date.now();
 let mockStrategies: StrategyRecord[] = [
   {
     id: 1,
-    title: "黄金智能交易系统",
+    title: "SuperTrend EA 黄金趋势版",
     description: "专注于黄金市场的AI驱动交易系统，内置风险管理模块，适合稳健型投资者。",
     platform: "MT4",
     pairs: "XAUUSD",
     timeframe: "H1",
-    coverImage: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3",
+    coverImage: "/ea-covers-v2/43_SuperTrend_EA_32.jpg",
     totalReturn: "156.80",
     maxDrawdown: "12.30",
     sharpeRatio: "2.45",
@@ -28,8 +30,8 @@ let mockStrategies: StrategyRecord[] = [
     saleMode: "direct",
     richDescription: "<h2>核心特点</h2><p>本地预览样例数据，不影响线上真实数据库。</p>",
     galleryImages: JSON.stringify([
-      "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3",
-      "https://images.unsplash.com/photo-1642790106117-e829e14a795f",
+      "/ea-covers-v2/43_SuperTrend_EA_32.jpg",
+      "/ea-covers-v2/13_AI_Gold_Sniper.jpg",
     ]),
     isFeatured: true,
     featuredLink: null,
@@ -49,7 +51,7 @@ let mockStrategies: StrategyRecord[] = [
     platform: "MT5",
     pairs: "EURUSD",
     timeframe: "M5",
-    coverImage: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44",
+    coverImage: "/ea-covers-v2/30_GOLD_Scalper_PRO.jpg",
     totalReturn: "89.40",
     maxDrawdown: "8.60",
     sharpeRatio: "1.95",
@@ -82,7 +84,7 @@ let mockStrategies: StrategyRecord[] = [
     platform: "MT4",
     pairs: "EURUSD,GBPUSD,USDJPY,AUDUSD",
     timeframe: "H4",
-    coverImage: "https://images.unsplash.com/photo-1642790106117-e829e14a795f",
+    coverImage: "/ea-covers-v2/50_HTTP_Multi_Asset_EA.jpg",
     totalReturn: "234.60",
     maxDrawdown: "15.80",
     sharpeRatio: "3.12",
@@ -115,7 +117,7 @@ let mockStrategies: StrategyRecord[] = [
     platform: "MT5",
     pairs: "XAUUSD,EURUSD",
     timeframe: "H1",
-    coverImage: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0",
+    coverImage: "/ea-covers-v2/40_Goldex_AI_Neural.jpg",
     totalReturn: "112.50",
     maxDrawdown: "9.20",
     sharpeRatio: "2.85",
@@ -143,7 +145,45 @@ let mockStrategies: StrategyRecord[] = [
   },
 ];
 
-let nextStrategyId = mockStrategies.length + 1;
+const catalogPreviewStrategies = CURATED_STRATEGY_CATALOG.map((strategy, index) => ({
+  id: 100 + index,
+  ...strategy,
+  downloadUrl: null,
+  price: "0.00",
+  originalPrice: null,
+  isFree: false,
+  downloadCount: 180 + index * 9,
+  productType: "ea",
+  saleMode: "inquiry",
+  richDescription: `<p>${strategy.description}</p>`,
+  galleryImages: null,
+  isFeatured: false,
+  isCurated: true,
+  featuredLink: null,
+  dataStatus: "referenced",
+  telegramGroup: null,
+  qqGroup: null,
+  virtualSubscribers: 18 + index * 2,
+  virtualDownloads: 36 + index * 4,
+  viewCount: 2400 + index * 110,
+  status: "published",
+  createdAt: new Date(now - (index + 3) * 1000 * 60 * 60 * 24),
+  updatedAt: new Date(now - (index + 2) * 1000 * 60 * 60 * 24),
+}));
+
+mockStrategies = [
+  ...catalogPreviewStrategies,
+  ...mockStrategies.map((strategy) => ({
+    isCurated: false,
+    dataStatus: "estimated",
+    sourceName: null,
+    sourceUrl: null,
+    evidenceUrl: null,
+    ...strategy,
+  })),
+];
+
+let nextStrategyId = Math.max(...mockStrategies.map((strategy) => strategy.id)) + 1;
 let nextCommentId = 10;
 
 let mockComments: CommentRecord[] = [
@@ -306,6 +346,8 @@ export function getMockStrategies(params: {
   if (params.tag) rows = rows.filter((strategy) => String(strategy.tags || "").split(",").map((tag) => tag.trim()).includes(params.tag!));
 
   rows = [...rows].sort((a, b) => {
+    if (!!a.isFeatured !== !!b.isFeatured) return Number(!!b.isFeatured) - Number(!!a.isFeatured);
+    if (!!a.isCurated !== !!b.isCurated) return Number(!!b.isCurated) - Number(!!a.isCurated);
     if (params.orderBy === "popular") return (b.downloadCount || 0) - (a.downloadCount || 0);
     if (params.orderBy === "return") return parseFloat(b.totalReturn || "0") - parseFloat(a.totalReturn || "0");
     if (params.orderBy === "hot") return (b.viewCount || 0) + (b.virtualSubscribers || 0) * 10 - ((a.viewCount || 0) + (a.virtualSubscribers || 0) * 10);
@@ -352,7 +394,12 @@ export function createMockStrategy(data: StrategyRecord) {
     richDescription: null,
     galleryImages: null,
     isFeatured: false,
+    isCurated: false,
     featuredLink: null,
+    dataStatus: "estimated",
+    sourceName: null,
+    sourceUrl: null,
+    evidenceUrl: null,
     telegramGroup: null,
     qqGroup: null,
     virtualSubscribers: 0,

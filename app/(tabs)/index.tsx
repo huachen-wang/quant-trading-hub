@@ -184,7 +184,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.desktopHeroSide}>
             <CustomEABanner onPress={openContactModal} />
-            <DesktopBriefPanel itemCount={allStrategies.length} />
+            <DesktopBriefPanel itemCount={displayStrategies.length} />
           </View>
         </View>
       ) : (
@@ -215,7 +215,7 @@ export default function HomeScreen() {
       />
       {isShowingPreviewCatalog ? <LocalPreviewStrip /> : null}
     </View>
-  ), [allStrategies.length, categoryFilter, categoriesForFilters, clearAllFilters, colors, dynamicTags, isDesktop, isShowingPreviewCatalog, openContactModal, openSearch, orderBy, platformFilter, saleModeFilter, showAdvancedFilters, tagFilter, toggleAdvancedFilters]);
+  ), [categoryFilter, categoriesForFilters, clearAllFilters, colors, displayStrategies.length, dynamicTags, isDesktop, isShowingPreviewCatalog, openContactModal, openSearch, orderBy, platformFilter, saleModeFilter, showAdvancedFilters, tagFilter, toggleAdvancedFilters]);
 
   const renderEmpty = useCallback(() => (
     <StrategyListEmpty
@@ -233,13 +233,14 @@ export default function HomeScreen() {
     />
   ), [colors, displayStrategies.length, hasMore, isLoadingMore, isShowingPreviewCatalog]);
 
-  const renderStrategyItem = useCallback<ListRenderItem<HomeStrategy>>(({ item }) => (
+  const renderStrategyItem = useCallback<ListRenderItem<HomeStrategy>>(({ item, index }) => (
     <StrategyListItem
       item={item}
+      imagePriority={index < (isDesktop ? 8 : 4) ? "high" : "low"}
       onStrategyPress={handleStrategyPress}
       onSubscribePress={handleSubscribePress}
     />
-  ), [handleStrategyPress, handleSubscribePress]);
+  ), [handleStrategyPress, handleSubscribePress, isDesktop]);
 
   const keyExtractor = useCallback((item: HomeStrategy) => item.id.toString(), []);
 
@@ -292,7 +293,7 @@ function LocalPreviewStrip() {
 
 function DesktopBriefPanel({ itemCount }: { itemCount: number }) {
   const rows = [
-    { label: "可浏览策略", value: `${itemCount || 200}+`, tone: "#D8BC83" },
+    { label: "当前已载入", value: `${itemCount}`, tone: "#D8BC83" },
     { label: "交付模式", value: "DIRECT / B2B", tone: "#60A5FA" },
     { label: "源头审核", value: "MANUAL", tone: "#34D399" },
   ];

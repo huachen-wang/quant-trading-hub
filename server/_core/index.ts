@@ -191,6 +191,7 @@ function isStaticAssetRequest(reqPath: string): boolean {
     reqPath.startsWith('/_expo/') ||
     reqPath.startsWith('/assets/') ||
     reqPath.startsWith('/ea-covers/') ||
+    reqPath.startsWith('/ea-covers-v2/') ||
     reqPath.startsWith('/charts/') ||
     reqPath === '/favicon.ico' ||
     reqPath === '/metadata.json' ||
@@ -310,7 +311,22 @@ Sitemap: https://www.eaxau.com/sitemap.xml
   const indexPath = path.join(webBuildPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     console.log(`[static] web-build directory exists`);
-    app.use(express.static(webBuildPath));
+    const optimizedCoversPath = path.join(webBuildPath, 'ea-covers-v2');
+    if (fs.existsSync(optimizedCoversPath)) {
+      app.use('/ea-covers-v2', express.static(optimizedCoversPath, {
+        maxAge: '1y',
+        immutable: true,
+      }));
+    }
+    app.use(express.static(webBuildPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache');
+        } else if (filePath.includes(`${path.sep}_expo${path.sep}static${path.sep}`)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
+      },
+    }));
 
     // 读取并缓存 index.html
     let cachedIndexHtml = '';

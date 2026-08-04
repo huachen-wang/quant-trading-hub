@@ -6,12 +6,14 @@ type StrategyListItemProps = {
   item: HomeStrategy;
   onStrategyPress: (id: number) => void;
   onSubscribePress: (title: string) => void;
+  imagePriority?: "low" | "normal" | "high";
 };
 
 export const StrategyListItem = memo(function StrategyListItem({
   item,
   onStrategyPress,
   onSubscribePress,
+  imagePriority,
 }: StrategyListItemProps) {
   const handlePress = useCallback(() => onStrategyPress(item.id), [item.id, onStrategyPress]);
   const handleSubscribePress = useCallback(() => onSubscribePress(item.title), [item.title, onSubscribePress]);
@@ -35,7 +37,11 @@ export const StrategyListItem = memo(function StrategyListItem({
       tags={item.tags}
       productType={item.productType}
       isFeatured={!!item.isFeatured}
+      isCurated={!!item.isCurated}
       featuredLink={item.featuredLink}
+      saleMode={item.saleMode}
+      dataStatus={item.dataStatus}
+      imagePriority={imagePriority}
       onPress={handlePress}
       onSubscribePress={handleSubscribePress}
     />

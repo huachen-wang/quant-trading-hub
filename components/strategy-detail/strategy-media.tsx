@@ -86,13 +86,17 @@ export function StrategyMedia({
                       <Text style={styles.placeholderTitle} numberOfLines={2}>{strategy.title}</Text>
                     </View>
                   </LinearGradient>
-                  <Image
-                    source={{ uri: img }}
-                    style={StyleSheet.absoluteFillObject}
-                    contentFit="cover"
-                    transition={300}
-                    cachePolicy="memory-disk"
-                  />
+                  {Math.abs(i - galleryIndex) <= 1 ? (
+                    <Image
+                      source={{ uri: img }}
+                      style={StyleSheet.absoluteFillObject}
+                      contentFit="cover"
+                      transition={120}
+                      cachePolicy="memory-disk"
+                      priority={i === galleryIndex ? "high" : "low"}
+                      recyclingKey={img}
+                    />
+                  ) : null}
                 </View>
               </TouchableOpacity>
             ))}
@@ -131,8 +135,10 @@ export function StrategyMedia({
               style={{ width: "100%", height: "100%" }}
               placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
               contentFit="cover"
-              transition={300}
+              transition={120}
               cachePolicy="memory-disk"
+              priority="high"
+              recyclingKey={strategy.coverImage}
               onError={() => setCoverLoadFailed(true)}
             />
           </TouchableOpacity>
@@ -195,12 +201,17 @@ export function StrategyMedia({
           >
             {allImages.map((img, i) => (
               <View key={`${img}-modal-${i}`} style={{ width, justifyContent: "center", alignItems: "center" }}>
-                <Image
-                  source={{ uri: img }}
-                  style={{ width: fullImageSize, height: fullImageSize }}
-                  contentFit="contain"
-                  transition={200}
-                />
+                {Math.abs(i - galleryIndex) <= 1 ? (
+                  <Image
+                    source={{ uri: img }}
+                    style={{ width: fullImageSize, height: fullImageSize }}
+                    contentFit="contain"
+                    transition={120}
+                    cachePolicy="memory-disk"
+                    priority={i === galleryIndex ? "high" : "low"}
+                    recyclingKey={`${img}-modal`}
+                  />
+                ) : null}
               </View>
             ))}
           </ScrollView>

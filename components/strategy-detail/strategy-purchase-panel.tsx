@@ -27,14 +27,18 @@ export function StrategyPurchasePanel({
   onDownload,
   onContact,
 }: StrategyPurchasePanelProps) {
+  const isInquiryWithoutPrice = strategy.saleMode === "inquiry" && (parseFloat(strategy.price || "0") || 0) <= 0;
+
   return (
     <View style={styles.section}>
       <View style={[styles.actionCard, { backgroundColor: colors.surface }]}>
         <View style={styles.priceRow}>
           <View>
-            <Text style={[styles.priceLabel, { color: colors.muted }]}>价格</Text>
+            <Text style={[styles.priceLabel, { color: colors.muted }]}>{isInquiryWithoutPrice ? "授权方式" : "价格"}</Text>
             {strategy.isFree ? (
               <Text style={[styles.priceValue, { color: colors.success }]}>免费</Text>
+            ) : isInquiryWithoutPrice ? (
+              <Text style={[styles.inquiryValue, { color: "#C9A96E" }]}>联系咨询</Text>
             ) : (
               <View style={styles.priceDisplayRow}>
                 <Text style={[styles.priceValue, { color: "#C9A96E" }]}>¥{strategy.price}</Text>
@@ -106,6 +110,10 @@ const styles = StyleSheet.create({
   },
   priceValue: {
     fontSize: 22,
+    fontWeight: "800",
+  },
+  inquiryValue: {
+    fontSize: 18,
     fontWeight: "800",
   },
   priceDisplayRow: {

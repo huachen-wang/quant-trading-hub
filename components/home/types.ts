@@ -16,5 +16,8 @@ export type HomeStrategy = {
   tags?: string | null;
   productType?: string | null;
   isFeatured?: boolean | null;
+  isCurated?: boolean | null;
   featuredLink?: string | null;
+  saleMode?: "direct" | "inquiry" | null;
+  dataStatus?: "estimated" | "referenced" | "verified" | null;
 };
