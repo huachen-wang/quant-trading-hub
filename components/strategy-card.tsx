@@ -50,7 +50,7 @@ export function StrategyCard({
   tags,
   productType,
   isFeatured,
-  isCurated,
+  imagePriority,
   onPress,
   onSubscribePress,
 }: StrategyCardProps) {
@@ -141,9 +141,9 @@ export function StrategyCard({
               title={title}
               platform={platform}
               pairs={pairs}
+              tags={tags}
               productType={productType}
-              isCurated={isCurated}
-              isFeatured={isFeatured}
+              imagePriority={imagePriority}
               height={coverHeight}
             />
 

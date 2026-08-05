@@ -17,7 +17,7 @@ import { PcTopNav } from "@/components/pc-top-nav";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
-import { resolveStrategyCover } from "@/lib/strategy-covers";
+import { resolveStrategyArtwork } from "@/lib/strategy-artwork";
 import { trpc } from "@/lib/trpc";
 import { SubscribeModal } from "@/components/subscribe-modal";
 import { AdminNotesSection } from "@/components/strategy-detail/admin-notes-section";
@@ -162,8 +162,14 @@ export default function StrategyDetailScreen() {
   const productType = strategy.productType;
   const galleryImagesRaw = strategy.galleryImages;
   const isFeatured = !!strategy.isFeatured;
+  const artwork = resolveStrategyArtwork({
+    title: strategy.title,
+    tags: strategy.tags,
+    pairs: strategy.pairs,
+    productType: strategy.productType,
+  });
   const effectiveCoverImage = Platform.OS === "web"
-    ? resolveStrategyCover(strategy.title, strategy.coverImage)
+    ? artwork.image
     : strategy.coverImage;
 
   let galleryImages: string[] = [];

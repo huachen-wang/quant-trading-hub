@@ -1,13 +1,15 @@
 import { StyleSheet, Text, View } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
+import { resolveStrategyArtwork } from "@/lib/strategy-artwork";
 
 type StrategyCoverProps = {
   title: string;
   platform: "MT4" | "MT5";
   pairs?: string;
+  tags?: string | null;
   productType?: string | null;
-  isCurated?: boolean;
-  isFeatured?: boolean;
+  imagePriority?: "low" | "normal" | "high";
   height: number;
 };
 
@@ -15,66 +17,79 @@ export function StrategyCover({
   title,
   platform,
   pairs,
+  tags,
   productType,
-  isCurated,
-  isFeatured,
+  imagePriority = "normal",
   height,
 }: StrategyCoverProps) {
+  const artwork = resolveStrategyArtwork({ title, tags, pairs, productType });
+  const shortNameLength = Array.from(artwork.shortName).length;
+  const shortNameSize =
+    shortNameLength > 14 ? 11 : shortNameLength > 10 ? 12 : 15;
   const productLabel =
     productType === "indicator"
-      ? "INDICATOR"
+      ? "指标"
       : productType === "tool"
-        ? "TOOL"
-        : "EXPERT ADVISOR";
-  const titleSize = title.length > 30 ? 14 : title.length > 20 ? 16 : 18;
-  const platformColor = platform === "MT4" ? "#93C5FD" : "#6EE7B7";
+        ? "工具"
+        : "EA";
 
   return (
     <LinearGradient
-      colors={["#07101D", "#101C2E", "#17283B"]}
+      colors={artwork.fallback}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.cover, { height }]}
     >
-      <View style={styles.gridLineHorizontal} />
-      <View style={styles.gridLineVertical} />
-      <Text style={styles.watermark}>EA</Text>
+      <Image
+        source={{ uri: artwork.image }}
+        style={StyleSheet.absoluteFillObject}
+        contentFit="cover"
+        transition={120}
+        cachePolicy="memory-disk"
+        priority={imagePriority}
+        recyclingKey={artwork.image}
+        accessible={false}
+      />
+      <LinearGradient
+        colors={[
+          "rgba(3,8,17,0.72)",
+          "rgba(3,8,17,0.04)",
+          "rgba(3,8,17,0.24)",
+          "rgba(3,8,17,0.82)",
+        ]}
+        locations={[0, 0.34, 0.62, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
 
       <View style={styles.header}>
         <View style={styles.brandRow}>
-          <View style={styles.brandMark} />
+          <View
+            style={[styles.brandMark, { backgroundColor: artwork.accent }]}
+          />
           <Text style={styles.brand}>EAXAU</Text>
-          <Text style={styles.catalogLabel}>
-            {isFeatured ? "OFFICIAL" : isCurated ? "SELECT" : "CATALOG"}
-          </Text>
         </View>
-        <View
-          style={[styles.platformChip, { borderColor: `${platformColor}66` }]}
-        >
-          <Text style={[styles.platform, { color: platformColor }]}>
-            {platform}
-          </Text>
+        <View style={styles.platformChip}>
+          <Text style={styles.platform}>{`${platform} · ${productLabel}`}</Text>
         </View>
       </View>
 
-      <View style={styles.titleBlock}>
-        <Text style={styles.productType}>{productLabel}</Text>
+      <View style={[styles.categoryBlock, { borderLeftColor: artwork.accent }]}>
         <Text
-          style={[
-            styles.title,
-            { fontSize: titleSize, lineHeight: titleSize + 4 },
-          ]}
-          numberOfLines={2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.76}
+          style={[styles.category, { color: artwork.accent }]}
+          numberOfLines={1}
         >
-          {title}
+          {artwork.label}
         </Text>
-      </View>
-
-      <View style={styles.footer}>
-        <Text style={styles.pairs} numberOfLines={1}>
-          {pairs || "MULTI ASSET"}
+        <Text
+          style={[styles.shortName, { fontSize: shortNameSize }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.78}
+        >
+          {artwork.shortName}
+        </Text>
+        <Text style={styles.detail} numberOfLines={1}>
+          {artwork.detail}
         </Text>
       </View>
     </LinearGradient>
@@ -89,32 +104,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 11,
     justifyContent: "space-between",
-  },
-  gridLineHorizontal: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: "38%",
-    height: 1,
-    backgroundColor: "rgba(148,163,184,0.08)",
-  },
-  gridLineVertical: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    right: "25%",
-    width: 1,
-    backgroundColor: "rgba(148,163,184,0.08)",
-  },
-  watermark: {
-    position: "absolute",
-    right: 8,
-    bottom: -12,
-    color: "rgba(226,232,240,0.045)",
-    fontSize: 72,
-    lineHeight: 78,
-    fontWeight: "900",
-    letterSpacing: 0,
   },
   header: {
     flexDirection: "row",
@@ -131,7 +120,6 @@ const styles = StyleSheet.create({
   brandMark: {
     width: 3,
     height: 12,
-    backgroundColor: "#C9A96E",
   },
   brand: {
     color: "#F8FAFC",
@@ -139,50 +127,46 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0,
   },
-  catalogLabel: {
-    color: "rgba(201,169,110,0.72)",
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 0,
-  },
   platformChip: {
-    borderWidth: 1,
+    backgroundColor: "rgba(3,8,17,0.66)",
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.24)",
     borderRadius: 3,
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 3,
   },
   platform: {
+    color: "#F8FAFC",
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 0,
   },
-  titleBlock: {
-    maxWidth: "88%",
-    gap: 3,
+  categoryBlock: {
+    alignSelf: "flex-start",
+    maxWidth: "74%",
+    minWidth: 118,
+    backgroundColor: "rgba(3,8,17,0.70)",
+    borderLeftWidth: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    gap: 1,
   },
-  productType: {
-    color: "rgba(148,163,184,0.78)",
-    fontSize: 8,
-    fontWeight: "700",
+  category: {
+    fontSize: 7,
+    fontWeight: "800",
     letterSpacing: 0,
   },
-  title: {
+  shortName: {
     color: "#F8FAFC",
+    lineHeight: 18,
     fontWeight: "900",
     letterSpacing: 0,
   },
-  footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-    paddingRight: 76,
-  },
-  pairs: {
-    color: "rgba(226,232,240,0.64)",
-    fontSize: 8,
+  detail: {
+    color: "rgba(226,232,240,0.68)",
+    fontSize: 8.5,
+    lineHeight: 12,
     fontWeight: "700",
     letterSpacing: 0,
-    flex: 1,
   },
 });

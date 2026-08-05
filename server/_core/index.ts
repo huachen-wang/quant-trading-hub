@@ -192,6 +192,7 @@ function isStaticAssetRequest(reqPath: string): boolean {
     reqPath.startsWith('/assets/') ||
     reqPath.startsWith('/ea-covers/') ||
     reqPath.startsWith('/ea-covers-v2/') ||
+    reqPath.startsWith('/strategy-art/') ||
     reqPath.startsWith('/charts/') ||
     reqPath === '/favicon.ico' ||
     reqPath === '/metadata.json' ||
@@ -324,6 +325,8 @@ Sitemap: https://www.eaxau.com/sitemap.xml
           res.setHeader('Cache-Control', 'no-cache');
         } else if (filePath.includes(`${path.sep}_expo${path.sep}static${path.sep}`)) {
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else if (filePath.includes(`${path.sep}strategy-art${path.sep}`)) {
+          res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
         }
       },
     }));

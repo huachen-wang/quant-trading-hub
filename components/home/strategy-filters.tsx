@@ -186,7 +186,7 @@ export const StrategyFilters = memo(function StrategyFilters({
           <Text style={[styles.advancedToggleText, { color: showAdvancedFilters ? "#C9A96E" : colors.muted }]}>
             {showAdvancedFilters ? "▲ 收起" : "▾ 高级筛选"}
           </Text>
-          {(categoryFilter || tagFilter) && !showAdvancedFilters && (
+          {!!(categoryFilter || tagFilter) && !showAdvancedFilters && (
             <View style={styles.advancedDot} />
           )}
         </TouchableOpacity>
