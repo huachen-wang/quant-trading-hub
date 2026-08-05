@@ -73,8 +73,25 @@ const headInjection = `
           var root = document.getElementById("root");
           var observer;
 
+          function rootHasVisibleContent() {
+            if (!root) return false;
+
+            var text = (root.textContent || "").replace(/\\s+/g, "");
+            if (text.length > 0) return true;
+
+            var visual = root.querySelector(
+              'img, svg, canvas, video, input, button, [role="img"], [aria-label]',
+            );
+            if (!visual || typeof visual.getBoundingClientRect !== "function") {
+              return false;
+            }
+
+            var rect = visual.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          }
+
           function dismissWhenReady() {
-            if (!boot || !root || root.childElementCount === 0) return false;
+            if (!boot || !rootHasVisibleContent()) return false;
             boot.hidden = true;
             if (observer) observer.disconnect();
             try { window.sessionStorage.removeItem(retryKey); } catch (_) {}
@@ -84,7 +101,11 @@ const headInjection = `
           if (dismissWhenReady()) return;
           if (root && window.MutationObserver) {
             observer = new MutationObserver(dismissWhenReady);
-            observer.observe(root, { childList: true });
+            observer.observe(root, {
+              childList: true,
+              characterData: true,
+              subtree: true,
+            });
           }
 
           window.setTimeout(function () {

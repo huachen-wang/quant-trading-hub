@@ -38,6 +38,71 @@ function verifyAsset(assetPath) {
   }
 }
 
+function verifyBootstrapReadiness(bootstrapScript) {
+  const boot = { hidden: false };
+  const root = {
+    textContent: "",
+    querySelector: () => null,
+  };
+  let onReady;
+  let onMutation;
+
+  class MockMutationObserver {
+    constructor(callback) {
+      onMutation = callback;
+    }
+
+    observe() {}
+    disconnect() {}
+  }
+
+  const windowMock = {
+    addEventListener() {},
+    MutationObserver: MockMutationObserver,
+    sessionStorage: {
+      getItem: () => null,
+      setItem() {},
+      removeItem() {},
+    },
+    setTimeout() {},
+  };
+  const documentMock = {
+    addEventListener(eventName, callback) {
+      if (eventName === "DOMContentLoaded") onReady = callback;
+    },
+    getElementById(id) {
+      if (id === "eaxau-boot") return boot;
+      if (id === "root") return root;
+      return null;
+    },
+    querySelector: () => null,
+  };
+
+  new Function(
+    "window",
+    "document",
+    "URL",
+    "MutationObserver",
+    bootstrapScript,
+  )(
+    windowMock,
+    documentMock,
+    URL,
+    MockMutationObserver,
+  );
+  onReady?.();
+
+  if (boot.hidden) {
+    throw new Error("EAXAU loading bootstrap hides on an empty app container");
+  }
+
+  root.textContent = "EAXAU";
+  onMutation?.();
+  if (!boot.hidden) {
+    throw new Error("EAXAU loading bootstrap stays visible after app content mounts");
+  }
+}
+
 function main() {
   if (!fs.existsSync(indexPath)) {
     throw new Error("web-build/index.html was not generated");
@@ -60,6 +125,13 @@ function main() {
     throw new Error("web-build/index.html is missing the EAXAU recovery script");
   }
   new Function(bootstrapScript);
+  if (!bootstrapScript.includes("rootHasVisibleContent")) {
+    throw new Error("EAXAU loading bootstrap is missing its content-ready check");
+  }
+  if (!bootstrapScript.includes("subtree: true")) {
+    throw new Error("EAXAU loading bootstrap is not observing nested app content");
+  }
+  verifyBootstrapReadiness(bootstrapScript);
 
   if (requiredAssets.length === 0) {
     throw new Error("web-build/index.html does not reference any Expo JS/CSS assets");
