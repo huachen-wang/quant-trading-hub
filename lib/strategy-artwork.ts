@@ -78,6 +78,7 @@ const SHORT_NAME_RULES: ReadonlyArray<readonly [RegExp, string]> = [
   [/ai\s*深度学习/i, "AI 深度学习"],
   [/ai\s*gen/i, "AI Gen"],
   [/supertrend/i, "SuperTrend"],
+  [/waka\s*waka/i, "Waka Waka"],
   [/pro\s+gold\s+lion/i, "Gold Lion"],
   [/quantum\s+queen/i, "Quantum Queen"],
   [/quantum\s+king/i, "Quantum King"],
@@ -94,8 +95,23 @@ export function getStrategyShortName(title: string) {
   );
   if (matchedRule) return matchedRule[1];
 
+  const localizedAlias = normalized.match(/【\s*([^】]{2,12})\s*】/u)?.[1];
+  if (localizedAlias && /\p{Script=Han}/u.test(localizedAlias)) {
+    return Array.from(localizedAlias.replace(/\s+/g, "")).slice(0, 7).join("");
+  }
+
+  const trailingAlias = normalized.match(
+    /(?:^|[\s_-])([\p{Script=Han}]{2,8})$/u,
+  )?.[1];
+  if (trailingAlias) {
+    return trailingAlias
+      .replace(/(?:中文版|加强版|增强版|最终版)$/g, "")
+      .slice(0, 7);
+  }
+
   let cleaned = normalized
     .replace(/\[[^\]]+\]/g, " ")
+    .replace(/【[^】]+】/g, " ")
     .replace(/\.(?:ex4|ex5|mq4|mq5|zip)$/i, "")
     .replace(/^eaxau[\s_-]+/i, "")
     .replace(/\b(?:mt4|mt5)\b/gi, " ")

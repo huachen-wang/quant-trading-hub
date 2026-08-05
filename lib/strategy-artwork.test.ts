@@ -98,5 +98,11 @@ describe("strategy artwork resolver", () => {
     expect(getStrategyShortName("蓝狗对冲趋势加强版")).toBe("蓝狗对冲");
     expect(getStrategyShortName("恒鑫 EA 量化 v26 强化版")).toBe("恒鑫量化");
     expect(getStrategyShortName("莫奈灰优化-太极 MT5 v1.8")).toBe("莫奈灰");
+    expect(getStrategyShortName("Night Hunter Pro 【夜间猎手】")).toBe(
+      "夜间猎手",
+    );
+    expect(getStrategyShortName("Mad Turtle ML 【疯狂神龟】")).toBe("疯狂神龟");
+    expect(getStrategyShortName("Gold House 2.0 黄金屋")).toBe("黄金屋");
+    expect(getStrategyShortName("Waka WakaV4.59")).toBe("Waka Waka");
   });
 });
