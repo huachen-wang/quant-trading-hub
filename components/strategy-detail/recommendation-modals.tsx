@@ -103,13 +103,13 @@ export function VpsRecommendationModal({ visible, colors, onClose }: Recommendat
           </View>
 
           <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-            <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>免费 VPS 申请</Text>
-            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>通过我们的合作经纪商开户并达到一定交易量，即可申请免费 VPS 服务。详情请联系客服咨询。</Text>
+            <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>VPS 申请方案</Text>
+            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 20 }}>通过我们的合作经纪商开户并达到一定交易量，即可申请专属 VPS 服务方案。详情请联系客服咨询。</Text>
           </View>
 
           <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
             <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>联系方式</Text>
-            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>微信1号：oooiniooo0624{"\n"}微信2号：xau6000{"\n"}QQ1号：1226426670{"\n"}QQ2号：3832001817{"\n"}Telegram：@xau6000{"\n"}添加客服咨询可靠 VPS 推荐及免费申请方案</Text>
+            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>微信1号：oooiniooo0624{"\n"}微信2号：xau6000{"\n"}QQ1号：1226426670{"\n"}QQ2号：3832001817{"\n"}Telegram：@xau6000{"\n"}添加客服咨询可靠 VPS 推荐及申请方案</Text>
           </View>
 
           <TouchableOpacity

@@ -13,7 +13,7 @@ const DESKTOP_SEARCH_NOTES = [
   { label: "主市场", value: "XAUUSD / 外汇 / 指数" },
   { label: "平台", value: "MT4 / MT5" },
   { label: "策略类型", value: "趋势 / 网格 / 对冲 / AI" },
-  { label: "交付", value: "直购 / 咨询 / 合购" },
+  { label: "交付", value: "联系咨询 / 版本确认 / 人工交付" },
 ];
 const DESKTOP_SEARCH_CARDS = [
   { code: "XAU", title: "黄金策略", body: "剥头皮、突破、网格与 AI 黄金模型", query: "XAUUSD" },

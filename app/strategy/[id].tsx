@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,7 +17,6 @@ import { PcTopNav } from "@/components/pc-top-nav";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
-import { shouldUseContactForDownload } from "@/lib/download-links";
 import { resolveStrategyCover } from "@/lib/strategy-covers";
 import { trpc } from "@/lib/trpc";
 import { SubscribeModal } from "@/components/subscribe-modal";
@@ -116,19 +114,6 @@ export default function StrategyDetailScreen() {
     }
   };
 
-  const handleDownload = async () => {
-    if (shouldUseContactForDownload(strategy?.downloadUrl)) {
-      setShowContactModal(true);
-      return;
-    }
-
-    try {
-      await Linking.openURL(strategy!.downloadUrl!);
-    } catch {
-      setShowContactModal(true);
-    }
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -173,14 +158,10 @@ export default function StrategyDetailScreen() {
   const returnValue = parseFloat(strategy.totalReturn) || 0;
   const isPositive = returnValue >= 0;
   const isAdmin = user?.role === "admin";
-  const downloadRequiresContact = shouldUseContactForDownload(strategy.downloadUrl);
-
-  const originalPrice = strategy.originalPrice;
   const tags = strategy.tags;
   const productType = strategy.productType;
   const galleryImagesRaw = strategy.galleryImages;
   const isFeatured = !!strategy.isFeatured;
-  const featuredLink = strategy.featuredLink;
   const effectiveCoverImage = Platform.OS === "web"
     ? resolveStrategyCover(strategy.title, strategy.coverImage)
     : strategy.coverImage;
@@ -206,10 +187,6 @@ export default function StrategyDetailScreen() {
     ? tags.split(",").map((tag) => tag.trim()).filter(Boolean)
     : [];
 
-  const priceNum = parseFloat(strategy.price) || 0;
-  const originalPriceNum = parseFloat(originalPrice || "") || 0;
-  const hasDiscount = !strategy.isFree && originalPriceNum > 0 && originalPriceNum > priceNum;
-  const discountPercent = hasDiscount ? Math.round((1 - priceNum / originalPriceNum) * 100) : 0;
   const productTypeLabel = productType === "indicator" ? "指标" : productType === "tool" ? "工具" : "EA";
   const reviews = (userReviews || []) as StrategyReview[];
   const displayReviews = reviews.slice(0, 3);
@@ -290,13 +267,6 @@ export default function StrategyDetailScreen() {
                 <StrategyPurchasePanel
                   strategy={strategy}
                   colors={colors}
-                  originalPrice={originalPrice}
-                  hasDiscount={hasDiscount}
-                  discountPercent={discountPercent}
-                  downloadRequiresContact={downloadRequiresContact}
-                  isFeatured={isFeatured}
-                  featuredLink={featuredLink}
-                  onDownload={handleDownload}
                   onContact={() => setShowContactModal(true)}
                 />
                 <TradingEnvironmentSection
@@ -331,13 +301,6 @@ export default function StrategyDetailScreen() {
               <StrategyPurchasePanel
                 strategy={strategy}
                 colors={colors}
-                originalPrice={originalPrice}
-                hasDiscount={hasDiscount}
-                discountPercent={discountPercent}
-                downloadRequiresContact={downloadRequiresContact}
-                isFeatured={isFeatured}
-                featuredLink={featuredLink}
-                onDownload={handleDownload}
                 onContact={() => setShowContactModal(true)}
               />
               <TradingEnvironmentSection

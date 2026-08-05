@@ -101,7 +101,7 @@ export const LOCAL_PREVIEW_STRATEGIES: HomeStrategy[] = [
     winRate: "69.40",
     price: "0.00",
     originalPrice: null,
-    isFree: true,
+    isFree: false,
     downloadCount: 1540,
     virtualDownloads: 360,
     coverImage: null,
@@ -113,7 +113,7 @@ export const LOCAL_PREVIEW_STRATEGIES: HomeStrategy[] = [
     isFeatured: false,
     isCurated: true,
     featuredLink: null,
-    saleMode: "direct",
+    saleMode: "inquiry",
     dataStatus: "referenced",
   },
   {

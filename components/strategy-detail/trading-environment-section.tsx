@@ -35,7 +35,7 @@ export function TradingEnvironmentSection({
         >
           <Text style={styles.recommendCode}>VPS</Text>
           <Text style={[styles.recommendTitle, { color: colors.foreground }]}>VPS 服务器</Text>
-          <Text style={[styles.recommendDesc, { color: colors.muted }]}>推荐可靠VPS · 可申请免费</Text>
+          <Text style={[styles.recommendDesc, { color: colors.muted }]}>推荐可靠 VPS · 专属方案</Text>
           <View style={[styles.recommendBadge, { backgroundColor: colors.primary + "15" }]}>
             <Text style={[styles.recommendBadgeText, { color: colors.primary }]}>稳定可靠</Text>
           </View>

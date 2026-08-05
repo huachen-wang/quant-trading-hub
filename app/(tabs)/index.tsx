@@ -7,7 +7,7 @@ import { ContactModal } from "@/components/contact-modal";
 import { SubscribeModal } from "@/components/subscribe-modal";
 import { CustomEABanner } from "@/components/home/custom-ea-banner";
 import { HomeHero } from "@/components/home/home-hero";
-import { StrategyFilters, type OrderBy, type PlatformFilter, type SaleModeFilter } from "@/components/home/strategy-filters";
+import { StrategyFilters, type OrderBy, type PlatformFilter } from "@/components/home/strategy-filters";
 import { StrategyListItem } from "@/components/home/strategy-list-item";
 import { StrategyListEmpty, StrategyListFooter } from "@/components/home/strategy-list-states";
 import { LOCAL_PREVIEW_STRATEGIES } from "@/components/home/preview-strategies";
@@ -31,7 +31,6 @@ export default function HomeScreen() {
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>(undefined);
   const [orderBy, setOrderBy] = useState<OrderBy>("hot");
   const [tagFilter, setTagFilter] = useState("");
-  const [saleModeFilter, setSaleModeFilter] = useState<SaleModeFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -46,7 +45,6 @@ export default function HomeScreen() {
   const productTypeFilter = categoryFilter && PRODUCT_TYPE_SLUGS.has(categoryFilter)
     ? categoryFilter
     : undefined;
-  const activeSaleMode = saleModeFilter === "all" ? undefined : saleModeFilter;
 
   const categoriesForFilters = useMemo(() => {
     const productTypeCategories = ((categoriesData || []) as any[])
@@ -60,8 +58,7 @@ export default function HomeScreen() {
     orderBy,
     tag: tagFilter || undefined,
     productType: productTypeFilter,
-    saleMode: activeSaleMode,
-  }), [activeSaleMode, orderBy, platformFilter, productTypeFilter, tagFilter]);
+  }), [orderBy, platformFilter, productTypeFilter, tagFilter]);
 
   const { data: initialData, isLoading, refetch, isRefetching } = trpc.strategies.list.useQuery({
     ...listFilters,
@@ -127,7 +124,6 @@ export default function HomeScreen() {
 
   const clearAllFilters = useCallback(() => {
     setPlatformFilter(undefined);
-    setSaleModeFilter("all");
     setCategoryFilter(undefined);
     setTagFilter("");
     setOrderBy("hot");
@@ -198,7 +194,6 @@ export default function HomeScreen() {
         platformFilter={platformFilter}
         orderBy={orderBy}
         tagFilter={tagFilter}
-        saleModeFilter={saleModeFilter}
         categoryFilter={categoryFilter}
         showAdvancedFilters={showAdvancedFilters}
         categories={categoriesForFilters}
@@ -206,7 +201,6 @@ export default function HomeScreen() {
         onPlatformChange={setPlatformFilter}
         onOrderByChange={setOrderBy}
         onTagChange={setTagFilter}
-        onSaleModeChange={setSaleModeFilter}
         onCategoryChange={setCategoryFilter}
         onToggleAdvancedFilters={toggleAdvancedFilters}
         onClearAll={clearAllFilters}
@@ -215,7 +209,7 @@ export default function HomeScreen() {
       />
       {isShowingPreviewCatalog ? <LocalPreviewStrip /> : null}
     </View>
-  ), [categoryFilter, categoriesForFilters, clearAllFilters, colors, displayStrategies.length, dynamicTags, isDesktop, isShowingPreviewCatalog, openContactModal, openSearch, orderBy, platformFilter, saleModeFilter, showAdvancedFilters, tagFilter, toggleAdvancedFilters]);
+  ), [categoryFilter, categoriesForFilters, clearAllFilters, colors, displayStrategies.length, dynamicTags, isDesktop, isShowingPreviewCatalog, openContactModal, openSearch, orderBy, platformFilter, showAdvancedFilters, tagFilter, toggleAdvancedFilters]);
 
   const renderEmpty = useCallback(() => (
     <StrategyListEmpty
@@ -294,7 +288,7 @@ function LocalPreviewStrip() {
 function DesktopBriefPanel({ itemCount }: { itemCount: number }) {
   const rows = [
     { label: "当前已载入", value: `${itemCount}`, tone: "#D8BC83" },
-    { label: "交付模式", value: "DIRECT / B2B", tone: "#60A5FA" },
+    { label: "交付模式", value: "联系咨询 / 人工交付", tone: "#60A5FA" },
     { label: "源头审核", value: "MANUAL", tone: "#34D399" },
   ];
 

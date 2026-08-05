@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { CURATED_STRATEGY_CATALOG, syncCuratedStrategyCatalog } from "./strategy-catalog";
+import {
+  CURATED_STRATEGY_CATALOG,
+  syncCuratedStrategyCatalog,
+} from "./strategy-catalog";
+import {
+  USER_STRATEGY_CATALOG,
+  USER_STRATEGY_SEEDS,
+} from "./user-strategy-catalog";
 
 describe("curated strategy catalog", () => {
   it("contains unique, editable strategy records", () => {
@@ -7,14 +14,25 @@ describe("curated strategy catalog", () => {
       strategy.title.toLowerCase(),
     );
     expect(new Set(titles).size).toBe(titles.length);
-    expect(CURATED_STRATEGY_CATALOG.length).toBeGreaterThanOrEqual(12);
+    expect(CURATED_STRATEGY_CATALOG.length).toBeGreaterThanOrEqual(70);
   });
 
-  it("uses neutral generated covers and HTTPS reference sources", () => {
+  it("uses generated covers and only valid optional HTTPS sources", () => {
     for (const strategy of CURATED_STRATEGY_CATALOG) {
       expect(strategy.coverImage).toBeNull();
-      expect(strategy.sourceUrl).toMatch(/^https:\/\//);
-      expect(strategy.evidenceUrl).toMatch(/^https:\/\//);
+      if (strategy.sourceUrl) expect(strategy.sourceUrl).toMatch(/^https:\/\//);
+      if (strategy.evidenceUrl)
+        expect(strategy.evidenceUrl).toMatch(/^https:\/\//);
+    }
+  });
+
+  it("normalizes uploaded file variants into publishable product names", () => {
+    expect(USER_STRATEGY_CATALOG).toHaveLength(USER_STRATEGY_SEEDS.length);
+    expect(USER_STRATEGY_CATALOG.length).toBeGreaterThanOrEqual(55);
+    for (const strategy of USER_STRATEGY_CATALOG) {
+      expect(strategy.title).not.toMatch(/\.(?:ex4|ex5|mq4|mq5|set|zip|rar)$/i);
+      expect(strategy.description).toContain("联系确认");
+      expect(strategy.sourceName).toBe("用户提供的 EA 文件名录");
     }
   });
 
@@ -40,7 +58,9 @@ describe("curated strategy catalog", () => {
       }),
     };
 
-    await expect(syncCuratedStrategyCatalog(connection as any)).resolves.toBe(0);
+    await expect(syncCuratedStrategyCatalog(connection as any)).resolves.toBe(
+      0,
+    );
     expect(connection.query).not.toHaveBeenCalledWith(
       expect.stringContaining("UPDATE `strategies`"),
       expect.anything(),
@@ -70,6 +90,9 @@ describe("curated strategy catalog", () => {
     expect(changed).toBe(CURATED_STRATEGY_CATALOG.length);
     expect(inserts).toHaveLength(CURATED_STRATEGY_CATALOG.length);
     expect(inserts.every((params) => params.length === 15)).toBe(true);
+    expect(
+      updates.some(({ sql }) => sql.includes("`saleMode` = 'inquiry'")),
+    ).toBe(true);
     expect(updates.some(({ sql }) => sql.includes("CHAR_LENGTH"))).toBe(true);
     expect(updates.some(({ params }) => params[0] === 1)).toBe(true);
   });

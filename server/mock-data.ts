@@ -181,7 +181,11 @@ mockStrategies = [
     evidenceUrl: null,
     ...strategy,
   })),
-];
+].map((strategy) => ({
+  ...strategy,
+  isFree: false,
+  saleMode: "inquiry",
+}));
 
 let nextStrategyId = Math.max(...mockStrategies.map((strategy) => strategy.id)) + 1;
 let nextCommentId = 10;
@@ -199,7 +203,7 @@ let mockComments: CommentRecord[] = [
 
 let mockAnonymousComments = [
   { id: 1, strategyId: 1, nickname: "交易老手", content: "这个 EA 的回撤控制看起来不错，适合做本地预览。", isApproved: true, rating: 5, createdAt: new Date(now - 1000 * 60 * 60 * 24 * 2) },
-  { id: 2, strategyId: 1, nickname: null, content: "免费样例也能看到详情页评价区的布局。", isApproved: true, rating: 4, createdAt: new Date(now - 1000 * 60 * 60 * 20) },
+  { id: 2, strategyId: 1, nickname: null, content: "联系咨询和详情页评价区的布局都很清楚。", isApproved: true, rating: 4, createdAt: new Date(now - 1000 * 60 * 60 * 20) },
   { id: 3, strategyId: 2, nickname: "剥头皮用户", content: "短线策略卡片和详情页状态正常。", isApproved: true, rating: 5, createdAt: new Date(now - 1000 * 60 * 60 * 14) },
 ];
 let nextAnonymousCommentId = mockAnonymousComments.length + 1;
@@ -386,11 +390,11 @@ export function createMockStrategy(data: StrategyRecord) {
     downloadUrl: null,
     price: "0.00",
     originalPrice: null,
-    isFree: true,
+    isFree: false,
     downloadCount: 0,
     productType: "ea",
     tags: null,
-    saleMode: data.isFree ? "direct" : "inquiry",
+    saleMode: "inquiry",
     richDescription: null,
     galleryImages: null,
     isFeatured: false,
@@ -411,6 +415,8 @@ export function createMockStrategy(data: StrategyRecord) {
     createdAt: new Date(),
     updatedAt: new Date(),
   };
+  strategy.isFree = false;
+  strategy.saleMode = "inquiry";
   mockStrategies = [strategy, ...mockStrategies];
   return strategy;
 }

@@ -1,4 +1,5 @@
 import type { Connection } from "mysql2/promise";
+import { USER_STRATEGY_CATALOG } from "./user-strategy-catalog";
 
 export type CuratedStrategy = {
   title: string;
@@ -13,11 +14,11 @@ export type CuratedStrategy = {
   winRate: string;
   tags: string;
   sourceName: string;
-  sourceUrl: string;
-  evidenceUrl: string;
+  sourceUrl: string | null;
+  evidenceUrl: string | null;
 };
 
-export const CURATED_STRATEGY_CATALOG: CuratedStrategy[] = [
+const REFERENCE_STRATEGY_CATALOG: CuratedStrategy[] = [
   {
     title: "Quantum Queen X MT5",
     description:
@@ -242,6 +243,11 @@ export const CURATED_STRATEGY_CATALOG: CuratedStrategy[] = [
   },
 ];
 
+export const CURATED_STRATEGY_CATALOG: CuratedStrategy[] = [
+  ...REFERENCE_STRATEGY_CATALOG,
+  ...USER_STRATEGY_CATALOG,
+];
+
 const EXISTING_CURATED_REFERENCES = [
   {
     titleLike: "%正版云控V4.3%",
@@ -281,7 +287,7 @@ const EXISTING_CURATED_REFERENCES = [
   },
 ];
 
-const CONTENT_MIGRATION_KEY = "2026-08-05-curated-strategy-catalog-v1";
+const CONTENT_MIGRATION_KEY = "2026-08-05-curated-strategy-catalog-v2";
 const EMPTY_FEATURED_PROMO_TITLE = "金戈铁马 正版云控 全网收益第一";
 
 export async function syncCuratedStrategyCatalog(
@@ -301,6 +307,15 @@ export async function syncCuratedStrategyCatalog(
   if (migrationRows.length > 0) return 0;
 
   let changed = 0;
+
+  // 当前策略目录统一采用人工确认版本与授权范围的咨询交付方式。
+  const [normalizedSaleModeResult] = (await connection.query(
+    `UPDATE \`strategies\`
+     SET \`saleMode\` = 'inquiry', \`isFree\` = false
+     WHERE \`status\` = 'published'
+       AND (\`saleMode\` <> 'inquiry' OR \`isFree\` = true)`,
+  )) as any[];
+  changed += normalizedSaleModeResult.affectedRows || 0;
 
   // 旧数据中这个置顶条目只是跳转壳。仅当内容仍近乎为空时归档，避免覆盖后台后续补录。
   const [archivedPromoResult] = (await connection.query(

@@ -7,7 +7,6 @@ import { useResponsive } from "@/hooks/use-responsive";
 
 export type PlatformFilter = "MT4" | "MT5" | undefined;
 export type OrderBy = "latest" | "return" | "hot";
-export type SaleModeFilter = "all" | "direct" | "inquiry";
 
 type CategoryOption = {
   name: string;
@@ -26,7 +25,6 @@ type StrategyFiltersProps = {
   platformFilter: PlatformFilter;
   orderBy: OrderBy;
   tagFilter: string;
-  saleModeFilter: SaleModeFilter;
   categoryFilter?: string;
   showAdvancedFilters: boolean;
   categories: CategoryOption[];
@@ -34,7 +32,6 @@ type StrategyFiltersProps = {
   onPlatformChange: (value: PlatformFilter) => void;
   onOrderByChange: (value: OrderBy) => void;
   onTagChange: (value: string) => void;
-  onSaleModeChange: (value: SaleModeFilter) => void;
   onCategoryChange: (value: string | undefined) => void;
   onToggleAdvancedFilters: () => void;
   onClearAll: () => void;
@@ -54,18 +51,11 @@ const ORDER_OPTIONS: { label: string; value: OrderBy }[] = [
   { label: "收益率", value: "return" },
 ];
 
-const SALE_MODE_OPTIONS: { label: string; value: SaleModeFilter }[] = [
-  { label: "全部", value: "all" },
-  { label: "直购", value: "direct" },
-  { label: "商务授权", value: "inquiry" },
-];
-
 export const StrategyFilters = memo(function StrategyFilters({
   colors,
   platformFilter,
   orderBy,
   tagFilter,
-  saleModeFilter,
   categoryFilter,
   showAdvancedFilters,
   categories,
@@ -73,7 +63,6 @@ export const StrategyFilters = memo(function StrategyFilters({
   onPlatformChange,
   onOrderByChange,
   onTagChange,
-  onSaleModeChange,
   onCategoryChange,
   onToggleAdvancedFilters,
   onClearAll,
@@ -81,7 +70,7 @@ export const StrategyFilters = memo(function StrategyFilters({
   onSearchPress,
 }: StrategyFiltersProps) {
   const { isDesktop } = useResponsive();
-  const hasAnyFilter = !!platformFilter || saleModeFilter !== "all" || !!categoryFilter || !!tagFilter || orderBy !== "hot";
+  const hasAnyFilter = !!platformFilter || !!categoryFilter || !!tagFilter || orderBy !== "hot";
   const rootCategories = useMemo(
     () => categories.filter((category) => category.parentId === null),
     [categories],
@@ -90,8 +79,6 @@ export const StrategyFilters = memo(function StrategyFilters({
     const chips: { label: string; clear: () => void }[] = [];
 
     if (platformFilter) chips.push({ label: platformFilter, clear: () => onPlatformChange(undefined) });
-    if (saleModeFilter === "direct") chips.push({ label: "直购", clear: () => onSaleModeChange("all") });
-    if (saleModeFilter === "inquiry") chips.push({ label: "商务授权", clear: () => onSaleModeChange("all") });
     if (categoryFilter) {
       const cat = categories.find((category) => category.slug === categoryFilter);
       if (cat) chips.push({ label: cat.name, clear: () => onCategoryChange(undefined) });
@@ -105,7 +92,7 @@ export const StrategyFilters = memo(function StrategyFilters({
     }
 
     return chips;
-  }, [categories, categoryFilter, dynamicTags, onCategoryChange, onOrderByChange, onPlatformChange, onSaleModeChange, onTagChange, orderBy, platformFilter, saleModeFilter, tagFilter]);
+  }, [categories, categoryFilter, dynamicTags, onCategoryChange, onOrderByChange, onPlatformChange, onTagChange, orderBy, platformFilter, tagFilter]);
 
   return (
     <View style={[styles.container, isDesktop && styles.containerDesktop]}>
@@ -186,29 +173,6 @@ export const StrategyFilters = memo(function StrategyFilters({
       </View>
 
       <View style={[styles.filterRow, styles.secondFilterRow, isDesktop && styles.secondFilterRowDesktop]}>
-        <View style={styles.filterGroup}>
-          {SALE_MODE_OPTIONS.map((item) => {
-            const isActive = saleModeFilter === item.value;
-            return (
-              <TouchableOpacity
-                key={item.value}
-                onPress={() => onSaleModeChange(item.value)}
-                style={[
-                  styles.filterChip,
-                  isActive
-                    ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" }
-                    : { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterChipText, { color: isActive ? "#0A1628" : colors.muted }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
         <TouchableOpacity
           onPress={onToggleAdvancedFilters}
           style={[

@@ -8,17 +8,6 @@ type StrategyMetricsProps = {
 };
 
 export function StrategyMetrics({ strategy, colors, isPositive }: StrategyMetricsProps) {
-  const dataStatus = strategy.dataStatus || "estimated";
-  const statusMeta = dataStatus === "verified"
-    ? { label: "已核验", color: "#34D399", background: "rgba(16,185,129,0.12)" }
-    : dataStatus === "referenced"
-      ? { label: "参考估算", color: "#60A5FA", background: "rgba(59,130,246,0.12)" }
-      : { label: "待校准", color: "#D8BC83", background: "rgba(216,188,131,0.12)" };
-  const statusNote = dataStatus === "verified"
-    ? "已录入核验依据，历史数据仍不构成未来收益承诺。"
-    : dataStatus === "referenced"
-      ? "产品信息参考公开资料，当前展示指标为估算，后续可在后台替换为自有记录。"
-      : "当前为策略画像估算数据，正式发布前请完成回测或实盘校准。";
   const openLink = (url?: string | null) => {
     if (url && /^https:\/\//i.test(url)) Linking.openURL(url);
   };
@@ -26,12 +15,7 @@ export function StrategyMetrics({ strategy, colors, isPositive }: StrategyMetric
   return (
     <>
       <View style={styles.section}>
-        <View style={styles.sectionHeadingRow}>
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>策略参考数据</Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusMeta.background }]}>
-            <Text style={[styles.statusText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
-          </View>
-        </View>
+        <Text style={[styles.sectionTitle, styles.standaloneSectionTitle, { color: colors.foreground }]}>策略画像</Text>
         <View style={[styles.statsCard, { backgroundColor: colors.surface }]}>
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
@@ -51,7 +35,9 @@ export function StrategyMetrics({ strategy, colors, isPositive }: StrategyMetric
               <Text style={[styles.statValue, { color: colors.error }]}>{strategy.maxDrawdown}%</Text>
             </View>
           </View>
-          <Text style={[styles.statusNote, { color: colors.muted }]}>{statusNote}</Text>
+          <Text style={[styles.statusNote, { color: colors.muted }]}>
+            页面数据用于快速比较策略定位，不构成收益承诺；具体版本、参数与适用环境请联系确认。
+          </Text>
           {(strategy.sourceName || strategy.sourceUrl || strategy.evidenceUrl) ? (
             <View style={[styles.sourceRow, { borderTopColor: colors.border }]}>
               <View style={styles.sourceCopy}>
@@ -105,24 +91,8 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700",
   },
-  sectionHeadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-    gap: 10,
-  },
   standaloneSectionTitle: {
     marginBottom: 10,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: "800",
   },
   statsCard: {
     borderRadius: 8,
