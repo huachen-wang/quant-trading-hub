@@ -1,4 +1,6 @@
 import type { Connection } from "mysql2/promise";
+import { buildStrategyPlaceholderContent } from "../lib/strategy-placeholder-content";
+import { resolveStrategyEahubReference } from "../lib/strategy-eahub-reference";
 import { USER_STRATEGY_CATALOG } from "./user-strategy-catalog";
 
 export type CuratedStrategy = {
@@ -102,7 +104,7 @@ const REFERENCE_STRATEGY_CATALOG: CuratedStrategy[] = [
     tags: "黄金,趋势,止损",
     sourceName: "MQL5 Market",
     sourceUrl: "https://www.mql5.com/en/market/product/170050",
-    evidenceUrl: "https://www.mql0.com/strategies",
+    evidenceUrl: null,
   },
   {
     title: "Lizard MT5",
@@ -119,7 +121,7 @@ const REFERENCE_STRATEGY_CATALOG: CuratedStrategy[] = [
     tags: "多策略,波动,组合",
     sourceName: "MQL5 Market",
     sourceUrl: "https://www.mql5.com/en/market/product/172541",
-    evidenceUrl: "https://www.mql0.com/strategies",
+    evidenceUrl: "https://www.eahub.cn/thread-200486-1-1.html",
   },
   {
     title: "Range Breakout EA",
@@ -136,7 +138,7 @@ const REFERENCE_STRATEGY_CATALOG: CuratedStrategy[] = [
     tags: "突破,趋势,时段",
     sourceName: "MQL5 Market",
     sourceUrl: "https://www.mql5.com/en/market/product/122237",
-    evidenceUrl: "https://www.mql0.com/strategies",
+    evidenceUrl: null,
   },
   {
     title: "Adaptive Gold Scalper MT5",
@@ -153,7 +155,7 @@ const REFERENCE_STRATEGY_CATALOG: CuratedStrategy[] = [
     tags: "黄金,剥头皮,自适应",
     sourceName: "MQL5 Market",
     sourceUrl: "https://www.mql5.com/en/market/product/161554",
-    evidenceUrl: "https://www.mql0.com/strategies",
+    evidenceUrl: null,
   },
   {
     title: "AXIO GOLD EA",
@@ -248,15 +250,31 @@ export const CURATED_STRATEGY_CATALOG: CuratedStrategy[] = [
   ...USER_STRATEGY_CATALOG,
 ];
 
-const EXISTING_CURATED_REFERENCES = [
+type ExistingCuratedReference = {
+  titleLike: string;
+  coverImage: string;
+  isFeatured?: boolean;
+  sourceUrl?: string;
+};
+
+const EXISTING_CURATED_REFERENCES: ExistingCuratedReference[] = [
   {
     titleLike: "%金戈铁马%V5.1%",
     coverImage: "/ea-covers-v2/49_Quantum_Dark_Gold.jpg",
     isFeatured: true,
+    sourceUrl: "https://www.eahub.cn/thread-201119-1-1.html",
   },
   { titleLike: "%Waka Waka%", coverImage: "/ea-covers-v2/02_Waka_Waka_EA.jpg" },
-  { titleLike: "%Gold House%", coverImage: "/ea-covers-v2/34_Gold_Atlas.jpg" },
-  { titleLike: "%黄金屋%", coverImage: "/ea-covers-v2/34_Gold_Atlas.jpg" },
+  {
+    titleLike: "%Gold House%",
+    coverImage: "/ea-covers-v2/34_Gold_Atlas.jpg",
+    sourceUrl: "https://www.eahub.cn/thread-191895-1-1.html",
+  },
+  {
+    titleLike: "%黄金屋%",
+    coverImage: "/ea-covers-v2/34_Gold_Atlas.jpg",
+    sourceUrl: "https://www.eahub.cn/thread-191895-1-1.html",
+  },
   {
     titleLike: "%Mad Turtle%",
     coverImage: "/ea-covers-v2/19_Mad_Turtle_ML.jpg",
@@ -268,6 +286,7 @@ const EXISTING_CURATED_REFERENCES = [
   {
     titleLike: "%Quantum Emperor%",
     coverImage: "/ea-covers-v2/01_Quantum_Emperor.jpg",
+    sourceUrl: "https://www.eahub.cn/thread-113889-1-1.html",
   },
   {
     titleLike: "%Bitcoin Core%",
@@ -280,15 +299,23 @@ const EXISTING_CURATED_REFERENCES = [
   {
     titleLike: "%Quantum Queen%",
     coverImage: "/ea-covers-v2/11_Quantum_Queen.jpg",
+    sourceUrl: "https://www.eahub.cn/thread-180114-1-1.html",
   },
   {
     titleLike: "%Gold Reaper%",
     coverImage: "/ea-covers-v2/03_The_Gold_Reaper.jpg",
+    sourceUrl: "https://www.eahub.cn/thread-186932-1-1.html",
   },
 ];
 
-const CONTENT_MIGRATION_KEY = "2026-08-05-curated-strategy-catalog-v3";
+const CONTENT_MIGRATION_KEY = "2026-08-06-strategy-content-placeholders-v4";
 const EMPTY_FEATURED_PROMO_TITLE = "金戈铁马 正版云控 全网收益第一";
+const GENERIC_MQL0_URLS = [
+  "https://www.mql0.com/strategies",
+  "https://www.mql0.com/strategies/",
+  "http://www.mql0.com/strategies",
+  "http://www.mql0.com/strategies/",
+] as const;
 export const JINGE_TIE_MA_TITLE = "金戈铁马 V5.1 永不爆仓版本";
 
 export async function syncCuratedStrategyCatalog(
@@ -327,6 +354,27 @@ export async function syncCuratedStrategyCatalog(
   )) as any[];
   changed += normalizedSaleModeResult.affectedRows || 0;
 
+  // 通用目录地址已经失效。删除旧链接，并只为能精确对应的 Lizard 补入具体参考页。
+  const [clearedGenericSourceResult] = (await connection.query(
+    `UPDATE \`strategies\`
+     SET \`sourceUrl\` = NULL
+     WHERE \`sourceUrl\` IN (?, ?, ?, ?)`,
+    [...GENERIC_MQL0_URLS],
+  )) as any[];
+  changed += clearedGenericSourceResult.affectedRows || 0;
+
+  const [repairedGenericEvidenceResult] = (await connection.query(
+    `UPDATE \`strategies\`
+     SET \`evidenceUrl\` = IF(
+       LOWER(\`title\`) LIKE '%lizard%',
+       'https://www.eahub.cn/thread-200486-1-1.html',
+       NULL
+     )
+     WHERE \`evidenceUrl\` IN (?, ?, ?, ?)`,
+    [...GENERIC_MQL0_URLS],
+  )) as any[];
+  changed += repairedGenericEvidenceResult.affectedRows || 0;
+
   // 旧数据中这个置顶条目只是跳转壳。仅当内容仍近乎为空时归档，避免覆盖后台后续补录。
   const [archivedPromoResult] = (await connection.query(
     `UPDATE \`strategies\`
@@ -343,11 +391,49 @@ export async function syncCuratedStrategyCatalog(
        SET \`isCurated\` = true,
            \`isFeatured\` = IF(?, true, \`isFeatured\`),
            \`dataStatus\` = IF(\`dataStatus\` = 'verified', 'verified', 'referenced'),
-           \`sourceName\` = COALESCE(NULLIF(\`sourceName\`, ''), '公开策略目录参考'),
-           \`sourceUrl\` = COALESCE(NULLIF(\`sourceUrl\`, ''), 'https://www.mql0.com/strategies'),
+           \`sourceName\` = IF(
+             ? IS NOT NULL AND (\`sourceName\` IS NULL OR TRIM(\`sourceName\`) = '' OR \`sourceName\` = '公开策略目录参考'),
+             'EAHub 公开参考',
+             COALESCE(NULLIF(\`sourceName\`, ''), '公开策略目录参考')
+           ),
+           \`sourceUrl\` = COALESCE(NULLIF(\`sourceUrl\`, ''), ?),
            \`coverImage\` = ?
        WHERE \`title\` LIKE ?`,
-      [reference.isFeatured ? 1 : 0, reference.coverImage, reference.titleLike],
+      [
+        reference.isFeatured ? 1 : 0,
+        reference.sourceUrl || null,
+        reference.sourceUrl || null,
+        reference.coverImage,
+        reference.titleLike,
+      ],
+    )) as any[];
+    changed += result.affectedRows || 0;
+  }
+
+  // 只扩充空白详情和旧版单段自动文案，后台人工编辑的富文本不会被覆盖。
+  const [sparseContentRows] = (await connection.query(
+    `SELECT id, title, description, platform, pairs, timeframe, tags, productType
+     FROM strategies
+     WHERE status = 'published'
+       AND (
+         richDescription IS NULL
+         OR CHAR_LENGTH(TRIM(richDescription)) = 0
+         OR TRIM(richDescription) = CONCAT('<p>', COALESCE(description, ''), '</p>')
+       )`,
+  )) as any[];
+
+  for (const strategy of sparseContentRows) {
+    const richDescription = buildStrategyPlaceholderContent(strategy);
+    const [result] = (await connection.query(
+      `UPDATE strategies
+       SET richDescription = ?
+       WHERE id = ?
+         AND (
+           richDescription IS NULL
+           OR CHAR_LENGTH(TRIM(richDescription)) = 0
+           OR TRIM(richDescription) = CONCAT('<p>', COALESCE(description, ''), '</p>')
+         )`,
+      [richDescription, strategy.id],
     )) as any[];
     changed += result.affectedRows || 0;
   }
@@ -357,7 +443,25 @@ export async function syncCuratedStrategyCatalog(
       "SELECT `id` FROM `strategies` WHERE LOWER(`title`) = LOWER(?) LIMIT 1",
       [strategy.title],
     )) as any[];
-    if (existingRows.length > 0) continue;
+    if (existingRows.length > 0) {
+      const publicReference = resolveStrategyEahubReference(strategy.title);
+      if (publicReference) {
+        const [result] = (await connection.query(
+          `UPDATE strategies
+           SET sourceName = IF(
+                 sourceName IS NULL OR TRIM(sourceName) = '' OR sourceName = '用户提供的 EA 文件名录',
+                 '用户文件名录 / EAHub 公开参考',
+                 sourceName
+               ),
+               sourceUrl = COALESCE(NULLIF(sourceUrl, ''), ?),
+               dataStatus = IF(dataStatus = 'verified', 'verified', 'referenced')
+           WHERE id = ?`,
+          [publicReference.url, existingRows[0].id],
+        )) as any[];
+        changed += result.affectedRows || 0;
+      }
+      continue;
+    }
 
     await connection.query(
       `INSERT INTO \`strategies\` (
@@ -380,7 +484,7 @@ export async function syncCuratedStrategyCatalog(
         strategy.sharpeRatio,
         strategy.winRate,
         strategy.tags,
-        `<p>${strategy.description}</p>`,
+        buildStrategyPlaceholderContent(strategy),
         strategy.sourceName,
         strategy.sourceUrl,
         strategy.evidenceUrl,

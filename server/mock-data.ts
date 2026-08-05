@@ -1,4 +1,5 @@
 import { CURATED_STRATEGY_CATALOG } from "./strategy-catalog";
+import { buildStrategyPlaceholderContent } from "../lib/strategy-placeholder-content";
 
 type StrategyRecord = any;
 type CommentRecord = any;
@@ -155,7 +156,7 @@ const catalogPreviewStrategies = CURATED_STRATEGY_CATALOG.map((strategy, index) 
   downloadCount: 180 + index * 9,
   productType: "ea",
   saleMode: "inquiry",
-  richDescription: `<p>${strategy.description}</p>`,
+  richDescription: buildStrategyPlaceholderContent(strategy),
   galleryImages: null,
   isFeatured: false,
   isCurated: true,
@@ -185,6 +186,8 @@ mockStrategies = [
   ...strategy,
   isFree: false,
   saleMode: "inquiry",
+  richDescription:
+    strategy.richDescription || buildStrategyPlaceholderContent(strategy),
 }));
 
 let nextStrategyId = Math.max(...mockStrategies.map((strategy) => strategy.id)) + 1;

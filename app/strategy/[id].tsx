@@ -16,6 +16,7 @@ import { PlatformGuideSection } from "@/components/strategy-detail/platform-guid
 import { BrokerRecommendationModal, VpsRecommendationModal } from "@/components/strategy-detail/recommendation-modals";
 import { AllReviewsModal, ReviewComposerModal } from "@/components/strategy-detail/review-modals";
 import { StrategyHeader } from "@/components/strategy-detail/strategy-header";
+import { StrategyEvidenceSection } from "@/components/strategy-detail/strategy-evidence-section";
 import { StrategyMedia } from "@/components/strategy-detail/strategy-media";
 import { StrategyMetrics } from "@/components/strategy-detail/strategy-metrics";
 import { StrategyPurchasePanel } from "@/components/strategy-detail/strategy-purchase-panel";
@@ -220,6 +221,7 @@ export default function StrategyDetailScreen() {
                 <StrategyHeader strategy={strategy} colors={colors} isFeatured={isFeatured} tagList={tagList} />
                 <StrategyProfileSection profile={profile} colors={colors} accent={artwork.accent} isDesktop />
                 <StrategyMetrics strategy={strategy} colors={colors} isPositive={isPositive} />
+                <StrategyEvidenceSection strategy={strategy} colors={colors} />
               </View>
               <View style={styles.desktopHeroSide}>
                 <StrategyPurchasePanel strategy={strategy} colors={colors} onContact={() => setShowContactModal(true)} />
@@ -232,6 +234,7 @@ export default function StrategyDetailScreen() {
               <StrategyHeader strategy={strategy} colors={colors} isFeatured={isFeatured} tagList={tagList} />
               <StrategyProfileSection profile={profile} colors={colors} accent={artwork.accent} isDesktop={false} />
               <StrategyMetrics strategy={strategy} colors={colors} isPositive={isPositive} />
+              <StrategyEvidenceSection strategy={strategy} colors={colors} />
               <StrategyPurchasePanel strategy={strategy} colors={colors} onContact={() => setShowContactModal(true)} />
               <TradingEnvironmentSection colors={colors} onOpenBroker={() => setShowBrokerModal(true)} onOpenVps={() => setShowVpsModal(true)} />
             </>

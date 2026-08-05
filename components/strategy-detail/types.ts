@@ -22,6 +22,7 @@ export type StrategyDetailData = {
   sourceName?: string | null;
   sourceUrl?: string | null;
   evidenceUrl?: string | null;
+  dataStatus?: "estimated" | "referenced" | "verified" | null;
 };
 
 export type StrategyReview = {

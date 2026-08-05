@@ -204,6 +204,7 @@ export default function StrategyForm() {
               },
             ]}
           />
+          <Text style={[s.fieldHint, { color: colors.muted }]}>目录策略会自动生成带“模板说明”标记的占位内容；在这里修改并保存后，后续迁移不会覆盖人工文案。</Text>
 
           <View style={[s.fieldGrid, isDesktop && s.fieldGridDesktop]}>
             <View style={s.fieldCell}>
@@ -393,8 +394,8 @@ export default function StrategyForm() {
           <View style={s.row}>
             {(
               [
-                { label: "待校准", value: "estimated" },
-                { label: "参考估算", value: "referenced" },
+                { label: "资料待补", value: "estimated" },
+                { label: "外部参考", value: "referenced" },
                 { label: "已核验", value: "verified" },
               ] as const
             ).map((opt) => (
@@ -432,7 +433,7 @@ export default function StrategyForm() {
             </View>
             <View style={s.fieldCell}>
               <Text style={[s.label, { color: colors.foreground }]}>验证或观摩链接</Text>
-              <TextInput value={formData.evidenceUrl} onChangeText={(t) => setFormData({ ...formData, evidenceUrl: t })} placeholder="https://..." placeholderTextColor={colors.muted} autoCapitalize="none" style={inputStyle} />
+              <TextInput value={formData.evidenceUrl} onChangeText={(t) => setFormData({ ...formData, evidenceUrl: t })} placeholder="留空时前台明确显示待补充" placeholderTextColor={colors.muted} autoCapitalize="none" style={inputStyle} />
             </View>
           </View>
           <View style={s.row}>
@@ -645,6 +646,7 @@ const s = StyleSheet.create({
     marginTop: 16,
   },
   label: { fontSize: 14, fontWeight: "500", marginBottom: 4 },
+  fieldHint: { fontSize: 11, lineHeight: 17, marginTop: -7, marginBottom: 12 },
   input: {
     borderWidth: 1,
     borderRadius: 6,

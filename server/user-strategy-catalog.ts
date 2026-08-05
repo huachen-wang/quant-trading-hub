@@ -1,4 +1,5 @@
 import type { CuratedStrategy } from "./strategy-catalog";
+import { resolveStrategyEahubReference } from "../lib/strategy-eahub-reference";
 
 type StrategyProfile =
   | "breakout"
@@ -269,10 +270,13 @@ function buildStrategy(seed: UserStrategySeed): CuratedStrategy {
   const pairs = seed.pairs || defaults.pairs || "XAUUSD";
   const timeframe = seed.timeframe || defaults.timeframe || "M15";
   const positioning = seed.positioning || defaults.positioning;
+  const publicReference = resolveStrategyEahubReference(seed.title);
 
   return {
     title: seed.title,
-    description: `${seed.title} ${positioning}。${defaults.usage}。本介绍根据用户提供的 EA 文件名录整理，具体版本、参数、适用环境与授权范围请联系确认。`,
+    description: publicReference
+      ? `${publicReference.summary} 该资料对应同名或相近版本，实际文件、参数与授权范围请联系确认。`
+      : `${seed.title} ${positioning}。${defaults.usage}。本介绍根据用户提供的 EA 文件名录整理，具体版本、参数、适用环境与授权范围请联系确认。`,
     platform: seed.platform,
     pairs,
     timeframe,
@@ -282,8 +286,10 @@ function buildStrategy(seed: UserStrategySeed): CuratedStrategy {
     sharpeRatio: metric(1.52 + ((hash >>> 13) % 132) / 100),
     winRate: metric(57.2 + ((hash >>> 19) % 1420) / 100 + winAdjustment),
     tags: seed.tags || defaults.tags || "自动交易,风控",
-    sourceName: "用户提供的 EA 文件名录",
-    sourceUrl: null,
+    sourceName: publicReference
+      ? "用户文件名录 / EAHub 公开参考"
+      : "用户提供的 EA 文件名录",
+    sourceUrl: publicReference?.url || null,
     evidenceUrl: null,
   };
 }

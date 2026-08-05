@@ -1,4 +1,4 @@
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import type { AppColors, StrategyDetailData } from "./types";
 
 type StrategyMetricsProps = {
@@ -8,10 +8,6 @@ type StrategyMetricsProps = {
 };
 
 export function StrategyMetrics({ strategy, colors, isPositive }: StrategyMetricsProps) {
-  const openLink = (url?: string | null) => {
-    if (url && /^https:\/\//i.test(url)) Linking.openURL(url);
-  };
-
   return (
     <>
       <View style={styles.section}>
@@ -38,28 +34,6 @@ export function StrategyMetrics({ strategy, colors, isPositive }: StrategyMetric
           <Text style={[styles.statusNote, { color: colors.muted }]}>
             页面数据用于快速比较策略定位，不构成收益承诺；具体版本、参数与适用环境请联系确认。
           </Text>
-          {(strategy.sourceName || strategy.sourceUrl || strategy.evidenceUrl) ? (
-            <View style={[styles.sourceRow, { borderTopColor: colors.border }]}>
-              <View style={styles.sourceCopy}>
-                <Text style={[styles.sourceLabel, { color: colors.muted }]}>参考来源</Text>
-                <Text style={[styles.sourceName, { color: colors.foreground }]} numberOfLines={1}>
-                  {strategy.sourceName || "公开资料"}
-                </Text>
-              </View>
-              <View style={styles.sourceActions}>
-                {strategy.sourceUrl ? (
-                  <TouchableOpacity onPress={() => openLink(strategy.sourceUrl)} style={[styles.sourceButton, { borderColor: colors.border }]}>
-                    <Text style={[styles.sourceButtonText, { color: colors.primary }]}>查看来源</Text>
-                  </TouchableOpacity>
-                ) : null}
-                {strategy.evidenceUrl && strategy.evidenceUrl !== strategy.sourceUrl ? (
-                  <TouchableOpacity onPress={() => openLink(strategy.evidenceUrl)} style={[styles.sourceButton, { borderColor: colors.border }]}>
-                    <Text style={[styles.sourceButtonText, { color: colors.primary }]}>验证记录</Text>
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            </View>
-          ) : null}
         </View>
       </View>
 
@@ -106,41 +80,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 17,
     marginTop: 12,
-  },
-  sourceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderTopWidth: 1,
-    marginTop: 12,
-    paddingTop: 12,
-    gap: 12,
-  },
-  sourceCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  sourceLabel: {
-    fontSize: 10,
-    marginBottom: 2,
-  },
-  sourceName: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  sourceActions: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  sourceButton: {
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  sourceButtonText: {
-    fontSize: 11,
-    fontWeight: "700",
   },
   statItem: {
     flex: 1,
