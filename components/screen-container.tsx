@@ -1,4 +1,10 @@
-import { Platform, StyleSheet, View, useWindowDimensions, type ViewProps } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type ViewProps,
+} from "react-native";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
 
 import { SchemeColors } from "@/constants/theme";
@@ -59,10 +65,10 @@ export function ScreenContainer({
     >
       {isDesktopWeb && (
         <>
-          <View pointerEvents="none" style={styles.desktopGrid} />
-          <View pointerEvents="none" style={styles.desktopTopRule} />
-          <View pointerEvents="none" style={[styles.desktopRail, styles.desktopRailLeft]} />
-          <View pointerEvents="none" style={[styles.desktopRail, styles.desktopRailRight]} />
+          <View style={styles.desktopGrid} />
+          <View style={styles.desktopTopRule} />
+          <View style={[styles.desktopRail, styles.desktopRailLeft]} />
+          <View style={[styles.desktopRail, styles.desktopRailRight]} />
         </>
       )}
       <SafeAreaView
@@ -70,7 +76,10 @@ export function ScreenContainer({
         className={safeAreaClassName ? cn(safeAreaClassName) : undefined}
         style={[styles.safeArea, style]}
       >
-        <View style={styles.content} className={className ? cn(className) : undefined}>
+        <View
+          style={styles.content}
+          className={className ? cn(className) : undefined}
+        >
           {children}
         </View>
       </SafeAreaView>
@@ -91,6 +100,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     opacity: 0.48,
+    pointerEvents: "none",
     ...(Platform.OS === "web"
       ? {
           backgroundImage:
@@ -106,6 +116,7 @@ const styles = StyleSheet.create({
     right: 0,
     height: 1,
     backgroundColor: "rgba(216,188,131,0.18)",
+    pointerEvents: "none",
   },
   desktopRail: {
     position: "absolute",
@@ -113,6 +124,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 1,
     backgroundColor: "rgba(216,188,131,0.06)",
+    pointerEvents: "none",
   },
   desktopRailLeft: {
     left: 22,

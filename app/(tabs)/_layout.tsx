@@ -1,18 +1,31 @@
 import { useState } from "react";
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { View, Text, StyleSheet, Platform, TouchableOpacity, Animated, useWindowDimensions } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  TouchableOpacity,
+  Animated,
+  useWindowDimensions,
+} from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { ContactModal } from "@/components/contact-modal";
 import { useColors } from "@/hooks/use-colors";
-import { glassStyle } from "@/lib/glass-styles";
 import { PcTopNav } from "@/components/pc-top-nav";
 import { FloatingSideNav } from "@/components/floating-side-nav";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
 // 自定义Tab图标组件 - 支持高亮和置灰
-function TabIcon({ code, label, focused, activeColor, inactiveColor }: {
+function TabIcon({
+  code,
+  label,
+  focused,
+  activeColor,
+  inactiveColor,
+}: {
   code: string;
   label: string;
   focused: boolean;
@@ -21,24 +34,25 @@ function TabIcon({ code, label, focused, activeColor, inactiveColor }: {
 }) {
   return (
     <View style={styles.tabIconContainer}>
-      <View style={[
-        styles.tabIconCircle,
-        focused && { backgroundColor: activeColor + "15" },
-      ]}>
-        <Text style={[
-          styles.tabCode,
-          { opacity: focused ? 1 : 0.45 },
-        ]}>
+      <View
+        style={[
+          styles.tabIconCircle,
+          focused && { backgroundColor: activeColor + "15" },
+        ]}
+      >
+        <Text style={[styles.tabCode, { opacity: focused ? 1 : 0.45 }]}>
           {code}
         </Text>
       </View>
-      <Text style={[
-        styles.tabLabel,
-        {
-          color: focused ? activeColor : inactiveColor,
-          fontWeight: focused ? "700" : "400",
-        },
-      ]}>
+      <Text
+        style={[
+          styles.tabLabel,
+          {
+            color: focused ? activeColor : inactiveColor,
+            fontWeight: focused ? "700" : "400",
+          },
+        ]}
+      >
         {label}
       </Text>
       {focused && (
@@ -58,21 +72,30 @@ function FloatingConsultButton({
   dockInHeader: boolean;
   isWeb: boolean;
 }) {
-  const colors = useColors();
   const [showContactModal, setShowContactModal] = useState(false);
   const [scaleAnim] = useState(new Animated.Value(1));
 
   const handlePressIn = () => {
-    Animated.spring(scaleAnim, { toValue: 0.9, useNativeDriver: Platform.OS !== "web" }).start();
+    Animated.spring(scaleAnim, {
+      toValue: 0.9,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: Platform.OS !== "web" }).start();
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      friction: 3,
+      useNativeDriver: Platform.OS !== "web",
+    }).start();
   };
 
   return (
     <>
-      <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
+      <ContactModal
+        visible={showContactModal}
+        onClose={() => setShowContactModal(false)}
+      />
       <Animated.View
         style={[
           styles.floatingBtnWrapper,
@@ -90,14 +113,15 @@ function FloatingConsultButton({
             styles.floatingBtn,
             compact && styles.floatingBtnCompact,
             dockInHeader && styles.floatingBtnHeader,
-            { backgroundColor: colors.primary, shadowColor: colors.primary },
-            glassStyle("btn") as any,
           ]}
           accessibilityLabel="联系咨询"
-
         >
-          <IconSymbol name="bubble.left.fill" size={compact ? 19 : 16} color="#fff" />
-          {!compact && <Text style={styles.floatingBtnText}>咨询</Text>}
+          <IconSymbol
+            name="bubble.left.fill"
+            size={compact ? 18 : 16}
+            color={compact ? "#D8BC83" : "#07101D"}
+          />
+          {!compact && <Text style={styles.floatingBtnText}>联系咨询</Text>}
         </TouchableOpacity>
       </Animated.View>
     </>
@@ -109,7 +133,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === "web";
-  const isCompactWeb = isWeb && width < 768;
+  const isCompactWeb = isWeb && width < 1024;
   const bottomPadding = isWeb ? 4 : Math.max(insets.bottom, 4);
   const tabBarHeight = (isWeb ? 72 : 56) + bottomPadding;
 
@@ -117,7 +141,7 @@ export default function TabLayout() {
     <View style={{ flex: 1 }}>
       {/* B: PC 顶部导航 */}
       <PcTopNav />
-      <FloatingSideNav />
+      {isCompactWeb ? <FloatingSideNav /> : null}
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: colors.primary,
@@ -143,7 +167,13 @@ export default function TabLayout() {
           options={{
             title: "策略",
             tabBarIcon: ({ focused }) => (
-              <TabIcon code="EA" label="策略" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
+              <TabIcon
+                code="EA"
+                label="策略"
+                focused={focused}
+                activeColor={colors.primary}
+                inactiveColor={colors.muted}
+              />
             ),
           }}
         />
@@ -152,7 +182,13 @@ export default function TabLayout() {
           options={{
             title: "合作",
             tabBarIcon: ({ focused }) => (
-              <TabIcon code="B2B" label="合作" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
+              <TabIcon
+                code="B2B"
+                label="合作"
+                focused={focused}
+                activeColor={colors.primary}
+                inactiveColor={colors.muted}
+              />
             ),
           }}
         />
@@ -161,7 +197,13 @@ export default function TabLayout() {
           options={{
             title: "合购",
             tabBarIcon: ({ focused }) => (
-              <TabIcon code="GB" label="合购" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
+              <TabIcon
+                code="GB"
+                label="合购"
+                focused={focused}
+                activeColor={colors.primary}
+                inactiveColor={colors.muted}
+              />
             ),
           }}
         />
@@ -170,7 +212,13 @@ export default function TabLayout() {
           options={{
             title: "订阅",
             tabBarIcon: ({ focused }) => (
-              <TabIcon code="ACC" label="订阅" focused={focused} activeColor={colors.primary} inactiveColor={colors.muted} />
+              <TabIcon
+                code="ACC"
+                label="订阅"
+                focused={focused}
+                activeColor={colors.primary}
+                inactiveColor={colors.muted}
+              />
             ),
           }}
         />
@@ -179,7 +227,11 @@ export default function TabLayout() {
         <Tabs.Screen name="profile" options={{ href: null }} />
       </Tabs>
       {/* 全局悬浮咋询按钮 */}
-      <FloatingConsultButton compact={isWeb} dockInHeader={isCompactWeb} isWeb={isWeb} />
+      <FloatingConsultButton
+        compact={isCompactWeb}
+        dockInHeader={isCompactWeb}
+        isWeb={isWeb}
+      />
     </View>
   );
 }
@@ -223,8 +275,8 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   floatingBtnWrapperWeb: {
-    right: 8,
-    bottom: 24,
+    right: 20,
+    bottom: 22,
   },
   floatingBtnWrapperHeader: {
     right: 68,
@@ -234,14 +286,14 @@ const styles = StyleSheet.create({
   floatingBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 14,
+    minHeight: 42,
+    paddingHorizontal: 15,
     paddingVertical: 10,
-    borderRadius: 24,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-    gap: 4,
+    borderRadius: 5,
+    backgroundColor: "#D8BC83",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.20)",
+    gap: 7,
   },
   floatingBtnCompact: {
     width: 44,
@@ -250,14 +302,16 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     borderRadius: 6,
     justifyContent: "center",
+    backgroundColor: "#0B1422",
+    borderColor: "rgba(216,188,131,0.58)",
   },
   floatingBtnHeader: {
     width: 40,
     height: 40,
   },
   floatingBtnText: {
-    color: "#fff",
+    color: "#07101D",
     fontSize: 13,
-    fontWeight: "700",
+    fontWeight: "800",
   },
 });

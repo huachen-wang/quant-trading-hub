@@ -9,9 +9,9 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useRouter, usePathname } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { trpc } from "@/lib/trpc";
 import { BrandWordmark } from "@/components/brand-wordmark";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 
 /**
  * 悬浮侧边栏 v3
@@ -27,7 +27,7 @@ export function FloatingSideNav() {
   const { width } = useWindowDimensions();
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const isCompact = width < 768;
+  const isCompact = width < 1024;
 
   // Hooks 必须在条件之前
   const customEntriesQuery = trpc.siteEntries.list.useQuery(
@@ -36,7 +36,7 @@ export function FloatingSideNav() {
       enabled: Platform.OS === "web",
       retry: false,
       staleTime: 5 * 60 * 1000,
-    }
+    },
   );
 
   if (Platform.OS !== "web") return null;
@@ -55,11 +55,42 @@ export function FloatingSideNav() {
 
   // ==== 快捷跳转 ====
   const quickLinks = [
-    { code: "MKT", label: "策略广场", sub: "浏览全部 EA 策略", href: "/(tabs)", matchPaths: ["/", "/(tabs)"] },
-    { code: "GB", label: "合购", sub: "拼单更优惠", href: "/(tabs)/group-buy", matchPaths: ["/(tabs)/group-buy", "/group-buy"] },
-    { code: "ACC", label: "订阅", sub: "月度精选 EA 推送", href: "/(tabs)/subscribe", matchPaths: ["/(tabs)/subscribe", "/subscribe"] },
-    { code: "B2B", label: "合作授权", sub: "工作室合作 / 渠道", href: "/cooperation", matchPaths: ["/cooperation"] },
-    { code: "PRM", label: "限时促销", sub: "特价 EA 抢购中", href: "/promo", matchPaths: ["/promo"], badge: true },
+    {
+      code: "MKT",
+      label: "策略广场",
+      sub: "浏览全部 EA 策略",
+      href: "/(tabs)",
+      matchPaths: ["/", "/(tabs)"],
+    },
+    {
+      code: "GB",
+      label: "合购",
+      sub: "拼单更优惠",
+      href: "/(tabs)/group-buy",
+      matchPaths: ["/(tabs)/group-buy", "/group-buy"],
+    },
+    {
+      code: "ACC",
+      label: "订阅",
+      sub: "月度精选 EA 推送",
+      href: "/(tabs)/subscribe",
+      matchPaths: ["/(tabs)/subscribe", "/subscribe"],
+    },
+    {
+      code: "B2B",
+      label: "合作授权",
+      sub: "工作室合作 / 渠道",
+      href: "/cooperation",
+      matchPaths: ["/cooperation"],
+    },
+    {
+      code: "PRM",
+      label: "限时促销",
+      sub: "特价 EA 抢购中",
+      href: "/promo",
+      matchPaths: ["/promo"],
+      badge: true,
+    },
   ];
 
   // ==== 项目矩阵 ====
@@ -78,19 +109,24 @@ export function FloatingSideNav() {
           onPress={() => setIsOpen(true)}
           onHoverIn={() => setIsHovered(true)}
           onHoverOut={() => setIsHovered(false)}
-          style={[styles.fab, isCompact && styles.fabCompact, isHovered && styles.fabHover]}
+          style={[
+            styles.fab,
+            isCompact && styles.fabCompact,
+            isHovered && styles.fabHover,
+          ]}
           accessibilityLabel="打开导航"
         >
-          <IconSymbol name="line.3.horizontal" size={isCompact ? 20 : 17} color="#C9A96E" />
+          <Ionicons
+            name="menu-outline"
+            size={isCompact ? 22 : 19}
+            color="#C9A96E"
+          />
         </Pressable>
       )}
 
       {/* 遮罩 */}
       {isOpen && (
-        <Pressable
-          style={styles.backdrop}
-          onPress={() => setIsOpen(false)}
-        />
+        <Pressable style={styles.backdrop} onPress={() => setIsOpen(false)} />
       )}
 
       {/* 抽屉 */}
@@ -113,7 +149,9 @@ export function FloatingSideNav() {
             <SectionTitle en="QUICK ACCESS" zh="快捷跳转" />
             <View style={{ paddingHorizontal: 12 }}>
               {quickLinks.map((item) => {
-                const isActive = item.matchPaths?.some((p) => pathname === p || pathname?.startsWith(p));
+                const isActive = item.matchPaths?.some(
+                  (p) => pathname === p || pathname?.startsWith(p),
+                );
                 return (
                   <Pressable
                     key={item.href}
@@ -127,8 +165,15 @@ export function FloatingSideNav() {
                     {isActive && <View style={styles.activeBar} />}
                     <Text style={styles.itemCode}>{item.code}</Text>
                     <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: "row", alignItems: "center" }}>
-                        <Text style={[styles.itemLabel, isActive && { color: "#C9A96E", fontWeight: "600" }]}>
+                      <View
+                        style={{ flexDirection: "row", alignItems: "center" }}
+                      >
+                        <Text
+                          style={[
+                            styles.itemLabel,
+                            isActive && { color: "#C9A96E", fontWeight: "600" },
+                          ]}
+                        >
                           {item.label}
                         </Text>
                         {item.badge && <View style={styles.badge} />}
@@ -159,19 +204,33 @@ export function FloatingSideNav() {
                     styles.matrixItem,
                     s.current && styles.matrixItemCurrent,
                     s.disabled && styles.matrixItemDisabled,
-                    hovered && !s.current && !s.disabled && styles.listItemHover,
+                    hovered &&
+                      !s.current &&
+                      !s.disabled &&
+                      styles.listItemHover,
                   ]}
                 >
-                  <Text style={[styles.matrixCode, s.disabled && { opacity: 0.5 }]}>{s.code}</Text>
+                  <Text
+                    style={[styles.matrixCode, s.disabled && { opacity: 0.5 }]}
+                  >
+                    {s.code}
+                  </Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={[
-                      styles.matrixLabel,
-                      s.current && { color: "#C9A96E", fontWeight: "600" },
-                      s.disabled && { color: "#475569" },
-                    ]}>
+                    <Text
+                      style={[
+                        styles.matrixLabel,
+                        s.current && { color: "#C9A96E", fontWeight: "600" },
+                        s.disabled && { color: "#475569" },
+                      ]}
+                    >
                       {s.label}
                     </Text>
-                    <Text style={[styles.matrixSub, s.disabled && { color: "#475569" }]}>
+                    <Text
+                      style={[
+                        styles.matrixSub,
+                        s.disabled && { color: "#475569" },
+                      ]}
+                    >
                       {s.sub}
                     </Text>
                   </View>
@@ -195,7 +254,8 @@ export function FloatingSideNav() {
                     <Pressable
                       key={entry.id}
                       onPress={() => {
-                        if (entry.href.startsWith("http")) openExternal(entry.href);
+                        if (entry.href.startsWith("http"))
+                          openExternal(entry.href);
                         else goTo(entry.href);
                       }}
                       style={({ hovered }: any) => [
@@ -218,7 +278,9 @@ export function FloatingSideNav() {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>EAXAU © 2026 · Quant Source Desk</Text>
+            <Text style={styles.footerText}>
+              EAXAU © 2026 · Quant Source Desk
+            </Text>
           </View>
         </View>
       )}
@@ -256,10 +318,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.2,
     borderColor: "#C9A96E",
     zIndex: 999,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 4px 12px rgba(0,0,0,0.30)" }
+      : { elevation: 8 }),
   },
   fabHover: {
     backgroundColor: "rgba(201,169,110,0.12)",
@@ -280,7 +341,10 @@ const styles = StyleSheet.create({
   // 遮罩
   backdrop: {
     position: "absolute" as any,
-    top: 0, left: 0, right: 0, bottom: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: "rgba(0,0,0,0.55)",
     zIndex: 1000,
   },
@@ -288,16 +352,17 @@ const styles = StyleSheet.create({
   // 抽屉（280 宽）
   drawer: {
     position: "absolute" as any,
-    top: 0, left: 0, bottom: 0,
+    top: 0,
+    left: 0,
+    bottom: 0,
     width: 280,
     backgroundColor: "#0F1E33",
     borderRightWidth: 1,
     borderRightColor: "rgba(201,169,110,0.15)",
     zIndex: 1001,
-    shadowColor: "#000",
-    shadowOffset: { width: 4, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "4px 0 24px rgba(0,0,0,0.40)" }
+      : { elevation: 12 }),
     flexDirection: "column",
   },
   drawerCompact: {
@@ -315,14 +380,22 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.06)",
   },
   closeBtn: {
-    width: 28, height: 28, borderRadius: 6,
-    alignItems: "center", justifyContent: "center",
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.04)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.08)",
     marginRight: 16,
   },
-  closeBtnIcon: { color: "#A8B3C7", fontSize: 14, fontWeight: "500", lineHeight: 16 },
+  closeBtnIcon: {
+    color: "#A8B3C7",
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 16,
+  },
 
   brand: {
     flexShrink: 0,
@@ -337,33 +410,47 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   sectionBar: {
-    width: 3, height: 14,
+    width: 3,
+    height: 14,
     backgroundColor: "#C9A96E",
     borderRadius: 2,
     marginRight: 12,
   },
   sectionEn: {
-    color: "#A8B3C7", fontSize: 10, fontWeight: "700",
-    letterSpacing: 2, lineHeight: 12,
+    color: "#A8B3C7",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 2,
+    lineHeight: 12,
   },
   sectionZh: {
-    color: "#6B7891", fontSize: 10, fontWeight: "500",
-    marginTop: 3, lineHeight: 11,
+    color: "#6B7891",
+    fontSize: 10,
+    fontWeight: "500",
+    marginTop: 3,
+    lineHeight: 11,
   },
 
   // 列表项
   listItem: {
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 8, marginBottom: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 2,
     position: "relative" as any,
   },
   listItemActive: { backgroundColor: "rgba(201,169,110,0.06)" },
   listItemHover: { backgroundColor: "rgba(255,255,255,0.03)" },
   activeBar: {
     position: "absolute" as any,
-    left: 0, top: 8, bottom: 8, width: 3,
-    backgroundColor: "#C9A96E", borderRadius: 2,
+    left: 0,
+    top: 8,
+    bottom: 8,
+    width: 3,
+    backgroundColor: "#C9A96E",
+    borderRadius: 2,
   },
   itemCode: {
     width: 28,
@@ -372,26 +459,42 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginRight: 12,
   },
-  itemLabel: { color: "#F4F6FB", fontSize: 13, fontWeight: "500", lineHeight: 16 },
+  itemLabel: {
+    color: "#F4F6FB",
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 16,
+  },
   itemSub: { color: "#6B7891", fontSize: 10, marginTop: 2, lineHeight: 12 },
   badge: {
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: "#E63946", marginLeft: 8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#E63946",
+    marginLeft: 8,
   },
   activeArrow: {
-    color: "#C9A96E", fontSize: 12, fontWeight: "600", marginLeft: 8,
+    color: "#C9A96E",
+    fontSize: 12,
+    fontWeight: "600",
+    marginLeft: 8,
   },
 
   divider: {
-    height: 1, backgroundColor: "rgba(255,255,255,0.05)",
-    marginVertical: 8, marginHorizontal: 20,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    marginVertical: 8,
+    marginHorizontal: 20,
   },
 
   // 项目矩阵
   matrixItem: {
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 14, paddingVertical: 12,
-    borderRadius: 8, marginBottom: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginBottom: 4,
   },
   matrixItemCurrent: {
     backgroundColor: "rgba(201,169,110,0.06)",
@@ -406,28 +509,45 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     marginRight: 12,
   },
-  matrixLabel: { color: "#F4F6FB", fontSize: 13, fontWeight: "500", lineHeight: 15 },
+  matrixLabel: {
+    color: "#F4F6FB",
+    fontSize: 13,
+    fontWeight: "500",
+    lineHeight: 15,
+  },
   matrixSub: { color: "#6B7891", fontSize: 10, marginTop: 2, lineHeight: 11 },
   currentTag: {
     backgroundColor: "rgba(22,163,74,0.18)",
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 9,
   },
   currentTagText: {
-    color: "#16A34A", fontSize: 9, fontWeight: "600", lineHeight: 10,
+    color: "#16A34A",
+    fontSize: 9,
+    fontWeight: "600",
+    lineHeight: 10,
   },
   externalIcon: {
-    color: "#A8B3C7", fontSize: 13, fontWeight: "500", marginLeft: 8,
+    color: "#A8B3C7",
+    fontSize: 13,
+    fontWeight: "500",
+    marginLeft: 8,
   },
 
   // 资源中心 2 列
   resourceGrid: {
-    flexDirection: "row", flexWrap: "wrap",
-    paddingHorizontal: 12, gap: 6,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 12,
+    gap: 6,
   },
   resourceCell: {
     width: 124,
-    flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 10, paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 12,
     backgroundColor: "rgba(255,255,255,0.02)",
     borderRadius: 8,
     borderWidth: 1,
@@ -443,15 +563,21 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   resourceLabel: {
-    color: "#F4F6FB", fontSize: 11, fontWeight: "500", lineHeight: 13,
+    color: "#F4F6FB",
+    fontSize: 11,
+    fontWeight: "500",
+    lineHeight: 13,
   },
 
   footer: {
-    paddingHorizontal: 20, paddingVertical: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.05)",
   },
   footerText: {
-    color: "#475569", fontSize: 10, letterSpacing: 0.5,
+    color: "#475569",
+    fontSize: 10,
+    letterSpacing: 0.5,
   },
 });

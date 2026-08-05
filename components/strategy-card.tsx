@@ -157,14 +157,15 @@ export function StrategyCard({
                 style={[
                   styles.subscribeBtn,
                   {
-                    backgroundColor: "rgba(216,188,131,0.94)",
+                    backgroundColor: "rgba(3,8,17,0.70)",
+                    borderColor: "rgba(216,188,131,0.58)",
                     top: 34,
                   },
                 ]}
                 activeOpacity={0.7}
                 accessibilityLabel="订阅策略更新"
               >
-                <IconSymbol name="bell.fill" size={14} color="#08111F" />
+                <IconSymbol name="bell.fill" size={13} color="#D8BC83" />
               </TouchableOpacity>
             )}
 
@@ -298,12 +299,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    minWidth: 34,
-    height: 24,
+    width: 28,
+    height: 28,
     borderRadius: 4,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 7,
   },
   returnOverlay: {
     position: "absolute",

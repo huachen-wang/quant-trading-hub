@@ -52,12 +52,12 @@ export function StrategyCover({
       />
       <LinearGradient
         colors={[
-          "rgba(3,8,17,0.72)",
-          "rgba(3,8,17,0.04)",
-          "rgba(3,8,17,0.24)",
-          "rgba(3,8,17,0.82)",
+          "rgba(3,8,17,0.48)",
+          "rgba(3,8,17,0.08)",
+          "rgba(3,8,17,0.22)",
+          "rgba(3,8,17,0.90)",
         ]}
-        locations={[0, 0.34, 0.62, 1]}
+        locations={[0, 0.3, 0.58, 1]}
         style={StyleSheet.absoluteFillObject}
       />
 
@@ -73,13 +73,18 @@ export function StrategyCover({
         </View>
       </View>
 
-      <View style={[styles.categoryBlock, { borderLeftColor: artwork.accent }]}>
-        <Text
-          style={[styles.category, { color: artwork.accent }]}
-          numberOfLines={1}
-        >
-          {artwork.label}
-        </Text>
+      <View style={styles.copyBlock}>
+        <View style={styles.categoryRow}>
+          <View
+            style={[styles.categoryRail, { backgroundColor: artwork.accent }]}
+          />
+          <Text
+            style={[styles.category, { color: artwork.accent }]}
+            numberOfLines={1}
+          >
+            {artwork.label}
+          </Text>
+        </View>
         <Text
           style={[styles.shortName, { fontSize: shortNameSize }]}
           numberOfLines={1}
@@ -128,7 +133,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   platformChip: {
-    backgroundColor: "rgba(3,8,17,0.66)",
+    backgroundColor: "rgba(3,8,17,0.54)",
     borderWidth: 0.5,
     borderColor: "rgba(255,255,255,0.24)",
     borderRadius: 3,
@@ -141,30 +146,35 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0,
   },
-  categoryBlock: {
+  copyBlock: {
     alignSelf: "flex-start",
-    maxWidth: "74%",
-    minWidth: 118,
-    backgroundColor: "rgba(3,8,17,0.70)",
-    borderLeftWidth: 2,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    gap: 1,
+    maxWidth: "82%",
+    paddingRight: 4,
+    gap: 2,
+  },
+  categoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  categoryRail: {
+    width: 14,
+    height: 2,
   },
   category: {
-    fontSize: 7,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 0,
   },
   shortName: {
     color: "#F8FAFC",
-    lineHeight: 18,
+    lineHeight: 19,
     fontWeight: "900",
     letterSpacing: 0,
   },
   detail: {
-    color: "rgba(226,232,240,0.68)",
-    fontSize: 8.5,
+    color: "rgba(226,232,240,0.78)",
+    fontSize: 9,
     lineHeight: 12,
     fontWeight: "700",
     letterSpacing: 0,

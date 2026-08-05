@@ -59,11 +59,11 @@ export function PcTopNav() {
   };
 
   const navItems = [
-    { href: "/(tabs)", label: "策略广场", code: "MKT" },
-    { href: "/(tabs)/group-buy", label: "合购", code: "GB" },
-    { href: "/(tabs)/subscribe", label: "订阅", code: "ACC" },
-    { href: "/cooperation", label: "合作授权", code: "B2B" },
-    { href: "/promo", label: "限时促销", code: "PRM" },
+    { href: "/(tabs)", label: "策略广场" },
+    { href: "/(tabs)/group-buy", label: "合购" },
+    { href: "/(tabs)/subscribe", label: "订阅" },
+    { href: "/cooperation", label: "合作授权" },
+    { href: "/promo", label: "限时促销" },
   ];
   const goTo = (href: string) => {
     setUserMenuOpen(false);
@@ -97,7 +97,9 @@ export function PcTopNav() {
           onPress={() => goTo("/auth/login")}
           style={[styles.loginBtn, isMobile && styles.loginBtnMobile]}
         >
-          <Text style={[styles.loginBtnText, isMobile && styles.loginBtnTextMobile]}>
+          <Text
+            style={[styles.loginBtnText, isMobile && styles.loginBtnTextMobile]}
+          >
             {isMobile ? "登录" : "登录 / 注册"}
           </Text>
         </Pressable>
@@ -107,7 +109,9 @@ export function PcTopNav() {
     // 已登录
     return (
       <Pressable
-        onPress={() => (isMobile ? goTo("/(tabs)/profile") : setUserMenuOpen((v) => !v))}
+        onPress={() =>
+          isMobile ? goTo("/(tabs)/profile") : setUserMenuOpen((v) => !v)
+        }
         style={[styles.userPill, isMobile && styles.userPillMobile]}
       >
         <View style={styles.avatar}>
@@ -135,7 +139,7 @@ export function PcTopNav() {
             onPress={() => goTo("/(tabs)")}
             accessibilityLabel="EAXAU"
           >
-            <BrandWordmark size={isMobile ? "sm" : "md"} />
+            <BrandWordmark size="sm" />
           </Pressable>
 
           {/* 桌面端：内联 5 个导航 */}
@@ -149,8 +153,12 @@ export function PcTopNav() {
                     onPress={() => goTo(item.href)}
                     style={[styles.navLink, active && styles.navLinkActive]}
                   >
-                    <Text style={[styles.navCode, active && styles.navCodeActive]}>{item.code}</Text>
-                    <Text style={[styles.navLinkText, active && styles.navLinkTextActive]}>
+                    <Text
+                      style={[
+                        styles.navLinkText,
+                        active && styles.navLinkTextActive,
+                      ]}
+                    >
                       {item.label}
                     </Text>
                   </Pressable>
@@ -165,21 +173,22 @@ export function PcTopNav() {
           {isDesktop && (
             <View style={styles.marketStatus}>
               <View style={styles.marketDot} />
-              <Text style={styles.marketStatusText}>LIVE SOURCE DESK</Text>
+              <Text style={styles.marketStatusText}>在线服务</Text>
             </View>
           )}
 
           {/* 右侧：用户区 */}
-          <View style={styles.right}>
-            {renderUserArea()}
-          </View>
+          <View style={styles.right}>{renderUserArea()}</View>
         </View>
       </View>
 
       {/* 桌面端用户下拉菜单 */}
       {isDesktop && userMenuOpen && isAuthenticated && (
         <>
-          <Pressable style={styles.menuBackdrop} onPress={() => setUserMenuOpen(false)} />
+          <Pressable
+            style={styles.menuBackdrop}
+            onPress={() => setUserMenuOpen(false)}
+          />
           <View style={styles.userMenu}>
             <View style={styles.userMenuHeader}>
               <Text style={styles.userMenuName} numberOfLines={1}>
@@ -195,7 +204,10 @@ export function PcTopNav() {
             >
               <Text style={styles.userMenuItemText}>个人中心</Text>
             </Pressable>
-            <Pressable style={styles.userMenuItem} onPress={() => goTo("/(tabs)/profile")}>
+            <Pressable
+              style={styles.userMenuItem}
+              onPress={() => goTo("/(tabs)/profile")}
+            >
               <Text style={styles.userMenuItemText}>我的订单</Text>
             </Pressable>
             <Pressable
@@ -205,7 +217,10 @@ export function PcTopNav() {
               <Text style={styles.userMenuItemText}>我的收藏</Text>
             </Pressable>
             {user?.role === "admin" && (
-              <Pressable style={styles.userMenuItem} onPress={() => goTo("/admin")}>
+              <Pressable
+                style={styles.userMenuItem}
+                onPress={() => goTo("/admin")}
+              >
                 <Text style={styles.userMenuItemText}>管理后台</Text>
               </Pressable>
             )}
@@ -227,9 +242,9 @@ const styles = StyleSheet.create({
     position: Platform.OS === "web" ? ("sticky" as any) : "relative",
     top: 0,
     zIndex: 100,
-    backgroundColor: "rgba(3,7,18,0.96)",
+    backgroundColor: "rgba(5,9,16,0.97)",
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(216,188,131,0.20)",
+    borderBottomColor: "rgba(148,163,184,0.13)",
     ...(Platform.OS === "web"
       ? {
           backdropFilter: "saturate(1.25) blur(14px)",
@@ -241,14 +256,16 @@ const styles = StyleSheet.create({
     width: "100%",
     alignSelf: "center",
     paddingHorizontal: 22,
-    paddingVertical: 8,
+    minHeight: 58,
+    paddingVertical: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
   innerMobile: {
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    minHeight: 56,
+    paddingVertical: 0,
     gap: 10,
   },
   logo: {
@@ -256,7 +273,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
     minHeight: 40,
-    minWidth: 134,
+    minWidth: 104,
     paddingHorizontal: 0,
   },
   logoMobile: {
@@ -269,46 +286,29 @@ const styles = StyleSheet.create({
   nav: {
     flex: 1,
     flexDirection: "row",
-    gap: 2,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: "rgba(148,163,184,0.16)",
-    backgroundColor: "rgba(8,15,28,0.78)",
+    alignItems: "stretch",
+    alignSelf: "stretch",
+    gap: 22,
+    marginLeft: 8,
   },
   navLink: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 7,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 3,
-    borderWidth: 1,
-    borderColor: "transparent",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
   },
   navLinkActive: {
-    backgroundColor: "rgba(216,188,131,0.12)",
-    borderColor: "rgba(216,188,131,0.30)",
+    borderBottomColor: "#D8BC83",
   },
-  navCode: {
-    color: "rgba(148,163,184,0.62)",
-    fontSize: 9,
-    fontWeight: "900",
-  },
-  navCodeActive: {
-    color: "#D8BC83",
-  },
-  navLinkText: { color: "#A7B0C0", fontSize: 12, fontWeight: "700" },
-  navLinkTextActive: { color: "#F2D99B", fontWeight: "800" },
+  navLinkText: { color: "#98A3B5", fontSize: 13, fontWeight: "600" },
+  navLinkTextActive: { color: "#F8FAFC", fontWeight: "700" },
   marketStatus: {
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    paddingHorizontal: 9,
+    paddingHorizontal: 6,
     paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: "rgba(52,211,153,0.18)",
-    backgroundColor: "rgba(6,78,59,0.10)",
   },
   marketDot: {
     width: 7,
@@ -317,9 +317,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#34D399",
   },
   marketStatusText: {
-    color: "#9AE6C1",
-    fontSize: 10,
-    fontWeight: "800",
+    color: "#8FD7B7",
+    fontSize: 11,
+    fontWeight: "700",
     letterSpacing: 0,
   },
   right: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -364,7 +364,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { color: "#0A1628", fontSize: 13, fontWeight: "900" },
-  userName: { color: "#F1F5F9", fontSize: 13, fontWeight: "600", maxWidth: 120 },
+  userName: {
+    color: "#F1F5F9",
+    fontSize: 13,
+    fontWeight: "600",
+    maxWidth: 120,
+  },
   userArrow: { color: "#94A3B8", fontSize: 10 },
 
   // 桌面用户下拉菜单
@@ -387,10 +392,9 @@ const styles = StyleSheet.create({
     borderColor: "rgba(148,163,184,0.18)",
     paddingVertical: 8,
     zIndex: 100,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0 8px 24px rgba(0,0,0,0.40)" }
+      : { elevation: 10 }),
   },
   userMenuHeader: {
     paddingHorizontal: 16,
@@ -412,5 +416,4 @@ const styles = StyleSheet.create({
     marginVertical: 4,
     marginHorizontal: 12,
   },
-
 });

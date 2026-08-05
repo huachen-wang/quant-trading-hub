@@ -1,6 +1,11 @@
 import { memo, useMemo } from "react";
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import type { ThemeColorPalette } from "@/constants/theme";
 import { useResponsive } from "@/hooks/use-responsive";
@@ -70,7 +75,8 @@ export const StrategyFilters = memo(function StrategyFilters({
   onSearchPress,
 }: StrategyFiltersProps) {
   const { isDesktop } = useResponsive();
-  const hasAnyFilter = !!platformFilter || !!categoryFilter || !!tagFilter || orderBy !== "hot";
+  const hasAnyFilter =
+    !!platformFilter || !!categoryFilter || !!tagFilter || orderBy !== "hot";
   const rootCategories = useMemo(
     () => categories.filter((category) => category.parentId === null),
     [categories],
@@ -78,41 +84,158 @@ export const StrategyFilters = memo(function StrategyFilters({
   const activeFilterChips = useMemo(() => {
     const chips: { label: string; clear: () => void }[] = [];
 
-    if (platformFilter) chips.push({ label: platformFilter, clear: () => onPlatformChange(undefined) });
+    if (platformFilter)
+      chips.push({
+        label: platformFilter,
+        clear: () => onPlatformChange(undefined),
+      });
     if (categoryFilter) {
-      const cat = categories.find((category) => category.slug === categoryFilter);
-      if (cat) chips.push({ label: cat.name, clear: () => onCategoryChange(undefined) });
+      const cat = categories.find(
+        (category) => category.slug === categoryFilter,
+      );
+      if (cat)
+        chips.push({
+          label: cat.name,
+          clear: () => onCategoryChange(undefined),
+        });
     }
     if (tagFilter) {
       const tag = dynamicTags.find((item) => item.value === tagFilter);
-      chips.push({ label: tag?.label || tagFilter, clear: () => onTagChange("") });
+      chips.push({
+        label: tag?.label || tagFilter,
+        clear: () => onTagChange(""),
+      });
     }
     if (orderBy !== "hot") {
-      chips.push({ label: orderBy === "latest" ? "最新" : "收益率", clear: () => onOrderByChange("hot") });
+      chips.push({
+        label: orderBy === "latest" ? "最新" : "收益率",
+        clear: () => onOrderByChange("hot"),
+      });
     }
 
     return chips;
-  }, [categories, categoryFilter, dynamicTags, onCategoryChange, onOrderByChange, onPlatformChange, onTagChange, orderBy, platformFilter, tagFilter]);
+  }, [
+    categories,
+    categoryFilter,
+    dynamicTags,
+    onCategoryChange,
+    onOrderByChange,
+    onPlatformChange,
+    onTagChange,
+    orderBy,
+    platformFilter,
+    tagFilter,
+  ]);
+
+  const platformControls = PLATFORM_OPTIONS.map((item) => {
+    const isActive = platformFilter === item.value;
+    return (
+      <TouchableOpacity
+        key={item.label}
+        onPress={() => onPlatformChange(item.value)}
+        style={[
+          styles.filterChip,
+          isActive
+            ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" }
+            : { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
+        activeOpacity={0.7}
+      >
+        <Text
+          style={[
+            styles.filterChipText,
+            { color: isActive ? "#0A1628" : colors.muted },
+          ]}
+        >
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  });
+
+  const orderControls = ORDER_OPTIONS.map((item) => {
+    const isActive = orderBy === item.value;
+    return (
+      <TouchableOpacity
+        key={item.label}
+        onPress={() => onOrderByChange(item.value)}
+        style={[styles.sortChip, isActive && styles.sortChipActive]}
+        activeOpacity={0.7}
+      >
+        <Text
+          style={[
+            styles.sortChipText,
+            { color: isActive ? "#C9A96E" : colors.muted },
+          ]}
+        >
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    );
+  });
+
+  const advancedToggle = (
+    <TouchableOpacity
+      onPress={onToggleAdvancedFilters}
+      style={[
+        styles.advancedToggle,
+        showAdvancedFilters
+          ? {
+              backgroundColor: "rgba(201,169,110,0.12)",
+              borderColor: "#C9A96E",
+            }
+          : { backgroundColor: colors.surface, borderColor: colors.border },
+      ]}
+      activeOpacity={0.7}
+    >
+      <Text
+        style={[
+          styles.advancedToggleText,
+          { color: showAdvancedFilters ? "#C9A96E" : colors.muted },
+        ]}
+      >
+        {showAdvancedFilters ? "收起筛选" : "高级筛选"}
+      </Text>
+      {!!(categoryFilter || tagFilter) && !showAdvancedFilters && (
+        <View style={styles.advancedDot} />
+      )}
+    </TouchableOpacity>
+  );
 
   return (
     <View style={[styles.container, isDesktop && styles.containerDesktop]}>
       <View style={[styles.titleRow, isDesktop && styles.titleRowDesktop]}>
         <View style={styles.titleLeft}>
           <View style={styles.titleAccent} />
-          <View>
-            <Text style={[styles.titleText, isDesktop && styles.titleTextDesktop, { color: colors.foreground }]}>策略广场</Text>
-            {isDesktop && <Text style={styles.titleMeta}>EA SOURCE TERMINAL</Text>}
-          </View>
+          <Text
+            style={[
+              styles.titleText,
+              isDesktop && styles.titleTextDesktop,
+              { color: colors.foreground },
+            ]}
+          >
+            策略广场
+          </Text>
         </View>
+
+        {isDesktop && (
+          <View style={styles.desktopToolbar}>
+            <View style={styles.filterGroup}>{platformControls}</View>
+            <View
+              style={[styles.divider, { backgroundColor: colors.border }]}
+            />
+            <View style={styles.filterGroup}>{orderControls}</View>
+            {advancedToggle}
+          </View>
+        )}
+
         <View style={styles.titleRight}>
           <TouchableOpacity
             onPress={onUploadPress}
             style={styles.uploadBtn}
             activeOpacity={0.8}
           >
-            <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.uploadBtnInner}>
-              <Text style={styles.uploadBtnText}>+ 上架EA</Text>
-            </LinearGradient>
+            <Text style={styles.uploadBtnText}>上架 EA</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onSearchPress}
@@ -124,77 +247,31 @@ export const StrategyFilters = memo(function StrategyFilters({
         </View>
       </View>
 
-      <View style={[styles.filterRow, isDesktop && styles.filterRowDesktop]}>
-        <View style={styles.filterGroup}>
-          {PLATFORM_OPTIONS.map((item) => {
-            const isActive = platformFilter === item.value;
-            return (
-              <TouchableOpacity
-                key={item.label}
-                onPress={() => onPlatformChange(item.value)}
-                style={[
-                  styles.filterChip,
-                  isActive
-                    ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" }
-                    : { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.filterChipText, { color: isActive ? "#0A1628" : colors.muted }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-        <View style={styles.filterGroup}>
-          {ORDER_OPTIONS.map((item) => {
-            const isActive = orderBy === item.value;
-            return (
-              <TouchableOpacity
-                key={item.label}
-                onPress={() => onOrderByChange(item.value)}
-                style={[
-                  styles.sortChip,
-                  isActive && { borderBottomWidth: 2, borderBottomColor: "#C9A96E" },
-                ]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.sortChipText, { color: isActive ? "#C9A96E" : colors.muted }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      <View style={[styles.filterRow, styles.secondFilterRow, isDesktop && styles.secondFilterRowDesktop]}>
-        <TouchableOpacity
-          onPress={onToggleAdvancedFilters}
-          style={[
-            styles.advancedToggle,
-            showAdvancedFilters
-              ? { backgroundColor: "rgba(201,169,110,0.12)", borderColor: "#C9A96E" }
-              : { backgroundColor: colors.surface, borderColor: colors.border },
-          ]}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.advancedToggleText, { color: showAdvancedFilters ? "#C9A96E" : colors.muted }]}>
-            {showAdvancedFilters ? "▲ 收起" : "▾ 高级筛选"}
-          </Text>
-          {!!(categoryFilter || tagFilter) && !showAdvancedFilters && (
-            <View style={styles.advancedDot} />
-          )}
-        </TouchableOpacity>
-      </View>
+      {!isDesktop && (
+        <>
+          <View style={styles.filterRow}>
+            <View style={styles.filterGroup}>{platformControls}</View>
+            <View
+              style={[styles.divider, { backgroundColor: colors.border }]}
+            />
+            <View style={styles.filterGroup}>{orderControls}</View>
+          </View>
+          <View style={[styles.filterRow, styles.secondFilterRow]}>
+            {advancedToggle}
+          </View>
+        </>
+      )}
 
       {hasAnyFilter && (
-        <View style={[styles.filterRow, { marginTop: 10, alignItems: "center", flexWrap: "wrap" }]}>
-          <Text style={[styles.activeLabel, { color: colors.muted }]}>已选：</Text>
+        <View
+          style={[
+            styles.filterRow,
+            { marginTop: 10, alignItems: "center", flexWrap: "wrap" },
+          ]}
+        >
+          <Text style={[styles.activeLabel, { color: colors.muted }]}>
+            已选：
+          </Text>
           {activeFilterChips.map((chip, i) => (
             <TouchableOpacity
               key={`${chip.label}-${i}`}
@@ -217,20 +294,75 @@ export const StrategyFilters = memo(function StrategyFilters({
       )}
 
       {showAdvancedFilters && (
-        <View style={[styles.advancedPanel, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.advancedPanel,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           {categories.length > 0 && (
             <>
-              <Text style={[styles.advancedSectionTitle, { color: colors.muted }]}>分类</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4, gap: 6 }}>
-                <TouchableOpacity onPress={() => onCategoryChange(undefined)} style={[styles.filterChip, !categoryFilter ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" } : { backgroundColor: colors.background, borderColor: colors.border }]} activeOpacity={0.7}>
-                  <Text style={[styles.filterChipText, { color: !categoryFilter ? "#0A1628" : colors.muted }]}>全部分类</Text>
+              <Text
+                style={[styles.advancedSectionTitle, { color: colors.muted }]}
+              >
+                分类
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingVertical: 4, gap: 6 }}
+              >
+                <TouchableOpacity
+                  onPress={() => onCategoryChange(undefined)}
+                  style={[
+                    styles.filterChip,
+                    !categoryFilter
+                      ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" }
+                      : {
+                          backgroundColor: colors.background,
+                          borderColor: colors.border,
+                        },
+                  ]}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      { color: !categoryFilter ? "#0A1628" : colors.muted },
+                    ]}
+                  >
+                    全部分类
+                  </Text>
                 </TouchableOpacity>
                 {rootCategories.map((category) => {
                   const isActive = categoryFilter === category.slug;
                   const categoryLabel = category.name;
                   return (
-                    <TouchableOpacity key={category.slug} onPress={() => onCategoryChange(category.slug)} style={[styles.filterChip, isActive ? { backgroundColor: "#C9A96E", borderColor: "#C9A96E" } : { backgroundColor: colors.background, borderColor: colors.border }]} activeOpacity={0.7}>
-                      <Text style={[styles.filterChipText, { color: isActive ? "#0A1628" : colors.muted }]}>{categoryLabel}</Text>
+                    <TouchableOpacity
+                      key={category.slug}
+                      onPress={() => onCategoryChange(category.slug)}
+                      style={[
+                        styles.filterChip,
+                        isActive
+                          ? {
+                              backgroundColor: "#C9A96E",
+                              borderColor: "#C9A96E",
+                            }
+                          : {
+                              backgroundColor: colors.background,
+                              borderColor: colors.border,
+                            },
+                      ]}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          { color: isActive ? "#0A1628" : colors.muted },
+                        ]}
+                      >
+                        {categoryLabel}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -240,20 +372,41 @@ export const StrategyFilters = memo(function StrategyFilters({
 
           {dynamicTags.length > 0 && (
             <>
-              <Text style={[styles.advancedSectionTitle, { color: colors.muted, marginTop: 14 }]}>标签</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 12, gap: 8 }}>
+              <Text
+                style={[
+                  styles.advancedSectionTitle,
+                  { color: colors.muted, marginTop: 14 },
+                ]}
+              >
+                标签
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: 12, gap: 8 }}
+              >
                 <TouchableOpacity
                   onPress={() => onTagChange("")}
                   style={[
                     styles.tagChip,
                     {
-                      backgroundColor: tagFilter === "" ? "rgba(201,169,110,0.12)" : colors.background,
+                      backgroundColor:
+                        tagFilter === ""
+                          ? "rgba(201,169,110,0.12)"
+                          : colors.background,
                       borderColor: tagFilter === "" ? "#C9A96E" : colors.border,
                     },
                   ]}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.tagChipText, { color: tagFilter === "" ? "#C9A96E" : colors.muted }]}>全部</Text>
+                  <Text
+                    style={[
+                      styles.tagChipText,
+                      { color: tagFilter === "" ? "#C9A96E" : colors.muted },
+                    ]}
+                  >
+                    全部
+                  </Text>
                 </TouchableOpacity>
                 {dynamicTags.map((tag) => {
                   const isActive = tagFilter === tag.value;
@@ -264,13 +417,20 @@ export const StrategyFilters = memo(function StrategyFilters({
                       style={[
                         styles.tagChip,
                         {
-                          backgroundColor: isActive ? "rgba(201,169,110,0.12)" : colors.background,
+                          backgroundColor: isActive
+                            ? "rgba(201,169,110,0.12)"
+                            : colors.background,
                           borderColor: isActive ? "#C9A96E" : colors.border,
                         },
                       ]}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.tagChipText, { color: isActive ? "#C9A96E" : colors.muted }]}>
+                      <Text
+                        style={[
+                          styles.tagChipText,
+                          { color: isActive ? "#C9A96E" : colors.muted },
+                        ]}
+                      >
                         {tag.label}
                       </Text>
                     </TouchableOpacity>
@@ -292,13 +452,12 @@ const styles = StyleSheet.create({
   },
   containerDesktop: {
     marginTop: 6,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "rgba(148,163,184,0.16)",
-    backgroundColor: "rgba(9,15,28,0.82)",
+    marginBottom: 10,
+    paddingHorizontal: 8,
+    paddingTop: 14,
+    paddingBottom: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(148,163,184,0.14)",
   },
   titleRow: {
     flexDirection: "row",
@@ -307,11 +466,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   titleRowDesktop: {
-    marginBottom: 8,
+    marginBottom: 0,
+    gap: 16,
   },
   titleLeft: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 0,
   },
   titleAccent: {
     width: 3,
@@ -326,34 +487,35 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   titleTextDesktop: {
-    fontSize: 18,
+    fontSize: 17,
     lineHeight: 22,
   },
-  titleMeta: {
-    color: "rgba(148,163,184,0.72)",
-    fontSize: 10,
-    fontWeight: "800",
-    marginTop: 2,
-    letterSpacing: 0,
+  desktopToolbar: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
   },
   titleRight: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flexShrink: 0,
   },
   uploadBtn: {
     borderRadius: 4,
-    overflow: "hidden",
-  },
-  uploadBtnInner: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.48)",
+    backgroundColor: "rgba(216,188,131,0.08)",
   },
   uploadBtnText: {
-    color: "#0A0E1A",
+    color: "#D8BC83",
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   searchBtn: {
     width: 30,
@@ -369,19 +531,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     rowGap: 6,
   },
-  filterRowDesktop: {
-    marginBottom: 5,
-    rowGap: 5,
-  },
   secondFilterRow: {
     marginTop: 8,
     justifyContent: "space-between",
-  },
-  secondFilterRowDesktop: {
-    marginTop: 2,
-    paddingTop: 7,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(148,163,184,0.10)",
   },
   filterGroup: {
     flexDirection: "row",
@@ -408,6 +560,9 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderBottomWidth: 2,
     borderBottomColor: "transparent",
+  },
+  sortChipActive: {
+    borderBottomColor: "#C9A96E",
   },
   sortChipText: {
     fontSize: 12,
