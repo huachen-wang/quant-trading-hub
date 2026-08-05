@@ -46,6 +46,21 @@ function main() {
   const indexHtml = fs.readFileSync(indexPath, "utf8");
   const requiredAssets = collectRequiredAssets(indexHtml);
 
+  if (!indexHtml.includes('data-eaxau-bootstrap="v1"')) {
+    throw new Error("web-build/index.html is missing the EAXAU loading bootstrap");
+  }
+  if (!indexHtml.includes('id="eaxau-boot"')) {
+    throw new Error("web-build/index.html is missing the EAXAU loading element");
+  }
+
+  const bootstrapScript = indexHtml.match(
+    /<script[^>]*data-eaxau-bootstrap="v1"[^>]*>([\s\S]*?)<\/script>/,
+  )?.[1];
+  if (!bootstrapScript) {
+    throw new Error("web-build/index.html is missing the EAXAU recovery script");
+  }
+  new Function(bootstrapScript);
+
   if (requiredAssets.length === 0) {
     throw new Error("web-build/index.html does not reference any Expo JS/CSS assets");
   }

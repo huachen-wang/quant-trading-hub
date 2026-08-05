@@ -322,7 +322,9 @@ Sitemap: https://www.eaxau.com/sitemap.xml
     app.use(express.static(webBuildPath, {
       setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
-          res.setHeader('Cache-Control', 'no-cache');
+          res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
         } else if (filePath.includes(`${path.sep}_expo${path.sep}static${path.sep}`)) {
           res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         } else if (filePath.includes(`${path.sep}strategy-art${path.sep}`)) {
@@ -353,6 +355,10 @@ Sitemap: https://www.eaxau.com/sitemap.xml
       if (isStaticAssetRequest(req.path)) {
         return res.status(404).type('text/plain').send('Static asset not found');
       }
+
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
 
       const userAgent = req.headers['user-agent'] || '';
       const isCrawler = isSearchBot(userAgent);
