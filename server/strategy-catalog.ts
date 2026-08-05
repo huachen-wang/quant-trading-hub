@@ -250,7 +250,7 @@ export const CURATED_STRATEGY_CATALOG: CuratedStrategy[] = [
 
 const EXISTING_CURATED_REFERENCES = [
   {
-    titleLike: "%正版云控V4.3%",
+    titleLike: "%金戈铁马%V5.1%",
     coverImage: "/ea-covers-v2/49_Quantum_Dark_Gold.jpg",
     isFeatured: true,
   },
@@ -287,8 +287,9 @@ const EXISTING_CURATED_REFERENCES = [
   },
 ];
 
-const CONTENT_MIGRATION_KEY = "2026-08-05-curated-strategy-catalog-v2";
+const CONTENT_MIGRATION_KEY = "2026-08-05-curated-strategy-catalog-v3";
 const EMPTY_FEATURED_PROMO_TITLE = "金戈铁马 正版云控 全网收益第一";
+export const JINGE_TIE_MA_TITLE = "金戈铁马 V5.1 永不爆仓版本";
 
 export async function syncCuratedStrategyCatalog(
   connection: Connection,
@@ -307,6 +308,15 @@ export async function syncCuratedStrategyCatalog(
   if (migrationRows.length > 0) return 0;
 
   let changed = 0;
+
+  const [renamedJingeResult] = (await connection.query(
+    `UPDATE \`strategies\`
+     SET \`title\` = ?
+     WHERE \`title\` LIKE '金戈铁马%'
+       AND \`title\` LIKE '%V4.3%'`,
+    [JINGE_TIE_MA_TITLE],
+  )) as any[];
+  changed += renamedJingeResult.affectedRows || 0;
 
   // 当前策略目录统一采用人工确认版本与授权范围的咨询交付方式。
   const [normalizedSaleModeResult] = (await connection.query(

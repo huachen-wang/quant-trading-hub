@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   CURATED_STRATEGY_CATALOG,
+  JINGE_TIE_MA_TITLE,
   syncCuratedStrategyCatalog,
 } from "./strategy-catalog";
 import {
@@ -95,5 +96,12 @@ describe("curated strategy catalog", () => {
     ).toBe(true);
     expect(updates.some(({ sql }) => sql.includes("CHAR_LENGTH"))).toBe(true);
     expect(updates.some(({ params }) => params[0] === 1)).toBe(true);
+    expect(
+      updates.some(
+        ({ sql, params }) =>
+          sql.includes("`title` LIKE '%V4.3%'") &&
+          params[0] === JINGE_TIE_MA_TITLE,
+      ),
+    ).toBe(true);
   });
 });
