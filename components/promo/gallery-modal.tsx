@@ -1,5 +1,5 @@
 import { Image, Modal, Text, TouchableOpacity, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 import type { PromoStyles } from "@/components/promo/styles";
 import type { PromoProduct } from "@/components/promo/types";

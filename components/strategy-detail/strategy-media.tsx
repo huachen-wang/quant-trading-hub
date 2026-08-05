@@ -12,22 +12,15 @@ type StrategyMediaProps = {
   isFeatured: boolean;
   isDesktop: boolean;
   width: number;
+  mediaWidth: number;
 };
 
-export function StrategyMedia({
-  strategy,
-  allImages,
-  gradientColors,
-  productTypeLabel,
-  isFeatured,
-  isDesktop,
-  width,
-}: StrategyMediaProps) {
+export function StrategyMedia({ strategy, allImages, gradientColors, productTypeLabel, isFeatured, isDesktop, width, mediaWidth }: StrategyMediaProps) {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [coverLoadFailed, setCoverLoadFailed] = useState(false);
   const hasGalleryImages = allImages.length > 0;
-  const galleryWidth = Math.max(1, Math.min(width - 32, 688));
+  const galleryWidth = Math.max(1, mediaWidth);
   const fullImageSize = Math.max(1, width - 40);
 
   useEffect(() => {
@@ -45,18 +38,21 @@ export function StrategyMedia({
     }
   }, [allImages.length, galleryIndex, hasGalleryImages]);
 
-  const openGallery = useCallback((index: number) => {
-    if (!hasGalleryImages) return;
-    setGalleryIndex(Math.min(Math.max(index, 0), allImages.length - 1));
-    setShowGalleryModal(true);
-  }, [allImages.length, hasGalleryImages]);
+  const openGallery = useCallback(
+    (index: number) => {
+      if (!hasGalleryImages) return;
+      setGalleryIndex(Math.min(Math.max(index, 0), allImages.length - 1));
+      setShowGalleryModal(true);
+    },
+    [allImages.length, hasGalleryImages],
+  );
 
   const closeGallery = useCallback(() => setShowGalleryModal(false), []);
 
   return (
     <>
       {allImages.length > 1 ? (
-        <View style={[styles.galleryContainer, isDesktop && styles.galleryContainerDesktop]}>
+        <View style={[styles.galleryContainer, isDesktop && styles.galleryContainerDesktop, { width: galleryWidth }]}>
           <ScrollView
             horizontal
             pagingEnabled
@@ -68,35 +64,19 @@ export function StrategyMedia({
             style={{ width: galleryWidth }}
           >
             {allImages.map((img, i) => (
-              <TouchableOpacity
-                key={`${img}-${i}`}
-                onPress={() => openGallery(i)}
-                activeOpacity={0.9}
-                style={{ width: galleryWidth }}
-              >
-                <View style={{ width: galleryWidth, height: isDesktop ? 196 : 180, borderRadius: isDesktop ? 8 : 14, overflow: "hidden" }}>
-                  <LinearGradient
-                    colors={gradientColors}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={StyleSheet.absoluteFillObject}
-                  >
-                    <View style={styles.placeholderPanel}>
-                      <Text style={styles.placeholderKicker}>STRATEGY PROFILE</Text>
-                      <Text style={styles.placeholderTitle} numberOfLines={2}>{strategy.title}</Text>
-                    </View>
+              <TouchableOpacity key={`${img}-${i}`} onPress={() => openGallery(i)} activeOpacity={0.9} style={{ width: galleryWidth }}>
+                <View
+                  style={{
+                    width: galleryWidth,
+                    height: isDesktop ? 286 : 190,
+                    borderRadius: isDesktop ? 8 : 8,
+                    overflow: "hidden",
+                  }}
+                >
+                  <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject}>
+                    <View style={styles.loadingWash} />
                   </LinearGradient>
-                  {Math.abs(i - galleryIndex) <= 1 ? (
-                    <Image
-                      source={{ uri: img }}
-                      style={StyleSheet.absoluteFillObject}
-                      contentFit="cover"
-                      transition={120}
-                      cachePolicy="memory-disk"
-                      priority={i === galleryIndex ? "high" : "low"}
-                      recyclingKey={img}
-                    />
-                  ) : null}
+                  {Math.abs(i - galleryIndex) <= 1 ? <Image source={{ uri: img }} style={StyleSheet.absoluteFillObject} contentFit="cover" transition={120} cachePolicy="memory-disk" priority={i === galleryIndex ? "high" : "low"} recyclingKey={img} /> : null}
                 </View>
               </TouchableOpacity>
             ))}
@@ -117,47 +97,24 @@ export function StrategyMedia({
             ))}
           </View>
 
-          <PlatformBadge
-            label={`${strategy.platform} · ${productTypeLabel}`}
-            color={gradientColors[1]}
-          />
+          <PlatformBadge label={`${strategy.platform} · ${productTypeLabel}`} color={gradientColors[1]} />
           {isFeatured && <FeaturedBadge />}
         </View>
       ) : strategy.coverImage && !coverLoadFailed ? (
         <View style={[styles.coverGradient, isDesktop && styles.coverDesktop, { overflow: "hidden" }]}>
-          <TouchableOpacity
-            onPress={() => openGallery(0)}
-            activeOpacity={0.9}
-            style={{ width: "100%", height: "100%" }}
-          >
-            <Image
-              source={{ uri: strategy.coverImage }}
-              style={{ width: "100%", height: "100%" }}
-              placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }}
-              contentFit="cover"
-              transition={120}
-              cachePolicy="memory-disk"
-              priority="high"
-              recyclingKey={strategy.coverImage}
-              onError={() => setCoverLoadFailed(true)}
-            />
+          <TouchableOpacity onPress={() => openGallery(0)} activeOpacity={0.9} style={{ width: "100%", height: "100%" }}>
+            <Image source={{ uri: strategy.coverImage }} style={{ width: "100%", height: "100%" }} placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }} contentFit="cover" transition={120} cachePolicy="memory-disk" priority="high" recyclingKey={strategy.coverImage} onError={() => setCoverLoadFailed(true)} />
           </TouchableOpacity>
-          <PlatformBadge
-            label={`${strategy.platform} · ${productTypeLabel}`}
-            color={gradientColors[1]}
-          />
+          <PlatformBadge label={`${strategy.platform} · ${productTypeLabel}`} color={gradientColors[1]} />
           {isFeatured && <FeaturedBadge />}
         </View>
       ) : (
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.coverGradient, isDesktop && styles.coverDesktop]}
-        >
+        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.coverGradient, isDesktop && styles.coverDesktop]}>
           <View style={styles.placeholderPanel}>
             <Text style={styles.placeholderKicker}>STRATEGY PROFILE</Text>
-            <Text style={styles.placeholderTitle} numberOfLines={2}>{strategy.title}</Text>
+            <Text style={styles.placeholderTitle} numberOfLines={2}>
+              {strategy.title}
+            </Text>
             <View style={styles.placeholderMetrics}>
               <View style={styles.placeholderMetric}>
                 <Text style={styles.placeholderMetricLabel}>收益率</Text>
@@ -169,24 +126,13 @@ export function StrategyMedia({
               </View>
             </View>
           </View>
-          <PlatformBadge
-            label={`${strategy.platform} · ${productTypeLabel}`}
-            color={gradientColors[1]}
-          />
+          <PlatformBadge label={`${strategy.platform} · ${productTypeLabel}`} color={gradientColors[1]} />
         </LinearGradient>
       )}
 
-      <Modal
-        visible={showGalleryModal && hasGalleryImages}
-        transparent
-        animationType="fade"
-        onRequestClose={closeGallery}
-      >
+      <Modal visible={showGalleryModal && hasGalleryImages} transparent animationType="fade" onRequestClose={closeGallery}>
         <View style={styles.galleryModalOverlay}>
-          <TouchableOpacity
-            onPress={closeGallery}
-            style={styles.galleryCloseBtn}
-          >
+          <TouchableOpacity onPress={closeGallery} style={styles.galleryCloseBtn}>
             <Text style={styles.galleryCloseText}>✕</Text>
           </TouchableOpacity>
           <ScrollView
@@ -200,22 +146,21 @@ export function StrategyMedia({
             }}
           >
             {allImages.map((img, i) => (
-              <View key={`${img}-modal-${i}`} style={{ width, justifyContent: "center", alignItems: "center" }}>
-                {Math.abs(i - galleryIndex) <= 1 ? (
-                  <Image
-                    source={{ uri: img }}
-                    style={{ width: fullImageSize, height: fullImageSize }}
-                    contentFit="contain"
-                    transition={120}
-                    cachePolicy="memory-disk"
-                    priority={i === galleryIndex ? "high" : "low"}
-                    recyclingKey={`${img}-modal`}
-                  />
-                ) : null}
+              <View
+                key={`${img}-modal-${i}`}
+                style={{
+                  width,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                {Math.abs(i - galleryIndex) <= 1 ? <Image source={{ uri: img }} style={{ width: fullImageSize, height: fullImageSize }} contentFit="contain" transition={120} cachePolicy="memory-disk" priority={i === galleryIndex ? "high" : "low"} recyclingKey={`${img}-modal`} /> : null}
               </View>
             ))}
           </ScrollView>
-          <Text style={styles.galleryCounter}>{galleryIndex + 1} / {allImages.length}</Text>
+          <Text style={styles.galleryCounter}>
+            {galleryIndex + 1} / {allImages.length}
+          </Text>
         </View>
       </Modal>
     </>
@@ -233,12 +178,7 @@ function PlatformBadge({ label, color }: { label: string; color: string }) {
 function FeaturedBadge() {
   return (
     <View style={styles.featuredDetailBadge}>
-      <LinearGradient
-        colors={["#A8895A", "#C9A96E"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.featuredDetailGradient}
-      >
+      <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.featuredDetailGradient}>
         <Text style={styles.featuredDetailText}>官方旗舰</Text>
       </LinearGradient>
     </View>
@@ -248,14 +188,14 @@ function FeaturedBadge() {
 const styles = StyleSheet.create({
   coverGradient: {
     marginHorizontal: 16,
-    height: 180,
-    borderRadius: 14,
+    height: 190,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
   coverDesktop: {
-    height: 196,
+    height: 286,
     borderRadius: 8,
     marginHorizontal: 0,
     marginBottom: 10,
@@ -305,17 +245,21 @@ const styles = StyleSheet.create({
   },
   galleryContainer: {
     marginHorizontal: 16,
-    height: 180,
-    borderRadius: 14,
+    height: 190,
+    borderRadius: 8,
     overflow: "hidden",
     marginBottom: 16,
     position: "relative",
   },
   galleryContainerDesktop: {
     marginHorizontal: 0,
-    height: 196,
+    height: 286,
     borderRadius: 8,
     marginBottom: 10,
+  },
+  loadingWash: {
+    flex: 1,
+    backgroundColor: "rgba(4,8,16,0.18)",
   },
   galleryIndicatorRow: {
     position: "absolute",

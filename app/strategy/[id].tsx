@@ -1,15 +1,5 @@
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { ContactModal } from "@/components/contact-modal";
@@ -18,6 +8,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { resolveStrategyArtwork } from "@/lib/strategy-artwork";
+import { resolveStrategyProfile } from "@/lib/strategy-profile";
 import { trpc } from "@/lib/trpc";
 import { SubscribeModal } from "@/components/subscribe-modal";
 import { AdminNotesSection } from "@/components/strategy-detail/admin-notes-section";
@@ -28,6 +19,7 @@ import { StrategyHeader } from "@/components/strategy-detail/strategy-header";
 import { StrategyMedia } from "@/components/strategy-detail/strategy-media";
 import { StrategyMetrics } from "@/components/strategy-detail/strategy-metrics";
 import { StrategyPurchasePanel } from "@/components/strategy-detail/strategy-purchase-panel";
+import { StrategyProfileSection } from "@/components/strategy-detail/strategy-profile-section";
 import { TradingEnvironmentSection } from "@/components/strategy-detail/trading-environment-section";
 import { UserReviewsSection } from "@/components/strategy-detail/user-reviews-section";
 import type { StrategyComment, StrategyReview } from "@/components/strategy-detail/types";
@@ -53,8 +45,11 @@ export default function StrategyDetailScreen() {
   const strategyId = parseInt(id || "0");
   const isDesktop = Platform.OS === "web" && width >= 1024;
   const maxContentWidth = isDesktop ? Math.min(width - 56, 1320) : width;
+  const mediaWidth = isDesktop ? Math.max(1, maxContentWidth - 388) : Math.max(1, width - 32);
 
-  const { data: strategy, isLoading } = trpc.strategies.detail.useQuery({ id: strategyId });
+  const { data: strategy, isLoading } = trpc.strategies.detail.useQuery({
+    id: strategyId,
+  });
   const { data: comments, refetch: refetchComments } = trpc.comments.list.useQuery({ strategyId });
   const { data: userReviews, refetch: refetchReviews } = trpc.anonymousComments.list.useQuery({
     strategyId,
@@ -93,7 +88,11 @@ export default function StrategyDetailScreen() {
   const handleDeleteComment = (commentId: number) => {
     Alert.alert("删除评论", "确定要删除这条评论吗？", [
       { text: "取消", style: "cancel" },
-      { text: "删除", style: "destructive", onPress: () => deleteCommentMutation.mutate({ id: commentId }) },
+      {
+        text: "删除",
+        style: "destructive",
+        onPress: () => deleteCommentMutation.mutate({ id: commentId }),
+      },
     ]);
   };
 
@@ -140,20 +139,14 @@ export default function StrategyDetailScreen() {
     return (
       <ScreenContainer className="items-center justify-center p-6">
         <Text className="text-lg text-muted">策略不存在</Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="mt-4 px-6 py-3 bg-primary rounded-full"
-        >
+        <TouchableOpacity onPress={() => router.back()} className="mt-4 px-6 py-3 bg-primary rounded-full">
           <Text className="text-background font-semibold">返回</Text>
         </TouchableOpacity>
       </ScreenContainer>
     );
   }
 
-  const gradientColors: readonly [string, string, ...string[]] =
-    strategy.isFeatured
-      ? ["#0A0E1A", "#1E293B", "#A8895A"]
-      : strategy.platform === "MT4" ? ["#06101D", "#11233A", "#41607A"] : ["#06140F", "#12382B", "#34D399"];
+  const gradientColors: readonly [string, string, ...string[]] = strategy.isFeatured ? ["#0A0E1A", "#1E293B", "#A8895A"] : strategy.platform === "MT4" ? ["#06101D", "#11233A", "#41607A"] : ["#06140F", "#12382B", "#34D399"];
 
   const returnValue = parseFloat(strategy.totalReturn) || 0;
   const isPositive = returnValue >= 0;
@@ -168,30 +161,34 @@ export default function StrategyDetailScreen() {
     pairs: strategy.pairs,
     productType: strategy.productType,
   });
-  const effectiveCoverImage = Platform.OS === "web"
-    ? artwork.image
-    : strategy.coverImage;
+  const profile = resolveStrategyProfile({
+    title: strategy.title,
+    tags: strategy.tags,
+    pairs: strategy.pairs,
+    timeframe: strategy.timeframe,
+    platform: strategy.platform,
+    productType: strategy.productType,
+  });
+  const effectiveCoverImage = Platform.OS === "web" ? artwork.image : strategy.coverImage;
 
   let galleryImages: string[] = [];
   try {
-    const parsed = typeof galleryImagesRaw === "string"
-      ? JSON.parse(galleryImagesRaw)
-      : galleryImagesRaw;
+    const parsed = typeof galleryImagesRaw === "string" ? JSON.parse(galleryImagesRaw) : galleryImagesRaw;
     if (Array.isArray(parsed)) {
       galleryImages = parsed.filter((img): img is string => typeof img === "string" && img.length > 0);
     }
   } catch {}
 
-  const allImages = effectiveCoverImage
-    ? [effectiveCoverImage, ...galleryImages.filter((img) => img !== effectiveCoverImage && img !== strategy.coverImage)]
-    : galleryImages;
-  const mediaStrategy = effectiveCoverImage === strategy.coverImage
-    ? strategy
-    : { ...strategy, coverImage: effectiveCoverImage };
+  const allImages = effectiveCoverImage ? [effectiveCoverImage, ...galleryImages.filter((img) => img !== effectiveCoverImage && img !== strategy.coverImage)] : galleryImages;
+  const mediaStrategy = effectiveCoverImage === strategy.coverImage ? strategy : { ...strategy, coverImage: effectiveCoverImage };
 
-  const tagList = typeof tags === "string"
-    ? tags.split(",").map((tag) => tag.trim()).filter(Boolean)
-    : [];
+  const tagList =
+    typeof tags === "string"
+      ? tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean)
+      : [];
 
   const productTypeLabel = productType === "indicator" ? "指标" : productType === "tool" ? "工具" : "EA";
   const reviews = (userReviews || []) as StrategyReview[];
@@ -200,46 +197,17 @@ export default function StrategyDetailScreen() {
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
       <PcTopNav />
-      <SubscribeModal
-        visible={showSubscribeModal}
-        onClose={() => setShowSubscribeModal(false)}
-        strategyTitle={strategy.title}
-      />
-      <ReviewComposerModal
-        visible={showReviewModal}
-        colors={colors}
-        nickname={reviewNickname}
-        content={reviewContent}
-        isSubmitting={isSubmittingReview}
-        showSuccess={showReviewSuccess}
-        onClose={() => setShowReviewModal(false)}
-        onChangeNickname={setReviewNickname}
-        onChangeContent={setReviewContent}
-        onSubmit={handleSubmitReview}
-      />
-      <AllReviewsModal
-        visible={showAllComments}
-        colors={colors}
-        reviews={reviews}
-        formatDate={formatDate}
-        onClose={() => setShowAllComments(false)}
-      />
+      <SubscribeModal visible={showSubscribeModal} onClose={() => setShowSubscribeModal(false)} strategyTitle={strategy.title} />
+      <ReviewComposerModal visible={showReviewModal} colors={colors} nickname={reviewNickname} content={reviewContent} isSubmitting={isSubmittingReview} showSuccess={showReviewSuccess} onClose={() => setShowReviewModal(false)} onChangeNickname={setReviewNickname} onChangeContent={setReviewContent} onSubmit={handleSubmitReview} />
+      <AllReviewsModal visible={showAllComments} colors={colors} reviews={reviews} formatDate={formatDate} onClose={() => setShowAllComments(false)} />
 
       <ScrollView className="flex-1" contentContainerStyle={isDesktop ? styles.desktopContainer : undefined}>
         <View style={isDesktop ? [styles.desktopContent, { maxWidth: maxContentWidth }] : undefined}>
           <View style={[styles.topBar, isDesktop && styles.topBarDesktop]}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={[styles.backBtn, isDesktop && styles.backBtnDesktopHidden, { backgroundColor: colors.surface }]}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={() => router.back()} style={[styles.backBtn, isDesktop && styles.backBtnDesktopHidden, { backgroundColor: colors.surface }]} activeOpacity={0.7}>
               <IconSymbol name="chevron.left" size={22} color={colors.foreground} />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowSubscribeModal(true)}
-              style={[styles.subscribeTopBtn, { backgroundColor: colors.primary + "15" }]}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={() => setShowSubscribeModal(true)} style={[styles.subscribeTopBtn, { backgroundColor: colors.primary + "15" }]} activeOpacity={0.7}>
               <Text style={styles.subscribeTopCode}>SUP</Text>
               <Text style={[styles.subscribeTopText, { color: colors.primary }]}>获取支持</Text>
             </TouchableOpacity>
@@ -248,114 +216,50 @@ export default function StrategyDetailScreen() {
           {isDesktop ? (
             <View style={styles.desktopHeroGrid}>
               <View style={styles.desktopHeroMain}>
-                <StrategyMedia
-                  strategy={mediaStrategy}
-                  allImages={allImages}
-                  gradientColors={gradientColors}
-                  productTypeLabel={productTypeLabel}
-                  isFeatured={isFeatured}
-                  isDesktop={isDesktop}
-                  width={width}
-                />
-                <StrategyHeader
-                  strategy={strategy}
-                  colors={colors}
-                  isFeatured={isFeatured}
-                  tagList={tagList}
-                />
-                <StrategyMetrics
-                  strategy={strategy}
-                  colors={colors}
-                  isPositive={isPositive}
-                />
+                <StrategyMedia strategy={mediaStrategy} allImages={allImages} gradientColors={gradientColors} productTypeLabel={productTypeLabel} isFeatured={isFeatured} isDesktop={isDesktop} width={width} mediaWidth={mediaWidth} />
+                <StrategyHeader strategy={strategy} colors={colors} isFeatured={isFeatured} tagList={tagList} />
+                <StrategyProfileSection profile={profile} colors={colors} accent={artwork.accent} isDesktop />
+                <StrategyMetrics strategy={strategy} colors={colors} isPositive={isPositive} />
               </View>
               <View style={styles.desktopHeroSide}>
-                <StrategyPurchasePanel
-                  strategy={strategy}
-                  colors={colors}
-                  onContact={() => setShowContactModal(true)}
-                />
-                <TradingEnvironmentSection
-                  colors={colors}
-                  onOpenBroker={() => setShowBrokerModal(true)}
-                  onOpenVps={() => setShowVpsModal(true)}
-                />
+                <StrategyPurchasePanel strategy={strategy} colors={colors} onContact={() => setShowContactModal(true)} />
+                <TradingEnvironmentSection colors={colors} onOpenBroker={() => setShowBrokerModal(true)} onOpenVps={() => setShowVpsModal(true)} />
               </View>
             </View>
           ) : (
             <>
-              <StrategyMedia
-                strategy={mediaStrategy}
-                allImages={allImages}
-                gradientColors={gradientColors}
-                productTypeLabel={productTypeLabel}
-                isFeatured={isFeatured}
-                isDesktop={isDesktop}
-                width={width}
-              />
-              <StrategyHeader
-                strategy={strategy}
-                colors={colors}
-                isFeatured={isFeatured}
-                tagList={tagList}
-              />
-              <StrategyMetrics
-                strategy={strategy}
-                colors={colors}
-                isPositive={isPositive}
-              />
-              <StrategyPurchasePanel
-                strategy={strategy}
-                colors={colors}
-                onContact={() => setShowContactModal(true)}
-              />
-              <TradingEnvironmentSection
-                colors={colors}
-                onOpenBroker={() => setShowBrokerModal(true)}
-                onOpenVps={() => setShowVpsModal(true)}
-              />
+              <StrategyMedia strategy={mediaStrategy} allImages={allImages} gradientColors={gradientColors} productTypeLabel={productTypeLabel} isFeatured={isFeatured} isDesktop={isDesktop} width={width} mediaWidth={mediaWidth} />
+              <StrategyHeader strategy={strategy} colors={colors} isFeatured={isFeatured} tagList={tagList} />
+              <StrategyProfileSection profile={profile} colors={colors} accent={artwork.accent} isDesktop={false} />
+              <StrategyMetrics strategy={strategy} colors={colors} isPositive={isPositive} />
+              <StrategyPurchasePanel strategy={strategy} colors={colors} onContact={() => setShowContactModal(true)} />
+              <TradingEnvironmentSection colors={colors} onOpenBroker={() => setShowBrokerModal(true)} onOpenVps={() => setShowVpsModal(true)} />
             </>
           )}
-          <AdminNotesSection
-            colors={colors}
-            comments={comments as StrategyComment[] | undefined}
-            isAdmin={isAdmin}
-            commentText={commentText}
-            isPosting={createCommentMutation.isPending}
-            onChangeCommentText={setCommentText}
-            onAddComment={handleAddComment}
-            onDeleteComment={handleDeleteComment}
-          />
-          <UserReviewsSection
-            colors={colors}
-            reviews={reviews}
-            displayReviews={displayReviews}
-            hasMoreReviews={reviews.length > 3}
-            showReviewSuccess={showReviewSuccess}
-            formatDate={formatDate}
-            onOpenReview={() => setShowReviewModal(true)}
-            onOpenAllReviews={() => setShowAllComments(true)}
-          />
-          <PlatformGuideSection
-            colors={colors}
-            onPress={() => setShowContactModal(true)}
-          />
+          <AdminNotesSection colors={colors} comments={comments as StrategyComment[] | undefined} isAdmin={isAdmin} commentText={commentText} isPosting={createCommentMutation.isPending} onChangeCommentText={setCommentText} onAddComment={handleAddComment} onDeleteComment={handleDeleteComment} />
+          {isDesktop ? (
+            <View style={styles.desktopLowerGrid}>
+              <View style={styles.desktopLowerMain}>
+                <UserReviewsSection colors={colors} reviews={reviews} displayReviews={displayReviews} hasMoreReviews={reviews.length > 3} showReviewSuccess={showReviewSuccess} formatDate={formatDate} onOpenReview={() => setShowReviewModal(true)} onOpenAllReviews={() => setShowAllComments(true)} />
+              </View>
+              <View style={styles.desktopLowerSide}>
+                <PlatformGuideSection colors={colors} onPress={() => setShowContactModal(true)} />
+              </View>
+            </View>
+          ) : (
+            <>
+              <UserReviewsSection colors={colors} reviews={reviews} displayReviews={displayReviews} hasMoreReviews={reviews.length > 3} showReviewSuccess={showReviewSuccess} formatDate={formatDate} onOpenReview={() => setShowReviewModal(true)} onOpenAllReviews={() => setShowAllComments(true)} />
+              <PlatformGuideSection colors={colors} onPress={() => setShowContactModal(true)} />
+            </>
+          )}
 
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
 
       <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
-      <BrokerRecommendationModal
-        visible={showBrokerModal}
-        colors={colors}
-        onClose={() => setShowBrokerModal(false)}
-      />
-      <VpsRecommendationModal
-        visible={showVpsModal}
-        colors={colors}
-        onClose={() => setShowVpsModal(false)}
-      />
+      <BrokerRecommendationModal visible={showBrokerModal} colors={colors} onClose={() => setShowBrokerModal(false)} />
+      <VpsRecommendationModal visible={showVpsModal} colors={colors} onClose={() => setShowVpsModal(false)} />
     </ScreenContainer>
   );
 }
@@ -376,13 +280,20 @@ const styles = StyleSheet.create({
   desktopHeroMain: {
     flex: 1,
     minWidth: 0,
-    borderRadius: 8,
-    paddingTop: 2,
-    backgroundColor: "rgba(15,23,42,0.42)",
-    borderWidth: 1,
-    borderColor: "rgba(148,163,184,0.12)",
   },
   desktopHeroSide: {
+    width: 372,
+  },
+  desktopLowerGrid: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+  },
+  desktopLowerMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  desktopLowerSide: {
     width: 372,
   },
   topBar: {

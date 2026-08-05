@@ -1,14 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Animated,
-  Linking,
-  Platform,
-} from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Linking, Platform } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { trpc } from "@/lib/trpc";
@@ -17,6 +8,7 @@ import { glassStyle } from "@/lib/glass-styles";
 import { shouldUseContactForDownload } from "@/lib/download-links";
 import { ContactModal } from "@/components/contact-modal";
 import { ScreenContainer } from "@/components/screen-container";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 /**
  * 支付成功页
@@ -30,7 +22,10 @@ import { ScreenContainer } from "@/components/screen-container";
  *   - 已取消/过期 → 显示对应状态
  */
 export default function CheckoutSuccessScreen() {
-  const params = useLocalSearchParams<{ orderNo?: string; out_trade_no?: string }>();
+  const params = useLocalSearchParams<{
+    orderNo?: string;
+    out_trade_no?: string;
+  }>();
   const router = useRouter();
   const colors = useColors();
 
@@ -40,14 +35,18 @@ export default function CheckoutSuccessScreen() {
   const checkAnim = useRef(new Animated.Value(0)).current;
   const [showContactModal, setShowContactModal] = useState(false);
 
-  const { data: order, isLoading, error: orderError } = trpc.orders.detail.useQuery(
+  const {
+    data: order,
+    isLoading,
+    error: orderError,
+  } = trpc.orders.detail.useQuery(
     { orderNo: orderNo! },
     {
       enabled: !!orderNo,
       retry: false,
       // 只有待支付订单需要轮询；未登录、订单不存在和终态都立即停止。
-      refetchInterval: (query) => query.state.data?.status === "pending" ? 3000 : false,
-    }
+      refetchInterval: (query) => (query.state.data?.status === "pending" ? 3000 : false),
+    },
   );
 
   useEffect(() => {
@@ -87,23 +86,13 @@ export default function CheckoutSuccessScreen() {
     return (
       <ScreenContainer>
         <View style={styles.center}>
-          <Text style={styles.emptyIcon}>!</Text>
-          <Text style={[styles.title, { color: colors.foreground }]}>
-            {needsLogin ? "需要登录" : "订单不存在"}
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>
-            {needsLogin ? "请先登录后查看支付结果，或返回首页重新选择商品。" : "没有找到支付结果，请返回首页重新选择商品。"}
-          </Text>
-          <TouchableOpacity
-            onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)}
-            style={styles.cta}
-          >
-            <LinearGradient
-              colors={["#A8895A", "#C9A96E"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.ctaInner}
-            >
+          <View style={styles.emptyIcon}>
+            <IconSymbol name="exclamationmark.triangle.fill" size={25} color="#D8BC83" />
+          </View>
+          <Text style={[styles.title, { color: colors.foreground }]}>{needsLogin ? "需要登录" : "订单不存在"}</Text>
+          <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>{needsLogin ? "请先登录后查看支付结果，或返回首页重新选择商品。" : "没有找到支付结果，请返回首页重新选择商品。"}</Text>
+          <TouchableOpacity onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)} style={styles.cta}>
+            <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
               <Text style={styles.ctaText}>{needsLogin ? "去登录" : "返回首页"}</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -118,12 +107,8 @@ export default function CheckoutSuccessScreen() {
       <ScreenContainer>
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#D8BC83" />
-          <Text style={[styles.title, { color: colors.foreground, marginTop: 24 }]}>
-            支付确认中...
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.muted }]}>
-            请稍候，我们正在等待网关回调（最多约 30 秒）
-          </Text>
+          <Text style={[styles.title, { color: colors.foreground, marginTop: 24 }]}>支付确认中...</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>请稍候，我们正在等待网关回调（最多约 30 秒）</Text>
         </View>
       </ScreenContainer>
     );
@@ -134,17 +119,13 @@ export default function CheckoutSuccessScreen() {
     return (
       <ScreenContainer>
         <View style={styles.center}>
-          <Text style={[styles.title, { color: colors.foreground }]}>
-            订单已{order.status === "cancelled" ? "取消" : "过期"}
-          </Text>
+          <View style={styles.expiredIcon}>
+            <IconSymbol name="exclamationmark.triangle.fill" size={25} color="#F87171" />
+          </View>
+          <Text style={[styles.title, { color: colors.foreground }]}>订单已{order.status === "cancelled" ? "取消" : "过期"}</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>请重新下单</Text>
           <TouchableOpacity onPress={() => router.replace("/(tabs)" as any)} style={styles.cta}>
-            <LinearGradient
-              colors={["#A8895A", "#C9A96E"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.ctaInner}
-            >
+            <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
               <Text style={styles.ctaText}>返回首页</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -164,91 +145,90 @@ export default function CheckoutSuccessScreen() {
           style={[
             styles.successCard,
             glassStyle("strong") as any,
-            { transform: [{ scale: checkAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }] },
+            {
+              transform: [
+                {
+                  scale: checkAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.92, 1],
+                  }),
+                },
+              ],
+            },
           ]}
         >
-        {/* 大对勾 */}
-        <Animated.View
-          style={[
-            styles.checkCircle,
-            { transform: [{ scale: checkAnim }] },
-          ]}
-        >
-          <Text style={styles.checkIcon}>✓</Text>
-        </Animated.View>
-        <Text style={[styles.title, { color: colors.foreground }]}>支付成功</Text>
-        <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>
-          感谢您的购买。订单已生效。
-        </Text>
+          {/* 大对勾 */}
+          <Animated.View style={[styles.checkCircle, { transform: [{ scale: checkAnim }] }]}>
+            <IconSymbol name="checkmark.circle.fill" size={44} color="#34D399" />
+          </Animated.View>
+          <Text style={[styles.title, { color: colors.foreground }]}>支付成功</Text>
+          <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>感谢您的购买。订单已生效。</Text>
 
-        {/* 订单信息 */}
-        <View style={[styles.infoCard, { borderColor: colors.border }]}>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.muted }]}>订单号</Text>
-            <Text style={[styles.infoValue, { color: colors.foreground }]} numberOfLines={1}>
-              {order.orderNo}
-            </Text>
+          {/* 订单信息 */}
+          <View style={[styles.infoCard, { borderColor: colors.border }]}>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: colors.muted }]}>订单号</Text>
+              <Text style={[styles.infoValue, { color: colors.foreground }]} numberOfLines={1}>
+                {order.orderNo}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: colors.muted }]}>商品</Text>
+              <Text style={[styles.infoValue, { color: colors.foreground }]} numberOfLines={1}>
+                {order.productTitle}
+              </Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: colors.muted }]}>支付金额</Text>
+              <Text style={[styles.infoValue, { color: "#D8BC83", fontWeight: "800" }]}>¥ {order.amount}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: colors.muted }]}>支付方式</Text>
+              <Text style={[styles.infoValue, { color: colors.foreground }]}>{paymentMethodLabel(order.paymentMethod)}</Text>
+            </View>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.muted }]}>商品</Text>
-            <Text style={[styles.infoValue, { color: colors.foreground }]} numberOfLines={1}>
-              {order.productTitle}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.muted }]}>支付金额</Text>
-            <Text style={[styles.infoValue, { color: "#D8BC83", fontWeight: "800" }]}>
-              ¥ {order.amount}
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.muted }]}>支付方式</Text>
-            <Text style={[styles.infoValue, { color: colors.foreground }]}>
-              {paymentMethodLabel(order.paymentMethod)}
-            </Text>
-          </View>
-        </View>
 
-        <TouchableOpacity
-          onPress={() => {
-            if (downloadRequiresContact) {
-              setShowContactModal(true);
-              return;
-            }
-            if (Platform.OS === "web") window.open(order.downloadUrl!, "_blank");
-            else Linking.openURL(order.downloadUrl!);
-          }}
-          style={styles.cta}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={downloadRequiresContact ? ["#A8895A", "#C9A96E"] : ["#10B981", "#34D399"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.ctaInner}
-          >
-            <Text style={styles.ctaText}>{downloadRequiresContact ? "联系获取文件" : "立即下载"}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
-        <View style={styles.btnRow}>
           <TouchableOpacity
-            onPress={() => router.replace("/(tabs)/profile" as any)}
-            style={[styles.secondaryBtn, { borderColor: colors.border }]}
+            onPress={() => {
+              if (downloadRequiresContact) {
+                setShowContactModal(true);
+                return;
+              }
+              if (Platform.OS === "web") window.open(order.downloadUrl!, "_blank");
+              else Linking.openURL(order.downloadUrl!);
+            }}
+            style={styles.cta}
+            activeOpacity={0.85}
           >
-            <Text style={{ color: colors.foreground, fontWeight: "700", fontSize: 13 }}>
-              查看我的订单
-            </Text>
+            <LinearGradient colors={downloadRequiresContact ? ["#A8895A", "#C9A96E"] : ["#10B981", "#34D399"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
+              <Text style={styles.ctaText}>{downloadRequiresContact ? "联系获取文件" : "立即下载"}</Text>
+            </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.replace("/(tabs)" as any)}
-            style={[styles.secondaryBtn, { borderColor: colors.border }]}
-          >
-            <Text style={{ color: colors.foreground, fontWeight: "700", fontSize: 13 }}>
-              继续选购
-            </Text>
-          </TouchableOpacity>
-        </View>
+
+          <View style={styles.btnRow}>
+            <TouchableOpacity onPress={() => router.replace("/(tabs)/profile" as any)} style={[styles.secondaryBtn, { borderColor: colors.border }]}>
+              <Text
+                style={{
+                  color: colors.foreground,
+                  fontWeight: "700",
+                  fontSize: 13,
+                }}
+              >
+                查看我的订单
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.replace("/(tabs)" as any)} style={[styles.secondaryBtn, { borderColor: colors.border }]}>
+              <Text
+                style={{
+                  color: colors.foreground,
+                  fontWeight: "700",
+                  fontSize: 13,
+                }}
+              >
+                继续选购
+              </Text>
+            </TouchableOpacity>
+          </View>
         </Animated.View>
       </View>
     </ScreenContainer>
@@ -275,15 +255,23 @@ const styles = StyleSheet.create({
   emptyIcon: {
     width: 54,
     height: 54,
-    borderRadius: 27,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "rgba(216,188,131,0.5)",
-    color: "#D8BC83",
-    textAlign: "center",
-    lineHeight: 52,
-    fontSize: 30,
-    fontWeight: "900",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 16,
+  },
+  expiredIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    backgroundColor: "rgba(248,113,113,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(248,113,113,0.28)",
   },
   successWrap: {
     flex: 1,
@@ -295,7 +283,7 @@ const styles = StyleSheet.create({
   successCard: {
     width: "100%",
     maxWidth: 480,
-    borderRadius: 24,
+    borderRadius: 8,
     padding: 32,
     alignItems: "center",
     backgroundColor: "rgba(15, 23, 42, 0.7)",
@@ -305,18 +293,13 @@ const styles = StyleSheet.create({
   checkCircle: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: 8,
     backgroundColor: "rgba(52, 211, 153, 0.18)",
     borderWidth: 2,
     borderColor: "#34D399",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 20,
-  },
-  checkIcon: {
-    fontSize: 40,
-    color: "#34D399",
-    fontWeight: "900",
   },
   title: {
     fontSize: 26,
@@ -332,7 +315,7 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 20,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
   },
   infoRow: {
@@ -342,11 +325,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   infoLabel: { fontSize: 12, fontWeight: "600" },
-  infoValue: { fontSize: 13, fontWeight: "600", flex: 1, textAlign: "right", marginLeft: 8 },
+  infoValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    flex: 1,
+    textAlign: "right",
+    marginLeft: 8,
+  },
   cta: {
     width: "100%",
     marginTop: 18,
-    borderRadius: 12,
+    borderRadius: 8,
     overflow: "hidden",
   },
   ctaInner: {
@@ -370,7 +359,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 11,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 6,
     alignItems: "center",
   },
 });

@@ -18,12 +18,12 @@ const MAPPING = {
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
   "chevron.left": "chevron-left",
-  "magnifyingglass": "search",
+  magnifyingglass: "search",
   "person.fill": "person",
   "chart.line.uptrend.xyaxis": "trending-up",
   "star.fill": "star",
   "arrow.down.circle": "download",
-  "heart": "favorite-border",
+  heart: "favorite-border",
   "arrow.left": "arrow-back",
   "ellipsis.circle": "more-horiz",
   "tray.full": "inbox",
@@ -31,9 +31,11 @@ const MAPPING = {
   "message.fill": "chat",
   "bubble.left.fill": "chat-bubble",
   "line.3.horizontal": "menu",
-  "trash": "delete",
+  trash: "delete",
   "hand.thumbsup": "thumb-up",
-  "xmark": "close",
+  xmark: "close",
+  "checkmark.circle.fill": "check-circle",
+  "exclamationmark.triangle.fill": "warning",
 } as IconMapping;
 
 type IconSymbolName = keyof typeof MAPPING;
@@ -43,17 +45,6 @@ type IconSymbolName = keyof typeof MAPPING;
  * This ensures a consistent look across platforms, and optimal resource usage.
  * Icon `name`s are based on SF Symbols and require manual mapping to Material Icons.
  */
-export function IconSymbol({
-  name,
-  size = 24,
-  color,
-  style,
-}: {
-  name: IconSymbolName;
-  size?: number;
-  color: string | OpaqueColorValue;
-  style?: StyleProp<TextStyle>;
-  weight?: SymbolWeight;
-}) {
+export function IconSymbol({ name, size = 24, color, style }: { name: IconSymbolName; size?: number; color: string | OpaqueColorValue; style?: StyleProp<TextStyle>; weight?: SymbolWeight }) {
   return <MaterialIcons color={color} size={size} name={MAPPING[name]} style={style} />;
 }

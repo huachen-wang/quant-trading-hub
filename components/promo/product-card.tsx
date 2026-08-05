@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { CountdownTimer } from "@/components/promo/countdown-timer";

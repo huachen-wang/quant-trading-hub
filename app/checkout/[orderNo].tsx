@@ -1,23 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Image,
-  Linking,
-  Animated,
-} from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Platform, Image, Linking, Animated } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { trpc } from "@/lib/trpc";
 import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
 import { ScreenContainer } from "@/components/screen-container";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 
 type PayState =
   | { kind: "select" }
@@ -72,7 +61,7 @@ export default function CheckoutOrderScreen() {
     {
       enabled: !!orderNo,
       retry: false,
-      refetchInterval: (query) => query.state.data?.status === "pending" ? 5000 : false,
+      refetchInterval: (query) => (query.state.data?.status === "pending" ? 5000 : false),
     },
   );
 
@@ -205,16 +194,9 @@ export default function CheckoutOrderScreen() {
       <ScreenContainer>
         <View style={styles.centerFull}>
           <Text style={styles.emptyIcon}>!</Text>
-          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-            {needsLogin ? "需要登录" : "订单不存在"}
-          </Text>
-          <Text style={[styles.emptyText, { color: colors.muted }]}>
-            {needsLogin ? "请先登录后查看订单，或返回首页重新选择商品。" : "没有找到这个订单，可能已经失效或订单号有误。"}
-          </Text>
-          <TouchableOpacity
-            onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)}
-            style={styles.emptyBtn}
-          >
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{needsLogin ? "需要登录" : "订单不存在"}</Text>
+          <Text style={[styles.emptyText, { color: colors.muted }]}>{needsLogin ? "请先登录后查看订单，或返回首页重新选择商品。" : "没有找到这个订单，可能已经失效或订单号有误。"}</Text>
+          <TouchableOpacity onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)} style={styles.emptyBtn}>
             <Text style={styles.emptyBtnText}>{needsLogin ? "去登录" : "返回首页"}</Text>
           </TouchableOpacity>
         </View>
@@ -227,16 +209,9 @@ export default function CheckoutOrderScreen() {
     return (
       <View style={styles.centerFull}>
         <Text style={styles.emptyIcon}>!</Text>
-        <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-          {needsLogin ? "需要登录" : "订单不存在"}
-        </Text>
-        <Text style={[styles.emptyText, { color: colors.muted }]}>
-          {needsLogin ? "请先登录后查看订单，或返回首页重新选择商品。" : "没有找到这个订单，可能已经失效或订单号有误。"}
-        </Text>
-        <TouchableOpacity
-          onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)}
-          style={styles.emptyBtn}
-        >
+        <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{needsLogin ? "需要登录" : "订单不存在"}</Text>
+        <Text style={[styles.emptyText, { color: colors.muted }]}>{needsLogin ? "请先登录后查看订单，或返回首页重新选择商品。" : "没有找到这个订单，可能已经失效或订单号有误。"}</Text>
+        <TouchableOpacity onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)} style={styles.emptyBtn}>
           <Text style={styles.emptyBtnText}>{needsLogin ? "去登录" : "返回首页"}</Text>
         </TouchableOpacity>
       </View>
@@ -249,225 +224,243 @@ export default function CheckoutOrderScreen() {
 
   return (
     <ScreenContainer>
-    <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-      <View style={{ padding: 16, maxWidth: 720, alignSelf: "center", width: "100%" }}>
-        {/* 顶部品牌行 */}
-        <View style={styles.brandRow}>
-          <View style={styles.liveDot} />
-          <Text style={styles.brandText}>EAXAU 安全收银台</Text>
-        </View>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        <View
+          style={{
+            padding: 16,
+            maxWidth: 720,
+            alignSelf: "center",
+            width: "100%",
+          }}
+        >
+          {/* 顶部品牌行 */}
+          <View style={styles.brandRow}>
+            <View style={styles.liveDot} />
+            <Text style={styles.brandText}>EAXAU 安全收银台</Text>
+          </View>
 
-        {/* 订单卡片 */}
-        <View style={[styles.orderCard, glassStyle("strong") as any]}>
-          {order.productCover ? (
-            <Image source={{ uri: order.productCover }} style={styles.orderCover} />
-          ) : null}
-          <View style={{ flex: 1, padding: 16 }}>
-            <Text style={[styles.orderTitle, { color: colors.foreground }]} numberOfLines={2}>
-              {order.productTitle}
-            </Text>
-            <View style={{ flexDirection: "row", alignItems: "baseline", marginTop: 8, gap: 6 }}>
-              <Text style={styles.amount}>¥ {order.amount}</Text>
-              {order.originalAmount && parseFloat(order.originalAmount) > parseFloat(String(order.amount)) ? (
-                <Text style={[styles.amountOrig, { color: colors.muted }]}>
-                  ¥{order.originalAmount}
-                </Text>
+          {/* 订单卡片 */}
+          <View style={[styles.orderCard, glassStyle("strong") as any]}>
+            {order.productCover ? <Image source={{ uri: order.productCover }} style={styles.orderCover} /> : null}
+            <View style={{ flex: 1, padding: 16 }}>
+              <Text style={[styles.orderTitle, { color: colors.foreground }]} numberOfLines={2}>
+                {order.productTitle}
+              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "baseline",
+                  marginTop: 8,
+                  gap: 6,
+                }}
+              >
+                <Text style={styles.amount}>¥ {order.amount}</Text>
+                {order.originalAmount && parseFloat(order.originalAmount) > parseFloat(String(order.amount)) ? <Text style={[styles.amountOrig, { color: colors.muted }]}>¥{order.originalAmount}</Text> : null}
+              </View>
+              <View style={styles.statusRow}>
+                <View
+                  style={[
+                    styles.statusPill,
+                    {
+                      backgroundColor: statusColor + "20",
+                      borderColor: statusColor + "60",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: "700",
+                    }}
+                  >
+                    {statusLabel}
+                  </Text>
+                </View>
+                <Text style={[styles.orderNo, { color: colors.muted }]}>订单号 {order.orderNo}</Text>
+              </View>
+              {isPending ? (
+                <View style={[styles.countdown, { backgroundColor: "rgba(248, 113, 113, 0.08)" }]}>
+                  <Text
+                    style={{
+                      color: "#F87171",
+                      fontSize: 12,
+                      fontWeight: "700",
+                    }}
+                  >
+                    ⏱ 订单将在 {fmtCountdown(remainingSeconds)} 后过期
+                  </Text>
+                </View>
               ) : null}
             </View>
-            <View style={styles.statusRow}>
-              <View style={[styles.statusPill, { backgroundColor: statusColor + "20", borderColor: statusColor + "60" }]}>
-                <Text style={{ color: statusColor, fontSize: 11, fontWeight: "700" }}>
-                  {statusLabel}
-                </Text>
-              </View>
-              <Text style={[styles.orderNo, { color: colors.muted }]}>订单号 {order.orderNo}</Text>
-            </View>
-            {isPending ? (
-              <View style={[styles.countdown, { backgroundColor: "rgba(248, 113, 113, 0.08)" }]}>
-                <Text style={{ color: "#F87171", fontSize: 12, fontWeight: "700" }}>
-                  ⏱ 订单将在 {fmtCountdown(remainingSeconds)} 后过期
-                </Text>
-              </View>
-            ) : null}
           </View>
-        </View>
 
-        {/* 状态分支：Selecting / ZPay / USDT */}
-        {order.status === "pending" && remainingSeconds > 0 && (
-          <>
-            {payState.kind === "select" && (
-              <View style={[styles.methodCard, glassStyle("subtle") as any]}>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                  选择支付方式
-                </Text>
-                {(methods || []).map((m: any) => (
-                  <TouchableOpacity
-                    key={m.method}
-                    onPress={() => handleSelectMethod(m.method)}
-                    style={[styles.methodItem, { borderColor: colors.border }]}
-                    activeOpacity={0.7}
-                    disabled={busy}
-                  >
-                    <Text style={{ fontSize: 28 }}>{m.icon}</Text>
-                    <View style={{ flex: 1, marginLeft: 14 }}>
-                      <Text style={[styles.methodLabel, { color: colors.foreground }]}>
-                        {m.label}
+          {/* 状态分支：Selecting / ZPay / USDT */}
+          {order.status === "pending" && remainingSeconds > 0 && (
+            <>
+              {payState.kind === "select" && (
+                <View style={[styles.methodCard, glassStyle("subtle") as any]}>
+                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>选择支付方式</Text>
+                  {(methods || []).map((m: any) => (
+                    <TouchableOpacity key={m.method} onPress={() => handleSelectMethod(m.method)} style={[styles.methodItem, { borderColor: colors.border }]} activeOpacity={0.7} disabled={busy}>
+                      <Text style={{ fontSize: 28 }}>{m.icon}</Text>
+                      <View style={{ flex: 1, marginLeft: 14 }}>
+                        <Text style={[styles.methodLabel, { color: colors.foreground }]}>{m.label}</Text>
+                        <Text style={[styles.methodHint, { color: colors.muted }]}>{m.hint || ""}</Text>
+                      </View>
+                      <Text style={{ color: colors.muted, fontSize: 18 }}>›</Text>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity onPress={handleCancel} style={styles.cancelLink}>
+                    <Text style={{ color: colors.muted, fontSize: 13 }}>取消订单</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {payState.kind === "zpay" && (
+                <View style={[styles.methodCard, glassStyle("subtle") as any]}>
+                  <View style={styles.zpayBox}>
+                    <Text style={{ fontSize: 48, marginBottom: 8 }}>{payState.method === "alipay" ? "💙" : "💚"}</Text>
+                    <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{payState.method === "alipay" ? "支付宝支付" : "微信支付"}</Text>
+                    <Text style={[styles.zpayHint, { color: colors.muted }]}>{payState.hint || "已为您打开支付页面，请在新窗口完成支付"}</Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (Platform.OS === "web") window.open(payState.payUrl, "_blank");
+                        else Linking.openURL(payState.payUrl);
+                      }}
+                      style={styles.zpayReopen}
+                    >
+                      <Text style={{ color: "#D8BC83", fontWeight: "700" }}>重新打开支付页 →</Text>
+                    </TouchableOpacity>
+                    <Text style={[styles.zpayWaitHint, { color: colors.muted }]}>支付完成后页面会自动跳转。如未跳转，请刷新本页面。</Text>
+                    <TouchableOpacity onPress={() => setPayState({ kind: "select" })} style={styles.zpayBack}>
+                      <Text style={{ color: colors.muted, fontSize: 13 }}>← 切换其他支付方式</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {payState.kind === "usdt" && (
+                <View style={[styles.methodCard, glassStyle("subtle") as any]}>
+                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>🪙 USDT 转账（{payState.chain}）</Text>
+                  <Text style={[styles.usdtHint, { color: colors.muted }]}>
+                    请使用 USDT 钱包通过 <Text style={{ color: "#D8BC83", fontWeight: "700" }}>{payState.chain}</Text> 网络转账 <Text style={{ color: "#D8BC83", fontWeight: "700" }}>¥{order.amount} 等值的 USDT</Text> 至下方地址：
+                  </Text>
+
+                  <View style={styles.usdtAddrCard}>
+                    <Text style={[styles.usdtLabel, { color: colors.muted }]}>收款地址</Text>
+                    <Text style={[styles.usdtAddr, { color: colors.foreground }]} selectable>
+                      {payState.address}
+                    </Text>
+                    <TouchableOpacity onPress={() => handleCopy(payState.address)} style={styles.copyBtn}>
+                      <Text
+                        style={{
+                          color: "#D8BC83",
+                          fontWeight: "700",
+                          fontSize: 12,
+                        }}
+                      >
+                        复制地址
                       </Text>
-                      <Text style={[styles.methodHint, { color: colors.muted }]}>
-                        {m.hint || ""}
+                    </TouchableOpacity>
+                  </View>
+
+                  {payState.qrCodeUrl ? (
+                    <View style={styles.qrBox}>
+                      <Text style={[styles.usdtLabel, { color: colors.muted }]}>扫码转账</Text>
+                      <Image source={{ uri: payState.qrCodeUrl }} style={styles.qrImage} />
+                    </View>
+                  ) : null}
+
+                  <View style={styles.usdtNote}>
+                    <Text
+                      style={{
+                        color: "#F87171",
+                        fontSize: 12,
+                        fontWeight: "700",
+                        marginBottom: 6,
+                      }}
+                    >
+                      RISK 重要提示
+                    </Text>
+                    <Text
+                      style={{
+                        color: colors.muted,
+                        fontSize: 12,
+                        lineHeight: 20,
+                      }}
+                    >
+                      1. 请务必使用 <Text style={{ color: "#D8BC83" }}>{payState.chain}</Text> 网络（其他网络无法到账，资金可能丢失）{"\n"}
+                      2. 转账完成后请
+                      <Text style={{ color: "#D8BC83" }}>联系客服 Telegram 提供截图</Text>
+                      ，我们会在 30 分钟内确认到账{"\n"}
+                      3. 确认到账后您的订单状态会自动变更为已支付
+                    </Text>
+                  </View>
+
+                  {!payState.submitted ? (
+                    <TouchableOpacity onPress={handleConfirmUsdt} style={styles.usdtSubmitBtn} disabled={busy} activeOpacity={0.85}>
+                      <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.usdtSubmitInner}>
+                        {busy ? <ActivityIndicator color="#0A1628" /> : <Text style={styles.usdtSubmitText}>✓ 我已转账，请确认</Text>}
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.usdtSubmitted}>
+                      <Text
+                        style={{
+                          color: "#34D399",
+                          fontWeight: "700",
+                          fontSize: 13,
+                        }}
+                      >
+                        ✓ 已提交，等待客服确认中...
+                      </Text>
+                      <Text
+                        style={{
+                          color: colors.muted,
+                          fontSize: 11,
+                          marginTop: 4,
+                        }}
+                      >
+                        若 30 分钟内仍未确认，请联系客服 Telegram 提供截图
                       </Text>
                     </View>
-                    <Text style={{ color: colors.muted, fontSize: 18 }}>›</Text>
-                  </TouchableOpacity>
-                ))}
-                <TouchableOpacity onPress={handleCancel} style={styles.cancelLink}>
-                  <Text style={{ color: colors.muted, fontSize: 13 }}>取消订单</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+                  )}
 
-            {payState.kind === "zpay" && (
-              <View style={[styles.methodCard, glassStyle("subtle") as any]}>
-                <View style={styles.zpayBox}>
-                  <Text style={{ fontSize: 48, marginBottom: 8 }}>
-                    {payState.method === "alipay" ? "💙" : "💚"}
-                  </Text>
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                    {payState.method === "alipay" ? "支付宝支付" : "微信支付"}
-                  </Text>
-                  <Text style={[styles.zpayHint, { color: colors.muted }]}>
-                    {payState.hint || "已为您打开支付页面，请在新窗口完成支付"}
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (Platform.OS === "web") window.open(payState.payUrl, "_blank");
-                      else Linking.openURL(payState.payUrl);
-                    }}
-                    style={styles.zpayReopen}
-                  >
-                    <Text style={{ color: "#D8BC83", fontWeight: "700" }}>重新打开支付页 →</Text>
-                  </TouchableOpacity>
-                  <Text style={[styles.zpayWaitHint, { color: colors.muted }]}>
-                    支付完成后页面会自动跳转。如未跳转，请刷新本页面。
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setPayState({ kind: "select" })}
-                    style={styles.zpayBack}
-                  >
+                  <TouchableOpacity onPress={() => setPayState({ kind: "select" })} style={styles.zpayBack}>
                     <Text style={{ color: colors.muted, fontSize: 13 }}>← 切换其他支付方式</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-            )}
+              )}
+            </>
+          )}
 
-            {payState.kind === "usdt" && (
-              <View style={[styles.methodCard, glassStyle("subtle") as any]}>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-                  🪙 USDT 转账（{payState.chain}）
-                </Text>
-                <Text style={[styles.usdtHint, { color: colors.muted }]}>
-                  请使用 USDT 钱包通过 <Text style={{ color: "#D8BC83", fontWeight: "700" }}>{payState.chain}</Text> 网络转账{" "}
-                  <Text style={{ color: "#D8BC83", fontWeight: "700" }}>¥{order.amount} 等值的 USDT</Text> 至下方地址：
-                </Text>
-
-                <View style={styles.usdtAddrCard}>
-                  <Text style={[styles.usdtLabel, { color: colors.muted }]}>收款地址</Text>
-                  <Text style={[styles.usdtAddr, { color: colors.foreground }]} selectable>
-                    {payState.address}
-                  </Text>
-                  <TouchableOpacity onPress={() => handleCopy(payState.address)} style={styles.copyBtn}>
-                    <Text style={{ color: "#D8BC83", fontWeight: "700", fontSize: 12 }}>复制地址</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {payState.qrCodeUrl ? (
-                  <View style={styles.qrBox}>
-                    <Text style={[styles.usdtLabel, { color: colors.muted }]}>扫码转账</Text>
-                    <Image source={{ uri: payState.qrCodeUrl }} style={styles.qrImage} />
-                  </View>
-                ) : null}
-
-                <View style={styles.usdtNote}>
-                  <Text style={{ color: "#F87171", fontSize: 12, fontWeight: "700", marginBottom: 6 }}>
-                    RISK 重要提示
-                  </Text>
-                  <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 20 }}>
-                    1. 请务必使用 <Text style={{ color: "#D8BC83" }}>{payState.chain}</Text> 网络（其他网络无法到账，资金可能丢失）{"\n"}
-                    2. 转账完成后请<Text style={{ color: "#D8BC83" }}>联系客服 Telegram 提供截图</Text>，我们会在 30 分钟内确认到账{"\n"}
-                    3. 确认到账后您的订单状态会自动变更为已支付
-                  </Text>
-                </View>
-
-                {!payState.submitted ? (
-                  <TouchableOpacity
-                    onPress={handleConfirmUsdt}
-                    style={styles.usdtSubmitBtn}
-                    disabled={busy}
-                    activeOpacity={0.85}
-                  >
-                    <LinearGradient
-                      colors={["#A8895A", "#C9A96E"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.usdtSubmitInner}
-                    >
-                      {busy ? (
-                        <ActivityIndicator color="#0A1628" />
-                      ) : (
-                        <Text style={styles.usdtSubmitText}>✓ 我已转账，请确认</Text>
-                      )}
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ) : (
-                  <View style={styles.usdtSubmitted}>
-                    <Text style={{ color: "#34D399", fontWeight: "700", fontSize: 13 }}>
-                      ✓ 已提交，等待客服确认中...
-                    </Text>
-                    <Text style={{ color: colors.muted, fontSize: 11, marginTop: 4 }}>
-                      若 30 分钟内仍未确认，请联系客服 Telegram 提供截图
-                    </Text>
-                  </View>
-                )}
-
-                <TouchableOpacity
-                  onPress={() => setPayState({ kind: "select" })}
-                  style={styles.zpayBack}
-                >
-                  <Text style={{ color: colors.muted, fontSize: 13 }}>← 切换其他支付方式</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </>
-        )}
-
-        {/* 已过期 / 已取消 */}
-        {(order.status === "expired" || order.status === "cancelled" || remainingSeconds <= 0) &&
-          order.status !== "paid" && (
+          {/* 已过期 / 已取消 */}
+          {(order.status === "expired" || order.status === "cancelled" || remainingSeconds <= 0) && order.status !== "paid" && (
             <View style={[styles.methodCard, glassStyle("subtle") as any]}>
-              <Text style={{ fontSize: 36, textAlign: "center", marginBottom: 12 }}>😞</Text>
-              <Text style={[styles.sectionTitle, { color: colors.foreground, textAlign: "center" }]}>
-                订单已{order.status === "cancelled" ? "取消" : "过期"}
-              </Text>
-              <Text style={{ color: colors.muted, fontSize: 13, textAlign: "center", marginTop: 8 }}>
+              <View style={styles.expiredIcon}>
+                <IconSymbol name="exclamationmark.triangle.fill" size={25} color="#F87171" />
+              </View>
+              <Text style={[styles.sectionTitle, { color: colors.foreground, textAlign: "center" }]}>订单已{order.status === "cancelled" ? "取消" : "过期"}</Text>
+              <Text
+                style={{
+                  color: colors.muted,
+                  fontSize: 13,
+                  textAlign: "center",
+                  marginTop: 8,
+                }}
+              >
                 请重新下单
               </Text>
-              <TouchableOpacity
-                onPress={() => router.replace("/(tabs)" as any)}
-                style={[styles.usdtSubmitBtn, { marginTop: 16 }]}
-              >
-                <LinearGradient
-                  colors={["#A8895A", "#C9A96E"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.usdtSubmitInner}
-                >
+              <TouchableOpacity onPress={() => router.replace("/(tabs)" as any)} style={[styles.usdtSubmitBtn, { marginTop: 16 }]}>
+                <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.usdtSubmitInner}>
                   <Text style={styles.usdtSubmitText}>返回首页</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
           )}
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
     </ScreenContainer>
   );
 }
@@ -479,7 +472,12 @@ function fmtCountdown(s: number): string {
 }
 
 const styles = StyleSheet.create({
-  centerFull: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
+  centerFull: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
   emptyIcon: {
     width: 54,
     height: 54,
@@ -538,7 +536,7 @@ const styles = StyleSheet.create({
   orderCard: {
     flexDirection: "row",
     backgroundColor: "rgba(15, 23, 42, 0.6)",
-    borderRadius: 16,
+    borderRadius: 8,
     overflow: "hidden",
     marginBottom: 16,
     borderWidth: 1,
@@ -590,7 +588,7 @@ const styles = StyleSheet.create({
   },
   methodCard: {
     backgroundColor: "rgba(15, 23, 42, 0.6)",
-    borderRadius: 16,
+    borderRadius: 8,
     padding: 16,
     borderWidth: 1,
     borderColor: "rgba(148, 163, 184, 0.12)",
@@ -715,5 +713,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     alignItems: "center",
+  },
+  expiredIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+    backgroundColor: "rgba(248,113,113,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(248,113,113,0.28)",
   },
 });

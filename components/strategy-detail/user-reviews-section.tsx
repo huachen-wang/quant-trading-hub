@@ -12,100 +12,54 @@ type UserReviewsSectionProps = {
   onOpenAllReviews: () => void;
 };
 
-export function UserReviewsSection({
-  colors,
-  reviews,
-  displayReviews,
-  hasMoreReviews,
-  showReviewSuccess,
-  formatDate,
-  onOpenReview,
-  onOpenAllReviews,
-}: UserReviewsSectionProps) {
+export function UserReviewsSection({ colors, reviews, displayReviews, hasMoreReviews, showReviewSuccess, formatDate, onOpenReview, onOpenAllReviews }: UserReviewsSectionProps) {
   return (
     <View style={styles.section}>
       <View style={styles.reviewSectionHeader}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>
-          用户评价 {reviews && reviews.length > 0 ? `(${reviews.length})` : ""}
-        </Text>
-        <TouchableOpacity
-          onPress={onOpenReview}
-          style={[styles.writeReviewBtn, { backgroundColor: colors.primary }]}
-          activeOpacity={0.8}
-        >
+        <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 0 }]}>公开评价 {reviews && reviews.length > 0 ? `(${reviews.length})` : ""}</Text>
+        <TouchableOpacity onPress={onOpenReview} style={[styles.writeReviewBtn, { backgroundColor: colors.primary }]} activeOpacity={0.8}>
           <Text style={styles.writeReviewBtnText}>写评价</Text>
         </TouchableOpacity>
       </View>
 
       {showReviewSuccess && (
         <View style={[styles.successBanner, { backgroundColor: colors.success + "15", marginBottom: 10 }]}>
-          <Text style={[styles.successText, { color: colors.success }]}>
-            评价已提交，审核通过后将显示
-          </Text>
+          <Text style={[styles.successText, { color: colors.success }]}>评价已提交，审核通过后将显示</Text>
         </View>
       )}
 
       {displayReviews.length > 0 ? (
         <>
           {displayReviews.map((review) => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-              colors={colors}
-              formatDate={formatDate}
-              numberOfLines={3}
-            />
+            <ReviewCard key={review.id} review={review} colors={colors} formatDate={formatDate} numberOfLines={3} />
           ))}
 
           {hasMoreReviews && (
-            <TouchableOpacity
-              onPress={onOpenAllReviews}
-              style={[styles.viewAllBtn, { borderColor: colors.border }]}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.viewAllText, { color: colors.primary }]}>
-                查看全部 {reviews?.length} 条评价 →
-              </Text>
+            <TouchableOpacity onPress={onOpenAllReviews} style={[styles.viewAllBtn, { borderColor: colors.border }]} activeOpacity={0.7}>
+              <Text style={[styles.viewAllText, { color: colors.primary }]}>查看全部 {reviews?.length} 条评价 →</Text>
             </TouchableOpacity>
           )}
         </>
       ) : (
         <View style={[styles.emptyReviews, { backgroundColor: colors.surface }]}>
-          <Text style={{ color: colors.muted, textAlign: "center", fontSize: 14 }}>
-            暂无评价，快来抢沙发吧~
-          </Text>
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>尚未收录公开评价</Text>
+          <Text style={[styles.emptyCopy, { color: colors.muted }]}>提交内容经审核后展示，避免未经确认的信息直接公开。</Text>
         </View>
       )}
     </View>
   );
 }
 
-export function ReviewCard({
-  review,
-  colors,
-  formatDate,
-  numberOfLines,
-}: {
-  review: StrategyReview;
-  colors: AppColors;
-  formatDate: (dateString: string) => string;
-  numberOfLines?: number;
-}) {
+export function ReviewCard({ review, colors, formatDate, numberOfLines }: { review: StrategyReview; colors: AppColors; formatDate: (dateString: string) => string; numberOfLines?: number }) {
   return (
     <View style={[styles.reviewCard, { backgroundColor: colors.surface }]}>
       <View style={styles.reviewHeader}>
         <View style={[styles.reviewAvatar, { backgroundColor: colors.primary + "15" }]}>
-          <Text style={[styles.reviewAvatarText, { color: colors.primary }]}>
-            {(review.nickname || "匿名")[0]}
-          </Text>
+          <Text style={[styles.reviewAvatarText, { color: colors.primary }]}>{(review.nickname || "匿名")[0]}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.reviewNickname, { color: colors.foreground }]}>
-            {review.nickname || "匿名用户"}
-          </Text>
-          <Text style={[styles.reviewTime, { color: colors.muted }]}>
-            {formatDate(String(review.createdAt))}
-          </Text>
+          <Text style={[styles.reviewNickname, { color: colors.foreground }]}>{review.nickname || "匿名用户"}</Text>
+          <Text style={[styles.reviewTime, { color: colors.muted }]}>{formatDate(String(review.createdAt))}</Text>
         </View>
       </View>
       <Text style={[styles.reviewContent, { color: colors.foreground }]} numberOfLines={numberOfLines}>
@@ -134,7 +88,7 @@ const styles = StyleSheet.create({
   writeReviewBtn: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 6,
   },
   writeReviewBtnText: {
     color: "#fff",
@@ -142,7 +96,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   reviewCard: {
-    borderRadius: 14,
+    borderRadius: 8,
     padding: 14,
     marginBottom: 8,
   },
@@ -187,9 +141,21 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   emptyReviews: {
-    borderRadius: 14,
-    padding: 24,
+    borderRadius: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 22,
     alignItems: "center",
+  },
+  emptyTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 5,
+  },
+  emptyCopy: {
+    maxWidth: 420,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: "center",
   },
   successBanner: {
     borderRadius: 12,

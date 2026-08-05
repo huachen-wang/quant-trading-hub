@@ -2,7 +2,27 @@ import type { ThemeColorPalette } from "@/constants/theme";
 
 export type AppColors = ThemeColorPalette;
 export type GradientColors = readonly [string, string, ...string[]];
-export type StrategyDetailData = any;
+export type StrategyDetailData = {
+  id: number;
+  title: string;
+  description?: string | null;
+  richDescription?: string | null;
+  platform: string;
+  productType?: string | null;
+  tags?: string | null;
+  pairs?: string | null;
+  timeframe?: string | null;
+  coverImage?: string | null;
+  galleryImages?: string | string[] | null;
+  isFeatured?: boolean | number | null;
+  totalReturn: string | number;
+  winRate: string | number;
+  maxDrawdown: string | number;
+  price: string | number;
+  sourceName?: string | null;
+  sourceUrl?: string | null;
+  evidenceUrl?: string | null;
+};
 
 export type StrategyReview = {
   id: number | string;

@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ContactModal } from "@/components/contact-modal";
 import { QuickNav } from "@/components/quick-nav";
 import { SafeAreaView } from "react-native-safe-area-context";
