@@ -10,6 +10,7 @@
 - 公开策略接口可缓存；账户、持仓、交易和方案接口禁止公共缓存。
 - 牛帮现有 tRPC 不改名、不改返回值。Niubang Export Adapter 只负责转换为本契约。
 - Draft 0.1 不包含下单、平仓、修改牛帮订阅或写入交易账户的接口。
+- 大量 EA 商城数据属于 EAXAU BFF 的 Catalog API，不进入 Quant Data Core，也不自动成为可分仓策略。
 
 ## 2. 通用约定
 
@@ -105,7 +106,42 @@ type EquityPoint = {
 
 返回已关闭交易或延迟公开记录。延迟策略由数据提供方授权决定并在响应中说明。
 
-## 5. 平台接口
+## 5. EA 资料库接口（EAXAU BFF）
+
+EA 资料库沿用 EAXAU 自有 API 与数据库，和 Quant Data Core 的六策略接口分开。建议提供：
+
+```text
+GET /api/catalog/eas?q=&platform=&category=&status=&cursor=
+GET /api/catalog/eas/{eaId}
+GET /api/catalog/eas/{eaId}/comments
+POST /api/catalog/eas/{eaId}/favorite
+GET /api/catalog/filters
+```
+
+```ts
+type EaCatalogItem = {
+  id: string;
+  slug: string;
+  title: string;
+  shortTitle?: string;
+  platform: "MT4" | "MT5";
+  categories: string[];
+  symbols: string[];
+  status: "PUBLISHED" | "DRAFT" | "ARCHIVED";
+  consultationMode: "CONTACT" | "DOWNLOAD" | "EXTERNAL";
+  cover: { src: string; width: number; height: number; blurhash?: string };
+  hasLiveData: boolean;
+  linkedCoreStrategyId?: string;
+};
+```
+
+- `consultationMode=CONTACT` 时前端只进入联系方式页面。
+- `DOWNLOAD` 必须有经过后台校验的文件或安全下载记录。
+- `EXTERNAL` 必须经过允许域名校验；开户推广域名不得伪装成下载。
+- `hasLiveData=false` 时不得填充虚构收益、回撤或在线状态。
+- 列表查询必须分页、可搜索并返回稳定排序；后台使用同一搜索索引，不再依靠人工滚动查找。
+
+## 6. 平台接口
 
 ### `GET /platforms`
 
@@ -162,7 +198,7 @@ type CommercialTerms = {
 
 输入 1 至 3 个平台 ID、资金、地区和候选策略，返回可比较的规范化成本与兼容性。缺失数据返回 `null + warning`，不得以零代替。
 
-## 6. 分仓校验与推荐
+## 7. 分仓校验与推荐
 
 ### `POST /allocation/recommendations`
 
@@ -202,7 +238,7 @@ type AllocationValidation = {
 
 第一阶段本端点只返回确认凭证，不触发交易执行。
 
-## 7. 客户账户接口
+## 8. 客户账户接口
 
 ### `GET /accounts`
 
@@ -244,7 +280,7 @@ type AccountSnapshot = {
 
 返回 24 小时聚合执行质量，复用牛帮现有客户安全投影，不返回内部错误正文。
 
-## 8. 实时事件
+## 9. 实时事件
 
 ### `GET /streams?topics=strategy:{id},account:{id}`
 
@@ -260,7 +296,7 @@ source.freshness.changed
 
 事件只传增量与版本号。客户端断线重连后先通过 REST 拉完整快照，再从 `Last-Event-ID` 继续。
 
-## 9. 牛帮能力映射
+## 10. 牛帮能力映射
 
 | Quant Data Core | 牛帮当前能力 | 接入方式 |
 |---|---|---|
@@ -274,15 +310,16 @@ source.freshness.changed
 
 禁止直接从 EAXAU 复用 `updateSettings`、`flattenNow`、`catchUp` 或 copy engine 写接口。未来如需控制能力，必须另建写 API、强鉴权、幂等键、审批与审计，并进行独立风险评审。
 
-## 10. 缓存与新鲜度
+## 11. 缓存与新鲜度
 
 - 六策略摘要：服务端缓存 15 至 30 秒，支持 stale-while-revalidate。
+- EA 资料库列表：按查询条件缓存，并使用游标分页；详情内容发布后主动失效。
 - 净值曲线：按策略与时间范围缓存 60 秒。
 - 公开持仓：遵守提供方延迟策略，缓存时间写入响应。
 - 私有账户快照：不进入公共 CDN，服务端短缓存不超过 10 秒。
 - 平台商业条款：按规则版本缓存，变更立即失效。
 
-## 11. 版本与变更规则
+## 12. 版本与变更规则
 
 - 兼容新增字段可进入当前版本，客户端必须忽略未知字段。
 - 字段改名、语义变化、百分比单位变化或权限变化必须升主版本。

@@ -6,6 +6,7 @@
 ## 已确认的产品决策
 
 - 首页核心不是 EA 商城，而是六款量化策略及其实盘状态。
+- 现有大量 EA 名录完整保留为独立的“EA 资料库/商城”页面，不占用六个核心策略席位。
 - 策略详情采用可编辑的图文内容块，并展示可追溯的净值、收益、回撤、持仓与交易数据。
 - 服务只有两种业务模式：`MANAGED_CONTRACT`（签约管理）与 `SELF_ALLOCATED`（自主分仓）。
 - “系统推荐”与“客户手动配置”是配置来源，不是第三种业务模式。
@@ -20,6 +21,7 @@
 1. [产品与系统架构](PRODUCT_ARCHITECTURE.md)
 2. [API 契约](API_CONTRACT.md)
 3. [Claude UI 交接](CLAUDE_UI_HANDOFF.md)
+4. [实现状态与验收门槛](IMPLEMENTATION_STATUS.md)
 
 ## 当前阶段
 
