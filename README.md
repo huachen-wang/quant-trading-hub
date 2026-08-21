@@ -1,5 +1,7 @@
 # 量化军火库 (Quant Trading Hub)
 
+> 当前 `main` 是正在运行的 V1。EAXAU AI 量化 V2 的产品边界、数据架构、分仓配方和 UI 交接要求，统一以 [`docs/eaxau-v2/README.md`](docs/eaxau-v2/README.md) 为准。V2 未完成验收前不得直接替换现网。
+
 **一个专注于MT4/MT5策略实盘数据展示、分享和合作的平台。**
 
 ---
