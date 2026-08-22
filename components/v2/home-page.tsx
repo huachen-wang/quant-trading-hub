@@ -2,6 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,7 +11,10 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { formatMoney, formatPct } from "@/components/v2/format";
-import { LiveFeedStrip } from "@/components/v2/live-feed-strip";
+import {
+  LiveFeedStrip,
+  type LiveFeedItem,
+} from "@/components/v2/live-feed-strip";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
 import { SolutionConfigurator } from "@/components/v2/solution-configurator";
 import { StrategyCard } from "@/components/v2/strategy-card";
@@ -18,6 +22,14 @@ import { V2, V2_LAYOUT } from "@/components/v2/tokens";
 import { trpc } from "@/lib/trpc";
 
 const DEFAULT_SELECTION = ["jingge-v51", "quantum-queen"];
+const LIVE_PULSE_ACCENTS = [
+  V2.green,
+  V2.gold,
+  V2.cyan,
+  V2.blue,
+  V2.amber,
+  "#A995FF",
+];
 
 export default function V2HomePage() {
   const router = useRouter();
@@ -38,10 +50,25 @@ export default function V2HomePage() {
     staleTime: 4_000,
     refetchInterval: 10_000,
   });
+  const livePulse = trpc.v2.livePulse.useQuery(undefined, {
+    staleTime: 4_000,
+    refetchInterval: 10_000,
+    retry: 1,
+  });
 
   const openStrategy = useCallback(
     (id: string) => router.push(`/v2-preview/strategies/${id}` as never),
     [router],
+  );
+  const openFeedItem = useCallback(
+    (item: LiveFeedItem) => {
+      if (item.href) {
+        void Linking.openURL(item.href);
+        return;
+      }
+      openStrategy(item.id);
+    },
+    [openStrategy],
   );
 
   useEffect(() => {
@@ -87,6 +114,28 @@ export default function V2HomePage() {
   }
 
   const data = overview.data;
+  const hasPublicPulse = Boolean(livePulse.data?.items.length);
+  const feedItems: LiveFeedItem[] = hasPublicPulse
+    ? livePulse.data!.items.map((item, index) => ({
+        id: `niubang-${item.slug}`,
+        name: item.name,
+        accent: LIVE_PULSE_ACCENTS[index % LIVE_PULSE_ACCENTS.length],
+        changePct: item.monthlyReturnPct,
+        changeLabel: "月度",
+        equity: item.equity,
+        equityLabel: "账户权益",
+        href: item.url,
+      }))
+    : data.strategies.map((strategy) => ({
+        id: strategy.id,
+        name: strategy.shortName,
+        accent: strategy.accent,
+        changePct: strategy.metrics.todayPnlPct,
+        changeLabel: "今日",
+        equity: strategy.metrics.equity,
+        equityLabel: "权益",
+      }));
+  const feedSource = hasPublicPulse ? livePulse.data!.source : data.source;
   const cardWidth = isMobile ? "100%" : isTablet ? "49.1%" : "32.55%";
   const selectedStrategies = data.strategies.filter((strategy) =>
     selectedStrategyIds.includes(strategy.id),
@@ -125,12 +174,16 @@ export default function V2HomePage() {
     >
       <View style={[styles.page, isMobile && styles.pageMobile]}>
         <LiveFeedStrip
-          strategies={data.strategies}
-          source={data.source}
-          isFetching={overview.isFetching}
-          refreshKey={overview.dataUpdatedAt}
+          items={feedItems}
+          source={feedSource}
+          isFetching={
+            hasPublicPulse ? livePulse.isFetching : overview.isFetching
+          }
+          refreshKey={
+            hasPublicPulse ? livePulse.dataUpdatedAt : overview.dataUpdatedAt
+          }
           isMobile={isMobile || isTablet}
-          onOpen={openStrategy}
+          onOpen={openFeedItem}
         />
 
         <View style={styles.strategyStage}>

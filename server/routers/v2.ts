@@ -25,6 +25,7 @@ import {
   rebuildOverviewFromStrategies,
   saveStoredStrategyDataOverride,
 } from "../v2/data-overrides";
+import { getNiubangPublicPulse } from "../v2/niubang-public-pulse";
 
 function assertV2Enabled() {
   if (process.env.EAXAU_V2_ENABLED === "false") {
@@ -67,6 +68,8 @@ export const v2Router = router({
       previewPath: "/",
     } as const;
   }),
+
+  livePulse: enabledProcedure.query(() => getNiubangPublicPulse()),
 
   overview: enabledProcedure.query(async () => {
     const [overview, overrides] = await Promise.all([

@@ -8,17 +8,28 @@ import {
   Text,
   View,
 } from "react-native";
-import type { CoreStrategy, SourceMeta } from "@/shared/v2/contracts";
+import type { SourceMeta } from "@/shared/v2/contracts";
 import { formatMoney, formatPct } from "./format";
 import { V2 } from "./tokens";
 
+export type LiveFeedItem = {
+  id: string;
+  name: string;
+  accent: string;
+  changePct: number | null;
+  changeLabel: string;
+  equity: number | null;
+  equityLabel: string;
+  href?: string;
+};
+
 type LiveFeedStripProps = {
-  strategies: CoreStrategy[];
+  items: LiveFeedItem[];
   source: SourceMeta;
   isFetching: boolean;
   refreshKey: number;
   isMobile: boolean;
-  onOpen: (strategyId: string) => void;
+  onOpen: (item: LiveFeedItem) => void;
 };
 
 function timeOnly(value: string) {
@@ -33,12 +44,16 @@ function timeOnly(value: string) {
 }
 
 function sourceName(source: SourceMeta) {
-  if (/niubang/i.test(`${source.provider} ${source.label}`)) return "NIUBANG";
+  if (/niubang/i.test(`${source.provider} ${source.label}`)) {
+    if (source.freshness === "FRESH") return "NIUBANG LIVE";
+    if (source.freshness === "STALE") return "NIUBANG 延迟";
+    return "NIUBANG 离线";
+  }
   return source.dataMode;
 }
 
 export function LiveFeedStrip({
-  strategies,
+  items,
   source,
   isFetching,
   refreshKey,
@@ -78,15 +93,14 @@ export function LiveFeedStrip({
             : "链路已同步";
   const tickerNodes = useMemo(
     () =>
-      strategies.map((strategy) => {
-        const today = strategy.metrics.todayPnlPct;
-        const positive = today !== null && today >= 0;
+      items.map((item) => {
+        const positive = item.changePct !== null && item.changePct >= 0;
         return (
           <Pressable
-            key={strategy.id}
+            key={item.id}
             accessibilityRole="link"
-            accessibilityLabel={`查看 ${strategy.name} 实时数据`}
-            onPress={() => onOpen(strategy.id)}
+            accessibilityLabel={`查看 ${item.name} ${item.changeLabel}数据`}
+            onPress={() => onOpen(item)}
             style={({ pressed }) => [
               styles.ticker,
               isMobile && styles.tickerMobile,
@@ -95,33 +109,31 @@ export function LiveFeedStrip({
           >
             <View style={styles.tickerTop}>
               <View
-                style={[
-                  styles.strategyDot,
-                  { backgroundColor: strategy.accent },
-                ]}
+                style={[styles.strategyDot, { backgroundColor: item.accent }]}
               />
               <Text style={styles.tickerName} numberOfLines={1}>
-                {strategy.shortName}
+                {item.name}
               </Text>
+              <Text style={styles.changeLabel}>{item.changeLabel}</Text>
               <Text
                 style={[
                   styles.todayValue,
                   { color: positive ? V2.green : V2.red },
                 ]}
               >
-                {formatPct(today, true)}
+                {formatPct(item.changePct, true)}
               </Text>
             </View>
             <View style={styles.tickerBottom}>
-              <Text style={styles.tickerMeta}>权益</Text>
+              <Text style={styles.tickerMeta}>{item.equityLabel}</Text>
               <Text style={styles.equityValue} numberOfLines={1}>
-                {formatMoney(strategy.metrics.equity, "USD", true)}
+                {formatMoney(item.equity, "USD", true)}
               </Text>
             </View>
           </Pressable>
         );
       }),
-    [isMobile, onOpen, strategies],
+    [isMobile, items, onOpen],
   );
 
   return (
@@ -154,7 +166,9 @@ export function LiveFeedStrip({
             size={16}
             color={source.freshness === "OFFLINE" ? V2.red : V2.green}
           />
-          <Text style={styles.feedProvider}>{label}</Text>
+          <Text style={styles.feedProvider} numberOfLines={1}>
+            {label}
+          </Text>
         </View>
         <View style={styles.feedMetaRow}>
           <Text style={styles.feedStatus}>{statusText}</Text>
@@ -204,7 +218,13 @@ const styles = StyleSheet.create({
     width: 2,
   },
   feedHeading: { flexDirection: "row", alignItems: "center", gap: 7 },
-  feedProvider: { color: V2.text, fontSize: 10, fontWeight: "900" },
+  feedProvider: {
+    minWidth: 0,
+    flexShrink: 1,
+    color: V2.text,
+    fontSize: 10,
+    fontWeight: "900",
+  },
   feedMetaRow: { flexDirection: "row", alignItems: "center", gap: 7 },
   feedStatus: { color: V2.textMuted, fontSize: 8, fontWeight: "700" },
   feedTime: { color: V2.textDim, fontSize: 8 },
@@ -235,6 +255,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "900",
   },
+  changeLabel: { color: V2.textDim, fontSize: 7 },
   todayValue: { fontSize: 9, fontWeight: "900" },
   tickerBottom: { flexDirection: "row", alignItems: "center", gap: 5 },
   tickerMeta: { color: V2.textDim, fontSize: 7 },
