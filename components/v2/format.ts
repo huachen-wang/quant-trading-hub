@@ -4,6 +4,29 @@ export function formatPct(value: number | null, signed = false) {
   return `${prefix}${value.toFixed(2)}%`;
 }
 
+export function annualizeReturn(value: number | null, days = 90) {
+  if (
+    value === null ||
+    !Number.isFinite(value) ||
+    !Number.isFinite(days) ||
+    days <= 0 ||
+    value <= -100
+  ) {
+    return null;
+  }
+
+  const annualized = (Math.pow(1 + value / 100, 365 / days) - 1) * 100;
+  return Number.isFinite(annualized) ? annualized : null;
+}
+
+export function formatAnnualizedReturn(
+  value: number | null,
+  days = 90,
+  signed = true,
+) {
+  return formatPct(annualizeReturn(value, days), signed);
+}
+
 export function formatMoney(
   value: number | null,
   currency = "USD",

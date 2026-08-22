@@ -15,9 +15,13 @@ export function ConfiguratorHeading({
       style={[styles.sectionHeading, isMobile && styles.sectionHeadingMobile]}
     >
       <View style={styles.headingCopy}>
-        <Text style={styles.eyebrow}>02 · SOLUTION CONFIGURATION</Text>
+        <View style={styles.headingMarker}>
+          <Text style={styles.headingIndex}>02</Text>
+          <View style={styles.headingRule} />
+          <Text style={styles.eyebrow}>方案参数</Text>
+        </View>
         <Text style={[styles.title, isMobile && styles.titleMobile]}>
-          完善资金、风控与执行配置
+          配置资金、风控与执行
         </Text>
         <Text style={styles.subtitle}>
           已带入 {selectedStrategyCount}{" "}

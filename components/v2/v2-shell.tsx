@@ -81,16 +81,26 @@ export function V2Shell({ children }: V2ShellProps) {
         style={({ pressed }) => [
           styles.navItem,
           isMobile && styles.navItemMobile,
+          isMobile && {
+            width: Math.max(76, (width - 16) / NAV_ITEMS.length),
+          },
           active && styles.navItemActive,
           pressed && styles.pressed,
         ]}
       >
         <MaterialIcons
           name={item.icon}
-          size={isMobile ? 17 : 16}
+          size={isMobile ? 15 : 16}
           color={active ? V2.gold : V2.textMuted}
         />
-        <Text style={[styles.navText, active && styles.navTextActive]}>
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.navText,
+            isMobile && styles.navTextMobile,
+            active && styles.navTextActive,
+          ]}
+        >
           {item.label}
         </Text>
       </Pressable>
@@ -246,8 +256,10 @@ const styles = StyleSheet.create({
   },
   navItemMobile: {
     minWidth: 0,
+    flexShrink: 0,
     height: 44,
-    paddingHorizontal: 13,
+    paddingHorizontal: 2,
+    gap: 4,
     borderBottomWidth: 0,
     borderRadius: 4,
   },
@@ -261,6 +273,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0,
   },
+  navTextMobile: { fontSize: 11 },
   navTextActive: { color: V2.text },
   headerActions: {
     marginLeft: "auto",

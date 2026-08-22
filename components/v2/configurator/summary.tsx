@@ -65,7 +65,7 @@ export function SolutionSummary({
     <View style={[styles.summary, isNarrow && styles.summaryNarrow]}>
       <View style={styles.summaryHeader}>
         <View>
-          <Text style={styles.summaryEyebrow}>LIVE CONFIGURATION</Text>
+          <Text style={styles.summaryEyebrow}>实时方案</Text>
           <Text style={styles.summaryTitle}>当前方案</Text>
         </View>
         <View style={styles.completion}>

@@ -94,7 +94,7 @@ export default function AccountDetailPage() {
           </View>
           <View style={styles.headerCopy}>
             <Text style={[styles.mode, { color: accent }]}>
-              {managed ? "资管模式 · MANAGED" : "券商模式 · BROKER"}
+              {managed ? "资管模式" : "券商模式"}
             </Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
               {account.name}
@@ -151,7 +151,7 @@ export default function AccountDetailPage() {
         <View style={styles.chartPanel}>
           <View style={styles.chartHeading}>
             <View>
-              <Text style={styles.eyebrow}>EQUITY HISTORY</Text>
+              <Text style={styles.eyebrow}>权益历史</Text>
               <Text style={styles.sectionTitle}>账户净值</Text>
             </View>
             <View style={styles.connection}>
@@ -180,7 +180,7 @@ export default function AccountDetailPage() {
         <View style={[styles.detailGrid, isMobile && styles.detailGridMobile]}>
           <View style={styles.modePanel}>
             <Text style={styles.panelEyebrow}>
-              {managed ? "CONTRACT VIEW" : "ACTIVE RECIPE"}
+              {managed ? "合同视图" : "当前方案"}
             </Text>
             <Text style={styles.panelTitle}>
               {managed ? "资管合同与权限边界" : "当前券商配置方案"}
@@ -242,7 +242,7 @@ export default function AccountDetailPage() {
           </View>
 
           <View style={styles.platformPanel}>
-            <Text style={styles.panelEyebrow}>CONNECTIONS</Text>
+            <Text style={styles.panelEyebrow}>数据连接</Text>
             <Text style={styles.panelTitle}>平台连接</Text>
             <View style={styles.connectionRows}>
               {account.platformIds.map((platformId, index) => (

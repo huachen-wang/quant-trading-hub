@@ -9,7 +9,11 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { formatMoney, formatPct } from "@/components/v2/format";
+import {
+  formatAnnualizedReturn,
+  formatMoney,
+  formatPct,
+} from "@/components/v2/format";
 import {
   LiveFeedStrip,
   type LiveFeedItem,
@@ -38,9 +42,9 @@ export default function V2HomePage() {
     strategyId?: string;
   }>();
   const { width } = useWindowDimensions();
-  const isTiny = width < 360;
   const isMobile = width < 700;
   const isTablet = width >= 700 && width < 1060;
+  const useTwoColumnCards = width >= 700 && width < 820;
   const showSelectionSidebar = width >= 1120;
   const compactCards = width < 1320;
   const scrollRef = useRef<ScrollView>(null);
@@ -148,7 +152,7 @@ export default function V2HomePage() {
         equityLabel: "权益",
       }));
   const feedSource = hasPublicPulse ? livePulse.data!.source : data.source;
-  const cardWidth = isTiny ? "100%" : isMobile ? "47.8%" : "31.9%";
+  const cardWidth = isMobile ? "100%" : useTwoColumnCards ? "48.7%" : "31.9%";
   const selectedStrategies = data.strategies.filter((strategy) =>
     selectedStrategyIds.includes(strategy.id),
   );
@@ -213,44 +217,57 @@ export default function V2HomePage() {
           >
             <View style={styles.stageCopy}>
               <View style={styles.eyebrowRow}>
+                <Text style={styles.stageIndex}>01</Text>
                 <View style={styles.eyebrowRule} />
-                <Text style={styles.eyebrow}>
-                  01 · CORE STRATEGY ALLOCATION
-                </Text>
+                <Text style={styles.eyebrow}>核心量化组合</Text>
               </View>
               <Text
                 style={[styles.stageTitle, isMobile && styles.stageTitleMobile]}
               >
-                六策略组合工作台
+                六策略收益与组合
               </Text>
               <Text style={styles.stageSubtitle}>{dataNoticeCopy}</Text>
             </View>
 
             <View
               style={[
-                styles.portfolioMetrics,
-                (isMobile || isTablet) && styles.portfolioMetricsMobile,
+                styles.portfolioSnapshot,
+                (isMobile || isTablet) && styles.portfolioSnapshotMobile,
               ]}
             >
-              <OverviewMetric
-                label="组合权益"
-                value={formatMoney(data.portfolio.equity, "USD", true)}
-              />
-              <OverviewMetric
-                label="近 90 日"
-                value={formatPct(data.portfolio.return90dPct, true)}
-                color={V2.green}
-              />
-              <OverviewMetric
-                label="最大回撤"
-                value={formatPct(data.portfolio.maxDrawdownPct)}
-                color={V2.amber}
-              />
-              <OverviewMetric
-                label="运行中"
-                value={`${data.portfolio.activeStrategies} / 6`}
-                color={V2.blue}
-              />
+              <View
+                style={[
+                  styles.annualizedMetric,
+                  isMobile && styles.annualizedMetricMobile,
+                ]}
+              >
+                <Text style={styles.annualizedLabel}>年化估算</Text>
+                <Text style={styles.annualizedValue} numberOfLines={1}>
+                  {formatAnnualizedReturn(data.portfolio.return90dPct)}
+                </Text>
+                <Text style={styles.annualizedBasis}>按近 90 日复合折算</Text>
+              </View>
+              <View style={styles.secondaryMetrics}>
+                <OverviewMetric
+                  label="近 90 日"
+                  value={formatPct(data.portfolio.return90dPct, true)}
+                  color={V2.green}
+                />
+                <OverviewMetric
+                  label="最大回撤"
+                  value={formatPct(data.portfolio.maxDrawdownPct)}
+                  color={V2.amber}
+                />
+                <OverviewMetric
+                  label="组合权益"
+                  value={formatMoney(data.portfolio.equity, "USD", true)}
+                />
+                <OverviewMetric
+                  label="运行中"
+                  value={`${data.portfolio.activeStrategies} / 6`}
+                  color={V2.blue}
+                />
+              </View>
             </View>
           </View>
 
@@ -265,6 +282,7 @@ export default function V2HomePage() {
                 <View key={strategy.id} style={{ width: cardWidth }}>
                   <StrategyCard
                     compact={compactCards}
+                    mobile={isMobile}
                     strategy={strategy}
                     selected={selectedStrategyIds.includes(strategy.id)}
                     onPress={openStrategy}
@@ -343,9 +361,9 @@ const styles = StyleSheet.create({
   },
   strategyStage: { gap: 12 },
   stageHeader: {
-    minHeight: 62,
+    minHeight: 86,
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "stretch",
     justifyContent: "space-between",
     gap: 20,
   },
@@ -354,15 +372,16 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 10,
   },
-  stageCopy: { flex: 1, minWidth: 0 },
+  stageCopy: { flex: 1, minWidth: 0, justifyContent: "center" },
   eyebrowRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    marginBottom: 3,
+    marginBottom: 5,
   },
-  eyebrowRule: { width: 22, height: 2, backgroundColor: V2.gold },
-  eyebrow: { color: V2.gold, fontSize: 9, fontWeight: "900" },
+  stageIndex: { color: V2.gold, fontSize: 10, fontWeight: "900" },
+  eyebrowRule: { width: 24, height: 1, backgroundColor: V2.borderStrong },
+  eyebrow: { color: V2.textMuted, fontSize: 9, fontWeight: "800" },
   stageTitle: {
     color: V2.text,
     fontSize: 25,
@@ -371,26 +390,52 @@ const styles = StyleSheet.create({
   },
   stageTitleMobile: { fontSize: 23, lineHeight: 28 },
   stageSubtitle: {
-    marginTop: 2,
+    marginTop: 4,
     color: V2.textMuted,
     fontSize: 11,
     lineHeight: 17,
   },
-  portfolioMetrics: {
-    width: 520,
-    minHeight: 52,
+  portfolioSnapshot: {
+    width: 560,
+    minHeight: 86,
     flexDirection: "row",
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: V2.border,
+    backgroundColor: "rgba(13,21,33,0.42)",
   },
-  portfolioMetricsMobile: { width: "100%", flexWrap: "wrap" },
-  overviewMetric: {
+  portfolioSnapshotMobile: { width: "100%", minHeight: 88 },
+  annualizedMetric: {
+    width: 180,
+    paddingHorizontal: 14,
+    justifyContent: "center",
+    borderRightWidth: 1,
+    borderRightColor: V2.border,
+  },
+  annualizedMetricMobile: { width: "44%", paddingHorizontal: 10 },
+  annualizedLabel: { color: V2.textMuted, fontSize: 9, fontWeight: "800" },
+  annualizedValue: {
+    marginTop: 2,
+    color: V2.green,
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: "900",
+  },
+  annualizedBasis: { marginTop: 2, color: V2.textDim, fontSize: 8 },
+  secondaryMetrics: {
     flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  overviewMetric: {
+    width: "50%",
     minWidth: 0,
     justifyContent: "center",
     gap: 3,
     paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: V2.border,
   },
   overviewLabel: { color: V2.textDim, fontSize: 8 },
   overviewValue: {

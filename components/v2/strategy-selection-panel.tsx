@@ -58,7 +58,7 @@ export function StrategySelectionPanel({
       <View style={styles.panelInline}>
         <View style={styles.inlineHeader}>
           <View style={styles.inlineTitleRow}>
-            <Text style={styles.eyebrow}>PORTFOLIO</Text>
+            <Text style={styles.eyebrow}>组合草案</Text>
             <View style={styles.countInline}>
               <Text style={styles.countInlineValue}>
                 {selectedStrategies.length}
@@ -91,7 +91,7 @@ export function StrategySelectionPanel({
             style={[styles.feedbackText, feedback && styles.feedbackTextActive]}
             numberOfLines={1}
           >
-            {feedback || "已同步至方案参数"}
+            {feedback || "与方案参数实时同步"}
           </Text>
         </View>
 
@@ -118,8 +118,8 @@ export function StrategySelectionPanel({
     <View style={[styles.panel, compact && styles.panelCompact]}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>PORTFOLIO DRAFT</Text>
-          <Text style={styles.title}>当前策略组合</Text>
+          <Text style={styles.eyebrow}>策略选配</Text>
+          <Text style={styles.title}>组合草案</Text>
         </View>
         <View style={styles.count}>
           <Text style={styles.countValue}>{selectedStrategies.length}</Text>
@@ -156,7 +156,7 @@ export function StrategySelectionPanel({
           style={[styles.feedbackText, feedback && styles.feedbackTextActive]}
           numberOfLines={1}
         >
-          {feedback || "策略状态已同步至方案参数"}
+          {feedback || "组合与下方方案实时同步"}
         </Text>
       </View>
 
@@ -194,25 +194,36 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     padding: 14,
     borderWidth: 1,
-    borderTopWidth: 2,
+    borderTopWidth: 1,
     borderColor: V2.border,
-    borderTopColor: V2.gold,
+    borderTopColor: "rgba(216,188,131,0.66)",
     borderRadius: 6,
     backgroundColor: V2.backgroundRaised,
     gap: 11,
   },
-  panelCompact: { width: "100%", padding: 12, gap: 9 },
+  panelCompact: {
+    width: "100%",
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    gap: 9,
+    borderLeftWidth: 0,
+    borderRightWidth: 0,
+    borderRadius: 0,
+    backgroundColor: "rgba(11,17,28,0.58)",
+  },
   panelInline: {
     width: "100%",
     minHeight: 70,
     paddingHorizontal: 11,
     paddingVertical: 9,
-    borderWidth: 1,
-    borderTopWidth: 2,
+    borderWidth: 0,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
     borderColor: V2.border,
-    borderTopColor: V2.gold,
-    borderRadius: 6,
-    backgroundColor: V2.backgroundRaised,
+    borderTopColor: "rgba(216,188,131,0.48)",
+    borderBottomColor: V2.border,
+    borderRadius: 0,
+    backgroundColor: "rgba(11,17,28,0.42)",
     flexDirection: "row",
     alignItems: "center",
     gap: 11,
@@ -234,7 +245,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   headerCopy: { flex: 1, minWidth: 0, gap: 3 },
-  eyebrow: { color: V2.gold, fontSize: 8, fontWeight: "900" },
+  eyebrow: { color: V2.textMuted, fontSize: 8, fontWeight: "800" },
   title: { color: V2.text, fontSize: 17, lineHeight: 22, fontWeight: "900" },
   count: { flexDirection: "row", alignItems: "flex-end", gap: 3 },
   countValue: {
@@ -277,7 +288,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: V2.surfaceMuted,
+    backgroundColor: "#121C2A",
+    shadowColor: "#000000",
+    shadowOpacity: 0.16,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   strategyDot: { width: 3, height: 14 },
   chipText: {
@@ -296,9 +311,8 @@ const styles = StyleSheet.create({
   feedback: {
     minHeight: 30,
     paddingHorizontal: 8,
-    borderWidth: 1,
+    borderTopWidth: 1,
     borderColor: V2.border,
-    borderRadius: 4,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -344,10 +358,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 4,
     backgroundColor: V2.gold,
+    borderWidth: 1,
+    borderColor: "#E8D4A8",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
+    shadowColor: V2.gold,
+    shadowOpacity: 0.15,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   continueButtonInline: { minHeight: 36, flexShrink: 0 },
   continueText: { color: V2.background, fontSize: 10, fontWeight: "900" },

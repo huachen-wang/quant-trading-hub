@@ -12,6 +12,7 @@ import {
 import { ContentBlocks } from "@/components/v2/content-blocks";
 import { EquityChart } from "@/components/v2/equity-chart";
 import {
+  formatAnnualizedReturn,
   formatDateTime,
   formatMoney,
   formatPct,
@@ -138,7 +139,7 @@ export default function CoreStrategyDetailPage() {
             <View style={styles.identity}>
               <View style={styles.identityCopy}>
                 <Text style={styles.slotLabel}>
-                  CORE STRATEGY {String(strategy.homeSlot).padStart(2, "0")}
+                  核心策略 {String(strategy.homeSlot).padStart(2, "0")}
                 </Text>
                 <Text style={[styles.title, isMobile && styles.titleMobile]}>
                   {strategy.name}
@@ -155,8 +156,8 @@ export default function CoreStrategyDetailPage() {
 
             <View style={styles.metrics}>
               <DetailMetric
-                label="近 30 日"
-                value={formatPct(strategy.metrics.return30dPct, true)}
+                label="年化估算"
+                value={formatAnnualizedReturn(strategy.metrics.return90dPct)}
                 color={strategy.accent}
               />
               <DetailMetric
@@ -248,7 +249,7 @@ export default function CoreStrategyDetailPage() {
               ]}
             >
               <View>
-                <Text style={styles.sectionEyebrow}>PERFORMANCE</Text>
+                <Text style={styles.sectionEyebrow}>收益曲线</Text>
                 <Text style={styles.sectionTitle}>净值运行</Text>
               </View>
               <View style={styles.rangeControl}>
@@ -299,7 +300,7 @@ export default function CoreStrategyDetailPage() {
 
           <View style={styles.snapshot}>
             <View>
-              <Text style={styles.sectionEyebrow}>ACCOUNT SNAPSHOT</Text>
+              <Text style={styles.sectionEyebrow}>账户快照</Text>
               <Text style={styles.snapshotTitle}>运行快照</Text>
             </View>
             <View style={styles.snapshotRows}>
@@ -412,7 +413,7 @@ export default function CoreStrategyDetailPage() {
         <View style={styles.bottomNotice}>
           <MaterialIcons name="info-outline" size={18} color={V2.blue} />
           <Text style={styles.bottomNoticeText}>
-            {sourceNotice} 历史表现不代表未来结果。
+            {sourceNotice} 年化按近 90 日收益复合折算，历史表现不代表未来结果。
           </Text>
         </View>
       </View>

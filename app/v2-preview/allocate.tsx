@@ -418,7 +418,7 @@ export default function AllocationPage() {
       <View style={[styles.page, isMobile && styles.pageMobile]}>
         <View style={[styles.header, isMobile && styles.headerMobile]}>
           <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>ALLOCATION BUILDER</Text>
+            <Text style={styles.eyebrow}>分仓配置</Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
               券商模式精细选配
             </Text>

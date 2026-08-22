@@ -73,7 +73,7 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
           <View style={styles.panel}>
             <View style={styles.heading}>
               <View>
-                <Text style={styles.eyebrow}>WEB3 IDENTITY</Text>
+                <Text style={styles.eyebrow}>链上身份</Text>
                 <Text style={styles.title}>连接钱包</Text>
               </View>
               <Pressable

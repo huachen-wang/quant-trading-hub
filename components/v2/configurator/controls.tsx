@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
-import { formatPct } from "@/components/v2/format";
+import { formatAnnualizedReturn, formatPct } from "@/components/v2/format";
 import { V2 } from "@/components/v2/tokens";
 import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
 import { styles } from "./styles";
@@ -184,8 +184,8 @@ export function ConfiguratorControls({
                     {strategy.shortName}
                   </Text>
                   <Text style={styles.strategyMeta} numberOfLines={1}>
-                    90D {formatPct(strategy.metrics.return90dPct, true)} · 回撤{" "}
-                    {formatPct(strategy.metrics.maxDrawdownPct)}
+                    年化 {formatAnnualizedReturn(strategy.metrics.return90dPct)}{" "}
+                    · 回撤 {formatPct(strategy.metrics.maxDrawdownPct)}
                   </Text>
                 </View>
                 <MaterialIcons

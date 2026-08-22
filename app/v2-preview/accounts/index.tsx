@@ -55,7 +55,7 @@ export default function AccountsPage() {
       <View style={[styles.page, isMobile && styles.pageMobile]}>
         <View style={[styles.header, isMobile && styles.headerMobile]}>
           <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>ACCOUNT OBSERVATORY</Text>
+            <Text style={styles.eyebrow}>账户总览</Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
               账户观察
             </Text>
@@ -65,7 +65,7 @@ export default function AccountsPage() {
           </View>
           <View style={styles.demoState}>
             <View style={styles.demoDot} />
-            <Text style={styles.demoText}>DEMO ACCOUNTS</Text>
+            <Text style={styles.demoText}>模拟账户</Text>
           </View>
         </View>
 
