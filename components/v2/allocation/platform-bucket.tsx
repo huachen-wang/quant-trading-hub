@@ -2,11 +2,23 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
 import type { AllocationBucket } from "@/lib/v2/allocation-types";
-import { clamp, rebalanceBucket } from "@/lib/v2/allocation";
+import { appendStrategyToBucket, clamp, rebalanceBucket } from "@/lib/v2/allocation";
 import { formatMoney } from "../format";
 import { StatusBadge } from "../status-badge";
 import { V2 } from "../tokens";
 import { Stepper } from "./stepper";
+
+export type BucketDropStatus = {
+  tone: "valid" | "invalid" | "success" | "reject";
+  message: string;
+};
+
+const DROP_TONE = {
+  valid: { color: V2.green, icon: "add-circle-outline" },
+  invalid: { color: V2.red, icon: "block" },
+  success: { color: V2.green, icon: "check-circle" },
+  reject: { color: V2.red, icon: "error-outline" },
+} as const;
 
 export function PlatformBucketEditor({
   bucket,
@@ -14,6 +26,7 @@ export function PlatformBucketEditor({
   strategies,
   totalCapital,
   currency,
+  dropStatus = null,
   onChange,
   onRemove,
 }: {
@@ -22,6 +35,7 @@ export function PlatformBucketEditor({
   strategies: CoreStrategy[];
   totalCapital: number;
   currency: string;
+  dropStatus?: BucketDropStatus | null;
   onChange: (next: AllocationBucket) => void;
   onRemove: () => void;
 }) {
@@ -49,15 +63,7 @@ export function PlatformBucketEditor({
   };
 
   const addStrategy = (strategyId: string) => {
-    onChange(
-      rebalanceBucket({
-        ...bucket,
-        strategies: [
-          ...bucket.strategies,
-          { strategyId, weightPct: 0, riskMultiplier: 0.8 },
-        ],
-      }),
-    );
+    onChange(appendStrategyToBucket(bucket, strategyId));
   };
 
   const removeStrategy = (strategyId: string) => {
@@ -72,8 +78,21 @@ export function PlatformBucketEditor({
     );
   };
 
+  const dropTone = dropStatus ? DROP_TONE[dropStatus.tone] : null;
+
   return (
-    <View style={styles.bucket}>
+    <View style={[styles.bucket, dropTone && { borderColor: `${dropTone.color}88` }]}>
+      {dropStatus && dropTone ? (
+        <View
+          accessibilityLiveRegion="polite"
+          style={[styles.dropBanner, { backgroundColor: `${dropTone.color}10` }]}
+        >
+          <MaterialIcons name={dropTone.icon} size={15} color={dropTone.color} />
+          <Text style={[styles.dropBannerText, { color: dropTone.color }]}>
+            {dropStatus.message}
+          </Text>
+        </View>
+      ) : null}
       <View style={[styles.header, isMobile && styles.headerMobile]}>
         <View style={styles.identity}>
           <View style={styles.code}><Text style={styles.codeText}>{platform.code}</Text></View>
@@ -176,6 +195,8 @@ export function PlatformBucketEditor({
 
 const styles = StyleSheet.create({
   bucket: { borderWidth: 1, borderColor: V2.border, borderRadius: 6, backgroundColor: V2.backgroundRaised, overflow: "hidden" },
+  dropBanner: { minHeight: 30, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 7, borderBottomWidth: 1, borderBottomColor: V2.border },
+  dropBannerText: { fontSize: 11, fontWeight: "800" },
   header: { minHeight: 76, padding: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 18, borderBottomWidth: 1, borderBottomColor: V2.border },
   headerMobile: { alignItems: "flex-start", flexDirection: "column" },
   identity: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },

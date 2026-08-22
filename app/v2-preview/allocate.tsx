@@ -13,10 +13,17 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { AllocationSummary } from "@/components/v2/allocation/allocation-summary";
-import { PlatformBucketEditor } from "@/components/v2/allocation/platform-bucket";
+import { PlatformBucketEditor, type BucketDropStatus } from "@/components/v2/allocation/platform-bucket";
+import { DraggableStrategy, StrategyDropTarget } from "@/components/v2/allocation/web-dnd";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
-import { rebalanceBucket, rebalanceDraft } from "@/lib/v2/allocation";
+import {
+  STRATEGY_DROP_REASON_LABEL,
+  appendStrategyToBucket,
+  evaluateStrategyDrop,
+  rebalanceBucket,
+  rebalanceDraft,
+} from "@/lib/v2/allocation";
 import type { AllocationBucket, AllocationDraft } from "@/lib/v2/allocation-types";
 import { trpc } from "@/lib/trpc";
 import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
@@ -35,8 +42,16 @@ export default function AllocationPage() {
   const { strategyId } = useLocalSearchParams<{ strategyId?: string }>();
   const { width } = useWindowDimensions();
   const isMobile = width < 900;
+  const dragEnabled = Platform.OS === "web" && !isMobile;
   const [draft, setDraft] = useState<AllocationDraft>();
   const [capitalFocused, setCapitalFocused] = useState(false);
+  const [draggedStrategyId, setDraggedStrategyId] = useState<string | null>(null);
+  const [dropHover, setDropHover] = useState<string | null>(null);
+  const [dropFlash, setDropFlash] = useState<{
+    platformId: string;
+    kind: "success" | "reject";
+    message: string;
+  } | null>(null);
   const requestedInitial = useRef(false);
   const strategies = trpc.v2.strategies.list.useQuery(undefined, { staleTime: 30_000 });
   const platforms = trpc.v2.platforms.list.useQuery(undefined, { staleTime: 30_000 });
@@ -68,6 +83,12 @@ export default function AllocationPage() {
     const timer = setTimeout(() => validate.mutate(draft), 420);
     return () => clearTimeout(timer);
   }, [draft]);
+
+  useEffect(() => {
+    if (!dropFlash) return;
+    const timer = setTimeout(() => setDropFlash(null), 2600);
+    return () => clearTimeout(timer);
+  }, [dropFlash]);
 
   const selectedPlatformIds = useMemo(
     () => new Set(draft?.platformBuckets.map((bucket) => bucket.platformId) ?? []),
@@ -150,6 +171,64 @@ export default function AllocationPage() {
       capital: draft.capital,
       riskProfile: draft.riskBudget.profile,
     });
+  };
+
+  const evaluateDropForBucket = (
+    bucket: AllocationBucket,
+    platform: PlatformProfile,
+    strategyId: string,
+  ) => {
+    const strategy = strategies.data?.find((item) => item.id === strategyId);
+    return evaluateStrategyDrop({
+      bucket,
+      supportedStrategyIds: platform.supportedStrategyIds,
+      strategyId,
+      strategyOffline: strategy?.source.freshness === "OFFLINE",
+    });
+  };
+
+  const handleStrategyDrop = (index: number, strategyId: string) => {
+    const bucket = draft.platformBuckets[index];
+    const platform = platforms.data?.find((item) => item.id === bucket?.platformId);
+    if (!bucket || !platform) return;
+    const verdict = evaluateDropForBucket(bucket, platform, strategyId);
+    if (!verdict.allowed) {
+      setDropFlash({
+        platformId: platform.id,
+        kind: "reject",
+        message: STRATEGY_DROP_REASON_LABEL[verdict.reason],
+      });
+      return;
+    }
+    const strategy = strategies.data?.find((item) => item.id === strategyId);
+    updateBucket(index, appendStrategyToBucket(bucket, strategyId));
+    setDropFlash({
+      platformId: platform.id,
+      kind: "success",
+      message: `已加入「${strategy?.shortName ?? strategyId}」`,
+    });
+  };
+
+  const bucketDropStatus = (
+    bucket: AllocationBucket,
+    platform: PlatformProfile,
+  ): BucketDropStatus | null => {
+    if (!dragEnabled) return null;
+    if (dropFlash?.platformId === platform.id) {
+      return {
+        tone: dropFlash.kind === "success" ? "success" : "reject",
+        message: dropFlash.message,
+      };
+    }
+    if (!draggedStrategyId) return null;
+    const verdict = evaluateDropForBucket(bucket, platform, draggedStrategyId);
+    if (verdict.allowed) {
+      return {
+        tone: "valid",
+        message: dropHover === platform.id ? "松开鼠标即可加入" : "可放入此平台桶",
+      };
+    }
+    return { tone: "invalid", message: STRATEGY_DROP_REASON_LABEL[verdict.reason] };
   };
 
   return (
@@ -258,22 +337,71 @@ export default function AllocationPage() {
           </View>
         </View>
 
+        {dragEnabled ? (
+          <View style={styles.palette}>
+            <View style={styles.paletteHeading}>
+              <Text style={styles.paletteTitle}>策略面板</Text>
+              <Text style={styles.paletteDetail}>
+                把策略拖进下方已启用的平台桶即可添加；桶内的添加按钮与步进器继续可用。
+              </Text>
+            </View>
+            <View style={styles.paletteChips}>
+              {strategies.data.map((strategy) => {
+                const offline = strategy.source.freshness === "OFFLINE";
+                return (
+                  <DraggableStrategy
+                    key={strategy.id}
+                    strategyId={strategy.id}
+                    disabled={offline}
+                    onDragStateChange={(id) => {
+                      setDraggedStrategyId(id);
+                      if (!id) setDropHover(null);
+                    }}
+                  >
+                    <View style={[styles.paletteChip, offline && styles.paletteChipOffline]}>
+                      <View style={[styles.paletteRail, { backgroundColor: strategy.accent }]} />
+                      <View style={styles.paletteCopy}>
+                        <Text style={styles.paletteName}>{strategy.shortName}</Text>
+                        <Text style={styles.paletteMeta}>
+                          {offline ? "连接中断 · 暂不可拖入" : strategy.style}
+                        </Text>
+                      </View>
+                      <MaterialIcons name="drag-indicator" size={17} color={V2.textDim} />
+                    </View>
+                  </DraggableStrategy>
+                );
+              })}
+            </View>
+          </View>
+        ) : null}
+
         <View style={[styles.workspace, isMobile && styles.workspaceMobile]}>
           <View style={styles.bucketColumn}>
             {draft.platformBuckets.map((bucket, index) => {
               const platform = platforms.data.find((item) => item.id === bucket.platformId);
               if (!platform) return null;
               return (
-                <PlatformBucketEditor
+                <StrategyDropTarget
                   key={bucket.platformId}
-                  bucket={bucket}
-                  platform={platform}
-                  strategies={strategies.data}
-                  totalCapital={capital}
-                  currency={draft.capital.currency}
-                  onChange={(next) => updateBucket(index, next)}
-                  onRemove={() => removeBucket(index)}
-                />
+                  evaluate={(strategyId) => evaluateDropForBucket(bucket, platform, strategyId)}
+                  onDropStrategy={(strategyId) => handleStrategyDrop(index, strategyId)}
+                  onHoverChange={(hover) =>
+                    setDropHover((current) =>
+                      hover ? platform.id : current === platform.id ? null : current,
+                    )
+                  }
+                >
+                  <PlatformBucketEditor
+                    bucket={bucket}
+                    platform={platform}
+                    strategies={strategies.data}
+                    totalCapital={capital}
+                    currency={draft.capital.currency}
+                    dropStatus={bucketDropStatus(bucket, platform)}
+                    onChange={(next) => updateBucket(index, next)}
+                    onRemove={() => removeBucket(index)}
+                  />
+                </StrategyDropTarget>
               );
             })}
           </View>
@@ -360,6 +488,17 @@ const styles = StyleSheet.create({
   platformOptionCopy: { flex: 1, minWidth: 0, gap: 3 },
   platformOptionName: { color: V2.text, fontSize: 13, fontWeight: "900" },
   platformOptionMeta: { color: V2.textMuted, fontSize: 10, lineHeight: 14 },
+  palette: { gap: 10, padding: 14, borderWidth: 1, borderColor: V2.border, borderRadius: 6, backgroundColor: V2.backgroundRaised },
+  paletteHeading: { gap: 3 },
+  paletteTitle: { color: V2.text, fontSize: 14, fontWeight: "900" },
+  paletteDetail: { color: V2.textMuted, fontSize: 11, lineHeight: 17 },
+  paletteChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  paletteChip: { minHeight: 46, minWidth: 168, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderColor: V2.border, borderRadius: 5, flexDirection: "row", alignItems: "center", gap: 9, backgroundColor: V2.surfaceMuted, userSelect: "none" } as any,
+  paletteChipOffline: { opacity: 0.45 },
+  paletteRail: { width: 3, height: 24 },
+  paletteCopy: { gap: 2 },
+  paletteName: { color: V2.text, fontSize: 12, fontWeight: "900" },
+  paletteMeta: { color: V2.textMuted, fontSize: 10 },
   workspace: { flexDirection: "row", alignItems: "flex-start", gap: 16 },
   workspaceMobile: { flexDirection: "column" },
   bucketColumn: { flex: 1, minWidth: 0, gap: 13 },
