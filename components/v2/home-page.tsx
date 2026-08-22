@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Linking,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +17,7 @@ import {
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
 import { SolutionConfigurator } from "@/components/v2/solution-configurator";
 import { StrategyCard } from "@/components/v2/strategy-card";
+import { StrategySelectionPanel } from "@/components/v2/strategy-selection-panel";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
 import { trpc } from "@/lib/trpc";
 
@@ -38,12 +38,17 @@ export default function V2HomePage() {
     strategyId?: string;
   }>();
   const { width } = useWindowDimensions();
+  const isTiny = width < 360;
   const isMobile = width < 700;
   const isTablet = width >= 700 && width < 1060;
+  const showSelectionSidebar = width >= 1120;
+  const compactCards = width < 1320;
   const scrollRef = useRef<ScrollView>(null);
   const preferredApplied = useRef(false);
   const builderScrolled = useRef(false);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [builderY, setBuilderY] = useState(0);
+  const [selectionFeedback, setSelectionFeedback] = useState("");
   const [selectedStrategyIds, setSelectedStrategyIds] =
     useState<string[]>(DEFAULT_SELECTION);
   const overview = trpc.v2.overview.useQuery(undefined, {
@@ -103,6 +108,13 @@ export default function V2HomePage() {
     return () => clearTimeout(timer);
   }, [builderY, configure]);
 
+  useEffect(
+    () => () => {
+      if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    },
+    [],
+  );
+
   if (overview.isLoading) return <V2LoadingState label="正在汇总六策略" />;
   if (!overview.data) {
     return (
@@ -136,7 +148,7 @@ export default function V2HomePage() {
         equityLabel: "权益",
       }));
   const feedSource = hasPublicPulse ? livePulse.data!.source : data.source;
-  const cardWidth = isMobile ? "100%" : isTablet ? "49.1%" : "32.55%";
+  const cardWidth = isTiny ? "100%" : isMobile ? "47.8%" : "31.9%";
   const selectedStrategies = data.strategies.filter((strategy) =>
     selectedStrategyIds.includes(strategy.id),
   );
@@ -150,11 +162,17 @@ export default function V2HomePage() {
   const toggleStrategy = (id: string) => {
     const strategy = data.strategies.find((item) => item.id === id);
     if (!strategy || strategy.source.freshness === "OFFLINE") return;
+    const wasSelected = selectedStrategyIds.includes(id);
     setSelectedStrategyIds((current) =>
       current.includes(id)
         ? current.filter((strategyId) => strategyId !== id)
         : [...current, id],
     );
+    setSelectionFeedback(
+      `${strategy.shortName}${wasSelected ? "已移出" : "已加入"}组合`,
+    );
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    feedbackTimer.current = setTimeout(() => setSelectionFeedback(""), 1800);
   };
 
   const scrollToBuilder = () => {
@@ -196,12 +214,14 @@ export default function V2HomePage() {
             <View style={styles.stageCopy}>
               <View style={styles.eyebrowRow}>
                 <View style={styles.eyebrowRule} />
-                <Text style={styles.eyebrow}>SIX CORE STRATEGIES</Text>
+                <Text style={styles.eyebrow}>
+                  01 · CORE STRATEGY ALLOCATION
+                </Text>
               </View>
               <Text
                 style={[styles.stageTitle, isMobile && styles.stageTitleMobile]}
               >
-                六策略实时矩阵
+                六策略组合工作台
               </Text>
               <Text style={styles.stageSubtitle}>{dataNoticeCopy}</Text>
             </View>
@@ -234,48 +254,34 @@ export default function V2HomePage() {
             </View>
           </View>
 
-          <View style={styles.strategyGrid}>
-            {data.strategies.map((strategy) => (
-              <View key={strategy.id} style={{ width: cardWidth }}>
-                <StrategyCard
-                  strategy={strategy}
-                  selected={selectedStrategyIds.includes(strategy.id)}
-                  onPress={openStrategy}
-                  onToggle={toggleStrategy}
-                />
-              </View>
-            ))}
-          </View>
-
           <View
-            style={[styles.selectionBar, isMobile && styles.selectionBarMobile]}
+            style={[
+              styles.workbench,
+              !showSelectionSidebar && styles.workbenchStack,
+            ]}
           >
-            <View style={styles.selectionCopy}>
-              <View style={styles.selectionCount}>
-                <MaterialIcons name="check-circle" size={18} color={V2.green} />
-                <Text style={styles.selectionCountText}>
-                  已选 {selectedStrategies.length} / 6
-                </Text>
-              </View>
-              <Text style={styles.selectionNames} numberOfLines={1}>
-                {selectedStrategies.length
-                  ? selectedStrategies
-                      .map((strategy) => strategy.shortName)
-                      .join(" · ")
-                  : "选择至少一款策略开始配置"}
-              </Text>
+            <View style={styles.strategyGrid}>
+              {data.strategies.map((strategy) => (
+                <View key={strategy.id} style={{ width: cardWidth }}>
+                  <StrategyCard
+                    compact={compactCards}
+                    strategy={strategy}
+                    selected={selectedStrategyIds.includes(strategy.id)}
+                    onPress={openStrategy}
+                    onToggle={toggleStrategy}
+                  />
+                </View>
+              ))}
             </View>
-            <Pressable
-              accessibilityRole="button"
-              onPress={scrollToBuilder}
-              style={({ pressed }) => [
-                styles.continueButton,
-                pressed && styles.pressed,
-              ]}
-            >
-              <Text style={styles.continueText}>继续完成量化选配</Text>
-              <MaterialIcons name="south" size={17} color={V2.background} />
-            </Pressable>
+            <StrategySelectionPanel
+              compact={!showSelectionSidebar}
+              inline={!showSelectionSidebar && !isMobile}
+              selectedStrategies={selectedStrategies}
+              total={data.strategies.length}
+              feedback={selectionFeedback}
+              onRemove={toggleStrategy}
+              onContinue={scrollToBuilder}
+            />
           </View>
         </View>
 
@@ -335,7 +341,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     gap: 18,
   },
-  strategyStage: { gap: 10 },
+  strategyStage: { gap: 12 },
   stageHeader: {
     minHeight: 62,
     flexDirection: "row",
@@ -394,50 +400,24 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   strategyGrid: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 9,
     alignItems: "stretch",
   },
-  selectionBar: {
-    minHeight: 48,
-    paddingHorizontal: 13,
-    borderWidth: 1,
-    borderColor: V2.border,
-    borderRadius: 5,
-    backgroundColor: V2.backgroundRaised,
+  workbench: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-  },
-  selectionBarMobile: {
-    paddingVertical: 11,
     alignItems: "stretch",
-    flexDirection: "column",
+    gap: 10,
   },
-  selectionCopy: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+  workbenchStack: { flexDirection: "column" },
+  builderAnchor: {
+    paddingTop: 18,
+    borderTopWidth: 1,
+    borderTopColor: V2.border,
   },
-  selectionCount: { flexDirection: "row", alignItems: "center", gap: 6 },
-  selectionCountText: { color: V2.text, fontSize: 11, fontWeight: "900" },
-  selectionNames: { flex: 1, color: V2.textMuted, fontSize: 10 },
-  continueButton: {
-    minHeight: 36,
-    paddingHorizontal: 12,
-    borderRadius: 4,
-    backgroundColor: V2.gold,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-  },
-  continueText: { color: V2.background, fontSize: 10, fontWeight: "900" },
-  builderAnchor: { paddingTop: 0 },
   riskNotice: {
     paddingTop: 18,
     borderTopWidth: 1,
@@ -447,5 +427,4 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   riskText: { flex: 1, color: V2.textMuted, fontSize: 10, lineHeight: 16 },
-  pressed: { opacity: 0.72 },
 });

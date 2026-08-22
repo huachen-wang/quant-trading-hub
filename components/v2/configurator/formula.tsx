@@ -3,22 +3,29 @@ import { formatMoney } from "@/components/v2/format";
 import { styles } from "./styles";
 import type { RiskOption, ServicePath } from "./types";
 
-export function ConfiguratorHeading({ isMobile }: { isMobile: boolean }) {
+export function ConfiguratorHeading({
+  isMobile,
+  selectedStrategyCount,
+}: {
+  isMobile: boolean;
+  selectedStrategyCount: number;
+}) {
   return (
     <View
       style={[styles.sectionHeading, isMobile && styles.sectionHeadingMobile]}
     >
       <View style={styles.headingCopy}>
-        <Text style={styles.eyebrow}>QUANT CONFIGURATOR</Text>
+        <Text style={styles.eyebrow}>02 · SOLUTION CONFIGURATION</Text>
         <Text style={[styles.title, isMobile && styles.titleMobile]}>
-          像选配汽车一样组合量化方案
+          完善资金、风控与执行配置
         </Text>
         <Text style={styles.subtitle}>
-          不是购买单个 EA。资金、风险、策略、平台和管理模式共同决定最终方案。
+          已带入 {selectedStrategyCount}{" "}
+          款策略，所有参数共同组成同一份量化方案。
         </Text>
       </View>
       <View style={styles.formulaBadge}>
-        <Text style={styles.formulaLabel}>量化方案</Text>
+        <Text style={styles.formulaLabel}>方案结构</Text>
         <Text style={styles.formulaText}>资金 × 风控 × 策略 × 平台 × 模式</Text>
       </View>
     </View>

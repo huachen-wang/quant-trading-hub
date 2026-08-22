@@ -7,6 +7,7 @@ import { V2 } from "./tokens";
 type StrategySparklineProps = {
   points: EquityPoint[];
   color: string;
+  height?: number;
 };
 
 const WIDTH = 260;
@@ -33,12 +34,16 @@ function makeLine(points: EquityPoint[]) {
   return { path, min, max, last: coords.at(-1)! };
 }
 
-function StrategySparklineBase({ points, color }: StrategySparklineProps) {
+function StrategySparklineBase({
+  points,
+  color,
+  height = HEIGHT,
+}: StrategySparklineProps) {
   const line = useMemo(() => makeLine(points), [points]);
 
   if (!line) {
     return (
-      <View style={styles.empty}>
+      <View style={[styles.empty, { height }]}>
         <Text style={styles.emptyText}>等待时间序列</Text>
       </View>
     );
@@ -48,7 +53,7 @@ function StrategySparklineBase({ points, color }: StrategySparklineProps) {
     <View
       accessible
       accessibilityLabel={`近期净值轨迹，最低 ${line.min.toFixed(2)}，最高 ${line.max.toFixed(2)}`}
-      style={styles.chart}
+      style={[styles.chart, { height }]}
     >
       <Svg
         width="100%"

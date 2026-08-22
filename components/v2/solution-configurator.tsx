@@ -155,7 +155,10 @@ export function SolutionConfigurator({
 
   return (
     <View style={styles.section}>
-      <ConfiguratorHeading isMobile={isMobile} />
+      <ConfiguratorHeading
+        isMobile={isMobile}
+        selectedStrategyCount={selectedStrategies.length}
+      />
       <ConfiguratorFormula
         capital={numericCapital}
         riskOption={riskOption}

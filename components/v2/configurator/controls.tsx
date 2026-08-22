@@ -149,7 +149,7 @@ export function ConfiguratorControls({
         index="03"
         icon="hub"
         title="策略组合"
-        detail="最多组合六款核心策略；离线策略不会进入方案。"
+        detail={`已同步 ${selectedStrategyIds.length} 款；离线策略不会进入方案。`}
       >
         <View style={styles.strategyOptions}>
           {strategies.map((strategy) => {
