@@ -64,8 +64,9 @@ export default function AllocationPage() {
         strategies.data ?? [],
         platforms.data ?? [],
       );
+      // setDraft alone is enough: the debounced draft effect issues the
+      // validate call, so recommend no longer double-validates on load.
       setDraft(withPreferred);
-      validate.mutate(withPreferred);
     },
   });
 

@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Image } from "expo-image";
+import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { CoreStrategy } from "@/shared/v2/contracts";
 import { EquityChart } from "./equity-chart";
@@ -7,7 +8,7 @@ import { formatPct, riskLabel } from "./format";
 import { StatusBadge } from "./status-badge";
 import { V2 } from "./tokens";
 
-export function StrategyCard({
+function StrategyCardBase({
   strategy,
   onPress,
 }: {
@@ -35,6 +36,7 @@ export function StrategyCard({
           cachePolicy="memory-disk"
           transition={140}
           recyclingKey={strategy.artwork}
+          priority="low"
         />
         <View style={styles.slotMarker}>
           <Text style={styles.slotText}>{String(strategy.homeSlot).padStart(2, "0")}</Text>
@@ -97,6 +99,8 @@ export function StrategyCard({
     </Pressable>
   );
 }
+
+export const StrategyCard = memo(StrategyCardBase);
 
 const styles = StyleSheet.create({
   card: {

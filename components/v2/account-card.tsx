@@ -1,4 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { ServiceAccount } from "@/shared/v2/contracts";
 import { EquityChart } from "./equity-chart";
@@ -6,7 +7,7 @@ import { formatMoney, formatPct } from "./format";
 import { StatusBadge } from "./status-badge";
 import { V2 } from "./tokens";
 
-export function AccountCard({ account, onPress }: { account: ServiceAccount; onPress: () => void }) {
+function AccountCardBase({ account, onPress }: { account: ServiceAccount; onPress: () => void }) {
   const managed = account.serviceMode === "MANAGED_CONTRACT";
   const modeColor = managed ? V2.gold : V2.blue;
   return (
@@ -51,6 +52,8 @@ export function AccountCard({ account, onPress }: { account: ServiceAccount; onP
     </Pressable>
   );
 }
+
+export const AccountCard = memo(AccountCardBase);
 
 const styles = StyleSheet.create({
   card: { flex: 1, minWidth: 0, padding: 16, gap: 14, borderWidth: 1, borderColor: V2.border, borderRadius: 6, backgroundColor: V2.backgroundRaised },
