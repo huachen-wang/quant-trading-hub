@@ -19,7 +19,12 @@ Railway 可以在同一个服务里运行前端静态文件和后端 API，最�
 - `components/home/`
 - `components/promo/`
 - `components/strategy-detail/`
+- `components/v2/`
+- `app/v2-preview/`
+- `app/admin/v2-content.tsx`
 - `server/routers/`
+- `server/v2/`
+- `shared/v2/`
 - `server/mock-data.ts`
 - `.env.example`
 - `docker-compose.yml`
@@ -77,7 +82,8 @@ git push
 git status --short
 ```
 
-确保没有重要的新增文件漏掉，尤其是 `components/promo/`、`components/home/`、`components/strategy-detail/`、`server/routers/`。
+确保没有重要的新增文件漏掉，尤其是 `components/v2/`、`app/v2-preview/`、
+`server/v2/`、`shared/v2/` 和 `server/routers/v2.ts`。
 
 ## 四、Railway 自动部署
 
@@ -109,6 +115,9 @@ pnpm build:web
 node dist/index.mjs
 ```
 
+`package.json` 已声明 `Node.js 24.x`。Railway/Vercel 项目设置也应选择 Node.js 24，
+不要继续固定在 Node.js 20。
+
 其中 `pnpm build:web` 会先构建后端，再导出 Web 前端到 `web-build/`。
 
 ## 五、必须配置的环境变量
@@ -133,6 +142,7 @@ ADMIN_PASSWORD=你的强密码
 EXPO_PUBLIC_API_BASE_URL=
 ENABLE_USDT_PAYMENT=true
 ENABLE_ZPAY=true
+EAXAU_V2_ENABLED=true
 ```
 
 说明：
@@ -140,6 +150,18 @@ ENABLE_ZPAY=true
 - 如果前端和后端部署在同一个 Railway 服务里，`EXPO_PUBLIC_API_BASE_URL` 可以留空。
 - 如果你绑定了 `eaxau.com` 或 `www.eaxau.com`，代码会优先走同域 API。
 - 如果前端和后端分开部署，才需要把 `EXPO_PUBLIC_API_BASE_URL` 设置为后端完整地址。
+
+EAXAU V2 数据源：
+
+```bash
+# 不设置 URL：使用页面明确标注的确定性模拟数据
+QUANT_DATA_CORE_URL=
+QUANT_DATA_CORE_API_KEY=
+QUANT_DATA_CORE_TIMEOUT_MS=8000
+```
+
+只有独立 Quant Data Core 已部署并通过鉴权、脱敏和契约验收后，才填写 URL 和 Key。
+设置 URL 后请求失败会明确报错，不会静默回退并伪装成真实数据。
 
 OAuth 可选变量：
 
@@ -248,13 +270,16 @@ https://你的域名/api/health
 当前交付包制作前已通过：
 
 - TypeScript 类型检查
-- Vitest 自动测试
+- Vitest 全量自动测试（89 通过，1 个原有用例跳过）
 - Expo lint
 - 后端 build
 - Web export
 - 本地生产预览启动
-- 首页、详情页、合作、促销、订阅、合购、登录、注册、后台登录、后台首页路由巡检
+- V2 首页、详情、分仓、账户、EA 资料库、后台登录、后台首页和 V2 内容编辑路由巡检
+- 1440x900 与 390x844 响应式、图片加载和横向溢出检查
 - Git 空白检查
 - 顶层 tRPC 路由兼容性检查
+
+完整命令、输出结论和剩余外部风险见 `DEPLOYMENT_AUDIT.md`。
 
 详细记录见 `DEPLOYMENT_AUDIT.md`。

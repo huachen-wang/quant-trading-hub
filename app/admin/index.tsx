@@ -82,6 +82,13 @@ export default function AdminDashboard() {
 
   const menuItems = [
     {
+      code: "V2",
+      title: "V2 核心策略图文",
+      route: "/admin/v2-content",
+      count: 6,
+      description: "编辑六策略说明、证据、时间线与风险内容",
+    },
+    {
       code: "STR",
       title: "策略管理",
       route: "/admin/strategies",

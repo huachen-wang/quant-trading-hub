@@ -2,6 +2,9 @@
   "name": "quant-trading-hub",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "main": "expo-router/entry",
   "scripts": {
     "dev": "concurrently -k \"pnpm dev:server\" \"pnpm dev:metro\"",

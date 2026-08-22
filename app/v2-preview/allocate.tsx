@@ -1,0 +1,362 @@
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { AllocationSummary } from "@/components/v2/allocation/allocation-summary";
+import { PlatformBucketEditor } from "@/components/v2/allocation/platform-bucket";
+import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
+import { V2, V2_LAYOUT } from "@/components/v2/tokens";
+import { rebalanceBucket, rebalanceDraft } from "@/lib/v2/allocation";
+import type { AllocationBucket, AllocationDraft } from "@/lib/v2/allocation-types";
+import { trpc } from "@/lib/trpc";
+import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
+
+type RiskProfile = AllocationDraft["riskBudget"]["profile"];
+
+export default function AllocationPage() {
+  const { strategyId } = useLocalSearchParams<{ strategyId?: string }>();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 900;
+  const [draft, setDraft] = useState<AllocationDraft>();
+  const requestedInitial = useRef(false);
+  const strategies = trpc.v2.strategies.list.useQuery(undefined, { staleTime: 30_000 });
+  const platforms = trpc.v2.platforms.list.useQuery(undefined, { staleTime: 30_000 });
+  const validate = trpc.v2.allocation.validate.useMutation();
+  const recommend = trpc.v2.allocation.recommend.useMutation({
+    onSuccess: (next) => {
+      const withPreferred = includePreferredStrategy(
+        next,
+        strategyId,
+        strategies.data ?? [],
+        platforms.data ?? [],
+      );
+      setDraft(withPreferred);
+      validate.mutate(withPreferred);
+    },
+  });
+
+  useEffect(() => {
+    if (!strategies.data || !platforms.data || requestedInitial.current) return;
+    requestedInitial.current = true;
+    recommend.mutate({
+      capital: { amount: "50000", currency: "USD" },
+      riskProfile: "MEDIUM",
+    });
+  }, [platforms.data, recommend, strategies.data]);
+
+  useEffect(() => {
+    if (!draft) return;
+    const timer = setTimeout(() => validate.mutate(draft), 420);
+    return () => clearTimeout(timer);
+  }, [draft]);
+
+  const selectedPlatformIds = useMemo(
+    () => new Set(draft?.platformBuckets.map((bucket) => bucket.platformId) ?? []),
+    [draft?.platformBuckets],
+  );
+
+  if (strategies.isLoading || platforms.isLoading || recommend.isPending) {
+    return <V2LoadingState label="正在生成分仓草稿" />;
+  }
+  if (!strategies.data || !platforms.data || !draft) {
+    return (
+      <V2ErrorState
+        title="分仓配置暂时不可用"
+        detail={strategies.error?.message || platforms.error?.message || recommend.error?.message || "没有取得配置数据。"}
+        onRetry={() => {
+          requestedInitial.current = false;
+          strategies.refetch();
+          platforms.refetch();
+        }}
+      />
+    );
+  }
+
+  const capital = Number(draft.capital.amount) || 0;
+
+  const changeRisk = (profile: RiskProfile) => {
+    const maxDrawdownPct = profile === "LOW" ? 8 : profile === "HIGH" ? 18 : 12;
+    setDraft((current) => current ? {
+      ...current,
+      source: "CUSTOM",
+      riskBudget: { profile, maxDrawdownPct },
+    } : current);
+  };
+
+  const addPlatform = (platform: PlatformProfile) => {
+    if (draft.platformBuckets.length >= 3 || selectedPlatformIds.has(platform.id)) return;
+    const initialStrategy = strategies.data.find(
+      (strategy) =>
+        platform.supportedStrategyIds.includes(strategy.id) &&
+        strategy.source.freshness !== "OFFLINE",
+    );
+    if (!initialStrategy) return;
+    setDraft(
+      rebalanceDraft({
+        ...draft,
+        platformBuckets: [
+          ...draft.platformBuckets,
+          {
+            platformId: platform.id,
+            capitalWeightPct: 0,
+            strategies: [
+              { strategyId: initialStrategy.id, weightPct: 100, riskMultiplier: 0.8 },
+            ],
+          },
+        ],
+      }),
+    );
+  };
+
+  const updateBucket = (index: number, bucket: AllocationBucket) => {
+    setDraft((current) => current ? {
+      ...current,
+      source: "CUSTOM",
+      platformBuckets: current.platformBuckets.map((item, itemIndex) => itemIndex === index ? bucket : item),
+    } : current);
+  };
+
+  const removeBucket = (index: number) => {
+    if (draft.platformBuckets.length <= 1) return;
+    setDraft(
+      rebalanceDraft({
+        ...draft,
+        platformBuckets: draft.platformBuckets.filter((_, itemIndex) => itemIndex !== index),
+      }),
+    );
+  };
+
+  const requestRecommendation = () => {
+    recommend.mutate({
+      capital: draft.capital,
+      riskProfile: draft.riskBudget.profile,
+    });
+  };
+
+  return (
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+      <View style={[styles.page, isMobile && styles.pageMobile]}>
+        <View style={[styles.header, isMobile && styles.headerMobile]}>
+          <View style={styles.headerCopy}>
+            <Text style={styles.eyebrow}>ALLOCATION BUILDER</Text>
+            <Text style={[styles.title, isMobile && styles.titleMobile]}>自主分仓配置</Text>
+            <Text style={styles.subtitle}>选择 1 至 3 个平台，把核心策略分配到资金桶，再由规则引擎检查兼容性、集中度和风险预算。</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={requestRecommendation}
+            disabled={recommend.isPending}
+            style={({ pressed }) => [styles.recommendButton, pressed && styles.pressed]}
+          >
+            <MaterialIcons name="auto-awesome" size={18} color={V2.gold} />
+            <Text style={styles.recommendText}>生成推荐方案</Text>
+          </Pressable>
+        </View>
+
+        <View style={[styles.settings, isMobile && styles.settingsMobile]}>
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>资金基数</Text>
+            <View style={styles.moneyInput}>
+              <TextInput
+                accessibilityLabel="资金基数"
+                value={draft.capital.amount}
+                onChangeText={(value) => {
+                  const clean = value.replace(/[^0-9.]/g, "");
+                  if (!/^\d*(?:\.\d{0,2})?$/.test(clean)) return;
+                  setDraft({ ...draft, source: "CUSTOM", capital: { ...draft.capital, amount: clean || "0" } });
+                }}
+                keyboardType="decimal-pad"
+                style={styles.input}
+                placeholder="50000"
+                placeholderTextColor={V2.textDim}
+              />
+              <Text style={styles.currency}>{draft.capital.currency}</Text>
+            </View>
+          </View>
+          <View style={styles.field}>
+            <Text style={styles.fieldLabel}>风险预算</Text>
+            <View style={styles.riskControl}>
+              {(["LOW", "MEDIUM", "HIGH"] as RiskProfile[]).map((profile) => (
+                <Pressable
+                  key={profile}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: draft.riskBudget.profile === profile }}
+                  onPress={() => changeRisk(profile)}
+                  style={[styles.riskButton, draft.riskBudget.profile === profile && styles.riskButtonActive]}
+                >
+                  <Text style={[styles.riskText, draft.riskBudget.profile === profile && styles.riskTextActive]}>
+                    {profile === "LOW" ? "稳健" : profile === "MEDIUM" ? "均衡" : "进取"}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+          <View style={styles.budgetReadout}>
+            <Text style={styles.budgetLabel}>模型回撤上限</Text>
+            <Text style={styles.budgetValue}>{draft.riskBudget.maxDrawdownPct}%</Text>
+          </View>
+        </View>
+
+        <View style={styles.platformPicker}>
+          <View style={styles.pickerHeading}>
+            <View>
+              <Text style={styles.pickerTitle}>平台资金桶</Text>
+              <Text style={styles.pickerDetail}>已选择 {draft.platformBuckets.length} / 3</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setDraft(rebalanceDraft(draft))}
+              style={({ pressed }) => [styles.rebalanceButton, pressed && styles.pressed]}
+            >
+              <MaterialIcons name="balance" size={17} color={V2.text} />
+              <Text style={styles.rebalanceText}>自动均衡权重</Text>
+            </Pressable>
+          </View>
+          <View style={styles.platformOptions}>
+            {platforms.data.map((platform) => {
+              const selected = selectedPlatformIds.has(platform.id);
+              const disabled = !selected && draft.platformBuckets.length >= 3;
+              return (
+                <Pressable
+                  key={platform.id}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selected, disabled }}
+                  disabled={selected || disabled}
+                  onPress={() => addPlatform(platform)}
+                  style={[styles.platformOption, selected && styles.platformOptionSelected, disabled && styles.disabled]}
+                >
+                  <View style={styles.platformOptionCode}><Text style={styles.platformOptionCodeText}>{platform.code}</Text></View>
+                  <View style={styles.platformOptionCopy}>
+                    <Text style={styles.platformOptionName}>{platform.name}</Text>
+                    <Text style={styles.platformOptionMeta}>{platform.accountType} · 最低 {platform.minimumCapital.toLocaleString("zh-CN")} USD</Text>
+                  </View>
+                  <MaterialIcons name={selected ? "check-circle" : "add-circle-outline"} size={20} color={selected ? V2.green : V2.textMuted} />
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={[styles.workspace, isMobile && styles.workspaceMobile]}>
+          <View style={styles.bucketColumn}>
+            {draft.platformBuckets.map((bucket, index) => {
+              const platform = platforms.data.find((item) => item.id === bucket.platformId);
+              if (!platform) return null;
+              return (
+                <PlatformBucketEditor
+                  key={bucket.platformId}
+                  bucket={bucket}
+                  platform={platform}
+                  strategies={strategies.data}
+                  totalCapital={capital}
+                  currency={draft.capital.currency}
+                  onChange={(next) => updateBucket(index, next)}
+                  onRemove={() => removeBucket(index)}
+                />
+              );
+            })}
+          </View>
+          <View style={[styles.summaryColumn, isMobile && styles.summaryColumnMobile]}>
+            <AllocationSummary
+              draft={draft}
+              validation={validate.data}
+              isValidating={validate.isPending}
+              onValidate={() => validate.mutate(draft)}
+              onConfirm={() =>
+                Alert.alert(
+                  "确认摘要已生成",
+                  "当前是演示方案，不会开户、入金或执行交易。正式流程将增加客户确认、规则版本和审计凭证。",
+                )
+              }
+            />
+          </View>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+function includePreferredStrategy(
+  draft: AllocationDraft,
+  strategyId: string | undefined,
+  strategies: CoreStrategy[],
+  platforms: PlatformProfile[],
+) {
+  if (!strategyId || draft.platformBuckets.some((bucket) => bucket.strategies.some((item) => item.strategyId === strategyId))) return draft;
+  const strategy = strategies.find((item) => item.id === strategyId && item.source.freshness !== "OFFLINE");
+  if (!strategy) return draft;
+  const bucketIndex = draft.platformBuckets.findIndex((bucket) => {
+    const platform = platforms.find((item) => item.id === bucket.platformId);
+    return platform?.supportedStrategyIds.includes(strategy.id);
+  });
+  if (bucketIndex < 0) return draft;
+  return {
+    ...draft,
+    source: "CUSTOM" as const,
+    platformBuckets: draft.platformBuckets.map((bucket, index) => index === bucketIndex ? rebalanceBucket({
+      ...bucket,
+      strategies: [...bucket.strategies, { strategyId: strategy.id, weightPct: 0, riskMultiplier: 0.8 }],
+    }) : bucket),
+  };
+}
+
+const styles = StyleSheet.create({
+  scroll: { flex: 1, backgroundColor: V2.background },
+  scrollContent: { paddingBottom: 60 },
+  page: { width: "100%", maxWidth: V2_LAYOUT.maxWidth, alignSelf: "center", paddingHorizontal: V2_LAYOUT.pagePaddingDesktop, paddingTop: 26, gap: 28 },
+  pageMobile: { paddingHorizontal: V2_LAYOUT.pagePaddingMobile, paddingTop: 18 },
+  header: { minHeight: 118, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: V2.border, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 22 },
+  headerMobile: { alignItems: "stretch", flexDirection: "column" },
+  headerCopy: { flex: 1, minWidth: 0, gap: 6 },
+  eyebrow: { color: V2.gold, fontSize: 10, fontWeight: "900" },
+  title: { color: V2.text, fontSize: 34, lineHeight: 42, fontWeight: "900", letterSpacing: 0 },
+  titleMobile: { fontSize: 29, lineHeight: 36 },
+  subtitle: { color: V2.textMuted, fontSize: 12, lineHeight: 19, maxWidth: 760 },
+  recommendButton: { minHeight: 42, paddingHorizontal: 14, borderWidth: 1, borderColor: "rgba(216,188,131,0.46)", borderRadius: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, backgroundColor: "rgba(216,188,131,0.06)" },
+  recommendText: { color: V2.text, fontSize: 11, fontWeight: "900" },
+  settings: { minHeight: 80, padding: 14, flexDirection: "row", alignItems: "flex-end", gap: 18, borderWidth: 1, borderColor: V2.border, borderRadius: 6, backgroundColor: V2.backgroundRaised },
+  settingsMobile: { alignItems: "stretch", flexDirection: "column" },
+  field: { minWidth: 220, gap: 6 },
+  fieldLabel: { color: V2.textDim, fontSize: 9, fontWeight: "800" },
+  moneyInput: { height: 38, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: V2.borderStrong, borderRadius: 4, overflow: "hidden" },
+  input: { flex: 1, height: 38, paddingHorizontal: 11, color: V2.text, fontSize: 13, fontWeight: "800", outlineStyle: "none" } as any,
+  currency: { width: 48, color: V2.textMuted, fontSize: 10, fontWeight: "900", textAlign: "center" },
+  riskControl: { height: 38, padding: 3, flexDirection: "row", gap: 2, borderWidth: 1, borderColor: V2.border, borderRadius: 4, backgroundColor: V2.surfaceMuted },
+  riskButton: { flex: 1, minWidth: 62, borderRadius: 2, alignItems: "center", justifyContent: "center" },
+  riskButtonActive: { backgroundColor: V2.surface },
+  riskText: { color: V2.textMuted, fontSize: 10, fontWeight: "700" },
+  riskTextActive: { color: V2.gold, fontWeight: "900" },
+  budgetReadout: { marginLeft: "auto", minWidth: 138, minHeight: 38, justifyContent: "center", gap: 4 },
+  budgetLabel: { color: V2.textDim, fontSize: 9 },
+  budgetValue: { color: V2.amber, fontSize: 17, fontWeight: "900" },
+  platformPicker: { gap: 12 },
+  pickerHeading: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 },
+  pickerTitle: { color: V2.text, fontSize: 15, fontWeight: "900" },
+  pickerDetail: { marginTop: 3, color: V2.textDim, fontSize: 9 },
+  rebalanceButton: { minHeight: 34, paddingHorizontal: 10, borderWidth: 1, borderColor: V2.border, borderRadius: 4, flexDirection: "row", alignItems: "center", gap: 6 },
+  rebalanceText: { color: V2.text, fontSize: 10, fontWeight: "800" },
+  platformOptions: { flexDirection: "row", flexWrap: "wrap", gap: 9 },
+  platformOption: { flex: 1, minWidth: 250, minHeight: 66, padding: 11, borderWidth: 1, borderColor: V2.border, borderRadius: 5, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: V2.surfaceMuted },
+  platformOptionSelected: { borderColor: "rgba(66,211,161,0.36)", backgroundColor: "rgba(66,211,161,0.05)" },
+  platformOptionCode: { width: 36, height: 36, borderWidth: 1, borderColor: "rgba(216,188,131,0.34)", borderRadius: 4, alignItems: "center", justifyContent: "center" },
+  platformOptionCodeText: { color: V2.gold, fontSize: 9, fontWeight: "900" },
+  platformOptionCopy: { flex: 1, minWidth: 0, gap: 3 },
+  platformOptionName: { color: V2.text, fontSize: 12, fontWeight: "900" },
+  platformOptionMeta: { color: V2.textMuted, fontSize: 8, lineHeight: 12 },
+  workspace: { flexDirection: "row", alignItems: "flex-start", gap: 16 },
+  workspaceMobile: { flexDirection: "column" },
+  bucketColumn: { flex: 1, minWidth: 0, gap: 13 },
+  summaryColumn: { width: 330, flexShrink: 0 },
+  summaryColumnMobile: { width: "100%" },
+  disabled: { opacity: 0.42 },
+  pressed: { opacity: 0.7 },
+});

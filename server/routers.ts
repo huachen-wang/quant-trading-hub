@@ -23,6 +23,7 @@ import {
   strategiesRouter,
   tradesRouter,
 } from "./routers/strategy-public";
+import { v2Router } from "./routers/v2";
 
 export const appRouter = router({
   system: systemRouter,
@@ -51,6 +52,7 @@ export const appRouter = router({
   siteEntries: siteEntriesRouter,
   orders: ordersRouter,
   payments: paymentsRouter,
+  v2: v2Router,
 });
 
 export type AppRouter = typeof appRouter;

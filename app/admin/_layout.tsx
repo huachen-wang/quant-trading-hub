@@ -122,6 +122,7 @@ export default function AdminLayout() {
         <Stack.Screen name="strategies" options={{ title: "策略管理" }} />
         <Stack.Screen name="strategy-form" options={{ title: "编辑策略" }} />
         <Stack.Screen name="backtest-data" options={{ title: "回测数据管理" }} />
+        <Stack.Screen name="v2-content" options={{ title: "V2 核心策略图文" }} />
         <Stack.Screen name="comments" options={{ title: "评论管理" }} />
         <Stack.Screen name="page-contents" options={{ title: "订阅页面管理" }} />
         <Stack.Screen name="subscribers" options={{ title: "订阅用户" }} />

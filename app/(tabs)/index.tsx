@@ -41,7 +41,15 @@ const PRODUCT_TYPE_SLUGS = new Set(
   PRODUCT_TYPE_OPTIONS.map((item) => item.slug),
 );
 
+type EaLibraryScreenProps = {
+  variant?: "legacy" | "v2";
+};
+
 export default function HomeScreen() {
+  return <EaLibraryScreen />;
+}
+
+export function EaLibraryScreen({ variant = "legacy" }: EaLibraryScreenProps) {
   const colors = useColors();
   const router = useRouter();
   const { numColumns, isDesktop } = useResponsive();
@@ -228,8 +236,14 @@ export default function HomeScreen() {
   const renderHeader = useCallback(
     () => (
       <View style={styles.headerBlock}>
-        <HomeHero />
-        <CustomEABanner onPress={openContactModal} />
+        {variant === "legacy" ? (
+          <>
+            <HomeHero />
+            <CustomEABanner onPress={openContactModal} />
+          </>
+        ) : (
+          <V2LibraryHeader onContactPress={openContactModal} />
+        )}
         <StrategyFilters
           colors={colors}
           platformFilter={platformFilter}
@@ -265,6 +279,7 @@ export default function HomeScreen() {
       showAdvancedFilters,
       tagFilter,
       toggleAdvancedFilters,
+      variant,
     ],
   );
 
@@ -312,7 +327,7 @@ export default function HomeScreen() {
 
   if (isLoading && !initialData) {
     return (
-      <ScreenContainer>
+      <ScreenContainer edges={variant === "v2" ? [] : undefined}>
         <View
           style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
         >
@@ -323,7 +338,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScreenContainer>
+    <ScreenContainer edges={variant === "v2" ? [] : undefined}>
       <ContactModal visible={showContactModal} onClose={closeContactModal} />
       <SubscribeModal
         visible={showSubscribeModal}
@@ -362,6 +377,23 @@ export default function HomeScreen() {
   );
 }
 
+function V2LibraryHeader({ onContactPress }: { onContactPress: () => void }) {
+  return (
+    <View style={styles.v2LibraryHeader}>
+      <View style={styles.v2LibraryCopy}>
+        <Text style={styles.v2LibraryEyebrow}>EA CATALOG</Text>
+        <Text style={styles.v2LibraryTitle}>EA 资料库</Text>
+        <Text style={styles.v2LibraryDetail}>
+          大量 EA、指标与工具统一保留在这里；核心六策略与资料目录相互独立。
+        </Text>
+      </View>
+      <Text style={styles.v2LibraryContact} onPress={onContactPress}>
+        联系咨询
+      </Text>
+    </View>
+  );
+}
+
 function LocalPreviewStrip() {
   return (
     <View style={styles.previewStrip}>
@@ -389,6 +421,44 @@ const styles = StyleSheet.create({
   },
   headerBlock: {
     marginBottom: 4,
+  },
+  v2LibraryHeader: {
+    minHeight: 154,
+    paddingHorizontal: 12,
+    paddingVertical: 28,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(100,116,139,0.45)",
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 18,
+  },
+  v2LibraryCopy: { flex: 1, minWidth: 0, gap: 5 },
+  v2LibraryEyebrow: {
+    color: "#D8BC83",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0,
+  },
+  v2LibraryTitle: {
+    color: "#F4F7FB",
+    fontSize: 30,
+    lineHeight: 38,
+    fontWeight: "900",
+    letterSpacing: 0,
+  },
+  v2LibraryDetail: {
+    color: "#9BA9BC",
+    fontSize: 12,
+    lineHeight: 19,
+    maxWidth: 660,
+  },
+  v2LibraryContact: {
+    color: "#D8BC83",
+    fontSize: 12,
+    lineHeight: 20,
+    fontWeight: "900",
+    paddingVertical: 8,
   },
   previewStrip: {
     marginTop: 10,
