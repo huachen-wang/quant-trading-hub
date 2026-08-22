@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useId, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, {
   Defs,
@@ -40,13 +40,14 @@ function makePaths(points: EquityPoint[], height: number) {
   return { line, area, min, max };
 }
 
-export function EquityChart({
+function EquityChartBase({
   points,
   color = V2.green,
   height = 180,
   showAxis = false,
   emptyLabel = "暂无曲线数据",
 }: EquityChartProps) {
+  const gradientId = `equityFill-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const paths = useMemo(() => makePaths(points, height), [height, points]);
 
   if (!paths) {
@@ -63,9 +64,14 @@ export function EquityChart({
       accessibilityLabel={`净值曲线，最低 ${paths.min.toFixed(2)}，最高 ${paths.max.toFixed(2)}`}
       style={[styles.wrap, { height }]}
     >
-      <Svg width="100%" height="100%" viewBox={`0 0 ${WIDTH} ${height}`}>
+      <Svg
+        width="100%"
+        height="100%"
+        viewBox={`0 0 ${WIDTH} ${height}`}
+        preserveAspectRatio="none"
+      >
         <Defs>
-          <LinearGradient id="equityFill" x1="0" y1="0" x2="0" y2="1">
+          <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={color} stopOpacity={0.25} />
             <Stop offset="1" stopColor={color} stopOpacity={0} />
           </LinearGradient>
@@ -81,10 +87,11 @@ export function EquityChart({
                 stroke={V2.border}
                 strokeOpacity={0.5}
                 strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
               />
             ))
           : null}
-        <Path d={paths.area} fill="url(#equityFill)" />
+        <Path d={paths.area} fill={`url(#${gradientId})`} />
         <Path
           d={paths.line}
           fill="none"
@@ -92,11 +99,14 @@ export function EquityChart({
           strokeWidth="2.4"
           strokeLinecap="round"
           strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
         />
       </Svg>
     </View>
   );
 }
+
+export const EquityChart = memo(EquityChartBase);
 
 const styles = StyleSheet.create({
   wrap: { width: "100%", overflow: "hidden" },

@@ -22,7 +22,12 @@ export function StatusBadge({
   const state = freshness ?? "FRESH";
   const color =
     state === "FRESH" ? V2.green : state === "STALE" ? V2.amber : V2.red;
-  const label = dataMode === "DEMO" ? "模拟数据" : FRESHNESS_LABEL[state];
+  const label =
+    dataMode === "DEMO"
+      ? state === "FRESH"
+        ? "模拟数据"
+        : `模拟数据 · ${FRESHNESS_LABEL[state]}`
+      : FRESHNESS_LABEL[state];
 
   return (
     <View
