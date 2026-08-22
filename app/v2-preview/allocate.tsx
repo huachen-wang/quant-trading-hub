@@ -2,7 +2,6 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
+import { ActionDialog } from "@/components/v2/action-dialog";
 import { AllocationSummary } from "@/components/v2/allocation/allocation-summary";
 import { PlatformBucketEditor, type BucketDropStatus } from "@/components/v2/allocation/platform-bucket";
 import { DraggableStrategy, StrategyDropTarget } from "@/components/v2/allocation/web-dnd";
@@ -30,14 +30,6 @@ import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
 
 type RiskProfile = AllocationDraft["riskBudget"]["profile"];
 
-function showConfirmSummary() {
-  const title = "确认摘要已生成";
-  const message =
-    "当前是演示方案，不会开户、入金或执行交易。正式流程将增加客户确认、规则版本和审计凭证。";
-  if (Platform.OS === "web") window.alert(`${title}\n${message}`);
-  else Alert.alert(title, message);
-}
-
 export default function AllocationPage() {
   const { strategyId } = useLocalSearchParams<{ strategyId?: string }>();
   const { width } = useWindowDimensions();
@@ -45,6 +37,7 @@ export default function AllocationPage() {
   const dragEnabled = Platform.OS === "web" && !isMobile;
   const [draft, setDraft] = useState<AllocationDraft>();
   const [capitalFocused, setCapitalFocused] = useState(false);
+  const [summaryVisible, setSummaryVisible] = useState(false);
   const [draggedStrategyId, setDraggedStrategyId] = useState<string | null>(null);
   const [dropHover, setDropHover] = useState<string | null>(null);
   const [dropFlash, setDropFlash] = useState<{
@@ -412,11 +405,21 @@ export default function AllocationPage() {
               validation={validate.data}
               isValidating={validate.isPending}
               onValidate={() => validate.mutate(draft)}
-              onConfirm={showConfirmSummary}
+              onConfirm={() => setSummaryVisible(true)}
             />
           </View>
         </View>
       </View>
+      <ActionDialog
+        visible={summaryVisible}
+        title="确认摘要已生成"
+        message="当前是演示方案，不会开户、入金或执行交易。正式流程将增加客户确认、规则版本和审计凭证。"
+        tone="success"
+        confirmLabel="知道了"
+        confirmOnly
+        onConfirm={() => setSummaryVisible(false)}
+        onCancel={() => setSummaryVisible(false)}
+      />
     </ScrollView>
   );
 }

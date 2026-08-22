@@ -881,6 +881,48 @@ export async function updatePageContent(id: number, data: Partial<typeof schema.
   return { success: true };
 }
 
+export async function reorderPageContents(
+  pageKey: string,
+  items: Array<{
+    recordId: number | null;
+    sectionKey: string;
+    title: string;
+    content: string;
+    icon: string;
+    sortOrder: number;
+    isVisible: boolean;
+  }>,
+) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const { pageContents } = schema;
+  await db.transaction(async (transaction: any) => {
+    for (const item of items) {
+      const payload = {
+        title: item.title,
+        content: item.content,
+        icon: item.icon,
+        sortOrder: item.sortOrder,
+        isVisible: item.isVisible,
+      };
+      if (item.recordId) {
+        await transaction
+          .update(pageContents)
+          .set(payload)
+          .where(eq(pageContents.id, item.recordId));
+      } else {
+        await transaction.insert(pageContents).values({
+          ...payload,
+          pageKey,
+          sectionKey: item.sectionKey,
+        });
+      }
+    }
+  });
+  return { success: true };
+}
+
 export async function deletePageContent(id: number) {
   const db = await getDb();
   if (!db) return null;

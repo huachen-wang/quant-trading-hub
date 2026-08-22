@@ -13,7 +13,7 @@ function StrategyCardBase({
   onPress,
 }: {
   strategy: CoreStrategy;
-  onPress: () => void;
+  onPress: (strategyId: string) => void;
 }) {
   const unavailable = strategy.source.freshness === "OFFLINE";
 
@@ -21,7 +21,7 @@ function StrategyCardBase({
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={`查看 ${strategy.name} 详情`}
-      onPress={onPress}
+      onPress={() => onPress(strategy.id)}
       style={({ pressed }) => [
         styles.card,
         { borderTopColor: strategy.accent },
@@ -36,7 +36,7 @@ function StrategyCardBase({
           cachePolicy="memory-disk"
           transition={140}
           recyclingKey={strategy.artwork}
-          priority="low"
+          priority={strategy.homeSlot <= 3 ? "normal" : "low"}
         />
         <View style={styles.slotMarker}>
           <Text style={styles.slotText}>{String(strategy.homeSlot).padStart(2, "0")}</Text>

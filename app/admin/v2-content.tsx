@@ -3,9 +3,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState, type ComponentProps } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +14,8 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
+import { ActionDialog } from "@/components/v2/action-dialog";
+import { V2ErrorState } from "@/components/v2/page-state";
 import { V2 } from "@/components/v2/tokens";
 import {
   CONTENT_TYPE_LABELS,
@@ -35,6 +35,8 @@ type EditingState = {
   form: ContentEditorForm;
   baseline: string;
 };
+
+type DialogState = Omit<ComponentProps<typeof ActionDialog>, "visible">;
 
 function editingSnapshot(state: Pick<EditingState, "sortOrder" | "isVisible" | "form">) {
   return JSON.stringify([state.form, state.sortOrder, state.isVisible]);
@@ -66,6 +68,7 @@ export default function V2ContentAdminPage() {
   const strategies = trpc.v2.strategies.list.useQuery(undefined, { staleTime: 30_000 });
   const [selectedId, setSelectedId] = useState("");
   const [editing, setEditing] = useState<EditingState>();
+  const [dialog, setDialog] = useState<DialogState>();
   const [savedFlash, setSavedFlash] = useState(false);
   const content = trpc.v2.adminContent.list.useQuery(
     { strategyId: selectedId },
@@ -81,18 +84,64 @@ export default function V2ContentAdminPage() {
         utils.v2.overview.invalidate(),
       ]);
     },
-    onError: (error) => showMessage("保存失败", error.message),
+    onError: (error) => showNotice("保存失败", error.message, "danger"),
   });
   const remove = trpc.v2.adminContent.delete.useMutation({
     onSuccess: async () => {
+      setSavedFlash(true);
       await Promise.all([
         utils.v2.adminContent.list.invalidate({ strategyId: selectedId }),
         utils.v2.strategies.invalidate(),
         utils.v2.overview.invalidate(),
       ]);
     },
-    onError: (error) => showMessage("删除失败", error.message),
+    onError: (error) => showNotice("删除失败", error.message, "danger"),
   });
+  const reorder = trpc.v2.adminContent.reorder.useMutation({
+    onSuccess: async () => {
+      setSavedFlash(true);
+      await Promise.all([
+        utils.v2.adminContent.list.invalidate({ strategyId: selectedId }),
+        utils.v2.strategies.invalidate(),
+        utils.v2.overview.invalidate(),
+      ]);
+    },
+    onError: (error) => showNotice("排序失败", error.message, "danger"),
+  });
+
+  function closeDialog() {
+    setDialog(undefined);
+  }
+
+  function showNotice(
+    title: string,
+    message: string,
+    tone: ComponentProps<typeof ActionDialog>["tone"] = "warning",
+  ) {
+    setDialog({
+      title,
+      message,
+      tone,
+      confirmLabel: "知道了",
+      confirmOnly: true,
+      onConfirm: closeDialog,
+      onCancel: closeDialog,
+    });
+  }
+
+  function askForConfirmation(
+    options: Pick<DialogState, "title" | "message" | "tone" | "confirmLabel" | "cancelLabel">,
+    action: () => void,
+  ) {
+    setDialog({
+      ...options,
+      onConfirm: () => {
+        setDialog(undefined);
+        action();
+      },
+      onCancel: closeDialog,
+    });
+  }
 
   useEffect(() => {
     if (!selectedId && strategies.data?.length) setSelectedId(strategies.data[0].id);
@@ -105,12 +154,13 @@ export default function V2ContentAdminPage() {
   }, [savedFlash]);
 
   const selectedStrategy = strategies.data?.find((item) => item.id === selectedId);
-  const busy = save.isPending || remove.isPending;
+  const busy = save.isPending || remove.isPending || reorder.isPending;
 
   const openCreate = () => {
     const next = {
       recordId: null,
-      sortOrder: (content.data?.length ?? 0) + 1,
+      sortOrder:
+        Math.max(0, ...(content.data?.map((item) => item.sortOrder) ?? [])) + 10,
       isVisible: true,
       form: emptyEditorForm(),
     };
@@ -123,13 +173,68 @@ export default function V2ContentAdminPage() {
       setEditing(undefined);
       return;
     }
-    confirmDiscard(() => setEditing(undefined));
+    askForConfirmation(
+      {
+        title: "放弃修改",
+        message: "当前区块有未保存的修改，关闭后将无法恢复。",
+        tone: "danger",
+        confirmLabel: "放弃修改",
+        cancelLabel: "继续编辑",
+      },
+      () => setEditing(undefined),
+    );
+  };
+
+  const selectStrategy = (strategyId: string) => {
+    if (strategyId === selectedId) return;
+    const apply = () => {
+      setEditing(undefined);
+      setSelectedId(strategyId);
+    };
+    if (editing && editingSnapshot(editing) !== editing.baseline) {
+      askForConfirmation(
+        {
+          title: "切换策略",
+          message: "当前区块有未保存的修改。切换策略后，这些修改将无法恢复。",
+          tone: "warning",
+          confirmLabel: "放弃并切换",
+          cancelLabel: "继续编辑",
+        },
+        apply,
+      );
+      return;
+    }
+    apply();
+  };
+
+  const changeEditingType = (type: ContentBlockType) => {
+    if (!editing || editing.form.type === type) return;
+    const apply = () =>
+      setEditing((current) =>
+        current
+          ? { ...current, form: { ...current.form, type, body: "", items: "" } }
+          : current,
+      );
+    if (editing.form.body.trim() || editing.form.items.trim()) {
+      askForConfirmation(
+        {
+          title: "切换区块类型",
+          message: "当前正文和列表内容将被清空，区块标题会保留。",
+          tone: "warning",
+          confirmLabel: "继续切换",
+          cancelLabel: "取消",
+        },
+        apply,
+      );
+      return;
+    }
+    apply();
   };
 
   const handleSave = () => {
     if (!editing || !selectedId) return;
     if (!editing.form.heading.trim()) {
-      showMessage("内容不完整", "请填写区块标题。");
+      showNotice("内容不完整", "请填写区块标题。");
       return;
     }
     const block = editorFormToBlock(editing.form);
@@ -138,7 +243,7 @@ export default function V2ContentAdminPage() {
       (block.type === "risk_notice" && !block.content) ||
       ("items" in block && block.items.length === 0)
     ) {
-      showMessage("内容不完整", "请填写正文或至少一条列表内容。");
+      showNotice("内容不完整", "请填写正文或至少一条列表内容。");
       return;
     }
     save.mutate({
@@ -163,8 +268,31 @@ export default function V2ContentAdminPage() {
     });
   };
 
+  const moveBlock = (index: number, direction: -1 | 1) => {
+    if (!selectedId || !content.data) return;
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= content.data.length) return;
+    const next = [...content.data];
+    [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+    reorder.mutate({
+      strategyId: selectedId,
+      blockIds: next.map((item) => item.block.id),
+    });
+  };
+
   if (strategies.isLoading) {
     return <ScreenContainer><View style={styles.loading}><ActivityIndicator size="large" color={V2.gold} /></View></ScreenContainer>;
+  }
+  if (!strategies.data) {
+    return (
+      <ScreenContainer>
+        <V2ErrorState
+          title="核心策略加载失败"
+          detail={strategies.error?.message || "没有取得可编辑的核心策略。"}
+          onRetry={() => strategies.refetch()}
+        />
+      </ScreenContainer>
+    );
   }
 
   return (
@@ -177,11 +305,11 @@ export default function V2ContentAdminPage() {
             <Text style={styles.subtitle}>按内容块编辑说明、证据、时间线、风险边界和常见问题；保存后 V2 详情页即时读取。</Text>
           </View>
           <View style={styles.headerActions}>
-            <Pressable accessibilityRole="link" onPress={() => router.push(`/v2-preview/strategies/${selectedId}` as never)} style={({ pressed }) => [styles.previewButton, pressed && styles.pressed]}>
+            <Pressable accessibilityRole="link" accessibilityState={{ disabled: !selectedId }} disabled={!selectedId} onPress={() => router.push(`/v2-preview/strategies/${selectedId}` as never)} style={({ pressed }) => [styles.previewButton, !selectedId && styles.disabled, pressed && styles.pressed]}>
               <MaterialIcons name="open-in-new" size={17} color={V2.text} />
               <Text style={styles.previewText}>预览页面</Text>
             </Pressable>
-            <Pressable accessibilityRole="button" onPress={openCreate} style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}>
+            <Pressable accessibilityRole="button" accessibilityState={{ disabled: !selectedId }} disabled={!selectedId} onPress={openCreate} style={({ pressed }) => [styles.addButton, !selectedId && styles.disabled, pressed && styles.pressed]}>
               <MaterialIcons name="add" size={18} color={V2.background} />
               <Text style={styles.addText}>新建区块</Text>
             </Pressable>
@@ -189,12 +317,12 @@ export default function V2ContentAdminPage() {
         </View>
 
         <View style={styles.strategyPicker}>
-          {strategies.data?.map((strategy) => (
+          {strategies.data.map((strategy) => (
             <Pressable
               key={strategy.id}
               accessibilityRole="tab"
               accessibilityState={{ selected: selectedId === strategy.id }}
-              onPress={() => setSelectedId(strategy.id)}
+              onPress={() => selectStrategy(strategy.id)}
               style={[styles.strategyButton, selectedId === strategy.id && styles.strategyButtonActive]}
             >
               <View style={[styles.strategyRail, { backgroundColor: strategy.accent }]} />
@@ -226,7 +354,24 @@ export default function V2ContentAdminPage() {
         </View>
 
         <View style={styles.blockList}>
-          {content.data?.map((item, index) => (
+          {content.error ? (
+            <View accessibilityRole="alert" style={styles.inlineError}>
+              <MaterialIcons name="sync-problem" size={24} color={V2.amber} />
+              <View style={styles.inlineErrorCopy}>
+                <Text style={styles.inlineErrorTitle}>内容区块加载失败</Text>
+                <Text style={styles.inlineErrorDetail}>{content.error.message}</Text>
+              </View>
+              <Pressable accessibilityRole="button" onPress={() => content.refetch()} style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}>
+                <MaterialIcons name="refresh" size={17} color={V2.text} />
+                <Text style={styles.retryText}>重试</Text>
+              </Pressable>
+            </View>
+          ) : content.isLoading ? (
+            <View accessibilityLiveRegion="polite" style={styles.listLoading}>
+              <ActivityIndicator color={V2.gold} />
+              <Text style={styles.listLoadingText}>正在读取内容区块</Text>
+            </View>
+          ) : content.data?.map((item, index) => (
             <View key={item.block.id} style={[styles.blockRow, isMobile && styles.blockRowMobile, !item.isVisible && styles.blockHidden]}>
               <View style={styles.orderControls}>
                 <Pressable
@@ -234,7 +379,7 @@ export default function V2ContentAdminPage() {
                   accessibilityLabel={`上移「${item.block.heading}」`}
                   accessibilityState={{ disabled: index === 0 || busy }}
                   disabled={index === 0 || busy}
-                  onPress={() => quickSave(item, { sortOrder: Math.max(0, item.sortOrder - 2) })}
+                  onPress={() => moveBlock(index, -1)}
                   style={({ pressed }) => [styles.iconButton, index === 0 && styles.disabled, pressed && styles.pressed]}
                 >
                   <MaterialIcons name="keyboard-arrow-up" size={20} color={V2.textMuted} />
@@ -245,7 +390,7 @@ export default function V2ContentAdminPage() {
                   accessibilityLabel={`下移「${item.block.heading}」`}
                   accessibilityState={{ disabled: index === (content.data?.length ?? 1) - 1 || busy }}
                   disabled={index === (content.data?.length ?? 1) - 1 || busy}
-                  onPress={() => quickSave(item, { sortOrder: item.sortOrder + 2 })}
+                  onPress={() => moveBlock(index, 1)}
                   style={({ pressed }) => [styles.iconButton, index === (content.data?.length ?? 1) - 1 && styles.disabled, pressed && styles.pressed]}
                 >
                   <MaterialIcons name="keyboard-arrow-down" size={20} color={V2.textMuted} />
@@ -294,7 +439,18 @@ export default function V2ContentAdminPage() {
                     accessibilityLabel={`删除「${item.block.heading}」`}
                     accessibilityState={{ disabled: busy }}
                     disabled={busy}
-                    onPress={() => confirmDelete(() => remove.mutate({ recordId: item.recordId! }))}
+                    onPress={() =>
+                      askForConfirmation(
+                        {
+                          title: "删除内容区块",
+                          message: `确认删除「${item.block.heading}」吗？删除后会恢复默认占位（若存在）。`,
+                          tone: "danger",
+                          confirmLabel: "删除",
+                          cancelLabel: "取消",
+                        },
+                        () => remove.mutate({ recordId: item.recordId! }),
+                      )
+                    }
                     style={({ pressed }) => [styles.iconButtonLarge, pressed && styles.pressed]}
                   >
                     <MaterialIcons name="delete-outline" size={18} color={V2.red} />
@@ -303,7 +459,7 @@ export default function V2ContentAdminPage() {
               </View>
             </View>
           ))}
-          {!content.isLoading && !content.data?.length ? (
+          {!content.error && !content.isLoading && !content.data?.length ? (
             <View style={styles.empty}>
               <MaterialIcons name="article" size={26} color={V2.textDim} />
               <Text style={styles.emptyText}>这个策略还没有内容区块。</Text>
@@ -332,7 +488,7 @@ export default function V2ContentAdminPage() {
                     key={type}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: editing?.form.type === type }}
-                    onPress={() => setEditing((current) => current ? { ...current, form: { ...current.form, type, body: "", items: "" } } : current)}
+                    onPress={() => changeEditingType(type)}
                     style={({ pressed }) => [styles.typeButton, editing?.form.type === type && styles.typeButtonActive, pressed && styles.pressed]}
                   >
                     <Text style={[styles.typeText, editing?.form.type === type && styles.typeTextActive]}>{CONTENT_TYPE_LABELS[type]}</Text>
@@ -399,6 +555,7 @@ export default function V2ContentAdminPage() {
           </Pressable>
         </Pressable>
       </Modal>
+      {dialog ? <ActionDialog visible {...dialog} /> : null}
     </ScreenContainer>
   );
 }
@@ -409,33 +566,6 @@ function blockPreview(block: ReturnType<typeof editorFormToBlock>) {
   if (block.type === "evidence") return block.items.map((item) => `${item.title}：${item.detail}`).join(" · ");
   if (block.type === "timeline") return block.items.map((item) => `${item.date} ${item.title}`).join(" · ");
   return block.items.map((item) => item.question).join(" · ");
-}
-
-function showMessage(title: string, message: string) {
-  if (Platform.OS === "web") window.alert(`${title}\n${message}`);
-  else Alert.alert(title, message);
-}
-
-function confirmDelete(action: () => void) {
-  if (Platform.OS === "web") {
-    if (window.confirm("删除自定义内容后会恢复默认占位（若存在），确认继续吗？")) action();
-    return;
-  }
-  Alert.alert("删除内容", "删除后会恢复默认占位（若存在）。", [
-    { text: "取消", style: "cancel" },
-    { text: "删除", style: "destructive", onPress: action },
-  ]);
-}
-
-function confirmDiscard(action: () => void) {
-  if (Platform.OS === "web") {
-    if (window.confirm("有未保存的修改，关闭后将丢失。确认关闭吗？")) action();
-    return;
-  }
-  Alert.alert("放弃修改", "有未保存的修改，关闭后将丢失。", [
-    { text: "继续编辑", style: "cancel" },
-    { text: "放弃修改", style: "destructive", onPress: action },
-  ]);
 }
 
 const styles = StyleSheet.create({
@@ -469,6 +599,14 @@ const styles = StyleSheet.create({
   savingText: { color: V2.gold, fontSize: 11, fontWeight: "800" },
   savedText: { color: V2.green },
   blockList: { borderTopWidth: 1, borderTopColor: V2.border },
+  inlineError: { minHeight: 96, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, borderBottomWidth: 1, borderBottomColor: V2.border, backgroundColor: "rgba(224,176,75,0.05)" },
+  inlineErrorCopy: { flex: 1, minWidth: 0, gap: 4 },
+  inlineErrorTitle: { color: V2.text, fontSize: 13, fontWeight: "900" },
+  inlineErrorDetail: { color: V2.textMuted, fontSize: 11, lineHeight: 17 },
+  retryButton: { minHeight: 38, paddingHorizontal: 11, borderWidth: 1, borderColor: V2.borderStrong, borderRadius: 4, flexDirection: "row", alignItems: "center", gap: 6 },
+  retryText: { color: V2.text, fontSize: 11, fontWeight: "800" },
+  listLoading: { minHeight: 140, alignItems: "center", justifyContent: "center", gap: 10, borderBottomWidth: 1, borderBottomColor: V2.border },
+  listLoadingText: { color: V2.textMuted, fontSize: 11 },
   blockRow: { minHeight: 104, paddingVertical: 13, flexDirection: "row", alignItems: "center", gap: 14, borderBottomWidth: 1, borderBottomColor: V2.border },
   blockRowMobile: { flexWrap: "wrap", alignItems: "flex-start", rowGap: 10 },
   blockHidden: { opacity: 0.55 },

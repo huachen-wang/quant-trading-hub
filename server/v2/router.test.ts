@@ -12,6 +12,29 @@ function createContext(): TrpcContext {
   };
 }
 
+function createAdminContext(): TrpcContext {
+  const now = new Date();
+  return {
+    ...createContext(),
+    user: {
+      id: 1,
+      openId: "v2-admin-test",
+      email: "admin@example.test",
+      name: "V2 Admin",
+      passwordHash: null,
+      avatar: null,
+      bio: null,
+      loginMethod: "password",
+      role: "admin",
+      phone: null,
+      phoneVerified: false,
+      createdAt: now,
+      updatedAt: now,
+      lastSignedIn: now,
+    },
+  };
+}
+
 afterEach(() => {
   if (originalFlag === undefined) delete process.env.EAXAU_V2_ENABLED;
   else process.env.EAXAU_V2_ENABLED = originalFlag;
@@ -36,5 +59,17 @@ describe("EAXAU V2 router", () => {
     await expect(caller.v2.overview()).rejects.toMatchObject({
       code: "FORBIDDEN",
     });
+  });
+
+  it("rejects stale admin reorder lists before writing", async () => {
+    process.env.EAXAU_V2_ENABLED = "true";
+    const caller = appRouter.createCaller(createAdminContext());
+
+    await expect(
+      caller.v2.adminContent.reorder({
+        strategyId: "jingge-v51",
+        blockIds: ["stale-client-block"],
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
   });
 });

@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { AccountCard } from "@/components/v2/account-card";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
@@ -14,6 +14,11 @@ export default function AccountsPage() {
   const { width } = useWindowDimensions();
   const isMobile = width < 740;
   const [filter, setFilter] = useState<Filter>("ALL");
+  const openAccount = useCallback(
+    (accountId: string) =>
+      router.push(`/v2-preview/accounts/${accountId}` as never),
+    [router],
+  );
   const query = trpc.v2.accounts.list.useQuery(undefined, { staleTime: 15_000 });
   const accounts = useMemo(
     () => query.data?.filter((account) => filter === "ALL" || account.serviceMode === filter) ?? [],
@@ -81,7 +86,7 @@ export default function AccountsPage() {
             <View key={account.id} style={{ width: isMobile ? "100%" : "49.25%" }}>
               <AccountCard
                 account={account}
-                onPress={() => router.push(`/v2-preview/accounts/${account.id}` as never)}
+                onPress={openAccount}
               />
             </View>
           ))}

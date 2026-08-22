@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -27,6 +27,11 @@ export default function V2HomePage() {
   const isTablet = width >= 700 && width < 1060;
   const isNarrow = width < 1000;
   const [mode, setMode] = useState<Mode>("SELF_ALLOCATED");
+  const openStrategy = useCallback(
+    (strategyId: string) =>
+      router.push(`/v2-preview/strategies/${strategyId}` as never),
+    [router],
+  );
   const overview = trpc.v2.overview.useQuery(undefined, {
     staleTime: 20_000,
     refetchInterval: 30_000,
@@ -136,9 +141,7 @@ export default function V2HomePage() {
               <View key={strategy.id} style={{ width: cardWidth }}>
                 <StrategyCard
                   strategy={strategy}
-                  onPress={() =>
-                    router.push(`/v2-preview/strategies/${strategy.id}` as never)
-                  }
+                  onPress={openStrategy}
                 />
               </View>
             ))}

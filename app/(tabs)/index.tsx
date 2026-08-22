@@ -9,7 +9,8 @@ import {
   View,
 } from "react-native";
 import type { ListRenderItem } from "react-native";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { ScreenContainer } from "@/components/screen-container";
 import { ContactModal } from "@/components/contact-modal";
 import { SubscribeModal } from "@/components/subscribe-modal";
@@ -46,6 +47,9 @@ type EaLibraryScreenProps = {
 };
 
 export default function HomeScreen() {
+  const isFocused = useIsFocused();
+  const pathname = usePathname();
+  if (!isFocused || pathname !== "/") return null;
   return <EaLibraryScreen />;
 }
 

@@ -7,14 +7,14 @@ import { formatMoney, formatPct } from "./format";
 import { StatusBadge } from "./status-badge";
 import { V2 } from "./tokens";
 
-function AccountCardBase({ account, onPress }: { account: ServiceAccount; onPress: () => void }) {
+function AccountCardBase({ account, onPress }: { account: ServiceAccount; onPress: (accountId: string) => void }) {
   const managed = account.serviceMode === "MANAGED_CONTRACT";
   const modeColor = managed ? V2.gold : V2.blue;
   return (
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={`查看 ${account.name}`}
-      onPress={onPress}
+      onPress={() => onPress(account.id)}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.heading}>

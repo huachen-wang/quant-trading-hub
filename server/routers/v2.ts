@@ -132,6 +132,59 @@ export const v2Router = router({
         }
         return { ok: true };
       }),
+    reorder: enabledAdminProcedure
+      .input(
+        z.object({
+          strategyId: z.string().min(1).max(80),
+          blockIds: z
+            .array(z.string().min(1).max(120))
+            .min(1)
+            .max(50)
+            .refine((ids) => new Set(ids).size === ids.length, {
+              message: "内容区块不能重复。",
+            }),
+        }),
+      )
+      .mutation(async ({ input }) => {
+        const strategy = await getV2Provider().getStrategy(input.strategyId);
+        if (!strategy) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "核心策略不存在。" });
+        }
+        const items = await listStrategyContentForAdmin(strategy);
+        const byId = new Map(items.map((item) => [item.block.id, item]));
+        if (
+          input.blockIds.length !== items.length ||
+          input.blockIds.some((id) => !byId.has(id))
+        ) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "内容列表已变化，请刷新后重新排序。",
+          });
+        }
+
+        const result = await db.reorderPageContents(
+          strategyContentPageKey(input.strategyId),
+          input.blockIds.map((blockId, index) => {
+            const item = byId.get(blockId)!;
+            return {
+              recordId: item.recordId,
+              sectionKey: item.block.id,
+              title: contentBlockHeading(item.block),
+              content: JSON.stringify(item.block),
+              icon: item.block.type,
+              sortOrder: (index + 1) * 10,
+              isVisible: item.isVisible,
+            };
+          }),
+        );
+        if (!result) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "数据库未连接，当前环境不能调整顺序。",
+          });
+        }
+        return { ok: true };
+      }),
     delete: enabledAdminProcedure
       .input(z.object({ recordId: z.number().int().positive() }))
       .mutation(async ({ input }) => {
