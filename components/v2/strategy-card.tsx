@@ -1,62 +1,66 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Image } from "expo-image";
-import { memo, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { memo } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { CoreStrategy } from "@/shared/v2/contracts";
-import { EquityChart } from "./equity-chart";
-import { formatPct, riskLabel } from "./format";
+import { formatMoney, formatPct, riskLabel } from "./format";
 import { StatusBadge } from "./status-badge";
 import { V2 } from "./tokens";
 
+type StrategyCardProps = {
+  strategy: CoreStrategy;
+  selected?: boolean;
+  onPress: (strategyId: string) => void;
+  onToggle?: (strategyId: string) => void;
+};
+
 function StrategyCardBase({
   strategy,
+  selected = false,
   onPress,
-}: {
-  strategy: CoreStrategy;
-  onPress: (strategyId: string) => void;
-}) {
+  onToggle,
+}: StrategyCardProps) {
   const unavailable = strategy.source.freshness === "OFFLINE";
-  const [hovered, setHovered] = useState(false);
 
   return (
-    <Pressable
-      accessibilityRole="link"
-      accessibilityLabel={`查看 ${strategy.name} 详情`}
-      onPress={() => onPress(strategy.id)}
-      onHoverIn={() => Platform.OS === "web" && setHovered(true)}
-      onHoverOut={() => Platform.OS === "web" && setHovered(false)}
-      style={({ pressed }) => [
+    <View
+      style={[
         styles.card,
         { borderTopColor: strategy.accent },
-        pressed && styles.pressed,
+        selected && styles.cardSelected,
       ]}
     >
-      <View style={styles.imageWrap}>
-        <Image
-          accessibilityLabel={`${strategy.shortName} 策略视觉图`}
-          source={{ uri: strategy.artwork }}
-          style={styles.image}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={140}
-          recyclingKey={strategy.artwork}
-          priority={strategy.homeSlot <= 3 ? "normal" : "low"}
-        />
-        <View style={styles.slotMarker}>
-          <Text style={styles.slotText}>{String(strategy.homeSlot).padStart(2, "0")}</Text>
-        </View>
-        {Platform.OS === "web" && hovered ? (
-          <View pointerEvents="none" style={[styles.hoverDetail, styles.hoverDetailVisible]}>
-            <Text style={styles.hoverEyebrow}>QUICK VIEW</Text>
-            <Text style={styles.hoverTitle}>{strategy.shortName}</Text>
-            <View style={styles.hoverRows}>
-              <Text style={styles.hoverText}>{strategy.style}</Text>
-              <Text style={styles.hoverText}>{strategy.instruments.join(" / ")} · {strategy.terminals.join(" / ")}</Text>
-              <Text style={styles.hoverText}>建议资金 {strategy.minimumCapital.toLocaleString("zh-CN")} USD</Text>
-            </View>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={`查看 ${strategy.name} 详情`}
+        onPress={() => onPress(strategy.id)}
+        style={({ pressed }) => [styles.detailLink, pressed && styles.pressed]}
+      >
+        <View style={styles.imageWrap}>
+          <Image
+            accessibilityLabel={`${strategy.shortName} 策略视觉图`}
+            source={{ uri: strategy.artwork }}
+            style={styles.image}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={120}
+            recyclingKey={strategy.artwork}
+            priority={strategy.homeSlot <= 3 ? "high" : "normal"}
+          />
+          <View style={styles.slotMarker}>
+            <Text style={styles.slotText}>
+              {String(strategy.homeSlot).padStart(2, "0")}
+            </Text>
           </View>
-        ) : null}
-      </View>
+          <View style={styles.sourceBadge}>
+            <StatusBadge
+              compact
+              dataMode={strategy.source.dataMode}
+              freshness={strategy.source.freshness}
+            />
+          </View>
+        </View>
+      </Pressable>
 
       <View style={styles.body}>
         <View style={styles.titleRow}>
@@ -68,50 +72,101 @@ function StrategyCardBase({
               {strategy.tagline}
             </Text>
           </View>
-          <StatusBadge
-            compact
-            dataMode={strategy.source.dataMode}
-            freshness={strategy.source.freshness}
-          />
+          <Text style={styles.version} numberOfLines={1}>
+            {strategy.version}
+          </Text>
         </View>
 
-        <View style={styles.chart}>
-          <EquityChart
-            points={unavailable ? [] : strategy.equity.slice(-30)}
-            color={strategy.accent}
-            height={68}
-            emptyLabel="等待数据恢复"
-          />
-        </View>
+        <Text style={styles.description} numberOfLines={2}>
+          {strategy.description}
+        </Text>
 
         <View style={styles.metrics}>
-          <View style={styles.metric}>
-            <Text style={styles.metricLabel}>近 90 日</Text>
-            <Text style={[styles.metricValue, { color: strategy.accent }]}>
-              {formatPct(strategy.metrics.return90dPct, true)}
-            </Text>
-          </View>
-          <View style={styles.metric}>
-            <Text style={styles.metricLabel}>最大回撤</Text>
-            <Text style={styles.metricValue}>
-              {formatPct(strategy.metrics.maxDrawdownPct)}
-            </Text>
-          </View>
-          <View style={styles.metric}>
-            <Text style={styles.metricLabel}>风险</Text>
-            <Text style={styles.metricValue}>{riskLabel(strategy.riskLevel)}</Text>
-          </View>
+          <Metric
+            label="90 日"
+            value={formatPct(strategy.metrics.return90dPct, true)}
+            color={strategy.accent}
+          />
+          <Metric
+            label="回撤"
+            value={formatPct(strategy.metrics.maxDrawdownPct)}
+          />
+          <Metric label="风险" value={riskLabel(strategy.riskLevel)} />
+          <Metric
+            label="资金门槛"
+            value={formatMoney(strategy.minimumCapital, "USD", true)}
+          />
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.version} numberOfLines={1}>{strategy.version}</Text>
-          <View style={styles.detailAction}>
-            <Text style={styles.detailActionText}>查看数据</Text>
-            <MaterialIcons name="arrow-forward" size={15} color={V2.text} />
-          </View>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel={`查看 ${strategy.name} 的运行详情`}
+            onPress={() => onPress(strategy.id)}
+            style={({ pressed }) => [
+              styles.textAction,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.textActionLabel}>运行详情</Text>
+            <MaterialIcons
+              name="arrow-forward"
+              size={15}
+              color={V2.textMuted}
+            />
+          </Pressable>
+
+          {onToggle ? (
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selected, disabled: unavailable }}
+              accessibilityLabel={`${selected ? "移出" : "加入"} ${strategy.shortName} 量化方案`}
+              disabled={unavailable}
+              onPress={() => onToggle(strategy.id)}
+              style={({ pressed }) => [
+                styles.selectButton,
+                selected && styles.selectButtonActive,
+                unavailable && styles.disabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <MaterialIcons
+                name={selected ? "check" : unavailable ? "cloud-off" : "add"}
+                size={16}
+                color={selected ? V2.background : V2.text}
+              />
+              <Text
+                style={[
+                  styles.selectLabel,
+                  selected && styles.selectLabelActive,
+                ]}
+              >
+                {selected ? "已加入" : unavailable ? "暂不可选" : "加入方案"}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
-    </Pressable>
+    </View>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  color = V2.text,
+}: {
+  label: string;
+  value: string;
+  color?: string;
+}) {
+  return (
+    <View style={styles.metric}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={[styles.metricValue, { color }]} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
   );
 }
 
@@ -128,48 +183,108 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: V2.surface,
   },
-  pressed: { opacity: 0.82, transform: [{ translateY: 1 }] },
-  imageWrap: { width: "100%", aspectRatio: 2.25, position: "relative", backgroundColor: V2.surfaceMuted },
+  cardSelected: {
+    borderColor: "rgba(216,188,131,0.72)",
+    backgroundColor: "#121C2B",
+  },
+  detailLink: { width: "100%" },
+  imageWrap: {
+    width: "100%",
+    aspectRatio: 3.8,
+    position: "relative",
+    backgroundColor: V2.surfaceMuted,
+  },
   image: { width: "100%", height: "100%" },
   slotMarker: {
     position: "absolute",
-    top: 10,
-    left: 10,
+    top: 9,
+    left: 9,
     width: 30,
-    height: 25,
+    height: 24,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.24)",
-    backgroundColor: "rgba(7,11,18,0.78)",
+    borderColor: "rgba(255,255,255,0.26)",
+    backgroundColor: "rgba(7,11,18,0.82)",
   },
   slotText: { color: V2.text, fontSize: 10, fontWeight: "900" },
-  hoverDetail: { position: "absolute", inset: 0, padding: 14, opacity: 0, backgroundColor: "rgba(4,8,14,0.93)", justifyContent: "flex-end", gap: 4 } as any,
-  hoverDetailVisible: { opacity: 1 },
-  hoverEyebrow: { color: V2.gold, fontSize: 9, lineHeight: 12, fontWeight: "900" },
-  hoverTitle: { color: V2.text, fontSize: 16, lineHeight: 21, fontWeight: "900" },
-  hoverRows: { marginTop: 3, gap: 2 },
-  hoverText: { color: V2.textMuted, fontSize: 9, lineHeight: 13 },
-  body: { padding: 15, gap: 13 },
-  titleRow: { minHeight: 45, flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  titleCopy: { flex: 1, minWidth: 0, gap: 3 },
-  title: { color: V2.text, fontSize: 17, lineHeight: 22, fontWeight: "900", letterSpacing: 0 },
-  tagline: { color: V2.textMuted, fontSize: 11, lineHeight: 16 },
-  chart: { height: 68 },
+  sourceBadge: { position: "absolute", top: 8, right: 8 },
+  body: { padding: 10, gap: 6 },
+  titleRow: {
+    minHeight: 34,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 9,
+  },
+  titleCopy: { flex: 1, minWidth: 0, gap: 2 },
+  title: { color: V2.text, fontSize: 15, lineHeight: 19, fontWeight: "900" },
+  tagline: { color: V2.textMuted, fontSize: 10, lineHeight: 14 },
+  version: {
+    maxWidth: 108,
+    color: V2.gold,
+    fontSize: 9,
+    lineHeight: 14,
+    fontWeight: "900",
+    textAlign: "right",
+  },
+  description: {
+    minHeight: 27,
+    color: V2.textMuted,
+    fontSize: 10,
+    lineHeight: 15,
+  },
   metrics: {
-    minHeight: 46,
+    minHeight: 40,
     flexDirection: "row",
     alignItems: "stretch",
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: V2.border,
   },
-  metric: { flex: 1, minWidth: 0, justifyContent: "center", gap: 3, paddingVertical: 8 },
-  metricLabel: { color: V2.textDim, fontSize: 10, lineHeight: 12 },
-  metricValue: { color: V2.text, fontSize: 13, lineHeight: 17, fontWeight: "800" },
-  footer: { minHeight: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  version: { color: V2.textMuted, fontSize: 11, flex: 1 },
-  detailAction: { flexDirection: "row", alignItems: "center", gap: 4 },
-  detailActionText: { color: V2.text, fontSize: 11, fontWeight: "800" },
+  metric: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: "center",
+    gap: 2,
+    paddingVertical: 6,
+    paddingRight: 5,
+  },
+  metricLabel: { color: V2.textDim, fontSize: 8, lineHeight: 11 },
+  metricValue: {
+    color: V2.text,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "900",
+  },
+  footer: {
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  textAction: {
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  textActionLabel: { color: V2.textMuted, fontSize: 10, fontWeight: "800" },
+  selectButton: {
+    minHeight: 32,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: V2.borderStrong,
+    borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+  },
+  selectButtonActive: { borderColor: V2.gold, backgroundColor: V2.gold },
+  selectLabel: { color: V2.text, fontSize: 10, fontWeight: "900" },
+  selectLabelActive: { color: V2.background },
+  disabled: { opacity: 0.46 },
+  pressed: { opacity: 0.72 },
 });

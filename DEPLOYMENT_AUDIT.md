@@ -1,14 +1,15 @@
 # 部署交付前审计记录
 
-审计日期：2026-08-22
+审计日期：2026-08-23
 
 审计运行时：Node.js `v24.19.0`
 
 ## 结论
 
 当前仓库已通过类型检查、lint、全量自动测试、后端生产构建、Expo Web 导出、静态资源
-完整性校验、本地生产 API 启动和关键路由浏览器巡检。V2 六策略体验已经切换为根首页，
-原 EA 商城完整保留在 `/market`；V2 使用独立 `v2` tRPC 命名空间，没有替换 V1 API。
+完整性校验、本地生产 API 启动和关键路由浏览器巡检。根首页首屏直接展示六款核心策略，
+页面内完成“资金 × 风控 × 策略 × 平台 × 模式”选配；原 EA 商城完整保留在 `/market`。
+V2 使用独立 `v2` tRPC 命名空间，没有替换 V1 API。
 
 这能证明当前提交不存在已知的编译错误、缺失模块或本地白屏问题；不能替代 Railway
 数据库、DNS、第三方支付/OAuth 和外部 Quant Data Core 的线上验收。
@@ -47,7 +48,7 @@ npx vitest run
 
 ```text
 Test Files  30 passed (30)
-Tests       105 passed (105)
+Tests       107 passed (107)
 ```
 
 无跳过项。契约、分仓引擎、数据覆盖、数据编辑器、Niubang 只读映射、Provider 选择和
@@ -61,7 +62,7 @@ npx esbuild server/_core/index.ts \
   --out-extension:.js=.mjs --outdir=dist
 ```
 
-结果：通过，生成 `dist/index.mjs`，约 `356.8 KB`。
+结果：通过，生成 `dist/index.mjs`，约 `361.1 KB`。
 
 ### Web 导出与完整性
 
@@ -79,7 +80,7 @@ node scripts/verify-web-build.js
 使用同域生产后端与 Web 产物启动：
 
 ```bash
-PORT=8083 NODE_ENV=production EAXAU_V2_ENABLED=true \
+PORT=8082 NODE_ENV=production EAXAU_V2_ENABLED=true \
 node dist/index.mjs
 ```
 
@@ -88,7 +89,7 @@ node dist/index.mjs
 - `/api/health` 返回 `{"ok":true}`；
 - `/api/trpc/v2.status` 返回 `enabled=true`、`provider=DEMO`；
 - `/api/trpc/v2.overview` 返回六策略聚合 DTO；
-- 服务端确认 `web-build directory exists` 并监听 `8083`；
+- 服务端确认 `web-build directory exists`、静态入口引用资源完整并监听 `8082`；
 - 未设置 `DATABASE_URL` 时迁移按设计跳过，适用于本地演示，不适用于正式生产。
 
 ## 浏览器巡检
@@ -101,31 +102,25 @@ node dist/index.mjs
 /v2-preview/strategies/jingge-v51
 /v2-preview/allocate
 /v2-preview/accounts
-/v2-preview/ea-library
+/v2-preview/accounts/managed-demo-01
+/v2-preview/accounts/self-demo-01
 /market
-/admin/login
-/admin
 /admin/v2-content
 /admin/v2-data
 ```
 
 核验结果：
 
-- 1440x900 桌面、1024x768 平板和 390x844 手机前台页面均有完整内容，无页面级横向溢出；
-- 六策略图片全部加载，策略图自然尺寸统一为 960x540；
-- V2 首页 DOM 只挂载六张策略图，首三张为普通优先级、后三张为低优先级；
-- 策略详情深链接只加载当前策略主图与三张资料图，不再后台预载首页六张图片；
-- `/search` 不再后台挂载旧首页的十二张商城图片；
+- 1440x900 桌面与 390x844 手机核心页面均有完整内容，无页面级横向溢出；
+- 桌面首页第一视口完整出现六张策略卡和已选方案条，不再先展示大面积英雄区或空白；
+- 六策略图片全部加载，卡片同时展示简介、90 日收益、回撤、风险、资金门槛和数据来源；
 - 首页明确显示 `模拟数据`，没有把 Demo 伪装为实盘；
-- 策略详情长内容在手机端改为单列，无两栏挤压；
-- 分仓、账户、EA 资料库手机端 `scrollWidth` 与视口宽度一致；
-- 本地管理员账号登录成功，V2 内容后台桌面和手机均可见；
-- 数据后台可切换六策略、载入当前样本、编辑指标/净值和设置实盘接管线；
-- 新建内容块弹窗在 390px 宽度下完整显示类型、标题、正文、要点、排序、显隐和保存控件；
-- 平台与策略先打开规格速览再加入方案，图库上一张/下一张/关闭操作均已实测；
-- 旧 EA 商城 `/market` 显示筛选器与 12 张首批策略卡，不再为空白；
-- 未观察到空白页、图片失败、内容遮挡或路由 404。
-- 分仓确认、后台未保存关闭和类型切换均使用站内弹层，没有浏览器原生对话框。
+- 页面内选配器可切换资金、风险、六策略、三个平台及资管/券商模式；生产包生成方案后返回“基础规则通过”；
+- 推荐引擎保留用户明确选择的策略和平台，测试覆盖 2 平台、2 策略并通过分仓校验；
+- 资管模式明确标注“技术方按合同代操管理”，券商模式明确标注“资金不经过技术方”；
+- 策略详情在桌面和手机均为高密度首屏，净值、快照、资料、持仓和交易通过页签组织；
+- 首页、详情、高级选配、两类账户与 `/market` 均无空白页、错误状态、横向溢出或路由 404；
+- `/admin/v2-content` 与 `/admin/v2-data` 在未登录生产会话中均正确跳转 `/admin/login`。
 
 ## V1 兼容边界
 

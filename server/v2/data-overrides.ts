@@ -30,15 +30,19 @@ function parseStoredOverride(row: PageContent) {
 
 export async function listStoredStrategyDataOverrides() {
   const rows = await db.getAllPageContents(DATA_PAGE_KEY);
-  const parsed = rows.map(parseStoredOverride).filter(Boolean) as StoredStrategyDataOverride[];
+  const parsed = rows
+    .map(parseStoredOverride)
+    .filter(Boolean) as StoredStrategyDataOverride[];
   return new Map(parsed.map((item) => [item.override.strategyId, item]));
 }
 
-export async function saveStoredStrategyDataOverride(input: StrategyDataOverride) {
+export async function saveStoredStrategyDataOverride(
+  input: StrategyDataOverride,
+) {
   const override = strategyDataOverrideSchema.parse(input);
-  const existing = (await db.getAllPageContents(DATA_PAGE_KEY) as PageContent[]).find(
-    (row: PageContent) => row.sectionKey === override.strategyId,
-  );
+  const existing = (
+    (await db.getAllPageContents(DATA_PAGE_KEY)) as PageContent[]
+  ).find((row: PageContent) => row.sectionKey === override.strategyId);
   const payload = {
     title: `${override.strategyId} strategy data`,
     content: JSON.stringify(override),
@@ -55,9 +59,9 @@ export async function saveStoredStrategyDataOverride(input: StrategyDataOverride
 }
 
 export async function deleteStoredStrategyDataOverride(strategyId: string) {
-  const existing = (await db.getAllPageContents(DATA_PAGE_KEY) as PageContent[]).find(
-    (row: PageContent) => row.sectionKey === strategyId,
-  );
+  const existing = (
+    (await db.getAllPageContents(DATA_PAGE_KEY)) as PageContent[]
+  ).find((row: PageContent) => row.sectionKey === strategyId);
   if (!existing) return { success: true };
   return db.deletePageContent(existing.id);
 }
@@ -91,7 +95,8 @@ function sortedUnique(points: EquityPoint[]) {
 
 function sourceMode(strategies: CoreStrategy[]): DataMode {
   const modes = new Set(strategies.map((strategy) => strategy.source.dataMode));
-  if (modes.has("HYBRID") || (modes.has("LIVE") && modes.size > 1)) return "HYBRID";
+  if (modes.has("HYBRID") || (modes.has("LIVE") && modes.size > 1))
+    return "HYBRID";
   if (modes.has("LIVE")) return "LIVE";
   if (modes.has("CUSTOM")) return "CUSTOM";
   return "DEMO";
@@ -109,16 +114,24 @@ export function applyStrategyDataOverride(
   const customPoints = override.equity
     .filter((point) => pointTime(point) < handover)
     .map((point) => ({ ...point, source: "CUSTOM" as const }));
-  const upstreamIsLive = strategy.source.dataMode === "LIVE" || strategy.source.dataMode === "HYBRID";
-  const livePoints = override.mode === "HYBRID" && upstreamIsLive
-    ? strategy.equity
-        .filter((point) => pointTime(point) >= handover)
-        .map((point) => ({ ...point, source: "LIVE" as const }))
-    : [];
+  const upstreamIsLive =
+    strategy.source.dataMode === "LIVE" ||
+    strategy.source.dataMode === "HYBRID";
+  const livePoints =
+    override.mode === "HYBRID" && upstreamIsLive
+      ? strategy.equity
+          .filter((point) => pointTime(point) >= handover)
+          .map((point) => ({ ...point, source: "LIVE" as const }))
+      : [];
   const mode: DataMode = livePoints.length ? "HYBRID" : "CUSTOM";
-  const equity = sortedUnique(customPoints.length || livePoints.length
-    ? [...customPoints, ...livePoints]
-    : strategy.equity.map((point) => ({ ...point, source: "CUSTOM" as const })));
+  const equity = sortedUnique(
+    customPoints.length || livePoints.length
+      ? [...customPoints, ...livePoints]
+      : strategy.equity.map((point) => ({
+          ...point,
+          source: "CUSTOM" as const,
+        })),
+  );
   const latest = equity.at(-1);
 
   return {
@@ -126,17 +139,20 @@ export function applyStrategyDataOverride(
     metrics: {
       ...strategy.metrics,
       ...override.metrics,
-      balance: override.metrics.balance ?? latest?.balance ?? strategy.metrics.balance,
-      equity: override.metrics.equity ?? latest?.equity ?? strategy.metrics.equity,
+      balance:
+        override.metrics.balance ?? latest?.balance ?? strategy.metrics.balance,
+      equity:
+        override.metrics.equity ?? latest?.equity ?? strategy.metrics.equity,
     },
     equity,
     positions: mode === "HYBRID" ? strategy.positions : [],
     recentTrades: mode === "HYBRID" ? strategy.recentTrades : [],
     source: {
       ...strategy.source,
-      provider: mode === "HYBRID"
-        ? `${strategy.source.provider}+eaxau-custom`
-        : "eaxau-custom",
+      provider:
+        mode === "HYBRID"
+          ? `${strategy.source.provider}+eaxau-custom`
+          : "eaxau-custom",
       label: mode === "HYBRID" ? "自定义历史 + 实盘接管" : "后台自定义历史",
       dataMode: mode,
       freshness: mode === "HYBRID" ? strategy.source.freshness : "FRESH",
@@ -147,7 +163,10 @@ export function applyStrategyDataOverride(
 }
 
 function aggregateEquity(strategies: CoreStrategy[]) {
-  const longest = Math.min(60, Math.max(0, ...strategies.map((item) => item.equity.length)));
+  const longest = Math.min(
+    60,
+    Math.max(0, ...strategies.map((item) => item.equity.length)),
+  );
   const points: EquityPoint[] = [];
   for (let offset = longest; offset > 0; offset -= 1) {
     const samples = strategies
@@ -155,7 +174,10 @@ function aggregateEquity(strategies: CoreStrategy[]) {
       .filter(Boolean) as EquityPoint[];
     if (!samples.length) continue;
     points.push({
-      timestamp: samples.map((point) => point.timestamp).sort().at(-1)!,
+      timestamp: samples
+        .map((point) => point.timestamp)
+        .sort()
+        .at(-1)!,
       balance: samples.reduce((sum, point) => sum + point.balance, 0),
       equity: samples.reduce((sum, point) => sum + point.equity, 0),
       source: sourceMode(strategies) === "LIVE" ? "LIVE" : undefined,
@@ -169,7 +191,8 @@ function maxDrawdownPct(points: EquityPoint[]) {
   let maximum = 0;
   for (const point of points) {
     peak = Math.max(peak, point.equity);
-    if (peak > 0) maximum = Math.max(maximum, ((peak - point.equity) / peak) * 100);
+    if (peak > 0)
+      maximum = Math.max(maximum, ((peak - point.equity) / peak) * 100);
   }
   return Math.round(maximum * 100) / 100;
 }
@@ -183,14 +206,24 @@ export function rebuildOverviewFromStrategies(
   const previous = equitySeries.at(-2);
   const latest = equitySeries.at(-1);
   const mode = sourceMode(strategies);
-  const freshnessRank = { FRESH: 0, STALE: 1, OFFLINE: 2 } as const;
-  const freshness = strategies
-    .map((strategy) => strategy.source.freshness)
-    .sort((a, b) => freshnessRank[b] - freshnessRank[a])[0] ?? "OFFLINE";
-  const observedAt = strategies
-    .map((strategy) => strategy.source.observedAt)
-    .sort()
-    .at(-1) ?? overview.source.observedAt;
+  const availableStrategies = strategies.filter(
+    (strategy) => strategy.source.freshness !== "OFFLINE",
+  );
+  const hasPartialAvailability = availableStrategies.length < strategies.length;
+  const freshness =
+    availableStrategies.length === 0
+      ? "OFFLINE"
+      : hasPartialAvailability ||
+          availableStrategies.some(
+            (strategy) => strategy.source.freshness === "STALE",
+          )
+        ? "STALE"
+        : "FRESH";
+  const observedAt =
+    (availableStrategies.length ? availableStrategies : strategies)
+      .map((strategy) => strategy.source.observedAt)
+      .sort()
+      .at(-1) ?? overview.source.observedAt;
 
   return {
     ...overview,
@@ -199,17 +232,21 @@ export function rebuildOverviewFromStrategies(
       ...overview.portfolio,
       equity: latest?.equity ?? overview.portfolio.equity,
       balance: latest?.balance ?? overview.portfolio.balance,
-      todayPnlPct: latest && previous && previous.equity
-        ? ((latest.equity - previous.equity) / previous.equity) * 100
-        : overview.portfolio.todayPnlPct,
-      return90dPct: latest && first && first.equity
-        ? ((latest.equity - first.equity) / first.equity) * 100
-        : overview.portfolio.return90dPct,
+      todayPnlPct:
+        latest && previous && previous.equity
+          ? ((latest.equity - previous.equity) / previous.equity) * 100
+          : overview.portfolio.todayPnlPct,
+      return90dPct:
+        latest && first && first.equity
+          ? ((latest.equity - first.equity) / first.equity) * 100
+          : overview.portfolio.return90dPct,
       maxDrawdownPct: equitySeries.length
         ? maxDrawdownPct(equitySeries)
         : overview.portfolio.maxDrawdownPct,
-      activeStrategies: strategies.filter((strategy) => strategy.source.freshness !== "OFFLINE").length,
-      equitySeries: equitySeries.length ? equitySeries : overview.portfolio.equitySeries,
+      activeStrategies: availableStrategies.length,
+      equitySeries: equitySeries.length
+        ? equitySeries
+        : overview.portfolio.equitySeries,
     },
     source: {
       ...overview.source,
@@ -219,7 +256,10 @@ export function rebuildOverviewFromStrategies(
       receivedAt: new Date().toISOString(),
       freshness,
       dataMode: mode,
-      delaySeconds: Math.max(0, ...strategies.map((strategy) => strategy.source.delaySeconds)),
+      delaySeconds: Math.max(
+        0,
+        ...availableStrategies.map((strategy) => strategy.source.delaySeconds),
+      ),
     },
   };
 }

@@ -14,7 +14,9 @@ describe("V2 strategy data overrides", () => {
 
     expect(applied.source.dataMode).toBe("CUSTOM");
     expect(applied.positions).toEqual([]);
-    expect(applied.equity.every((point) => point.source === "CUSTOM")).toBe(true);
+    expect(applied.equity.every((point) => point.source === "CUSTOM")).toBe(
+      true,
+    );
   });
 
   it("keeps custom points before handover and live points after it", () => {
@@ -22,7 +24,10 @@ describe("V2 strategy data overrides", () => {
     const handover = base.equity.at(-2)!.timestamp;
     const live = {
       ...base,
-      equity: base.equity.map((point) => ({ ...point, source: "LIVE" as const })),
+      equity: base.equity.map((point) => ({
+        ...point,
+        source: "LIVE" as const,
+      })),
       source: { ...base.source, dataMode: "LIVE" as const },
     };
     const override = {
@@ -45,9 +50,28 @@ describe("V2 strategy data overrides", () => {
       DEMO_STRATEGIES[0],
       createStrategyDataOverrideSample(DEMO_STRATEGIES[0]),
     );
-    const rebuilt = rebuildOverviewFromStrategies(overview, [first, ...DEMO_STRATEGIES.slice(1)]);
+    const rebuilt = rebuildOverviewFromStrategies(overview, [
+      first,
+      ...DEMO_STRATEGIES.slice(1),
+    ]);
 
     expect(rebuilt.source.dataMode).toBe("CUSTOM");
+    expect(rebuilt.source.freshness).toBe("STALE");
+    expect(rebuilt.portfolio.activeStrategies).toBe(5);
     expect(rebuilt.portfolio.equitySeries.length).toBeGreaterThan(0);
+  });
+
+  it("marks the portfolio offline only when every strategy is offline", () => {
+    const strategies = DEMO_STRATEGIES.map((strategy) => ({
+      ...strategy,
+      source: { ...strategy.source, freshness: "OFFLINE" as const },
+    }));
+    const rebuilt = rebuildOverviewFromStrategies(
+      createDemoOverview(),
+      strategies,
+    );
+
+    expect(rebuilt.source.freshness).toBe("OFFLINE");
+    expect(rebuilt.portfolio.activeStrategies).toBe(0);
   });
 });

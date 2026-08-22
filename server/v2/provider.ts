@@ -13,6 +13,7 @@ import {
   DEMO_PLATFORMS,
   DEMO_STRATEGIES,
 } from "./demo-data";
+import { buildSelectionAwareAllocation } from "./allocation-recommendation";
 import { HttpQuantDataProvider } from "./http-provider";
 import { NiubangQuantDataProvider } from "./niubang-provider";
 
@@ -108,21 +109,16 @@ export class DemoQuantDataProvider implements QuantDataProvider {
             ]
           : DEFAULT_ALLOCATION.platformBuckets;
 
-    return {
-      ...DEFAULT_ALLOCATION,
-      id: `demo-${input.riskProfile.toLowerCase()}-${input.capital.amount}`,
-      capital: input.capital,
-      platformBuckets: template,
-      riskBudget: {
-        profile: input.riskProfile,
-        maxDrawdownPct:
-          input.riskProfile === "LOW"
-            ? 8
-            : input.riskProfile === "HIGH"
-              ? 18
-              : 12,
+    return buildSelectionAwareAllocation({
+      request: input,
+      base: {
+        ...DEFAULT_ALLOCATION,
+        platformBuckets: template,
       },
-    };
+      strategies: DEMO_STRATEGIES,
+      platforms: DEMO_PLATFORMS,
+      idPrefix: "demo",
+    });
   }
 }
 
@@ -140,7 +136,9 @@ function niubangStrategyMap() {
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return Object.fromEntries(
-      Object.entries(parsed).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+      Object.entries(parsed).filter(
+        (entry): entry is [string, string] => typeof entry[1] === "string",
+      ),
     );
   } catch (error) {
     console.error("[v2-provider] invalid NIUBANG_STRATEGY_MAP:", error);
@@ -159,7 +157,9 @@ export function getV2Provider(): QuantDataProvider {
     provider = new DemoQuantDataProvider();
   } else if (selected === "NIUBANG") {
     if (!niubangUrl) {
-      console.warn("[v2-provider] V2_DATA_PROVIDER=NIUBANG but NIUBANG_DATA_URL is empty; using demo data.");
+      console.warn(
+        "[v2-provider] V2_DATA_PROVIDER=NIUBANG but NIUBANG_DATA_URL is empty; using demo data.",
+      );
       provider = new DemoQuantDataProvider();
     } else {
       provider = new NiubangQuantDataProvider({
@@ -171,7 +171,9 @@ export function getV2Provider(): QuantDataProvider {
     }
   } else if (selected === "HTTP") {
     if (!baseUrl) {
-      console.warn("[v2-provider] V2_DATA_PROVIDER=HTTP but QUANT_DATA_CORE_URL is empty; using demo data.");
+      console.warn(
+        "[v2-provider] V2_DATA_PROVIDER=HTTP but QUANT_DATA_CORE_URL is empty; using demo data.",
+      );
       provider = new DemoQuantDataProvider();
     } else {
       provider = new HttpQuantDataProvider({
@@ -181,7 +183,9 @@ export function getV2Provider(): QuantDataProvider {
       });
     }
   } else if (selected) {
-    console.warn(`[v2-provider] unsupported V2_DATA_PROVIDER=${selected}; using demo data.`);
+    console.warn(
+      `[v2-provider] unsupported V2_DATA_PROVIDER=${selected}; using demo data.`,
+    );
     provider = new DemoQuantDataProvider();
   } else if (niubangUrl) {
     provider = new NiubangQuantDataProvider({

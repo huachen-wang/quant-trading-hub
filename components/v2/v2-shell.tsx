@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { usePathname, useRouter } from "expo-router";
-import { useMemo, useState, type ReactNode } from "react";
+import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
+import { useState, type ReactNode } from "react";
 import {
   Platform,
   Pressable,
@@ -18,42 +18,59 @@ import { V2, V2_LAYOUT } from "./tokens";
 type V2ShellProps = { children: ReactNode };
 
 const NAV_ITEMS = [
-  { label: "六策略", path: "/", icon: "insights" },
-  { label: "自主分仓", path: "/v2-preview/allocate", icon: "account-tree" },
-  { label: "账户观察", path: "/v2-preview/accounts", icon: "monitor-heart" },
-  { label: "EA 资料库", path: "/v2-preview/ea-library", icon: "inventory-2" },
+  { label: "核心策略", path: "/", activeOn: "/", icon: "insights" },
+  {
+    label: "方案选配",
+    path: "/?configure=1",
+    activeOn: "CONFIGURE",
+    icon: "tune",
+  },
+  {
+    label: "实盘账户",
+    path: "/v2-preview/accounts",
+    activeOn: "/v2-preview/accounts",
+    icon: "monitor-heart",
+  },
+  {
+    label: "EA 商城",
+    path: "/market",
+    activeOn: "/market",
+    icon: "storefront",
+  },
 ] as const;
 
 export function V2Shell({ children }: V2ShellProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { configure } = useLocalSearchParams<{ configure?: string }>();
   const { width } = useWindowDimensions();
   const isMobile = width < 760;
   const [contactOpen, setContactOpen] = useState(false);
   const { data: status } = trpc.v2.status.useQuery(undefined, {
     staleTime: 60_000,
   });
-  const providerLabel = status?.provider === "HTTP"
-    ? "DATA CORE"
-    : status?.provider === "NIUBANG"
-      ? "NIUBANG DATA"
-      : "DEMO";
-  const connectedProvider = status?.provider === "HTTP" || status?.provider === "NIUBANG";
-
-  const activePath = useMemo(() => {
-    return (
-      [...NAV_ITEMS]
-        .reverse()
-        .find((item) =>
-          item.path === "/"
-            ? pathname === "/" || pathname === "/v2-preview"
-            : pathname.startsWith(item.path),
-        )?.path ?? "/"
-    );
-  }, [pathname]);
+  const providerLabel =
+    status?.provider === "HTTP"
+      ? "DATA CORE"
+      : status?.provider === "NIUBANG"
+        ? "NIUBANG DATA"
+        : "DEMO";
+  const connectedProvider =
+    status?.provider === "HTTP" || status?.provider === "NIUBANG";
 
   const nav = NAV_ITEMS.map((item) => {
-    const active = activePath === item.path;
+    const active =
+      item.activeOn === "/"
+        ? (pathname === "/" ||
+            pathname === "/v2-preview" ||
+            pathname.startsWith("/v2-preview/strategies/")) &&
+          configure !== "1"
+        : item.activeOn === "CONFIGURE"
+          ? (pathname === "/" || pathname === "/v2-preview") &&
+            configure === "1"
+          : item.activeOn
+            ? pathname.startsWith(item.activeOn)
+            : false;
     return (
       <Pressable
         key={item.path}
@@ -86,9 +103,12 @@ export function V2Shell({ children }: V2ShellProps) {
         <View style={styles.headerInner}>
           <Pressable
             accessibilityRole="link"
-            accessibilityLabel="返回 EAXAU V2 首页"
+            accessibilityLabel="返回 EAXAU 首页"
             onPress={() => router.push("/" as never)}
-            style={({ pressed }) => [styles.brandButton, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.brandButton,
+              pressed && styles.pressed,
+            ]}
           >
             <Text style={styles.brand}>EAXAU</Text>
             <View style={styles.brandRule} />
@@ -110,22 +130,28 @@ export function V2Shell({ children }: V2ShellProps) {
                 style={[
                   styles.providerDot,
                   {
-                    backgroundColor:
-                      connectedProvider ? V2.green : V2.amber,
+                    backgroundColor: connectedProvider ? V2.green : V2.amber,
                   },
                 ]}
               />
-              <Text style={styles.providerText}>
-                {providerLabel}
-              </Text>
+              <Text style={styles.providerText}>{providerLabel}</Text>
             </View>
             <Pressable
               accessibilityRole="button"
               onPress={() => setContactOpen(true)}
-              style={({ pressed }) => [styles.contactButton, pressed && styles.pressed]}
+              style={({ pressed }) => [
+                styles.contactButton,
+                pressed && styles.pressed,
+              ]}
             >
-              <MaterialIcons name="support-agent" size={18} color={V2.background} />
-              <Text style={styles.contactText}>{isMobile ? "联系" : "联系顾问"}</Text>
+              <MaterialIcons
+                name="support-agent"
+                size={18}
+                color={V2.background}
+              />
+              <Text style={styles.contactText}>
+                {isMobile ? "联系" : "联系顾问"}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -148,13 +174,18 @@ export function V2Shell({ children }: V2ShellProps) {
           <View style={styles.disabledState}>
             <MaterialIcons name="construction" size={30} color={V2.amber} />
             <Text style={styles.disabledTitle}>V2 预览暂未开放</Text>
-            <Text style={styles.disabledText}>该版本当前处于内部验收阶段，请联系管理员开放。</Text>
+            <Text style={styles.disabledText}>
+              该版本当前处于内部验收阶段，请联系管理员开放。
+            </Text>
           </View>
         ) : (
           children
         )}
       </View>
-      <ContactModal visible={contactOpen} onClose={() => setContactOpen(false)} />
+      <ContactModal
+        visible={contactOpen}
+        onClose={() => setContactOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -192,7 +223,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   brandRule: { width: 76, height: 2, marginTop: 3, backgroundColor: V2.gold },
-  desktopNav: { flex: 1, height: 68, flexDirection: "row", alignItems: "stretch" },
+  desktopNav: {
+    flex: 1,
+    height: 68,
+    flexDirection: "row",
+    alignItems: "stretch",
+  },
   navItem: {
     minWidth: 104,
     height: "100%",
@@ -211,10 +247,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     borderRadius: 4,
   },
-  navItemActive: { borderBottomColor: V2.gold, backgroundColor: "rgba(216,188,131,0.06)" },
-  navText: { color: V2.textMuted, fontSize: 13, fontWeight: "700", letterSpacing: 0 },
+  navItemActive: {
+    borderBottomColor: V2.gold,
+    backgroundColor: "rgba(216,188,131,0.06)",
+  },
+  navText: {
+    color: V2.textMuted,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0,
+  },
   navTextActive: { color: V2.text },
-  headerActions: { marginLeft: "auto", flexDirection: "row", alignItems: "center", gap: 10 },
+  headerActions: {
+    marginLeft: "auto",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   providerState: {
     minHeight: 34,
     paddingHorizontal: 10,
@@ -226,7 +275,12 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   providerDot: { width: 7, height: 7, borderRadius: 4 },
-  providerText: { color: V2.textMuted, fontSize: 10, fontWeight: "900", letterSpacing: 0 },
+  providerText: {
+    color: V2.textMuted,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 0,
+  },
   contactButton: {
     minHeight: 38,
     paddingHorizontal: 13,
@@ -237,7 +291,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 7,
   },
-  contactText: { color: V2.background, fontSize: 12, fontWeight: "900", letterSpacing: 0 },
+  contactText: {
+    color: V2.background,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 0,
+  },
   mobileNavWrap: {
     minHeight: 45,
     borderBottomWidth: 1,
@@ -246,8 +305,20 @@ const styles = StyleSheet.create({
   },
   mobileNav: { paddingHorizontal: 8, alignItems: "center", gap: 2 },
   content: { flex: 1, minHeight: 0 },
-  disabledState: { flex: 1, minHeight: 420, alignItems: "center", justifyContent: "center", gap: 9, padding: 24 },
+  disabledState: {
+    flex: 1,
+    minHeight: 420,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 9,
+    padding: 24,
+  },
   disabledTitle: { color: V2.text, fontSize: 17, fontWeight: "900" },
-  disabledText: { color: V2.textMuted, fontSize: 12, textAlign: "center", lineHeight: 18 },
+  disabledText: {
+    color: V2.textMuted,
+    fontSize: 12,
+    textAlign: "center",
+    lineHeight: 18,
+  },
   pressed: { opacity: 0.72 },
 });

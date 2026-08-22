@@ -78,18 +78,30 @@ type StrategySeed = Omit<
 };
 
 function buildStrategy(input: StrategySeed): CoreStrategy {
-  const equity = createEquitySeries(input.seed, input.metrics.balance ?? 10_000);
+  const equity = createEquitySeries(
+    input.seed,
+    input.metrics.balance ?? 10_000,
+  );
   const symbol = input.instruments[0] || "XAUUSD";
   const direction = input.seed % 2 === 0 ? "BUY" : "SELL";
-  const basePrice = symbol === "BTCUSD" ? 116_240 : symbol === "EURUSD" ? 1.1624 : 3_342.6;
+  const basePrice =
+    symbol === "BTCUSD" ? 116_240 : symbol === "EURUSD" ? 1.1624 : 3_342.6;
   const currentPrice = basePrice * (direction === "BUY" ? 1.0021 : 0.9984);
   const freshness = input.freshness ?? "FRESH";
-  const galleryImages = [...new Set([
-    input.artwork,
-    STRATEGY_GALLERY_ASSETS[(input.seed * 2 + 3) % STRATEGY_GALLERY_ASSETS.length],
-    STRATEGY_GALLERY_ASSETS[(input.seed * 3 + 5) % STRATEGY_GALLERY_ASSETS.length],
-    STRATEGY_GALLERY_ASSETS[(input.seed * 5 + 1) % STRATEGY_GALLERY_ASSETS.length],
-  ])].slice(0, 3);
+  const galleryImages = [
+    ...new Set([
+      input.artwork,
+      STRATEGY_GALLERY_ASSETS[
+        (input.seed * 2 + 3) % STRATEGY_GALLERY_ASSETS.length
+      ],
+      STRATEGY_GALLERY_ASSETS[
+        (input.seed * 3 + 5) % STRATEGY_GALLERY_ASSETS.length
+      ],
+      STRATEGY_GALLERY_ASSETS[
+        (input.seed * 5 + 1) % STRATEGY_GALLERY_ASSETS.length
+      ],
+    ]),
+  ].slice(0, 3);
 
   return {
     ...input,
@@ -155,7 +167,8 @@ function buildStrategy(input: StrategySeed): CoreStrategy {
         items: [
           {
             title: "净值数据链路",
-            detail: "当前为确定性模拟曲线；接入 Quant Data Core 后替换为带来源签名的账户快照。",
+            detail:
+              "当前为确定性模拟曲线；接入 Quant Data Core 后替换为带来源签名的账户快照。",
             status: "DEMO",
             observedAt: source(freshness).observedAt,
           },
@@ -172,12 +185,14 @@ function buildStrategy(input: StrategySeed): CoreStrategy {
         heading: "策略资料",
         items: galleryImages.map((url, index) => ({
           id: `${input.id}-gallery-media-${index + 1}`,
-          title: ["策略视觉", "执行结构", "风险观察"][index] ?? `资料 ${index + 1}`,
-          caption: [
-            `${input.shortName}的视觉识别与核心交易场景。`,
-            `用于说明${input.style}的信号与执行关系。`,
-            "当前为展示占位，后续可替换为实盘截图、参数说明或核验材料。",
-          ][index] ?? "策略展示资料。",
+          title:
+            ["策略视觉", "执行结构", "风险观察"][index] ?? `资料 ${index + 1}`,
+          caption:
+            [
+              `${input.shortName}的视觉识别与核心交易场景。`,
+              `用于说明${input.style}的信号与执行关系。`,
+              "当前为展示占位，后续可替换为实盘截图、参数说明或核验材料。",
+            ][index] ?? "策略展示资料。",
           thumbnailUrl: url,
           fullUrl: url,
           alt: `${input.shortName} ${["策略视觉", "执行结构", "风险观察"][index] ?? "资料"}`,
@@ -219,16 +234,25 @@ function buildStrategy(input: StrategySeed): CoreStrategy {
         items: [
           {
             question: "可以直接连接真实账户吗？",
-            answer: "当前预览只生成方案与接入步骤，不下单、不自动调仓。正式连接需完成账户授权与风险确认。",
+            answer:
+              "当前预览只生成方案与接入步骤，不下单、不自动调仓。正式连接需完成账户授权与风险确认。",
           },
           {
             question: "页面里的收益是真实收益吗？",
-            answer: "不是。带 DEMO 标识的数据用于产品评审；只有绑定并核验数据源后才会显示 LIVE。",
+            answer:
+              "不是。带 DEMO 标识的数据用于产品评审；只有绑定并核验数据源后才会显示 LIVE。",
           },
         ],
       },
     ],
-    source: source(freshness, freshness === "STALE" ? 18 : freshness === "OFFLINE" ? 72 : 0.03 + input.seed * 0.01),
+    source: source(
+      freshness,
+      freshness === "STALE"
+        ? 18
+        : freshness === "OFFLINE"
+          ? 72
+          : 0.03 + input.seed * 0.01,
+    ),
   };
 }
 
@@ -440,7 +464,12 @@ export const DEMO_PLATFORMS: PlatformProfile[] = [
     minimumCapital: 3_000,
     accountType: "Raw Spread",
     summary: "偏重低延迟执行与黄金短线适配。",
-    supportedStrategyIds: ["jingge-v51", "night-hunter", "gold-reaper", "black-aura"],
+    supportedStrategyIds: [
+      "jingge-v51",
+      "night-hunter",
+      "gold-reaper",
+      "black-aura",
+    ],
     commercialTerms: {
       version: "DEMO-ATP-2026.08",
       effectiveFrom: "2026-08-01",
@@ -466,7 +495,12 @@ export const DEMO_PLATFORMS: PlatformProfile[] = [
     minimumCapital: 5_000,
     accountType: "ECN Pro",
     summary: "偏重多品种覆盖与稳定成本结构。",
-    supportedStrategyIds: ["jingge-v51", "night-hunter", "quantum-queen", "black-aura"],
+    supportedStrategyIds: [
+      "jingge-v51",
+      "night-hunter",
+      "quantum-queen",
+      "black-aura",
+    ],
     commercialTerms: {
       version: "DEMO-MDN-2026.08",
       effectiveFrom: "2026-08-01",
@@ -492,7 +526,13 @@ export const DEMO_PLATFORMS: PlatformProfile[] = [
     minimumCapital: 8_000,
     accountType: "Multi Asset",
     summary: "偏重 MT5、多资产和独立风险桶。",
-    supportedStrategyIds: ["jingge-v51", "quantum-queen", "gold-reaper", "black-aura", "bitcoin-core"],
+    supportedStrategyIds: [
+      "jingge-v51",
+      "quantum-queen",
+      "gold-reaper",
+      "black-aura",
+      "bitcoin-core",
+    ],
     commercialTerms: {
       version: "DEMO-VTX-2026.08",
       effectiveFrom: "2026-08-01",
@@ -548,7 +588,7 @@ export const DEFAULT_ALLOCATION: AllocationDraft = {
 export const DEMO_ACCOUNTS: ServiceAccount[] = [
   {
     id: "managed-demo-01",
-    name: "签约管理观察账户",
+    name: "资管模式观察账户",
     serviceMode: "MANAGED_CONTRACT",
     contractStatus: "ACTIVE",
     platformIds: ["meridian"],
@@ -570,11 +610,17 @@ export const DEMO_ACCOUNTS: ServiceAccount[] = [
   },
   {
     id: "self-demo-01",
-    name: "自主分仓演示账户",
+    name: "券商模式演示账户",
     serviceMode: "SELF_ALLOCATED",
     contractStatus: "NONE",
     platformIds: ["atlas-prime", "meridian", "vertex"],
-    strategyIds: ["jingge-v51", "night-hunter", "quantum-queen", "black-aura", "gold-reaper"],
+    strategyIds: [
+      "jingge-v51",
+      "night-hunter",
+      "quantum-queen",
+      "black-aura",
+      "gold-reaper",
+    ],
     currency: "USD",
     balance: 50_000,
     equity: 51_194,
@@ -585,15 +631,23 @@ export const DEMO_ACCOUNTS: ServiceAccount[] = [
     maxDrawdownPct: 3.8,
     connectionStatus: "DEGRADED",
     equitySeries: createEquitySeries(11, 47_500, 90),
-    positions: [...DEMO_STRATEGIES[1].positions, ...DEMO_STRATEGIES[3].positions],
-    recentTrades: [...DEMO_STRATEGIES[0].recentTrades, ...DEMO_STRATEGIES[4].recentTrades],
+    positions: [
+      ...DEMO_STRATEGIES[1].positions,
+      ...DEMO_STRATEGIES[3].positions,
+    ],
+    recentTrades: [
+      ...DEMO_STRATEGIES[0].recentTrades,
+      ...DEMO_STRATEGIES[4].recentTrades,
+    ],
     allocation: DEFAULT_ALLOCATION,
     source: source("STALE", 1.2),
   },
 ];
 
 function aggregateEquity(strategies: CoreStrategy[]): EquityPoint[] {
-  const pointCount = Math.min(...strategies.map((strategy) => strategy.equity.length));
+  const pointCount = Math.min(
+    ...strategies.map((strategy) => strategy.equity.length),
+  );
   return Array.from({ length: pointCount }, (_, index) => {
     const rows = strategies.map((strategy) => strategy.equity[index]);
     return {
@@ -605,9 +659,18 @@ function aggregateEquity(strategies: CoreStrategy[]): EquityPoint[] {
 }
 
 export function createDemoOverview(): V2Overview {
-  const active = DEMO_STRATEGIES.filter((strategy) => strategy.source.freshness !== "OFFLINE");
-  const balance = active.reduce((sum, strategy) => sum + (strategy.metrics.balance ?? 0), 0);
-  const equity = active.reduce((sum, strategy) => sum + (strategy.metrics.equity ?? strategy.metrics.balance ?? 0), 0);
+  const active = DEMO_STRATEGIES.filter(
+    (strategy) => strategy.source.freshness !== "OFFLINE",
+  );
+  const balance = active.reduce(
+    (sum, strategy) => sum + (strategy.metrics.balance ?? 0),
+    0,
+  );
+  const equity = active.reduce(
+    (sum, strategy) =>
+      sum + (strategy.metrics.equity ?? strategy.metrics.balance ?? 0),
+    0,
+  );
 
   return {
     headline: "六策略量化组合",

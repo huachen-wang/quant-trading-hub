@@ -12,6 +12,7 @@ import {
   DEMO_PLATFORMS,
   DEMO_STRATEGIES,
 } from "./demo-data";
+import { buildSelectionAwareAllocation } from "./allocation-recommendation";
 import { rebuildOverviewFromStrategies } from "./data-overrides";
 import type { QuantDataProvider } from "./provider";
 
@@ -37,26 +38,36 @@ const niubangDetailSchema = z.object({
     accountEquityUsd: z.number().nonnegative(),
   }),
   fullEquityPoints: z.array(chartPointSchema).optional().default([]),
-  currentPositions: z.array(z.object({
-    id: z.union([z.number(), z.string()]),
-    symbol: z.string(),
-    direction: z.enum(["BUY", "SELL", "多", "空"]),
-    lots: z.number(),
-    openPrice: z.number(),
-    currentPrice: z.number(),
-    floatingPnl: z.number(),
-    openedAt: z.string().datetime(),
-  })).optional().default([]),
-  recentTrades: z.array(z.object({
-    id: z.union([z.number(), z.string()]),
-    symbol: z.string(),
-    direction: z.enum(["BUY", "SELL", "多", "空"]),
-    lots: z.number().nullable().optional(),
-    entryPrice: z.number().nullable().optional(),
-    exitPrice: z.number().nullable().optional(),
-    pnlUsd: z.number(),
-    tradeTime: z.string().datetime(),
-  })).optional().default([]),
+  currentPositions: z
+    .array(
+      z.object({
+        id: z.union([z.number(), z.string()]),
+        symbol: z.string(),
+        direction: z.enum(["BUY", "SELL", "多", "空"]),
+        lots: z.number(),
+        openPrice: z.number(),
+        currentPrice: z.number(),
+        floatingPnl: z.number(),
+        openedAt: z.string().datetime(),
+      }),
+    )
+    .optional()
+    .default([]),
+  recentTrades: z
+    .array(
+      z.object({
+        id: z.union([z.number(), z.string()]),
+        symbol: z.string(),
+        direction: z.enum(["BUY", "SELL", "多", "空"]),
+        lots: z.number().nullable().optional(),
+        entryPrice: z.number().nullable().optional(),
+        exitPrice: z.number().nullable().optional(),
+        pnlUsd: z.number(),
+        tradeTime: z.string().datetime(),
+      }),
+    )
+    .optional()
+    .default([]),
   lastSyncedAt: z.string().datetime().nullable().optional(),
   updatedAt: z.string().datetime(),
   historyHandoverAt: z.string().datetime().nullable().optional(),
@@ -75,7 +86,8 @@ function returnOverPeriod(points: EquityPoint[], days: number) {
   const latest = points.at(-1);
   if (!latest) return null;
   const cutoff = Date.parse(latest.timestamp) - days * 86_400_000;
-  const first = points.find((point) => Date.parse(point.timestamp) >= cutoff) ?? points[0];
+  const first =
+    points.find((point) => Date.parse(point.timestamp) >= cutoff) ?? points[0];
   if (!first?.equity) return null;
   return ((latest.equity - first.equity) / first.equity) * 100;
 }
@@ -95,11 +107,18 @@ function freshnessFor(observedAt: string) {
 }
 
 function normalizeDirection(direction: "BUY" | "SELL" | "多" | "空") {
-  return direction === "BUY" || direction === "多" ? "BUY" as const : "SELL" as const;
+  return direction === "BUY" || direction === "多"
+    ? ("BUY" as const)
+    : ("SELL" as const);
 }
 
-function positiveOrFallback(value: number | null | undefined, fallback: number) {
-  return value != null && Number.isFinite(value) && value > 0 ? value : fallback;
+function positiveOrFallback(
+  value: number | null | undefined,
+  fallback: number,
+) {
+  return value != null && Number.isFinite(value) && value > 0
+    ? value
+    : fallback;
 }
 
 function resolveMediaUrl(raw: string, baseUrl?: string) {
@@ -123,7 +142,7 @@ export function mapNiubangDetailToStrategy(
     timestamp: point.time,
     equity: point.equityValue,
     balance: point.equityValue,
-    source: point.source === "live" ? "LIVE" as const : "CUSTOM" as const,
+    source: point.source === "live" ? ("LIVE" as const) : ("CUSTOM" as const),
   }));
   const latestEquity = equity.at(-1)?.equity ?? detail.metrics.accountEquityUsd;
   const galleryImages = [detail.coverImageUrl, ...detail.images]
@@ -138,8 +157,12 @@ export function mapNiubangDetailToStrategy(
           heading: "实盘资料",
           items: galleryImages.slice(0, 8).map((url, index) => ({
             id: `${base.id}-niubang-${index + 1}`,
-            title: index === 0 ? "策略主图" : `资料 ${String(index + 1).padStart(2, "0")}`,
-            caption: "来自已映射策略档案的展示资料，具体口径以图片说明和同步时间为准。",
+            title:
+              index === 0
+                ? "策略主图"
+                : `资料 ${String(index + 1).padStart(2, "0")}`,
+            caption:
+              "来自已映射策略档案的展示资料，具体口径以图片说明和同步时间为准。",
             thumbnailUrl: url,
             fullUrl: url,
             alt: `${base.shortName} 实盘资料 ${index + 1}`,
@@ -163,7 +186,10 @@ export function mapNiubangDetailToStrategy(
       tradeCount: detail.metrics.tradeCount,
       balance: latestEquity,
       equity: latestEquity,
-      floatingPnl: detail.currentPositions.reduce((sum, item) => sum + item.floatingPnl, 0),
+      floatingPnl: detail.currentPositions.reduce(
+        (sum, item) => sum + item.floatingPnl,
+        0,
+      ),
     },
     equity,
     positions: detail.currentPositions.map((item) => ({
@@ -182,7 +208,10 @@ export function mapNiubangDetailToStrategy(
       side: normalizeDirection(item.direction),
       volume: positiveOrFallback(item.lots, 0.01),
       openPrice: positiveOrFallback(item.entryPrice, 0.00001),
-      closePrice: positiveOrFallback(item.exitPrice ?? item.entryPrice, 0.00001),
+      closePrice: positiveOrFallback(
+        item.exitPrice ?? item.entryPrice,
+        0.00001,
+      ),
       pnl: item.pnlUsd,
       openedAt: item.tradeTime,
       closedAt: item.tradeTime,
@@ -190,12 +219,20 @@ export function mapNiubangDetailToStrategy(
     contentBlocks,
     source: {
       provider: "niubang.ai",
-      label: mode === "HYBRID" ? "牛帮迁移历史 + 实盘" : mode === "LIVE" ? "牛帮实盘" : "牛帮自定义历史",
+      label:
+        mode === "HYBRID"
+          ? "牛帮迁移历史 + 实盘"
+          : mode === "LIVE"
+            ? "牛帮实盘"
+            : "牛帮自定义历史",
       observedAt,
       receivedAt: new Date().toISOString(),
       freshness: freshnessFor(observedAt),
       dataMode: mode,
-      delaySeconds: Math.max(0, Math.round((Date.now() - Date.parse(observedAt)) / 1_000)),
+      delaySeconds: Math.max(
+        0,
+        Math.round((Date.now() - Date.parse(observedAt)) / 1_000),
+      ),
       historyHandoverAt: detail.historyHandoverAt ?? null,
     },
   };
@@ -204,7 +241,10 @@ export function mapNiubangDetailToStrategy(
 export class NiubangQuantDataProvider implements QuantDataProvider {
   readonly kind = "NIUBANG" as const;
   private readonly baseUrl: string;
-  private readonly cache = new Map<string, { expiresAt: number; value: CoreStrategy }>();
+  private readonly cache = new Map<
+    string,
+    { expiresAt: number; value: CoreStrategy }
+  >();
 
   constructor(private readonly options: NiubangProviderOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
@@ -212,18 +252,27 @@ export class NiubangQuantDataProvider implements QuantDataProvider {
 
   private async detail(slug: string) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      this.options.timeoutMs,
+    );
     const input = encodeURIComponent(JSON.stringify({ json: { slug } }));
     try {
-      const response = await fetch(`${this.baseUrl}/api/trpc/signal.detail?input=${input}`, {
-        signal: controller.signal,
-        headers: {
-          accept: "application/json",
-          ...(this.options.apiKey ? { authorization: `Bearer ${this.options.apiKey}` } : {}),
+      const response = await fetch(
+        `${this.baseUrl}/api/trpc/signal.detail?input=${input}`,
+        {
+          signal: controller.signal,
+          headers: {
+            accept: "application/json",
+            ...(this.options.apiKey
+              ? { authorization: `Bearer ${this.options.apiKey}` }
+              : {}),
+          },
         },
-      });
-      if (!response.ok) throw new Error(`Niubang Data ${response.status}: ${slug}`);
-      const payload = await response.json() as any;
+      );
+      if (!response.ok)
+        throw new Error(`Niubang Data ${response.status}: ${slug}`);
+      const payload = (await response.json()) as any;
       return payload?.result?.data?.json ?? payload?.result?.data ?? payload;
     } finally {
       clearTimeout(timeout);
@@ -236,11 +285,18 @@ export class NiubangQuantDataProvider implements QuantDataProvider {
     const cached = this.cache.get(base.id);
     if (cached && cached.expiresAt > Date.now()) return cached.value;
     try {
-      const value = mapNiubangDetailToStrategy(base, await this.detail(slug), this.baseUrl);
+      const value = mapNiubangDetailToStrategy(
+        base,
+        await this.detail(slug),
+        this.baseUrl,
+      );
       this.cache.set(base.id, { expiresAt: Date.now() + 20_000, value });
       return value;
     } catch (error) {
-      console.error(`[v2-niubang] strategy=${base.id} slug=${slug} sync failed:`, error);
+      console.error(
+        `[v2-niubang] strategy=${base.id} slug=${slug} sync failed:`,
+        error,
+      );
       return {
         ...base,
         source: {
@@ -255,7 +311,9 @@ export class NiubangQuantDataProvider implements QuantDataProvider {
   }
 
   async listStrategies() {
-    return Promise.all(DEMO_STRATEGIES.map((strategy) => this.hydrate(strategy)));
+    return Promise.all(
+      DEMO_STRATEGIES.map((strategy) => this.hydrate(strategy)),
+    );
   }
 
   async getStrategy(id: string) {
@@ -264,7 +322,10 @@ export class NiubangQuantDataProvider implements QuantDataProvider {
   }
 
   async getOverview() {
-    return rebuildOverviewFromStrategies(createDemoOverview(), await this.listStrategies());
+    return rebuildOverviewFromStrategies(
+      createDemoOverview(),
+      await this.listStrategies(),
+    );
   }
 
   async listPlatforms() {
@@ -279,18 +340,21 @@ export class NiubangQuantDataProvider implements QuantDataProvider {
     return null;
   }
 
-  async recommendAllocation(input: AllocationRequest): Promise<AllocationDraft> {
-    const modes = new Set((await this.listStrategies()).map((strategy) => strategy.source.dataMode));
+  async recommendAllocation(
+    input: AllocationRequest,
+  ): Promise<AllocationDraft> {
+    const strategies = await this.listStrategies();
+    const modes = new Set(
+      strategies.map((strategy) => strategy.source.dataMode),
+    );
     const dataMode: DataMode = modes.size === 1 ? [...modes][0] : "HYBRID";
-    return {
-      ...DEFAULT_ALLOCATION,
-      id: `niubang-${input.riskProfile.toLowerCase()}-${input.capital.amount}`,
-      capital: input.capital,
-      riskBudget: {
-        profile: input.riskProfile,
-        maxDrawdownPct: input.riskProfile === "LOW" ? 8 : input.riskProfile === "HIGH" ? 18 : 12,
-      },
+    return buildSelectionAwareAllocation({
+      request: input,
+      base: DEFAULT_ALLOCATION,
+      strategies,
+      platforms: DEMO_PLATFORMS,
+      idPrefix: "niubang",
       dataMode,
-    };
+    });
   }
 }

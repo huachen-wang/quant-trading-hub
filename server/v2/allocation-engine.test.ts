@@ -25,7 +25,9 @@ describe("V2 allocation engine", () => {
     draft.platformBuckets[0].capitalWeightPct = 20;
     const result = validateAllocation(draft, DEMO_PLATFORMS, DEMO_STRATEGIES);
     expect(result.valid).toBe(false);
-    expect(result.issues.some((item) => item.code === "PLATFORM_WEIGHT_TOTAL")).toBe(true);
+    expect(
+      result.issues.some((item) => item.code === "PLATFORM_WEIGHT_TOTAL"),
+    ).toBe(true);
   });
 
   it("blocks incompatible and offline strategies", () => {
@@ -59,5 +61,32 @@ describe("V2 allocation engine", () => {
     expect(first).toEqual(second);
     expect(first.platformBuckets).toHaveLength(1);
     expect(first.riskBudget.maxDrawdownPct).toBe(8);
+  });
+
+  it("keeps explicit strategy and platform selections in the recommendation", async () => {
+    const provider = new DemoQuantDataProvider();
+    const result = await provider.recommendAllocation({
+      capital: { amount: "50000", currency: "USD" },
+      riskProfile: "MEDIUM",
+      platformIds: ["atlas-prime", "meridian"],
+      strategyIds: ["jingge-v51", "quantum-queen"],
+    });
+
+    expect(result.platformBuckets.map((bucket) => bucket.platformId)).toEqual([
+      "atlas-prime",
+      "meridian",
+    ]);
+    expect(
+      Array.from(
+        new Set(
+          result.platformBuckets.flatMap((bucket) =>
+            bucket.strategies.map((strategy) => strategy.strategyId),
+          ),
+        ),
+      ).sort(),
+    ).toEqual(["jingge-v51", "quantum-queen"]);
+    expect(
+      validateAllocation(result, DEMO_PLATFORMS, DEMO_STRATEGIES).valid,
+    ).toBe(true);
   });
 });
