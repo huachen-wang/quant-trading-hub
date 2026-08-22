@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ContactModal } from "@/components/contact-modal";
 import { trpc } from "@/lib/trpc";
 import { V2, V2_LAYOUT } from "./tokens";
+import { WalletConnect } from "./wallet/wallet-connect";
 
 type V2ShellProps = { children: ReactNode };
 
@@ -44,7 +45,7 @@ export function V2Shell({ children }: V2ShellProps) {
   const pathname = usePathname();
   const { configure } = useLocalSearchParams<{ configure?: string }>();
   const { width } = useWindowDimensions();
-  const isMobile = width < 760;
+  const isMobile = width < 940;
   const [contactOpen, setContactOpen] = useState(false);
   const { data: status } = trpc.v2.status.useQuery(undefined, {
     staleTime: 60_000,
@@ -117,27 +118,31 @@ export function V2Shell({ children }: V2ShellProps) {
           {!isMobile ? <View style={styles.desktopNav}>{nav}</View> : null}
 
           <View style={styles.headerActions}>
-            <View
-              accessible
-              accessibilityLabel={
-                connectedProvider
-                  ? `数据来源：${providerLabel} 接口`
-                  : "数据来源：确定性模拟数据"
-              }
-              style={styles.providerState}
-            >
+            {!isMobile ? (
               <View
-                style={[
-                  styles.providerDot,
-                  {
-                    backgroundColor: connectedProvider ? V2.green : V2.amber,
-                  },
-                ]}
-              />
-              <Text style={styles.providerText}>{providerLabel}</Text>
-            </View>
+                accessible
+                accessibilityLabel={
+                  connectedProvider
+                    ? `数据来源：${providerLabel} 接口`
+                    : "数据来源：确定性模拟数据"
+                }
+                style={styles.providerState}
+              >
+                <View
+                  style={[
+                    styles.providerDot,
+                    {
+                      backgroundColor: connectedProvider ? V2.green : V2.amber,
+                    },
+                  ]}
+                />
+                <Text style={styles.providerText}>{providerLabel}</Text>
+              </View>
+            ) : null}
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="联系量化顾问"
+              accessibilityHint="打开联系方式"
               onPress={() => setContactOpen(true)}
               style={({ pressed }) => [
                 styles.contactButton,
@@ -147,12 +152,11 @@ export function V2Shell({ children }: V2ShellProps) {
               <MaterialIcons
                 name="support-agent"
                 size={18}
-                color={V2.background}
+                color={V2.textMuted}
               />
-              <Text style={styles.contactText}>
-                {isMobile ? "联系" : "联系顾问"}
-              </Text>
+              <Text style={styles.contactText}>顾问</Text>
             </Pressable>
+            <WalletConnect compact={isMobile} />
           </View>
         </View>
       </View>
@@ -194,7 +198,7 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: V2.background },
   topRule: { height: 1, backgroundColor: "rgba(216,188,131,0.34)" },
   header: {
-    minHeight: 68,
+    minHeight: 60,
     borderBottomWidth: 1,
     borderBottomColor: V2.border,
     backgroundColor: "rgba(7,11,18,0.98)",
@@ -203,34 +207,34 @@ const styles = StyleSheet.create({
   headerInner: {
     width: "100%",
     maxWidth: V2_LAYOUT.maxWidth,
-    minHeight: 68,
+    minHeight: 60,
     alignSelf: "center",
     paddingHorizontal: Platform.OS === "web" ? 28 : 16,
     flexDirection: "row",
     alignItems: "center",
-    gap: 24,
+    gap: 18,
   },
   brandButton: {
-    width: 142,
-    height: 48,
+    width: 124,
+    height: 44,
     justifyContent: "center",
   },
   brand: {
     color: V2.text,
-    fontSize: 30,
-    lineHeight: 34,
+    fontSize: 27,
+    lineHeight: 31,
     fontWeight: "900",
     letterSpacing: 0,
   },
-  brandRule: { width: 76, height: 2, marginTop: 3, backgroundColor: V2.gold },
+  brandRule: { width: 68, height: 2, marginTop: 2, backgroundColor: V2.gold },
   desktopNav: {
     flex: 1,
-    height: 68,
+    height: 60,
     flexDirection: "row",
     alignItems: "stretch",
   },
   navItem: {
-    minWidth: 104,
+    minWidth: 96,
     height: "100%",
     paddingHorizontal: 14,
     flexDirection: "row",
@@ -282,21 +286,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   contactButton: {
-    minHeight: 38,
-    paddingHorizontal: 13,
+    minWidth: 58,
+    height: 38,
+    paddingHorizontal: 9,
+    borderWidth: 1,
+    borderColor: V2.borderStrong,
     borderRadius: 4,
-    backgroundColor: V2.gold,
+    backgroundColor: V2.surfaceMuted,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 7,
+    gap: 5,
   },
-  contactText: {
-    color: V2.background,
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0,
-  },
+  contactText: { color: V2.textMuted, fontSize: 10, fontWeight: "800" },
   mobileNavWrap: {
     minHeight: 45,
     borderBottomWidth: 1,

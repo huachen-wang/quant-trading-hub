@@ -52,7 +52,7 @@ function requirePrivateProviderUser(
   if (providerKind !== "DEMO" && !user) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "账户数据需要登录并完成数据授权。",
+      message: "账户数据需要完成身份验证和数据授权。",
     });
   }
 }

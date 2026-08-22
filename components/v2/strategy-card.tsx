@@ -3,8 +3,9 @@ import { Image } from "expo-image";
 import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { CoreStrategy } from "@/shared/v2/contracts";
-import { formatMoney, formatPct, riskLabel } from "./format";
+import { formatDateTime, formatMoney, formatPct, riskLabel } from "./format";
 import { StatusBadge } from "./status-badge";
+import { StrategySparkline } from "./strategy-sparkline";
 import { V2 } from "./tokens";
 
 type StrategyCardProps = {
@@ -77,13 +78,47 @@ function StrategyCardBase({
           </Text>
         </View>
 
-        <Text style={styles.description} numberOfLines={2}>
-          {strategy.description}
-        </Text>
+        <View style={styles.trajectoryRow}>
+          <View style={styles.chartColumn}>
+            <View style={styles.chartHeading}>
+              <Text style={styles.chartLabel}>净值轨迹</Text>
+              <Text style={styles.chartRange}>近 32 个观测点</Text>
+            </View>
+            <StrategySparkline
+              points={strategy.equity}
+              color={strategy.accent}
+            />
+          </View>
+          <View style={styles.liveMetrics}>
+            <View style={styles.liveMetric}>
+              <Text style={styles.liveMetricLabel}>当前权益</Text>
+              <Text style={styles.liveMetricValue} numberOfLines={1}>
+                {formatMoney(strategy.metrics.equity, "USD", true)}
+              </Text>
+            </View>
+            <View style={styles.liveMetric}>
+              <Text style={styles.liveMetricLabel}>今日</Text>
+              <Text
+                style={[
+                  styles.liveMetricValue,
+                  {
+                    color:
+                      strategy.metrics.todayPnlPct !== null &&
+                      strategy.metrics.todayPnlPct < 0
+                        ? V2.red
+                        : V2.green,
+                  },
+                ]}
+              >
+                {formatPct(strategy.metrics.todayPnlPct, true)}
+              </Text>
+            </View>
+          </View>
+        </View>
 
         <View style={styles.metrics}>
           <Metric
-            label="90 日"
+            label="90D"
             value={formatPct(strategy.metrics.return90dPct, true)}
             color={strategy.accent}
           />
@@ -93,12 +128,31 @@ function StrategyCardBase({
           />
           <Metric label="风险" value={riskLabel(strategy.riskLevel)} />
           <Metric
-            label="资金门槛"
+            label="起配"
             value={formatMoney(strategy.minimumCapital, "USD", true)}
           />
         </View>
 
         <View style={styles.footer}>
+          <View style={styles.runtimeState}>
+            <View
+              style={[
+                styles.runtimeDot,
+                {
+                  backgroundColor:
+                    strategy.source.freshness === "OFFLINE"
+                      ? V2.red
+                      : strategy.source.freshness === "STALE"
+                        ? V2.amber
+                        : V2.green,
+                },
+              ]}
+            />
+            <Text style={styles.runtimeText} numberOfLines={1}>
+              {formatDateTime(strategy.source.observedAt)}
+            </Text>
+          </View>
+
           <Pressable
             accessibilityRole="link"
             accessibilityLabel={`查看 ${strategy.name} 的运行详情`}
@@ -108,10 +162,10 @@ function StrategyCardBase({
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.textActionLabel}>运行详情</Text>
+            <Text style={styles.textActionLabel}>详情</Text>
             <MaterialIcons
               name="arrow-forward"
-              size={15}
+              size={14}
               color={V2.textMuted}
             />
           </Pressable>
@@ -190,7 +244,7 @@ const styles = StyleSheet.create({
   detailLink: { width: "100%" },
   imageWrap: {
     width: "100%",
-    aspectRatio: 3.8,
+    aspectRatio: 4.7,
     position: "relative",
     backgroundColor: V2.surfaceMuted,
   },
@@ -210,9 +264,9 @@ const styles = StyleSheet.create({
   },
   slotText: { color: V2.text, fontSize: 10, fontWeight: "900" },
   sourceBadge: { position: "absolute", top: 8, right: 8 },
-  body: { padding: 10, gap: 6 },
+  body: { padding: 9, gap: 5 },
   titleRow: {
-    minHeight: 34,
+    minHeight: 31,
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 9,
@@ -228,14 +282,46 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     textAlign: "right",
   },
-  description: {
-    minHeight: 27,
-    color: V2.textMuted,
-    fontSize: 10,
-    lineHeight: 15,
+  trajectoryRow: {
+    minHeight: 66,
+    flexDirection: "row",
+    alignItems: "stretch",
+    borderTopWidth: 1,
+    borderTopColor: V2.border,
+  },
+  chartColumn: {
+    flex: 1,
+    minWidth: 0,
+    paddingTop: 5,
+    paddingRight: 8,
+  },
+  chartHeading: {
+    height: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  chartLabel: { color: V2.textMuted, fontSize: 8, fontWeight: "800" },
+  chartRange: { color: V2.textDim, fontSize: 7 },
+  liveMetrics: {
+    width: 98,
+    paddingLeft: 9,
+    borderLeftWidth: 1,
+    borderLeftColor: V2.border,
+    justifyContent: "center",
+    gap: 7,
+  },
+  liveMetric: { gap: 2 },
+  liveMetricLabel: { color: V2.textDim, fontSize: 7 },
+  liveMetricValue: {
+    color: V2.text,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: "900",
   },
   metrics: {
-    minHeight: 40,
+    minHeight: 36,
     flexDirection: "row",
     alignItems: "stretch",
     borderTopWidth: 1,
@@ -247,7 +333,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     justifyContent: "center",
     gap: 2,
-    paddingVertical: 6,
+    paddingVertical: 5,
     paddingRight: 5,
   },
   metricLabel: { color: V2.textDim, fontSize: 8, lineHeight: 11 },
@@ -258,19 +344,28 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   footer: {
-    minHeight: 32,
+    minHeight: 30,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     gap: 8,
   },
   textAction: {
-    minHeight: 32,
+    minHeight: 30,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
   textActionLabel: { color: V2.textMuted, fontSize: 10, fontWeight: "800" },
+  runtimeState: {
+    marginRight: "auto",
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  runtimeDot: { width: 6, height: 6, borderRadius: 3 },
+  runtimeText: { color: V2.textDim, fontSize: 8 },
   selectButton: {
     minHeight: 32,
     paddingHorizontal: 10,

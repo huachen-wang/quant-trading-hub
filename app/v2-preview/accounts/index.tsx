@@ -143,7 +143,7 @@ export default function AccountsPage() {
           <MaterialIcons name="lock-outline" size={20} color={V2.green} />
           <Text style={styles.noticeText}>
             EAXAU
-            只读取获授权的账户投影，不保存交易密码或提供方原始令牌。真实数据模式下，未登录或未授权请求会被服务端拒绝。
+            只读取获授权的账户投影，不保存交易密码或提供方原始令牌。真实数据模式下，未完成身份验证或数据授权的请求会被服务端拒绝。
           </Text>
         </View>
       </View>

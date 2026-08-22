@@ -16,6 +16,8 @@ import { buildSelectionAwareAllocation } from "./allocation-recommendation";
 import { rebuildOverviewFromStrategies } from "./data-overrides";
 import type { QuantDataProvider } from "./provider";
 
+const NIUBANG_CACHE_TTL_MS = 8_000;
+
 const chartPointSchema = z.object({
   time: z.string().datetime(),
   equityValue: z.number(),
@@ -290,7 +292,10 @@ export class NiubangQuantDataProvider implements QuantDataProvider {
         await this.detail(slug),
         this.baseUrl,
       );
-      this.cache.set(base.id, { expiresAt: Date.now() + 20_000, value });
+      this.cache.set(base.id, {
+        expiresAt: Date.now() + NIUBANG_CACHE_TTL_MS,
+        value,
+      });
       return value;
     } catch (error) {
       console.error(

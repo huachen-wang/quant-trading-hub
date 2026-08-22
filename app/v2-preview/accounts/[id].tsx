@@ -345,7 +345,7 @@ export default function AccountDetailPage() {
         <View style={styles.notice}>
           <MaterialIcons name="shield" size={20} color={V2.blue} />
           <Text style={styles.noticeText}>
-            账户页是经过脱敏的只读投影。模拟金额不代表真实资产，真实模式必须通过登录、用户授权和数据新鲜度校验。
+            账户页是经过脱敏的只读投影。模拟金额不代表真实资产，真实模式必须通过身份验证、用户授权和数据新鲜度校验。
           </Text>
         </View>
       </View>

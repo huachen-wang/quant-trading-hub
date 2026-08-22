@@ -9,10 +9,10 @@ import {
   View,
   useWindowDimensions,
 } from "react-native";
-import { formatDateTime, formatMoney, formatPct } from "@/components/v2/format";
+import { formatMoney, formatPct } from "@/components/v2/format";
+import { LiveFeedStrip } from "@/components/v2/live-feed-strip";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
 import { SolutionConfigurator } from "@/components/v2/solution-configurator";
-import { StatusBadge } from "@/components/v2/status-badge";
 import { StrategyCard } from "@/components/v2/strategy-card";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
 import { trpc } from "@/lib/trpc";
@@ -35,8 +35,8 @@ export default function V2HomePage() {
   const [selectedStrategyIds, setSelectedStrategyIds] =
     useState<string[]>(DEFAULT_SELECTION);
   const overview = trpc.v2.overview.useQuery(undefined, {
-    staleTime: 20_000,
-    refetchInterval: 30_000,
+    staleTime: 4_000,
+    refetchInterval: 10_000,
   });
 
   const openStrategy = useCallback(
@@ -124,22 +124,21 @@ export default function V2HomePage() {
       showsVerticalScrollIndicator={false}
     >
       <View style={[styles.page, isMobile && styles.pageMobile]}>
-        <View style={[styles.dataNotice, isMobile && styles.dataNoticeMobile]}>
-          <View style={styles.dataNoticeMain}>
-            <StatusBadge
-              dataMode={data.source.dataMode}
-              freshness={data.source.freshness}
-            />
-            <Text style={styles.dataNoticeText}>{dataNoticeCopy}</Text>
-          </View>
-          <Text style={styles.syncText}>
-            更新 {formatDateTime(data.source.observedAt)}
-          </Text>
-        </View>
+        <LiveFeedStrip
+          strategies={data.strategies}
+          source={data.source}
+          isFetching={overview.isFetching}
+          refreshKey={overview.dataUpdatedAt}
+          isMobile={isMobile || isTablet}
+          onOpen={openStrategy}
+        />
 
         <View style={styles.strategyStage}>
           <View
-            style={[styles.stageHeader, isMobile && styles.stageHeaderMobile]}
+            style={[
+              styles.stageHeader,
+              (isMobile || isTablet) && styles.stageHeaderMobile,
+            ]}
           >
             <View style={styles.stageCopy}>
               <View style={styles.eyebrowRow}>
@@ -149,17 +148,15 @@ export default function V2HomePage() {
               <Text
                 style={[styles.stageTitle, isMobile && styles.stageTitleMobile]}
               >
-                六款核心量化策略
+                六策略实时矩阵
               </Text>
-              <Text style={styles.stageSubtitle}>
-                先看运行、回撤与资金门槛。可直接加入方案，也可进入详情查看净值、持仓和说明。
-              </Text>
+              <Text style={styles.stageSubtitle}>{dataNoticeCopy}</Text>
             </View>
 
             <View
               style={[
                 styles.portfolioMetrics,
-                isMobile && styles.portfolioMetricsMobile,
+                (isMobile || isTablet) && styles.portfolioMetricsMobile,
               ]}
             >
               <OverviewMetric
@@ -277,81 +274,52 @@ const styles = StyleSheet.create({
     maxWidth: V2_LAYOUT.maxWidth,
     alignSelf: "center",
     paddingHorizontal: V2_LAYOUT.pagePaddingDesktop,
-    paddingTop: 10,
-    gap: 34,
+    paddingTop: 8,
+    gap: 20,
   },
   pageMobile: {
     paddingHorizontal: V2_LAYOUT.pagePaddingMobile,
     paddingTop: 8,
-    gap: 28,
+    gap: 18,
   },
-  dataNotice: {
-    minHeight: 36,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: V2.border,
-  },
-  dataNoticeMobile: {
-    alignItems: "flex-start",
-    flexDirection: "column",
-    gap: 5,
-  },
-  dataNoticeMain: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 9,
-  },
-  dataNoticeText: {
-    flex: 1,
-    color: V2.textMuted,
-    fontSize: 10,
-    lineHeight: 15,
-  },
-  syncText: { color: V2.textDim, fontSize: 9 },
-  strategyStage: { gap: 12 },
+  strategyStage: { gap: 10 },
   stageHeader: {
-    minHeight: 82,
+    minHeight: 62,
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "space-between",
-    gap: 26,
+    gap: 20,
   },
   stageHeaderMobile: {
     alignItems: "stretch",
     flexDirection: "column",
-    gap: 14,
+    gap: 10,
   },
   stageCopy: { flex: 1, minWidth: 0 },
   eyebrowRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
-    marginBottom: 5,
+    marginBottom: 3,
   },
   eyebrowRule: { width: 22, height: 2, backgroundColor: V2.gold },
   eyebrow: { color: V2.gold, fontSize: 9, fontWeight: "900" },
   stageTitle: {
     color: V2.text,
-    fontSize: 29,
-    lineHeight: 36,
+    fontSize: 25,
+    lineHeight: 30,
     fontWeight: "900",
   },
-  stageTitleMobile: { fontSize: 25, lineHeight: 31 },
+  stageTitleMobile: { fontSize: 23, lineHeight: 28 },
   stageSubtitle: {
-    marginTop: 4,
+    marginTop: 2,
     color: V2.textMuted,
     fontSize: 11,
     lineHeight: 17,
   },
   portfolioMetrics: {
-    width: 570,
-    minHeight: 58,
+    width: 520,
+    minHeight: 52,
     flexDirection: "row",
     borderTopWidth: 1,
     borderBottomWidth: 1,
@@ -368,18 +336,18 @@ const styles = StyleSheet.create({
   overviewLabel: { color: V2.textDim, fontSize: 8 },
   overviewValue: {
     color: V2.text,
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 17,
     fontWeight: "900",
   },
   strategyGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 11,
+    gap: 9,
     alignItems: "stretch",
   },
   selectionBar: {
-    minHeight: 54,
+    minHeight: 48,
     paddingHorizontal: 13,
     borderWidth: 1,
     borderColor: V2.border,
@@ -416,7 +384,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   continueText: { color: V2.background, fontSize: 10, fontWeight: "900" },
-  builderAnchor: { paddingTop: 2 },
+  builderAnchor: { paddingTop: 0 },
   riskNotice: {
     paddingTop: 18,
     borderTopWidth: 1,
