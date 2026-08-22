@@ -3,6 +3,11 @@ const path = require("path");
 
 const webBuildDir = path.resolve(process.cwd(), "web-build");
 const indexPath = path.join(webBuildDir, "index.html");
+const strategyPreloads = [
+  "/strategy-art-v2/gold-momentum.jpg",
+  "/strategy-art-v2/breakout-execution.jpg",
+  "/strategy-art-v2/adaptive-signal.jpg",
+];
 
 function collectRequiredAssets(indexHtml) {
   const assets = new Set();
@@ -11,7 +16,10 @@ function collectRequiredAssets(indexHtml) {
 
   while ((match = attrRegex.exec(indexHtml)) !== null) {
     const value = match[1];
-    if (value.startsWith("/_expo/static/js/") || value.startsWith("/_expo/static/css/")) {
+    if (
+      value.startsWith("/_expo/static/js/") ||
+      value.startsWith("/_expo/static/css/")
+    ) {
       assets.add(value);
     }
   }
@@ -31,7 +39,10 @@ function verifyAsset(assetPath) {
   }
 
   if (assetPath.endsWith(".js")) {
-    const firstBytes = fs.readFileSync(diskPath, "utf8").slice(0, 80).trimStart();
+    const firstBytes = fs
+      .readFileSync(diskPath, "utf8")
+      .slice(0, 80)
+      .trimStart();
     if (firstBytes.startsWith("<!DOCTYPE") || firstBytes.startsWith("<html")) {
       throw new Error(`JavaScript asset resolved to HTML: ${assetPath}`);
     }
@@ -84,12 +95,7 @@ function verifyBootstrapReadiness(bootstrapScript) {
     "URL",
     "MutationObserver",
     bootstrapScript,
-  )(
-    windowMock,
-    documentMock,
-    URL,
-    MockMutationObserver,
-  );
+  )(windowMock, documentMock, URL, MockMutationObserver);
   onReady?.();
 
   if (boot.hidden) {
@@ -99,7 +105,9 @@ function verifyBootstrapReadiness(bootstrapScript) {
   root.textContent = "EAXAU";
   onMutation?.();
   if (!boot.hidden) {
-    throw new Error("EAXAU loading bootstrap stays visible after app content mounts");
+    throw new Error(
+      "EAXAU loading bootstrap stays visible after app content mounts",
+    );
   }
 }
 
@@ -112,41 +120,74 @@ function main() {
   const requiredAssets = collectRequiredAssets(indexHtml);
 
   if (!indexHtml.includes('data-eaxau-bootstrap="v1"')) {
-    throw new Error("web-build/index.html is missing the EAXAU loading bootstrap");
+    throw new Error(
+      "web-build/index.html is missing the EAXAU loading bootstrap",
+    );
   }
   if (!indexHtml.includes('id="eaxau-boot"')) {
-    throw new Error("web-build/index.html is missing the EAXAU loading element");
+    throw new Error(
+      "web-build/index.html is missing the EAXAU loading element",
+    );
   }
+  strategyPreloads.forEach((assetPath) => {
+    if (
+      !indexHtml.includes(
+        `rel="preload" as="image" href="${assetPath}" fetchpriority="high"`,
+      )
+    ) {
+      throw new Error(`web-build/index.html is missing preload: ${assetPath}`);
+    }
+    const diskPath = path.join(webBuildDir, assetPath.replace(/^\//, ""));
+    if (!fs.existsSync(diskPath) || fs.statSync(diskPath).size === 0) {
+      throw new Error(`Missing preloaded strategy image: ${assetPath}`);
+    }
+  });
 
   const bootstrapScript = indexHtml.match(
     /<script[^>]*data-eaxau-bootstrap="v1"[^>]*>([\s\S]*?)<\/script>/,
   )?.[1];
   if (!bootstrapScript) {
-    throw new Error("web-build/index.html is missing the EAXAU recovery script");
+    throw new Error(
+      "web-build/index.html is missing the EAXAU recovery script",
+    );
   }
   new Function(bootstrapScript);
   if (!bootstrapScript.includes("rootHasVisibleContent")) {
-    throw new Error("EAXAU loading bootstrap is missing its content-ready check");
+    throw new Error(
+      "EAXAU loading bootstrap is missing its content-ready check",
+    );
   }
   if (!bootstrapScript.includes("subtree: true")) {
-    throw new Error("EAXAU loading bootstrap is not observing nested app content");
+    throw new Error(
+      "EAXAU loading bootstrap is not observing nested app content",
+    );
   }
   verifyBootstrapReadiness(bootstrapScript);
 
   if (requiredAssets.length === 0) {
-    throw new Error("web-build/index.html does not reference any Expo JS/CSS assets");
+    throw new Error(
+      "web-build/index.html does not reference any Expo JS/CSS assets",
+    );
   }
 
   requiredAssets.forEach(verifyAsset);
 
-  const jsCount = requiredAssets.filter((asset) => asset.endsWith(".js")).length;
-  const cssCount = requiredAssets.filter((asset) => asset.endsWith(".css")).length;
+  const jsCount = requiredAssets.filter((asset) =>
+    asset.endsWith(".js"),
+  ).length;
+  const cssCount = requiredAssets.filter((asset) =>
+    asset.endsWith(".css"),
+  ).length;
 
   if (jsCount === 0 || cssCount === 0) {
-    throw new Error(`Expected at least one JS and one CSS asset, found ${jsCount} JS and ${cssCount} CSS`);
+    throw new Error(
+      `Expected at least one JS and one CSS asset, found ${jsCount} JS and ${cssCount} CSS`,
+    );
   }
 
-  console.log(`[verify-web-build] OK: ${requiredAssets.length} required asset(s), ${jsCount} JS, ${cssCount} CSS`);
+  console.log(
+    `[verify-web-build] OK: ${requiredAssets.length} required asset(s), ${jsCount} JS, ${cssCount} CSS`,
+  );
 }
 
 main();

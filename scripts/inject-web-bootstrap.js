@@ -4,8 +4,20 @@ const path = require("path");
 const webBuildDir = path.resolve(process.cwd(), "web-build");
 const indexPath = path.join(webBuildDir, "index.html");
 const marker = 'data-eaxau-bootstrap="v1"';
+const strategyPreloads = [
+  "/strategy-art-v2/gold-momentum.jpg",
+  "/strategy-art-v2/breakout-execution.jpg",
+  "/strategy-art-v2/adaptive-signal.jpg",
+];
+const strategyPreloadLinks = strategyPreloads
+  .map(
+    (href) =>
+      `    <link rel="preload" as="image" href="${href}" fetchpriority="high" ${marker}>`,
+  )
+  .join("\n");
 
 const headInjection = `
+${strategyPreloadLinks}
     <style ${marker}>
       html, body { margin: 0; background: #050810; }
       #eaxau-boot {
@@ -144,7 +156,9 @@ function main() {
     .replace(/<body(\s[^>]*)?>/, (bodyTag) => `${bodyTag}${bodyInjection}`);
 
   fs.writeFileSync(indexPath, indexHtml);
-  console.log("[inject-web-bootstrap] added loading and stale-asset recovery");
+  console.log(
+    `[inject-web-bootstrap] added loading recovery and ${strategyPreloads.length} image preload(s)`,
+  );
 }
 
 main();
