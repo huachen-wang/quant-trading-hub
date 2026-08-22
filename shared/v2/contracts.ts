@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const dataModeSchema = z.enum(["DEMO", "LIVE"]);
+export const dataModeSchema = z.enum(["DEMO", "CUSTOM", "LIVE", "HYBRID"]);
 export const freshnessSchema = z.enum(["FRESH", "STALE", "OFFLINE"]);
 export const serviceModeSchema = z.enum([
   "MANAGED_CONTRACT",
@@ -21,12 +21,14 @@ export const sourceMetaSchema = z.object({
   freshness: freshnessSchema,
   dataMode: dataModeSchema,
   delaySeconds: z.number().nonnegative(),
+  historyHandoverAt: z.string().datetime().nullable().optional(),
 });
 
 export const equityPointSchema = z.object({
   timestamp: z.string().datetime(),
   equity: z.number(),
   balance: z.number(),
+  source: z.enum(["DEMO", "CUSTOM", "LIVE"]).optional(),
 });
 
 export const strategyPositionSchema = z.object({
@@ -101,13 +103,44 @@ const faqBlockSchema = z.object({
   items: z.array(z.object({ question: z.string(), answer: z.string() })),
 });
 
+const mediaGalleryBlockSchema = z.object({
+  id: z.string(),
+  type: z.literal("media_gallery"),
+  heading: z.string(),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string(),
+      caption: z.string(),
+      thumbnailUrl: z.string().min(1),
+      fullUrl: z.string().min(1),
+      alt: z.string(),
+    }),
+  ),
+});
+
 export const contentBlockSchema = z.discriminatedUnion("type", [
   richTextBlockSchema,
   evidenceBlockSchema,
   timelineBlockSchema,
   riskNoticeBlockSchema,
   faqBlockSchema,
+  mediaGalleryBlockSchema,
 ]);
+
+export const strategyMetricsSchema = z.object({
+  return30dPct: z.number().nullable(),
+  return90dPct: z.number().nullable(),
+  totalReturnPct: z.number().nullable(),
+  todayPnlPct: z.number().nullable(),
+  maxDrawdownPct: z.number().nullable(),
+  winRatePct: z.number().nullable(),
+  tradeCount: z.number().int().nonnegative(),
+  avgHoldingMinutes: z.number().nonnegative().nullable(),
+  balance: z.number().nullable(),
+  equity: z.number().nullable(),
+  floatingPnl: z.number().nullable(),
+});
 
 export const coreStrategySchema = z.object({
   id: z.string().min(1),
@@ -125,25 +158,22 @@ export const coreStrategySchema = z.object({
   accent: z.string(),
   artwork: z.string(),
   minimumCapital: z.number().nonnegative(),
-  metrics: z.object({
-    return30dPct: z.number().nullable(),
-    return90dPct: z.number().nullable(),
-    totalReturnPct: z.number().nullable(),
-    todayPnlPct: z.number().nullable(),
-    maxDrawdownPct: z.number().nullable(),
-    winRatePct: z.number().nullable(),
-    tradeCount: z.number().int().nonnegative(),
-    avgHoldingMinutes: z.number().nonnegative().nullable(),
-    balance: z.number().nullable(),
-    equity: z.number().nullable(),
-    floatingPnl: z.number().nullable(),
-  }),
+  metrics: strategyMetricsSchema,
   equity: z.array(equityPointSchema),
   positions: z.array(strategyPositionSchema),
   recentTrades: z.array(strategyTradeSchema),
   compatiblePlatformIds: z.array(z.string()),
   contentBlocks: z.array(contentBlockSchema),
   source: sourceMetaSchema,
+});
+
+export const strategyDataOverrideSchema = z.object({
+  strategyId: z.string().min(1).max(80),
+  mode: z.enum(["CUSTOM", "HYBRID"]),
+  historyHandoverAt: z.string().datetime().nullable(),
+  note: z.string().max(500).default(""),
+  metrics: strategyMetricsSchema.partial(),
+  equity: z.array(equityPointSchema).max(365),
 });
 
 export const platformSchema = z.object({
@@ -288,6 +318,7 @@ export type SourceMeta = z.infer<typeof sourceMetaSchema>;
 export type EquityPoint = z.infer<typeof equityPointSchema>;
 export type ContentBlock = z.infer<typeof contentBlockSchema>;
 export type CoreStrategy = z.infer<typeof coreStrategySchema>;
+export type StrategyDataOverride = z.infer<typeof strategyDataOverrideSchema>;
 export type PlatformProfile = z.infer<typeof platformSchema>;
 export type AllocationDraft = z.infer<typeof allocationDraftSchema>;
 export type AllocationRequest = z.infer<typeof allocationRequestSchema>;

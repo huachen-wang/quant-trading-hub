@@ -1,6 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Image } from "expo-image";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { Modal, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import type { ContentBlock } from "@/shared/v2/contracts";
 import { formatDateTime } from "./format";
 import { V2 } from "./tokens";
@@ -97,7 +98,101 @@ function ContentBlockView({ block }: { block: ContentBlock }) {
     );
   }
 
+  if (block.type === "media_gallery") {
+    return <MediaGalleryBlock block={block} />;
+  }
+
   return <FaqBlock block={block} />;
+}
+
+function MediaGalleryBlock({ block }: { block: Extract<ContentBlock, { type: "media_gallery" }> }) {
+  const { width } = useWindowDimensions();
+  const isMobile = width < 720;
+  const [hovered, setHovered] = useState<string>();
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const selected = selectedIndex == null ? null : block.items[selectedIndex];
+
+  const move = (direction: -1 | 1) => {
+    if (selectedIndex == null || !block.items.length) return;
+    setSelectedIndex((selectedIndex + direction + block.items.length) % block.items.length);
+  };
+
+  return (
+    <>
+      <BlockFrame heading={block.heading} icon="photo-library">
+        <View style={styles.galleryGrid}>
+          {block.items.map((item, index) => {
+            const active = hovered === item.id;
+            return (
+              <Pressable
+                key={item.id}
+                accessibilityRole="button"
+                accessibilityLabel={`查看图片：${item.title}`}
+                onHoverIn={() => Platform.OS === "web" && setHovered(item.id)}
+                onHoverOut={() => Platform.OS === "web" && setHovered(undefined)}
+                onPress={() => setSelectedIndex(index)}
+                style={({ pressed }) => [
+                  styles.galleryItem,
+                  isMobile && styles.galleryItemMobile,
+                  pressed && styles.galleryPressed,
+                ]}
+              >
+                <Image
+                  accessibilityLabel={item.alt}
+                  source={{ uri: item.thumbnailUrl }}
+                  style={styles.galleryImage}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                  transition={120}
+                />
+                <View style={[styles.galleryCaption, (active || isMobile) && styles.galleryCaptionActive]}>
+                  <View style={styles.galleryCaptionCopy}>
+                    <Text style={styles.galleryTitle} numberOfLines={1}>{item.title}</Text>
+                    {(active || isMobile) && item.caption ? (
+                      <Text style={styles.galleryDetail} numberOfLines={2}>{item.caption}</Text>
+                    ) : null}
+                  </View>
+                  <MaterialIcons name="open-in-full" size={16} color={V2.text} />
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      </BlockFrame>
+
+      <Modal visible={!!selected} transparent animationType="fade" onRequestClose={() => setSelectedIndex(null)}>
+        <View style={styles.lightboxBackdrop}>
+          <Pressable accessibilityRole="button" accessibilityLabel="关闭图片" onPress={() => setSelectedIndex(null)} style={styles.lightboxClose}>
+            <MaterialIcons name="close" size={22} color={V2.text} />
+          </Pressable>
+          {selected ? (
+            <View style={styles.lightboxPanel}>
+              <Image
+                accessibilityLabel={selected.alt}
+                source={{ uri: selected.fullUrl }}
+                style={styles.lightboxImage}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+              />
+              <View style={styles.lightboxFooter}>
+                <Pressable accessibilityRole="button" accessibilityLabel="上一张" onPress={() => move(-1)} style={styles.lightboxArrow}>
+                  <MaterialIcons name="arrow-back" size={20} color={V2.text} />
+                </Pressable>
+                <View style={styles.lightboxCopy}>
+                  <Text style={styles.lightboxTitle}>{selected.title}</Text>
+                  <Text style={styles.lightboxDetail}>{selected.caption}</Text>
+                  <Text style={styles.lightboxCount}>{(selectedIndex ?? 0) + 1} / {block.items.length}</Text>
+                </View>
+                <Pressable accessibilityRole="button" accessibilityLabel="下一张" onPress={() => move(1)} style={styles.lightboxArrow}>
+                  <MaterialIcons name="arrow-forward" size={20} color={V2.text} />
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </Modal>
+    </>
+  );
 }
 
 function FaqBlock({ block }: { block: Extract<ContentBlock, { type: "faq" }> }) {
@@ -187,4 +282,24 @@ const styles = StyleSheet.create({
   faqQuestionRow: { minHeight: 24, flexDirection: "row", alignItems: "center", gap: 12 },
   faqQuestion: { flex: 1, color: V2.text, fontSize: 13, lineHeight: 19, fontWeight: "800" },
   faqAnswer: { marginTop: 9, paddingRight: 30, color: V2.textMuted, fontSize: 12, lineHeight: 20 },
+  galleryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  galleryItem: { width: "31.8%", minWidth: 190, aspectRatio: 1.55, overflow: "hidden", borderWidth: 1, borderColor: V2.border, borderRadius: 5, backgroundColor: V2.surfaceMuted },
+  galleryItemMobile: { width: "100%", minWidth: 0 },
+  galleryImage: { width: "100%", height: "100%" },
+  galleryPressed: { opacity: 0.8 },
+  galleryCaption: { position: "absolute", left: 0, right: 0, bottom: 0, minHeight: 44, paddingHorizontal: 10, paddingVertical: 8, flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(7,11,18,0.78)" },
+  galleryCaptionActive: { minHeight: 67, backgroundColor: "rgba(7,11,18,0.92)" },
+  galleryCaptionCopy: { flex: 1, minWidth: 0, gap: 3 },
+  galleryTitle: { color: V2.text, fontSize: 11, lineHeight: 15, fontWeight: "900" },
+  galleryDetail: { color: V2.textMuted, fontSize: 9, lineHeight: 13 },
+  lightboxBackdrop: { flex: 1, padding: 22, backgroundColor: "rgba(2,5,10,0.96)", alignItems: "center", justifyContent: "center" },
+  lightboxPanel: { width: "100%", maxWidth: 1120, height: "88%", minHeight: 420, borderWidth: 1, borderColor: V2.borderStrong, borderRadius: 6, overflow: "hidden", backgroundColor: V2.backgroundRaised },
+  lightboxImage: { flex: 1, width: "100%", backgroundColor: "#02050A" },
+  lightboxClose: { position: "absolute", top: 20, right: 20, zIndex: 5, width: 40, height: 40, borderWidth: 1, borderColor: V2.borderStrong, borderRadius: 4, backgroundColor: V2.backgroundRaised, alignItems: "center", justifyContent: "center" },
+  lightboxFooter: { minHeight: 88, paddingHorizontal: 14, paddingVertical: 12, borderTopWidth: 1, borderTopColor: V2.border, flexDirection: "row", alignItems: "center", gap: 12 },
+  lightboxArrow: { width: 40, height: 40, borderWidth: 1, borderColor: V2.border, borderRadius: 4, alignItems: "center", justifyContent: "center" },
+  lightboxCopy: { flex: 1, minWidth: 0, gap: 3, alignItems: "center" },
+  lightboxTitle: { color: V2.text, fontSize: 13, fontWeight: "900", textAlign: "center" },
+  lightboxDetail: { color: V2.textMuted, fontSize: 10, lineHeight: 14, textAlign: "center" },
+  lightboxCount: { color: V2.textDim, fontSize: 9 },
 });

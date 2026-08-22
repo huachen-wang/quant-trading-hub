@@ -2,7 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
 import type { AllocationBucket } from "@/lib/v2/allocation-types";
-import { appendStrategyToBucket, clamp, rebalanceBucket } from "@/lib/v2/allocation";
+import { clamp, rebalanceBucket } from "@/lib/v2/allocation";
 import { formatMoney } from "../format";
 import { StatusBadge } from "../status-badge";
 import { V2 } from "../tokens";
@@ -29,6 +29,7 @@ export function PlatformBucketEditor({
   dropStatus = null,
   onChange,
   onRemove,
+  onInspectStrategy,
 }: {
   bucket: AllocationBucket;
   platform: PlatformProfile;
@@ -38,6 +39,7 @@ export function PlatformBucketEditor({
   dropStatus?: BucketDropStatus | null;
   onChange: (next: AllocationBucket) => void;
   onRemove: () => void;
+  onInspectStrategy: (strategy: CoreStrategy) => void;
 }) {
   const { width } = useWindowDimensions();
   const isMobile = width < 720;
@@ -60,10 +62,6 @@ export function PlatformBucketEditor({
         item.strategyId === strategyId ? updater(item) : item,
       ),
     });
-  };
-
-  const addStrategy = (strategyId: string) => {
-    onChange(appendStrategyToBucket(bucket, strategyId));
   };
 
   const removeStrategy = (strategyId: string) => {
@@ -158,6 +156,14 @@ export function PlatformBucketEditor({
                 />
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityLabel={`查看 ${strategy.shortName} 详情`}
+                  onPress={() => onInspectStrategy(strategy)}
+                  style={({ pressed }) => [styles.inspectStrategy, pressed && styles.pressed]}
+                >
+                  <MaterialIcons name="info-outline" size={17} color={V2.blue} />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
                   accessibilityLabel={`移除 ${strategy.shortName}`}
                   disabled={bucket.strategies.length <= 1}
                   onPress={() => removeStrategy(allocation.strategyId)}
@@ -179,11 +185,12 @@ export function PlatformBucketEditor({
               <Pressable
                 key={strategy.id}
                 accessibilityRole="button"
-                onPress={() => addStrategy(strategy.id)}
+                accessibilityLabel={`了解 ${strategy.shortName} 后再添加`}
+                onPress={() => onInspectStrategy(strategy)}
                 style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
               >
-                <MaterialIcons name="add" size={15} color={strategy.accent} />
-                <Text style={styles.addButtonText}>{strategy.shortName}</Text>
+                <MaterialIcons name="info-outline" size={15} color={strategy.accent} />
+                <Text style={styles.addButtonText}>了解 {strategy.shortName}</Text>
               </Pressable>
             ))}
           </View>
@@ -221,6 +228,7 @@ const styles = StyleSheet.create({
   strategyMeta: { color: V2.textMuted, fontSize: 10 },
   strategyControls: { flexDirection: "row", alignItems: "flex-end", gap: 7, flexWrap: "wrap" },
   removeStrategy: { width: 34, height: 34, borderWidth: 1, borderColor: V2.border, borderRadius: 4, alignItems: "center", justifyContent: "center" },
+  inspectStrategy: { width: 34, height: 34, borderWidth: 1, borderColor: V2.border, borderRadius: 4, alignItems: "center", justifyContent: "center" },
   addRow: { padding: 13, gap: 9 },
   addLabel: { color: V2.textDim, fontSize: 10, fontWeight: "800" },
   addOptions: { flexDirection: "row", flexWrap: "wrap", gap: 7 },

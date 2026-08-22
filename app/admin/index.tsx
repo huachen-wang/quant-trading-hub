@@ -82,6 +82,13 @@ export default function AdminDashboard() {
 
   const menuItems = [
     {
+      code: "DAT",
+      title: "V2 策略数据",
+      route: "/admin/v2-data",
+      count: 6,
+      description: "编辑历史指标、净值曲线与实盘接管时间",
+    },
+    {
       code: "V2",
       title: "V2 核心策略图文",
       route: "/admin/v2-content",

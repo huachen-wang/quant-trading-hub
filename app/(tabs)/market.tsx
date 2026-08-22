@@ -49,7 +49,7 @@ type EaLibraryScreenProps = {
 export default function HomeScreen() {
   const isFocused = useIsFocused();
   const pathname = usePathname();
-  if (!isFocused || pathname !== "/") return null;
+  if (!isFocused || pathname !== "/market") return null;
   return <EaLibraryScreen />;
 }
 

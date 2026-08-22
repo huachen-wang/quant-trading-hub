@@ -1,5 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Platform,
@@ -16,6 +16,7 @@ import { AllocationSummary } from "@/components/v2/allocation/allocation-summary
 import { PlatformBucketEditor, type BucketDropStatus } from "@/components/v2/allocation/platform-bucket";
 import { DraggableStrategy, StrategyDropTarget } from "@/components/v2/allocation/web-dnd";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
+import { SelectionInspector, type SelectionInspectorItem } from "@/components/v2/selection-inspector";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
 import {
   STRATEGY_DROP_REASON_LABEL,
@@ -32,6 +33,7 @@ type RiskProfile = AllocationDraft["riskBudget"]["profile"];
 
 export default function AllocationPage() {
   const { strategyId } = useLocalSearchParams<{ strategyId?: string }>();
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const isMobile = width < 900;
   const dragEnabled = Platform.OS === "web" && !isMobile;
@@ -45,6 +47,12 @@ export default function AllocationPage() {
     kind: "success" | "reject";
     message: string;
   } | null>(null);
+  const [inspector, setInspector] = useState<{
+    item: SelectionInspectorItem;
+    targetBucketIndex?: number;
+  } | null>(null);
+  const [hoveredPlatformId, setHoveredPlatformId] = useState<string | null>(null);
+  const [hoveredStrategyId, setHoveredStrategyId] = useState<string | null>(null);
   const requestedInitial = useRef(false);
   const strategies = trpc.v2.strategies.list.useQuery(undefined, { staleTime: 30_000 });
   const platforms = trpc.v2.platforms.list.useQuery(undefined, { staleTime: 30_000 });
@@ -181,7 +189,7 @@ export default function AllocationPage() {
     });
   };
 
-  const handleStrategyDrop = (index: number, strategyId: string) => {
+  const confirmStrategyAdd = (index: number, strategyId: string) => {
     const bucket = draft.platformBuckets[index];
     const platform = platforms.data?.find((item) => item.id === bucket?.platformId);
     if (!bucket || !platform) return;
@@ -203,6 +211,23 @@ export default function AllocationPage() {
     });
   };
 
+  const requestStrategyDrop = (index: number, strategyId: string) => {
+    const bucket = draft.platformBuckets[index];
+    const platform = platforms.data?.find((item) => item.id === bucket?.platformId);
+    const strategy = strategies.data?.find((item) => item.id === strategyId);
+    if (!bucket || !platform || !strategy) return;
+    const verdict = evaluateDropForBucket(bucket, platform, strategyId);
+    if (!verdict.allowed) {
+      setDropFlash({
+        platformId: platform.id,
+        kind: "reject",
+        message: STRATEGY_DROP_REASON_LABEL[verdict.reason],
+      });
+      return;
+    }
+    setInspector({ item: { kind: "strategy", strategy }, targetBucketIndex: index });
+  };
+
   const bucketDropStatus = (
     bucket: AllocationBucket,
     platform: PlatformProfile,
@@ -219,11 +244,28 @@ export default function AllocationPage() {
     if (verdict.allowed) {
       return {
         tone: "valid",
-        message: dropHover === platform.id ? "松开鼠标即可加入" : "可放入此平台桶",
+        message: dropHover === platform.id ? "松开鼠标查看详情" : "可放入此平台桶",
       };
     }
     return { tone: "invalid", message: STRATEGY_DROP_REASON_LABEL[verdict.reason] };
   };
+
+  const inspectStrategy = (strategy: CoreStrategy, targetBucketIndex?: number) => {
+    setInspector({ item: { kind: "strategy", strategy }, targetBucketIndex });
+  };
+
+  const inspectedStrategy = inspector?.item.kind === "strategy" ? inspector.item.strategy : null;
+  const inspectedPlatform = inspector?.item.kind === "platform" ? inspector.item.platform : null;
+  const inspectorTargetIndex = inspectedStrategy
+    ? inspector?.targetBucketIndex ?? draft.platformBuckets.findIndex((bucket) => {
+        const platform = platforms.data?.find((item) => item.id === bucket.platformId);
+        return !!platform && evaluateDropForBucket(bucket, platform, inspectedStrategy.id).allowed;
+      })
+    : -1;
+  const inspectedPlatformSelected = inspectedPlatform ? selectedPlatformIds.has(inspectedPlatform.id) : false;
+  const inspectedPlatformDisabled = inspectedPlatform
+    ? !inspectedPlatformSelected && draft.platformBuckets.length >= 3
+    : false;
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -310,21 +352,30 @@ export default function AllocationPage() {
             {platforms.data.map((platform) => {
               const selected = selectedPlatformIds.has(platform.id);
               const disabled = !selected && draft.platformBuckets.length >= 3;
+              const hovered = hoveredPlatformId === platform.id;
               return (
                 <Pressable
                   key={platform.id}
-                  accessibilityRole="checkbox"
+                  accessibilityRole="button"
+                  accessibilityLabel={`查看 ${platform.name} 平台详情`}
                   accessibilityState={{ checked: selected, disabled }}
-                  disabled={selected || disabled}
-                  onPress={() => addPlatform(platform)}
+                  onHoverIn={() => Platform.OS === "web" && setHoveredPlatformId(platform.id)}
+                  onHoverOut={() => Platform.OS === "web" && setHoveredPlatformId(null)}
+                  onPress={() => setInspector({
+                    item: { kind: "platform", platform, strategies: strategies.data ?? [] },
+                  })}
                   style={[styles.platformOption, selected && styles.platformOptionSelected, disabled && styles.disabled]}
                 >
                   <View style={styles.platformOptionCode}><Text style={styles.platformOptionCodeText}>{platform.code}</Text></View>
                   <View style={styles.platformOptionCopy}>
                     <Text style={styles.platformOptionName}>{platform.name}</Text>
-                    <Text style={styles.platformOptionMeta}>{platform.accountType} · 最低 {platform.minimumCapital.toLocaleString("zh-CN")} USD</Text>
+                    <Text style={styles.platformOptionMeta} numberOfLines={2}>
+                      {hovered
+                        ? `${platform.commercialTerms.spreadLabel} · P50 出金 ${platform.commercialTerms.withdrawalP50Hours ?? "--"}h`
+                        : `${platform.accountType} · 最低 ${platform.minimumCapital.toLocaleString("zh-CN")} USD`}
+                    </Text>
                   </View>
-                  <MaterialIcons name={selected ? "check-circle" : "add-circle-outline"} size={20} color={selected ? V2.green : V2.textMuted} />
+                  <MaterialIcons name={selected ? "check-circle" : "info-outline"} size={20} color={selected ? V2.green : V2.textMuted} />
                 </Pressable>
               );
             })}
@@ -336,7 +387,7 @@ export default function AllocationPage() {
             <View style={styles.paletteHeading}>
               <Text style={styles.paletteTitle}>策略面板</Text>
               <Text style={styles.paletteDetail}>
-                把策略拖进下方已启用的平台桶即可添加；桶内的添加按钮与步进器继续可用。
+                悬停查看摘要；点击或拖入平台桶会先打开详情，确认后再加入方案。
               </Text>
             </View>
             <View style={styles.paletteChips}>
@@ -352,16 +403,27 @@ export default function AllocationPage() {
                       if (!id) setDropHover(null);
                     }}
                   >
-                    <View style={[styles.paletteChip, offline && styles.paletteChipOffline]}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`查看 ${strategy.shortName} 选配详情`}
+                      onPress={() => inspectStrategy(strategy)}
+                      onHoverIn={() => Platform.OS === "web" && setHoveredStrategyId(strategy.id)}
+                      onHoverOut={() => Platform.OS === "web" && setHoveredStrategyId(null)}
+                      style={[styles.paletteChip, offline && styles.paletteChipOffline]}
+                    >
                       <View style={[styles.paletteRail, { backgroundColor: strategy.accent }]} />
                       <View style={styles.paletteCopy}>
                         <Text style={styles.paletteName}>{strategy.shortName}</Text>
                         <Text style={styles.paletteMeta}>
-                          {offline ? "连接中断 · 暂不可拖入" : strategy.style}
+                          {offline
+                            ? "连接中断 · 暂不可拖入"
+                            : hoveredStrategyId === strategy.id
+                              ? `90D ${strategy.metrics.return90dPct ?? "--"}% · 回撤 ${strategy.metrics.maxDrawdownPct ?? "--"}%`
+                              : strategy.style}
                         </Text>
                       </View>
-                      <MaterialIcons name="drag-indicator" size={17} color={V2.textDim} />
-                    </View>
+                      <MaterialIcons name={hoveredStrategyId === strategy.id ? "info-outline" : "drag-indicator"} size={17} color={V2.textDim} />
+                    </Pressable>
                   </DraggableStrategy>
                 );
               })}
@@ -378,7 +440,7 @@ export default function AllocationPage() {
                 <StrategyDropTarget
                   key={bucket.platformId}
                   evaluate={(strategyId) => evaluateDropForBucket(bucket, platform, strategyId)}
-                  onDropStrategy={(strategyId) => handleStrategyDrop(index, strategyId)}
+                  onDropStrategy={(strategyId) => requestStrategyDrop(index, strategyId)}
                   onHoverChange={(hover) =>
                     setDropHover((current) =>
                       hover ? platform.id : current === platform.id ? null : current,
@@ -394,6 +456,7 @@ export default function AllocationPage() {
                     dropStatus={bucketDropStatus(bucket, platform)}
                     onChange={(next) => updateBucket(index, next)}
                     onRemove={() => removeBucket(index)}
+                    onInspectStrategy={(strategy) => inspectStrategy(strategy, index)}
                   />
                 </StrategyDropTarget>
               );
@@ -419,6 +482,35 @@ export default function AllocationPage() {
         confirmOnly
         onConfirm={() => setSummaryVisible(false)}
         onCancel={() => setSummaryVisible(false)}
+      />
+      <SelectionInspector
+        item={inspector?.item ?? null}
+        onClose={() => setInspector(null)}
+        onOpenStrategy={(id) => {
+          setInspector(null);
+          router.push(`/v2-preview/strategies/${id}` as never);
+        }}
+        onSelect={inspectedPlatform
+          ? () => {
+              if (!inspectedPlatformSelected && !inspectedPlatformDisabled) addPlatform(inspectedPlatform);
+              setInspector(null);
+            }
+          : inspectedStrategy && inspectorTargetIndex >= 0
+            ? () => {
+                confirmStrategyAdd(inspectorTargetIndex, inspectedStrategy.id);
+                setInspector(null);
+              }
+            : undefined}
+        selectDisabled={!!inspectedPlatform && (inspectedPlatformSelected || inspectedPlatformDisabled)}
+        selectLabel={inspectedPlatform
+          ? inspectedPlatformSelected
+            ? "已选择此平台"
+            : inspectedPlatformDisabled
+              ? "最多选择三个平台"
+              : "选择此平台"
+          : inspectedStrategy && inspectorTargetIndex >= 0
+            ? `加入 ${platforms.data?.find((item) => item.id === draft.platformBuckets[inspectorTargetIndex]?.platformId)?.name ?? "兼容资金桶"}`
+            : undefined}
       />
     </ScrollView>
   );

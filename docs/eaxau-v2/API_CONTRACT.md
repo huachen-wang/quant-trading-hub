@@ -1,6 +1,6 @@
 # EAXAU V2：Quant Data Core API 契约
 
-状态：Draft 0.1，尚未实现。
+状态：Draft 0.2，EAXAU BFF 契约与只读 Provider 已实现；独立 Quant Data Core 仍待部署。
 原则：品牌中立、只读优先、显式来源、版本化、可被 EAXAU 与未来白标站点复用。
 
 ## 1. 边界
@@ -8,15 +8,15 @@
 - 外部基址示例：`https://quant-api.example.com/v1`。
 - EAXAU 浏览器不直接调用本 API，由 EAXAU BFF 代理并做用户授权检查。
 - 公开策略接口可缓存；账户、持仓、交易和方案接口禁止公共缓存。
-- 牛帮现有 tRPC 不改名、不改返回值。Niubang Export Adapter 只负责转换为本契约。
-- Draft 0.1 不包含下单、平仓、修改牛帮订阅或写入交易账户的接口。
+- 当前 EAXAU 只读适配器把牛帮公开 `signal.detail` 转换为本契约，牛帮现有 tRPC 不改名、不改返回值。
+- Draft 0.2 不包含下单、平仓、修改牛帮订阅或写入交易账户的接口。
 - 大量 EA 商城数据属于 EAXAU BFF 的 Catalog API，不进入 Quant Data Core，也不自动成为可分仓策略。
 
 ## 2. 通用约定
 
 ```ts
-type DataMode = "LIVE" | "DEMO";
-type Freshness = "FRESH" | "STALE" | "OFFLINE" | "UNKNOWN";
+type DataMode = "DEMO" | "CUSTOM" | "LIVE" | "HYBRID";
+type Freshness = "FRESH" | "STALE" | "OFFLINE";
 
 type SourceMeta = {
   provider: string;
@@ -25,6 +25,7 @@ type SourceMeta = {
   receivedAt: string;
   freshness: Freshness;
   dataMode: DataMode;
+  historyHandoverAt?: string | null;
 };
 
 type ApiError = {
@@ -42,6 +43,8 @@ type ApiError = {
 - 百分比统一使用 `0..100`，例如 `12.5` 表示 12.5%。
 - 列表使用游标分页：`cursor`、`limit`、`nextCursor`。
 - 每个响应返回 `requestId`；私有请求写入租户、用户、scope 和结果状态审计。
+- `CUSTOM` 表示 EAXAU 后台维护的接入前历史；`HYBRID` 表示接管线之前为自定义/迁移历史、之后为只读实盘。
+- 接管线后的点不允许由 EAXAU 后台编辑；同一时间戳以提供方实盘点为准。
 
 ## 3. 鉴权
 

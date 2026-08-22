@@ -1,7 +1,7 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Image } from "expo-image";
-import { memo } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { memo, useState } from "react";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import type { CoreStrategy } from "@/shared/v2/contracts";
 import { EquityChart } from "./equity-chart";
 import { formatPct, riskLabel } from "./format";
@@ -16,12 +16,15 @@ function StrategyCardBase({
   onPress: (strategyId: string) => void;
 }) {
   const unavailable = strategy.source.freshness === "OFFLINE";
+  const [hovered, setHovered] = useState(false);
 
   return (
     <Pressable
       accessibilityRole="link"
       accessibilityLabel={`查看 ${strategy.name} 详情`}
       onPress={() => onPress(strategy.id)}
+      onHoverIn={() => Platform.OS === "web" && setHovered(true)}
+      onHoverOut={() => Platform.OS === "web" && setHovered(false)}
       style={({ pressed }) => [
         styles.card,
         { borderTopColor: strategy.accent },
@@ -30,6 +33,7 @@ function StrategyCardBase({
     >
       <View style={styles.imageWrap}>
         <Image
+          accessibilityLabel={`${strategy.shortName} 策略视觉图`}
           source={{ uri: strategy.artwork }}
           style={styles.image}
           contentFit="cover"
@@ -41,6 +45,17 @@ function StrategyCardBase({
         <View style={styles.slotMarker}>
           <Text style={styles.slotText}>{String(strategy.homeSlot).padStart(2, "0")}</Text>
         </View>
+        {Platform.OS === "web" && hovered ? (
+          <View pointerEvents="none" style={[styles.hoverDetail, styles.hoverDetailVisible]}>
+            <Text style={styles.hoverEyebrow}>QUICK VIEW</Text>
+            <Text style={styles.hoverTitle}>{strategy.shortName}</Text>
+            <View style={styles.hoverRows}>
+              <Text style={styles.hoverText}>{strategy.style}</Text>
+              <Text style={styles.hoverText}>{strategy.instruments.join(" / ")} · {strategy.terminals.join(" / ")}</Text>
+              <Text style={styles.hoverText}>建议资金 {strategy.minimumCapital.toLocaleString("zh-CN")} USD</Text>
+            </View>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.body}>
@@ -130,6 +145,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(7,11,18,0.78)",
   },
   slotText: { color: V2.text, fontSize: 10, fontWeight: "900" },
+  hoverDetail: { position: "absolute", inset: 0, padding: 14, opacity: 0, backgroundColor: "rgba(4,8,14,0.93)", justifyContent: "flex-end", gap: 4 } as any,
+  hoverDetailVisible: { opacity: 1 },
+  hoverEyebrow: { color: V2.gold, fontSize: 9, lineHeight: 12, fontWeight: "900" },
+  hoverTitle: { color: V2.text, fontSize: 16, lineHeight: 21, fontWeight: "900" },
+  hoverRows: { marginTop: 3, gap: 2 },
+  hoverText: { color: V2.textMuted, fontSize: 9, lineHeight: 13 },
   body: { padding: 15, gap: 13 },
   titleRow: { minHeight: 45, flexDirection: "row", alignItems: "flex-start", gap: 10 },
   titleCopy: { flex: 1, minWidth: 0, gap: 3 },

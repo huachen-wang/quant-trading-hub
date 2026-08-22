@@ -4,6 +4,7 @@ import {
   allocationDraftSchema,
   allocationRequestSchema,
   contentBlockSchema,
+  strategyDataOverrideSchema,
 } from "../../shared/v2/contracts";
 import { publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
@@ -16,6 +17,14 @@ import {
   withStoredStrategyContent,
 } from "../v2/content-store";
 import { getV2Provider } from "../v2/provider";
+import {
+  applyStrategyDataOverride,
+  createStrategyDataOverrideSample,
+  deleteStoredStrategyDataOverride,
+  listStoredStrategyDataOverrides,
+  rebuildOverviewFromStrategies,
+  saveStoredStrategyDataOverride,
+} from "../v2/data-overrides";
 
 function assertV2Enabled() {
   if (process.env.EAXAU_V2_ENABLED === "false") {
@@ -37,10 +46,10 @@ const enabledAdminProcedure = adminProcedure.use(async ({ next }) => {
 });
 
 function requirePrivateProviderUser(
-  providerKind: "DEMO" | "HTTP",
+  providerKind: "DEMO" | "HTTP" | "NIUBANG",
   user: unknown,
 ) {
-  if (providerKind === "HTTP" && !user) {
+  if (providerKind !== "DEMO" && !user) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
       message: "账户数据需要登录并完成数据授权。",
@@ -54,25 +63,33 @@ export const v2Router = router({
     return {
       enabled: process.env.EAXAU_V2_ENABLED !== "false",
       provider: provider.kind,
-      contractVersion: "2026.08.1",
-      previewPath: "/v2-preview",
+      contractVersion: "2026.08.2",
+      previewPath: "/",
     } as const;
   }),
 
   overview: enabledProcedure.query(async () => {
-    const overview = await getV2Provider().getOverview();
-    return {
-      ...overview,
-      strategies: await Promise.all(
-        overview.strategies.map(withStoredStrategyContent),
-      ),
-    };
+    const [overview, overrides] = await Promise.all([
+      getV2Provider().getOverview(),
+      listStoredStrategyDataOverrides(),
+    ]);
+    const strategies = await Promise.all(
+      overview.strategies.map((strategy) => withStoredStrategyContent(
+        applyStrategyDataOverride(strategy, overrides.get(strategy.id)?.override),
+      )),
+    );
+    return rebuildOverviewFromStrategies(overview, strategies);
   }),
 
   strategies: router({
     list: enabledProcedure.query(async () => {
-      const strategies = await getV2Provider().listStrategies();
-      return Promise.all(strategies.map(withStoredStrategyContent));
+      const [strategies, overrides] = await Promise.all([
+        getV2Provider().listStrategies(),
+        listStoredStrategyDataOverrides(),
+      ]);
+      return Promise.all(strategies.map((strategy) => withStoredStrategyContent(
+        applyStrategyDataOverride(strategy, overrides.get(strategy.id)?.override),
+      )));
     }),
     byId: enabledProcedure
       .input(z.object({ id: z.string().min(1).max(80) }))
@@ -81,7 +98,63 @@ export const v2Router = router({
         if (!strategy) {
           throw new TRPCError({ code: "NOT_FOUND", message: "核心策略不存在。" });
         }
-        return withStoredStrategyContent(strategy);
+        const overrides = await listStoredStrategyDataOverrides();
+        return withStoredStrategyContent(
+          applyStrategyDataOverride(strategy, overrides.get(strategy.id)?.override),
+        );
+      }),
+  }),
+
+  adminData: router({
+    list: enabledAdminProcedure.query(async () => {
+      const [strategies, overrides] = await Promise.all([
+        getV2Provider().listStrategies(),
+        listStoredStrategyDataOverrides(),
+      ]);
+      return strategies.map((strategy) => {
+        const stored = overrides.get(strategy.id);
+        return {
+          strategy: applyStrategyDataOverride(strategy, stored?.override),
+          override: stored?.override ?? null,
+          recordId: stored?.recordId ?? null,
+        };
+      });
+    }),
+    sample: enabledAdminProcedure
+      .input(z.object({
+        strategyId: z.string().min(1).max(80),
+        mode: z.enum(["CUSTOM", "HYBRID"]).default("CUSTOM"),
+      }))
+      .query(async ({ input }) => {
+        const strategy = await getV2Provider().getStrategy(input.strategyId);
+        if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "核心策略不存在。" });
+        return createStrategyDataOverrideSample(strategy, input.mode);
+      }),
+    save: enabledAdminProcedure
+      .input(strategyDataOverrideSchema)
+      .mutation(async ({ input }) => {
+        const strategy = await getV2Provider().getStrategy(input.strategyId);
+        if (!strategy) throw new TRPCError({ code: "NOT_FOUND", message: "核心策略不存在。" });
+        const result = await saveStoredStrategyDataOverride(input);
+        if (!result) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "数据库未连接，当前环境不能保存自定义数据。",
+          });
+        }
+        return { ok: true };
+      }),
+    delete: enabledAdminProcedure
+      .input(z.object({ strategyId: z.string().min(1).max(80) }))
+      .mutation(async ({ input }) => {
+        const result = await deleteStoredStrategyDataOverride(input.strategyId);
+        if (!result) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "数据库未连接，当前环境不能移除自定义数据。",
+          });
+        }
+        return { ok: true };
       }),
   }),
 
@@ -211,11 +284,19 @@ export const v2Router = router({
       .input(allocationDraftSchema)
       .mutation(async ({ input }) => {
         const provider = getV2Provider();
-        const [platforms, strategies] = await Promise.all([
+        const [platforms, strategies, overrides] = await Promise.all([
           provider.listPlatforms(),
           provider.listStrategies(),
+          listStoredStrategyDataOverrides(),
         ]);
-        return validateAllocation(input, platforms, strategies);
+        return validateAllocation(
+          input,
+          platforms,
+          strategies.map((strategy) => applyStrategyDataOverride(
+            strategy,
+            overrides.get(strategy.id)?.override,
+          )),
+        );
       }),
   }),
 

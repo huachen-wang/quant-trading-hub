@@ -18,7 +18,7 @@ import { V2, V2_LAYOUT } from "./tokens";
 type V2ShellProps = { children: ReactNode };
 
 const NAV_ITEMS = [
-  { label: "六策略", path: "/v2-preview", icon: "insights" },
+  { label: "六策略", path: "/", icon: "insights" },
   { label: "自主分仓", path: "/v2-preview/allocate", icon: "account-tree" },
   { label: "账户观察", path: "/v2-preview/accounts", icon: "monitor-heart" },
   { label: "EA 资料库", path: "/v2-preview/ea-library", icon: "inventory-2" },
@@ -33,16 +33,22 @@ export function V2Shell({ children }: V2ShellProps) {
   const { data: status } = trpc.v2.status.useQuery(undefined, {
     staleTime: 60_000,
   });
+  const providerLabel = status?.provider === "HTTP"
+    ? "DATA CORE"
+    : status?.provider === "NIUBANG"
+      ? "NIUBANG DATA"
+      : "DEMO";
+  const connectedProvider = status?.provider === "HTTP" || status?.provider === "NIUBANG";
 
   const activePath = useMemo(() => {
     return (
       [...NAV_ITEMS]
         .reverse()
         .find((item) =>
-          item.path === "/v2-preview"
-            ? pathname === item.path
+          item.path === "/"
+            ? pathname === "/" || pathname === "/v2-preview"
             : pathname.startsWith(item.path),
-        )?.path ?? "/v2-preview"
+        )?.path ?? "/"
     );
   }, [pathname]);
 
@@ -81,7 +87,7 @@ export function V2Shell({ children }: V2ShellProps) {
           <Pressable
             accessibilityRole="link"
             accessibilityLabel="返回 EAXAU V2 首页"
-            onPress={() => router.push("/v2-preview" as never)}
+            onPress={() => router.push("/" as never)}
             style={({ pressed }) => [styles.brandButton, pressed && styles.pressed]}
           >
             <Text style={styles.brand}>EAXAU</Text>
@@ -94,8 +100,8 @@ export function V2Shell({ children }: V2ShellProps) {
             <View
               accessible
               accessibilityLabel={
-                status?.provider === "HTTP"
-                  ? "数据来源：Quant Data Core 实时接口"
+                connectedProvider
+                  ? `数据来源：${providerLabel} 接口`
                   : "数据来源：确定性模拟数据"
               }
               style={styles.providerState}
@@ -105,12 +111,12 @@ export function V2Shell({ children }: V2ShellProps) {
                   styles.providerDot,
                   {
                     backgroundColor:
-                      status?.provider === "HTTP" ? V2.green : V2.amber,
+                      connectedProvider ? V2.green : V2.amber,
                   },
                 ]}
               />
               <Text style={styles.providerText}>
-                {status?.provider === "HTTP" ? "DATA CORE" : "DEMO"}
+                {providerLabel}
               </Text>
             </View>
             <Pressable

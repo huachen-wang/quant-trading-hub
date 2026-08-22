@@ -50,6 +50,12 @@ export default function CoreStrategyDetailPage() {
   }
 
   const strategy = query.data;
+  const sourceNotice = {
+    DEMO: "当前详情使用模拟数据验证展示链路，不构成收益承诺或投资建议。",
+    CUSTOM: "当前详情使用后台自定义历史；请结合资料区核对数据口径、时间范围与证明材料。",
+    LIVE: "当前详情读取已连接实盘数据；同步延迟、平台规则和账户授权仍可能影响展示。",
+    HYBRID: "接管线之前为自定义历史，之后为实盘同步；两段来源在后台分别保留。",
+  }[strategy.source.dataMode];
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
@@ -83,6 +89,9 @@ export default function CoreStrategyDetailPage() {
               <Text style={styles.updatedAt}>
                 同步 {formatDateTime(strategy.source.observedAt)}
               </Text>
+              {strategy.source.historyHandoverAt ? (
+                <Text style={styles.updatedAt}>接管 {formatDateTime(strategy.source.historyHandoverAt)}</Text>
+              ) : null}
             </View>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>{strategy.name}</Text>
             <Text style={styles.version}>{strategy.version}</Text>
@@ -214,7 +223,7 @@ export default function CoreStrategyDetailPage() {
         <View style={styles.bottomNotice}>
           <MaterialIcons name="info-outline" size={20} color={V2.blue} />
           <Text style={styles.bottomNoticeText}>
-            当前详情使用模拟数据验证展示链路，不构成收益承诺或投资建议。正式数据会保留相同字段，并明确来源、延迟和授权范围。
+            {sourceNotice} 历史表现不代表未来结果。
           </Text>
         </View>
       </View>

@@ -20,14 +20,21 @@ export function StatusBadge({
   compact = false,
 }: StatusBadgeProps) {
   const state = freshness ?? "FRESH";
-  const color =
-    state === "FRESH" ? V2.green : state === "STALE" ? V2.amber : V2.red;
-  const label =
-    dataMode === "DEMO"
-      ? state === "FRESH"
-        ? "模拟数据"
-        : `模拟数据 · ${FRESHNESS_LABEL[state]}`
-      : FRESHNESS_LABEL[state];
+  const mode = dataMode ?? "LIVE";
+  const modeLabel = {
+    DEMO: "模拟数据",
+    CUSTOM: "自定义历史",
+    LIVE: "实盘同步",
+    HYBRID: "历史 + 实盘",
+  }[mode];
+  const modeColor = {
+    DEMO: V2.amber,
+    CUSTOM: V2.blue,
+    LIVE: V2.green,
+    HYBRID: V2.gold,
+  }[mode];
+  const color = state === "OFFLINE" ? V2.red : state === "STALE" ? V2.amber : modeColor;
+  const label = state === "FRESH" ? modeLabel : `${modeLabel} · ${FRESHNESS_LABEL[state]}`;
 
   return (
     <View

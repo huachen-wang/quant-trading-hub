@@ -568,6 +568,7 @@ function blockPreview(block: ReturnType<typeof editorFormToBlock>) {
   if (block.type === "risk_notice") return block.content;
   if (block.type === "evidence") return block.items.map((item) => `${item.title}：${item.detail}`).join(" · ");
   if (block.type === "timeline") return block.items.map((item) => `${item.date} ${item.title}`).join(" · ");
+  if (block.type === "media_gallery") return block.items.map((item) => item.title).join(" · ");
   return block.items.map((item) => item.question).join(" · ");
 }
 

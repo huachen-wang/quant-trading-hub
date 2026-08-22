@@ -1,6 +1,6 @@
 # EAXAU AI 量化 V2：产品与系统架构
 
-状态：Draft 0.1
+状态：Implemented baseline 0.2
 日期：2026-08-22
 目标：把 EAXAU 的主入口升级为“六策略实盘展示 + 分仓配置 + 客户账户观察”，同时把现有大量 EA 名录完整保留为独立资料库页面。
 
@@ -15,7 +15,7 @@
 3. EAXAU 不保管客户资金。签约、开户、入金与执行主体必须明确展示，正式上线前需要法律与合规审阅。
 4. 牛帮的复制交易、风控与账户数据继续由牛帮拥有；EAXAU 只通过稳定契约读取获授权的数据。
 5. 不允许 EAXAU 查询牛帮数据库，不允许复制牛帮私有表结构，不允许 UI 直接调用牛帮 tRPC。
-6. V2 采用增量发布和功能开关。现网 V1 保留回滚能力，V2 未验收前不得替换根路由。
+6. V2 六策略体验已作为根首页；原 EA 商城保留在 `/market`，V2 内另有 `/v2-preview/ea-library` 兼容入口。
 
 ## 3. 业务模式与配置来源
 
@@ -121,7 +121,7 @@ cta             联系、申请试盘或进入分仓
 - 左侧/上方：六个可用策略模块。
 - 中间：最多三个已启用的平台桶。
 - 右侧/底部：权重汇总、预计成本、风险暴露、校验问题和确认按钮。
-- 移动端不用强制拖拽，改用“加入平台”菜单和步进器；拖拽只是桌面端快捷方式。
+- 移动端不用强制拖拽，改用“加入平台”菜单和步进器；桌面拖拽与点击都会先打开策略规格，确认后再加入方案。
 
 ### 7.2 平台对比维度
 
@@ -154,7 +154,7 @@ type AllocationDraft = {
       riskMultiplier: number;
     }>;
   }>;
-  dataMode: "DEMO" | "LIVE";
+  dataMode: "DEMO" | "CUSTOM" | "LIVE" | "HYBRID";
 };
 ```
 
@@ -220,12 +220,12 @@ flowchart LR
 - 每条数据返回 `source`、`observedAt`、`receivedAt`、`freshness` 和 `dataMode`。
 - 未来其他品牌只新增租户、主题与权限，不复制一套数据抓取代码。
 
-### 9.3 Niubang Export Adapter
+### 9.3 Niubang 适配层
 
-- 是牛帮唯一需要增加的隔离模块，放在独立 router/package 后并默认关闭。
-- 只读取已有公开策略与经授权的客户账户投影，不触碰 copy engine 写路径。
-- 复用现有 `signal.list/detail/live/liveFeed`、`mySubscriptions`、`myMirrors`、`mySubscriptionMetrics` 与 `myExecutionQuality` 的能力，但输出新的外部 DTO。
-- 使用服务身份、租户 scope、用户授权映射、字段白名单和审计日志。
+- 当前阶段由 EAXAU BFF 的 `NiubangQuantDataProvider` 只读转换公开 `signal.detail`，不触碰 copy engine 写路径。
+- 六个 EAXAU 策略 ID 通过环境变量映射到牛帮公开 slug；未映射席位保留 `DEMO`，读取失败显示 `OFFLINE`。
+- 客户账户阶段再在牛帮增加独立 Export Adapter，复用 `mySubscriptions`、`myMirrors`、`mySubscriptionMetrics` 与 `myExecutionQuality` 的只读投影。
+- 私有账户适配器必须使用服务身份、租户 scope、用户授权映射、字段白名单和审计日志。
 - 现有牛帮接口行为与返回结构不修改。
 
 ## 10. 数据归属
@@ -244,6 +244,8 @@ flowchart LR
 ## 11. 数据真实性与演示环境
 
 - 开发和 UI 评审允许生成占位收益、曲线、持仓和评论，但所有响应必须是 `dataMode: DEMO`。
+- 运营可在 `/admin/v2-data` 维护接入前历史，保存后标记为 `CUSTOM`，不得标记为实盘。
+- 只读实盘接入后可设置 `historyHandoverAt`；接管线之前保留迁移历史，之后仅接受 Provider 实盘点，并标记为 `HYBRID`。
 - 演示页面显示固定“模拟数据”标识，截图也不能裁掉该标识。
 - 生产环境只有通过来源映射和新鲜度校验的数据可标记 `LIVE`。
 - 超过策略定义的同步阈值自动变为 `STALE`，收益数字仍可见但必须降级提示。
@@ -264,7 +266,7 @@ flowchart LR
 ### Phase 0：契约冻结
 
 - 审阅六策略名称、平台目录、两种模式中文名称和风险字段。
-- 冻结 API Draft 0.1 与演示数据标识。
+- 冻结 API Draft 0.2 与四种数据模式标识。
 
 ### Phase 1：可点击纵向样板
 
@@ -275,8 +277,8 @@ flowchart LR
 
 ### Phase 2：公开实盘数据
 
-- 部署 Quant Data Core。
-- 接入六策略公开快照、曲线和数据新鲜度。
+- 当前可通过 Niubang 公开策略只读映射接入快照、曲线、持仓、成交和数据新鲜度。
+- 后续部署 Quant Data Core，把多来源接入迁移到品牌中立服务。
 - 不接入客户私有账户，不影响牛帮交易路径。
 
 ### Phase 3：账户授权

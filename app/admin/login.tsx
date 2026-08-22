@@ -129,6 +129,7 @@ export default function AdminLogin() {
             <View style={styles.fieldGroup}>
               <Text style={[styles.label, { color: colors.foreground }]}>邮箱</Text>
               <TextInput
+                accessibilityLabel="管理员邮箱"
                 value={email}
                 onChangeText={setEmail}
                 placeholder="admin@eaxau.com"
@@ -144,6 +145,7 @@ export default function AdminLogin() {
             <View style={styles.fieldGroup}>
               <Text style={[styles.label, { color: colors.foreground }]}>密码</Text>
               <TextInput
+                accessibilityLabel="管理员密码"
                 value={password}
                 onChangeText={setPassword}
                 placeholder="请输入密码"
@@ -158,6 +160,8 @@ export default function AdminLogin() {
             </View>
 
             <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="登录管理员后台"
               onPress={handleLogin}
               disabled={isLoading}
               activeOpacity={0.8}
@@ -181,6 +185,8 @@ export default function AdminLogin() {
 
           {/* 返回首页 */}
           <TouchableOpacity
+            accessibilityRole="link"
+            accessibilityLabel="返回首页"
             onPress={() => router.replace("/" as any)}
             activeOpacity={0.7}
             style={styles.backBtn}

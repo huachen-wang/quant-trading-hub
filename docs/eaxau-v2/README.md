@@ -1,6 +1,6 @@
 # EAXAU AI 量化 V2
 
-状态：V2 演示纵向链路已实现，等待真实 Quant Data Core 与业务数据接入。
+状态：V2 已成为根首页，支持模拟、自定义历史、牛帮只读映射和 Quant Data Core 接入。
 更新时间：2026-08-22。
 
 ## 已确认的产品决策
@@ -11,7 +11,7 @@
 - 服务只有两种业务模式：`MANAGED_CONTRACT`（签约管理）与 `SELF_ALLOCATED`（自主分仓）。
 - “系统推荐”与“客户手动配置”是配置来源，不是第三种业务模式。
 - 自主分仓的配方由平台、策略、资金权重和风险预算共同组成。
-- V1 分仓允许启用 1 至 3 个平台桶；上限来自配置，不写死在页面组件中。
+- 当前自主分仓允许启用 1 至 3 个平台桶，并由服务端契约再次校验。
 - 牛帮继续独立运行。EAXAU 不直连牛帮数据库，也不调用交易引擎内部函数。
 - 可复用能力通过品牌中立、版本化的 Quant Data Core API 输出，后续可服务其他公司网站。
 - 演示数据必须标记为 `DEMO`；正式页面不得把占位数据伪装成实盘。
@@ -20,8 +20,9 @@
 
 1. [产品与系统架构](PRODUCT_ARCHITECTURE.md)
 2. [API 契约](API_CONTRACT.md)
-3. [Claude Code 独立复查任务](CLAUDE_UI_HANDOFF.md)
-4. [实现状态与验收门槛](IMPLEMENTATION_STATUS.md)
+3. [数据接入与交接](DATA_INTEGRATION.md)
+4. [Claude Code 独立复查任务](CLAUDE_UI_HANDOFF.md)
+5. [实现状态与验收门槛](IMPLEMENTATION_STATUS.md)
 
 ## 已实现预览
 
@@ -29,11 +30,13 @@
 
 `六策略首页 -> 策略详情 -> 分仓草稿 -> 校验结果 -> 只读账户概览`
 
-同时保留独立的 EA 资料库，并新增六策略图文内容后台。预览入口为
-`/v2-preview`，后台内容入口为 `/admin/v2-content`。
+同时保留独立的 EA 资料库，并新增六策略图文与数据后台。正式首页入口为 `/`，旧
+EA 商城保留在 `/market`；兼容预览入口为 `/v2-preview`。后台入口为
+`/admin/v2-content` 与 `/admin/v2-data`。
 
-首条链路使用与正式 API 同结构的确定性 `DEMO` Provider。设置
-`QUANT_DATA_CORE_URL` 后才会启用 HTTP Provider；请求失败不会静默退回演示数据。
+未配置外部服务时使用与正式 API 同结构的确定性 `DEMO` Provider。可设置
+`NIUBANG_DATA_URL + NIUBANG_STRATEGY_MAP` 读取牛帮公开策略，也可设置
+`QUANT_DATA_CORE_URL` 启用品牌中立 HTTP Provider；请求失败不会静默伪装成实盘。
 
 ## 生产边界
 
@@ -41,8 +44,9 @@
 外部系统，不能仅靠本仓库伪造完成：
 
 - 独立 Quant Data Core 服务部署；
-- Niubang Export Adapter、服务鉴权、用户授权映射和字段脱敏；
+- 牛帮客户私有账户的服务鉴权、用户授权映射和字段脱敏；
 - 六款策略的真实账户、平台条款及法律/合同信息；
 - 真实数据接入后的业务验收、灰度切流和回滚演练。
 
-在这些条件就绪前，页面会持续清楚显示 `模拟数据`，不会冒充实盘。
+未映射席位会继续显示 `模拟数据`，自定义历史显示 `CUSTOM`，只读接入故障显示
+`OFFLINE`，不会冒充实盘。

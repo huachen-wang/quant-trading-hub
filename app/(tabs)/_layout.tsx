@@ -163,13 +163,13 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen
-          name="index"
+          name="market"
           options={{
-            title: "策略",
+            title: "EA商城",
             tabBarIcon: ({ focused }) => (
               <TabIcon
                 code="EA"
-                label="策略"
+                label="商城"
                 focused={focused}
                 activeColor={colors.primary}
                 inactiveColor={colors.muted}

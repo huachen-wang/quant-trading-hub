@@ -53,7 +53,7 @@ export default function OAuthCallback() {
 
           setStatus("success");
           setTimeout(() => {
-            router.replace("/(tabs)");
+            router.replace("/");
           }, 1000);
           return;
         }
@@ -116,7 +116,7 @@ export default function OAuthCallback() {
           await Auth.setSessionToken(sessionToken);
           setStatus("success");
           setTimeout(() => {
-            router.replace("/(tabs)");
+            router.replace("/");
           }, 1000);
           return;
         }
@@ -151,7 +151,7 @@ export default function OAuthCallback() {
 
           setStatus("success");
           setTimeout(() => {
-            router.replace("/(tabs)");
+            router.replace("/");
           }, 1000);
         } else {
           setStatus("error");

@@ -16,6 +16,7 @@ export const CONTENT_TYPE_LABELS: Record<ContentBlockType, string> = {
   timeline: "时间线",
   risk_notice: "风险说明",
   faq: "常见问题",
+  media_gallery: "图片资料库",
 };
 
 function joinParts(parts: string[]) {
@@ -72,6 +73,23 @@ export function blockToEditorForm(block: ContentBlock): ContentEditorForm {
       body: "",
       items: block.items
         .map((item) => joinParts([item.date, item.title, item.detail]))
+        .join("\n"),
+    };
+  }
+  if (block.type === "media_gallery") {
+    return {
+      id: block.id,
+      type: block.type,
+      heading: block.heading,
+      body: "",
+      items: block.items
+        .map((item) => joinParts([
+          item.title,
+          item.thumbnailUrl,
+          item.fullUrl,
+          item.caption,
+          item.alt,
+        ]))
         .join("\n"),
     };
   }
@@ -137,6 +155,24 @@ export function editorFormToBlock(form: ContentEditorForm): ContentBlock {
       }),
     };
   }
+  if (form.type === "media_gallery") {
+    return {
+      id: form.id,
+      type: "media_gallery",
+      heading: form.heading.trim(),
+      items: nonEmptyLines.map((line, index) => {
+        const [title, thumbnailUrl, rawFullUrl, caption, rawAlt] = splitLine(line, 5);
+        return {
+          id: `${form.id}-media-${index + 1}`,
+          title,
+          thumbnailUrl,
+          fullUrl: rawFullUrl || thumbnailUrl,
+          caption,
+          alt: rawAlt || title,
+        };
+      }),
+    };
+  }
   return {
     id: form.id,
     type: "faq",
@@ -163,5 +199,6 @@ export function editorItemsHelp(type: ContentBlockType) {
   if (type === "evidence") return "每行：标题 | 说明 | VERIFIED / PENDING / DEMO | 可选观察时间";
   if (type === "timeline") return "每行：阶段或日期 | 标题 | 说明";
   if (type === "faq") return "每行：问题 | 回答";
+  if (type === "media_gallery") return "每行：标题 | 缩略图 URL | 大图 URL（可留空） | 说明 | 图片替代文字";
   return "此类型无需列表内容";
 }

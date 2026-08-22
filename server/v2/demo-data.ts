@@ -9,6 +9,18 @@ import type {
 } from "../../shared/v2/contracts";
 
 const DAY_MS = 86_400_000;
+const STRATEGY_GALLERY_ASSETS = [
+  "/strategy-art-v2/gold-momentum.jpg",
+  "/strategy-art-v2/breakout-execution.jpg",
+  "/strategy-art-v2/adaptive-signal.jpg",
+  "/strategy-art-v2/volatility-prism.jpg",
+  "/strategy-art-v2/orderflow-depth.jpg",
+  "/strategy-art-v2/multiasset-network.jpg",
+  "/strategy-art-v2/gold-defense.jpg",
+  "/strategy-art-v2/grid-control.jpg",
+  "/strategy-art-v2/mean-reversion.jpg",
+  "/strategy-art-v2/silver-momentum.jpg",
+];
 
 function round(value: number, precision = 2) {
   const factor = 10 ** precision;
@@ -72,6 +84,12 @@ function buildStrategy(input: StrategySeed): CoreStrategy {
   const basePrice = symbol === "BTCUSD" ? 116_240 : symbol === "EURUSD" ? 1.1624 : 3_342.6;
   const currentPrice = basePrice * (direction === "BUY" ? 1.0021 : 0.9984);
   const freshness = input.freshness ?? "FRESH";
+  const galleryImages = [...new Set([
+    input.artwork,
+    STRATEGY_GALLERY_ASSETS[(input.seed * 2 + 3) % STRATEGY_GALLERY_ASSETS.length],
+    STRATEGY_GALLERY_ASSETS[(input.seed * 3 + 5) % STRATEGY_GALLERY_ASSETS.length],
+    STRATEGY_GALLERY_ASSETS[(input.seed * 5 + 1) % STRATEGY_GALLERY_ASSETS.length],
+  ])].slice(0, 3);
 
   return {
     ...input,
@@ -147,6 +165,23 @@ function buildStrategy(input: StrategySeed): CoreStrategy {
             status: "PENDING",
           },
         ],
+      },
+      {
+        id: `${input.id}-gallery`,
+        type: "media_gallery",
+        heading: "策略资料",
+        items: galleryImages.map((url, index) => ({
+          id: `${input.id}-gallery-media-${index + 1}`,
+          title: ["策略视觉", "执行结构", "风险观察"][index] ?? `资料 ${index + 1}`,
+          caption: [
+            `${input.shortName}的视觉识别与核心交易场景。`,
+            `用于说明${input.style}的信号与执行关系。`,
+            "当前为展示占位，后续可替换为实盘截图、参数说明或核验材料。",
+          ][index] ?? "策略展示资料。",
+          thumbnailUrl: url,
+          fullUrl: url,
+          alt: `${input.shortName} ${["策略视觉", "执行结构", "风险观察"][index] ?? "资料"}`,
+        })),
       },
       {
         id: `${input.id}-timeline`,
