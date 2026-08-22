@@ -11,6 +11,13 @@ import { trpc } from "@/lib/trpc";
 
 type Tab = "positions" | "trades";
 
+const CONNECTION_STATE = {
+  CONNECTED: { label: "连接正常", color: V2.green, icon: "check-circle" },
+  DEGRADED: { label: "部分数据延迟", color: V2.amber, icon: "schedule" },
+  DISCONNECTED: { label: "连接中断", color: V2.red, icon: "link-off" },
+  PENDING: { label: "等待连接", color: V2.amber, icon: "schedule" },
+} as const;
+
 export default function AccountDetailPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -67,7 +74,7 @@ export default function AccountDetailPage() {
         <View style={styles.chartPanel}>
           <View style={styles.chartHeading}>
             <View><Text style={styles.eyebrow}>EQUITY HISTORY</Text><Text style={styles.sectionTitle}>账户净值</Text></View>
-            <View style={styles.connection}><View style={[styles.connectionDot, { backgroundColor: account.connectionStatus === "CONNECTED" ? V2.green : V2.amber }]} /><Text style={styles.connectionText}>{account.connectionStatus === "CONNECTED" ? "连接正常" : "部分数据延迟"}</Text></View>
+            <View style={styles.connection}><View style={[styles.connectionDot, { backgroundColor: CONNECTION_STATE[account.connectionStatus].color }]} /><Text style={styles.connectionText}>{CONNECTION_STATE[account.connectionStatus].label}</Text></View>
           </View>
           <EquityChart points={account.equitySeries} color={accent} height={isMobile ? 230 : 320} showAxis />
         </View>
@@ -106,8 +113,8 @@ export default function AccountDetailPage() {
               {account.platformIds.map((platformId, index) => (
                 <View key={platformId} style={styles.connectionRow}>
                   <View style={styles.connectionIndex}><Text style={styles.connectionIndexText}>{String(index + 1).padStart(2, "0")}</Text></View>
-                  <View style={styles.connectionCopy}><Text style={styles.connectionName}>{platformName(platformId)}</Text><Text style={styles.connectionMeta}>账户映射已脱敏 · {account.currency}</Text></View>
-                  <MaterialIcons name={account.connectionStatus === "CONNECTED" ? "check-circle" : "schedule"} size={19} color={account.connectionStatus === "CONNECTED" ? V2.green : V2.amber} />
+                  <View style={styles.connectionCopy}><Text style={styles.connectionName}>{platformName(platformId)}</Text><Text style={styles.connectionMeta}>账户映射已脱敏 · {account.currency} · {CONNECTION_STATE[account.connectionStatus].label}</Text></View>
+                  <MaterialIcons name={CONNECTION_STATE[account.connectionStatus].icon} size={19} color={CONNECTION_STATE[account.connectionStatus].color} />
                 </View>
               ))}
             </View>
@@ -162,74 +169,74 @@ const styles = StyleSheet.create({
   page: { width: "100%", maxWidth: V2_LAYOUT.maxWidth, alignSelf: "center", paddingHorizontal: V2_LAYOUT.pagePaddingDesktop, paddingTop: 18, gap: 30 },
   pageMobile: { paddingHorizontal: V2_LAYOUT.pagePaddingMobile, paddingTop: 12 },
   back: { alignSelf: "flex-start", minHeight: 34, flexDirection: "row", alignItems: "center", gap: 7 },
-  backText: { color: V2.textMuted, fontSize: 11, fontWeight: "700" },
+  backText: { color: V2.textMuted, fontSize: 12, fontWeight: "700" },
   header: { minHeight: 130, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: V2.border, flexDirection: "row", alignItems: "center", gap: 16 },
   headerMobile: { alignItems: "flex-start", flexWrap: "wrap" },
   modeIcon: { width: 58, height: 58, borderWidth: 1, borderRadius: 5, alignItems: "center", justifyContent: "center" },
   headerCopy: { flex: 1, minWidth: 210, gap: 4 },
-  mode: { fontSize: 9, fontWeight: "900" },
+  mode: { fontSize: 10, fontWeight: "900" },
   title: { color: V2.text, fontSize: 31, lineHeight: 39, fontWeight: "900", letterSpacing: 0 },
   titleMobile: { fontSize: 25, lineHeight: 32 },
-  subtitle: { color: V2.textMuted, fontSize: 11 },
+  subtitle: { color: V2.textMuted, fontSize: 12 },
   headerStatus: { alignItems: "flex-end", gap: 6 },
-  updated: { color: V2.textDim, fontSize: 8 },
+  updated: { color: V2.textDim, fontSize: 10 },
   metrics: { minHeight: 82, flexDirection: "row", flexWrap: "wrap", borderTopWidth: 1, borderBottomWidth: 1, borderColor: V2.border },
   metric: { minWidth: 145, flex: 1, paddingVertical: 14, paddingRight: 12, justifyContent: "center", gap: 5 },
-  metricLabel: { color: V2.textDim, fontSize: 9 },
+  metricLabel: { color: V2.textDim, fontSize: 10 },
   metricValue: { fontSize: 15, lineHeight: 20, fontWeight: "900" },
   chartPanel: { padding: 17, borderWidth: 1, borderColor: V2.border, borderRadius: 6, backgroundColor: V2.backgroundRaised },
   chartHeading: { minHeight: 58, flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
-  eyebrow: { color: V2.gold, fontSize: 9, fontWeight: "900" },
+  eyebrow: { color: V2.gold, fontSize: 10, fontWeight: "900" },
   sectionTitle: { marginTop: 3, color: V2.text, fontSize: 20, fontWeight: "900" },
   connection: { flexDirection: "row", alignItems: "center", gap: 6 },
   connectionDot: { width: 7, height: 7, borderRadius: 4 },
-  connectionText: { color: V2.textMuted, fontSize: 9 },
+  connectionText: { color: V2.textMuted, fontSize: 10 },
   detailGrid: { flexDirection: "row", alignItems: "stretch", gap: 14 },
   detailGridMobile: { flexDirection: "column" },
   modePanel: { flex: 1.2, minWidth: 0, padding: 16, borderWidth: 1, borderColor: V2.border, borderRadius: 6, backgroundColor: V2.backgroundRaised },
   platformPanel: { flex: 0.8, minWidth: 0, padding: 16, borderWidth: 1, borderColor: V2.border, borderRadius: 6, backgroundColor: V2.backgroundRaised },
-  panelEyebrow: { color: V2.gold, fontSize: 8, fontWeight: "900" },
+  panelEyebrow: { color: V2.gold, fontSize: 10, fontWeight: "900" },
   panelTitle: { marginTop: 4, marginBottom: 15, color: V2.text, fontSize: 17, fontWeight: "900" },
   detailRows: { borderTopWidth: 1, borderTopColor: V2.border },
   detailRow: { minHeight: 42, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderBottomWidth: 1, borderBottomColor: V2.border },
-  detailLabel: { color: V2.textMuted, fontSize: 10 },
-  detailValue: { color: V2.text, fontSize: 10, fontWeight: "800", textAlign: "right" },
+  detailLabel: { color: V2.textMuted, fontSize: 11 },
+  detailValue: { color: V2.text, fontSize: 11, fontWeight: "800", textAlign: "right" },
   readOnlyNotice: { marginTop: 13, padding: 11, borderWidth: 1, borderColor: "rgba(216,188,131,0.3)", borderRadius: 4, flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  readOnlyText: { flex: 1, color: V2.textMuted, fontSize: 9, lineHeight: 14 },
+  readOnlyText: { flex: 1, color: V2.textMuted, fontSize: 11, lineHeight: 16 },
   buckets: { gap: 10 },
   bucket: { padding: 11, borderWidth: 1, borderColor: V2.border, borderRadius: 4, backgroundColor: V2.surfaceMuted, gap: 8 },
   bucketHeading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   bucketName: { color: V2.text, fontSize: 11, fontWeight: "900" },
   bucketWeight: { color: V2.gold, fontSize: 12, fontWeight: "900" },
   strategyLine: { flexDirection: "row", justifyContent: "space-between", gap: 10 },
-  strategyLabel: { color: V2.textMuted, fontSize: 9 },
-  strategyValue: { color: V2.text, fontSize: 9, fontWeight: "800" },
+  strategyLabel: { color: V2.textMuted, fontSize: 10 },
+  strategyValue: { color: V2.text, fontSize: 10, fontWeight: "800" },
   recipeMeta: { flexDirection: "row", justifyContent: "space-between", gap: 10 },
-  recipeMetaText: { color: V2.textDim, fontSize: 8 },
+  recipeMetaText: { color: V2.textDim, fontSize: 10 },
   connectionRows: { borderTopWidth: 1, borderTopColor: V2.border },
   connectionRow: { minHeight: 62, flexDirection: "row", alignItems: "center", gap: 10, borderBottomWidth: 1, borderBottomColor: V2.border },
   connectionIndex: { width: 30, height: 30, borderWidth: 1, borderColor: V2.border, borderRadius: 3, alignItems: "center", justifyContent: "center" },
-  connectionIndexText: { color: V2.textMuted, fontSize: 8, fontWeight: "900" },
+  connectionIndexText: { color: V2.textMuted, fontSize: 10, fontWeight: "900" },
   connectionCopy: { flex: 1, minWidth: 0, gap: 3 },
-  connectionName: { color: V2.text, fontSize: 11, fontWeight: "800" },
-  connectionMeta: { color: V2.textDim, fontSize: 8 },
+  connectionName: { color: V2.text, fontSize: 12, fontWeight: "800" },
+  connectionMeta: { color: V2.textDim, fontSize: 10 },
   activity: {},
   tabs: { minHeight: 46, flexDirection: "row", borderBottomWidth: 1, borderBottomColor: V2.border },
   tab: { minHeight: 46, paddingHorizontal: 14, alignItems: "center", justifyContent: "center", borderBottomWidth: 2, borderBottomColor: "transparent" },
   tabActive: { borderBottomColor: V2.gold },
-  tabText: { color: V2.textMuted, fontSize: 10, fontWeight: "700" },
+  tabText: { color: V2.textMuted, fontSize: 12, fontWeight: "700" },
   tabTextActive: { color: V2.text, fontWeight: "900" },
   activityRows: { borderTopWidth: 1, borderTopColor: V2.border },
   activityRow: { minHeight: 58, paddingHorizontal: 6, flexDirection: "row", alignItems: "center", gap: 14, borderBottomWidth: 1, borderBottomColor: V2.border },
   activityRowMobile: { paddingVertical: 12, flexWrap: "wrap", alignItems: "flex-start" },
   symbol: { width: 115, gap: 2 },
-  symbolText: { color: V2.text, fontSize: 11, fontWeight: "900" },
-  side: { fontSize: 8, fontWeight: "900" },
-  activityCell: { flex: 1, minWidth: 95, color: V2.textMuted, fontSize: 10 },
+  symbolText: { color: V2.text, fontSize: 12, fontWeight: "900" },
+  side: { fontSize: 10, fontWeight: "900" },
+  activityCell: { flex: 1, minWidth: 95, color: V2.textMuted, fontSize: 11 },
   activityPnl: { fontWeight: "900" },
-  activityTime: { width: 110, color: V2.textDim, fontSize: 9 },
-  empty: { paddingVertical: 40, color: V2.textMuted, fontSize: 10, textAlign: "center" },
+  activityTime: { width: 110, color: V2.textDim, fontSize: 10 },
+  empty: { paddingVertical: 40, color: V2.textMuted, fontSize: 12, textAlign: "center" },
   notice: { paddingTop: 18, borderTopWidth: 1, borderTopColor: V2.border, flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  noticeText: { flex: 1, color: V2.textMuted, fontSize: 10, lineHeight: 17 },
+  noticeText: { flex: 1, color: V2.textMuted, fontSize: 11, lineHeight: 18 },
   pressed: { opacity: 0.7 },
 });

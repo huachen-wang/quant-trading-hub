@@ -25,6 +25,7 @@ export default function V2HomePage() {
   const { width } = useWindowDimensions();
   const isMobile = width < 700;
   const isTablet = width >= 700 && width < 1060;
+  const isNarrow = width < 1000;
   const [mode, setMode] = useState<Mode>("SELF_ALLOCATED");
   const overview = trpc.v2.overview.useQuery(undefined, {
     staleTime: 20_000,
@@ -202,7 +203,7 @@ export default function V2HomePage() {
           />
           <View style={styles.platformGrid}>
             {data.platforms.map((platform) => (
-              <View key={platform.id} style={[styles.platformRow, isMobile && styles.platformRowMobile]}>
+              <View key={platform.id} style={[styles.platformRow, isNarrow && styles.platformRowMobile]}>
                 <View style={styles.platformIdentity}>
                   <View style={styles.platformCode}>
                     <Text style={styles.platformCodeText}>{platform.code}</Text>
@@ -310,8 +311,8 @@ const styles = StyleSheet.create({
     borderBottomColor: V2.border,
   },
   dataNoticeMain: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
-  dataNoticeText: { color: V2.textMuted, fontSize: 11, lineHeight: 17, flexShrink: 1 },
-  syncText: { color: V2.textDim, fontSize: 10, flexShrink: 0 },
+  dataNoticeText: { color: V2.textMuted, fontSize: 12, lineHeight: 18, flexShrink: 1 },
+  syncText: { color: V2.textDim, fontSize: 11, flexShrink: 0 },
   hero: { minHeight: 400, flexDirection: "row", gap: 42, alignItems: "stretch" },
   heroMobile: { minHeight: 0, flexDirection: "column", gap: 28 },
   heroCopy: { flex: 1.05, justifyContent: "center", minWidth: 0 },
@@ -342,7 +343,7 @@ const styles = StyleSheet.create({
   todayPnl: { flexDirection: "row", alignItems: "center", gap: 5 },
   todayPnlText: { color: V2.green, fontSize: 11, fontWeight: "800" },
   chartFooter: { flexDirection: "row", justifyContent: "space-between", paddingTop: 4 },
-  chartFooterText: { color: V2.textDim, fontSize: 9 },
+  chartFooterText: { color: V2.textDim, fontSize: 10 },
   section: { gap: 22 },
   strategyGrid: { flexDirection: "row", flexWrap: "wrap", gap: 14, alignItems: "stretch" },
   segmented: {
@@ -375,15 +376,15 @@ const styles = StyleSheet.create({
   platformCodeText: { color: V2.gold, fontSize: 12, fontWeight: "900" },
   platformNameWrap: { flex: 1, minWidth: 0, gap: 4 },
   platformName: { color: V2.text, fontSize: 15, fontWeight: "900" },
-  platformSummary: { color: V2.textMuted, fontSize: 10, lineHeight: 15 },
+  platformSummary: { color: V2.textMuted, fontSize: 11, lineHeight: 16 },
   platformMetric: { flex: 1, minWidth: 138, gap: 5 },
-  platformMetricLabel: { color: V2.textDim, fontSize: 9, fontWeight: "800" },
-  platformMetricValue: { color: V2.text, fontSize: 11, lineHeight: 17 },
+  platformMetricLabel: { color: V2.textDim, fontSize: 10, fontWeight: "800" },
+  platformMetricValue: { color: V2.text, fontSize: 12, lineHeight: 18 },
   platformStatus: { width: 132, alignItems: "flex-end", gap: 6 },
-  termsVersion: { color: V2.textDim, fontSize: 8 },
+  termsVersion: { color: V2.textDim, fontSize: 10 },
   riskNotice: { paddingTop: 22, borderTopWidth: 1, borderTopColor: V2.border, flexDirection: "row", alignItems: "flex-start", gap: 12 },
   riskCopy: { flex: 1, gap: 5 },
   riskTitle: { color: V2.text, fontSize: 13, fontWeight: "900" },
-  riskText: { color: V2.textMuted, fontSize: 11, lineHeight: 18 },
+  riskText: { color: V2.textMuted, fontSize: 12, lineHeight: 19 },
   pressed: { opacity: 0.76 },
 });

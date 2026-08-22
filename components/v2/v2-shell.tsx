@@ -236,6 +236,6 @@ const styles = StyleSheet.create({
   content: { flex: 1, minHeight: 0 },
   disabledState: { flex: 1, minHeight: 420, alignItems: "center", justifyContent: "center", gap: 9, padding: 24 },
   disabledTitle: { color: V2.text, fontSize: 17, fontWeight: "900" },
-  disabledText: { color: V2.textMuted, fontSize: 11, textAlign: "center" },
+  disabledText: { color: V2.textMuted, fontSize: 12, textAlign: "center", lineHeight: 18 },
   pressed: { opacity: 0.72 },
 });

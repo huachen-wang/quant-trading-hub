@@ -43,8 +43,8 @@ export function AccountCard({ account, onPress }: { account: ServiceAccount; onP
       </View>
       <View style={styles.footer}>
         <View style={styles.connection}>
-          <View style={[styles.connectionDot, { backgroundColor: account.connectionStatus === "CONNECTED" ? V2.green : account.connectionStatus === "DEGRADED" ? V2.amber : V2.red }]} />
-          <Text style={styles.connectionText}>{account.connectionStatus === "CONNECTED" ? "连接正常" : account.connectionStatus === "DEGRADED" ? "部分延迟" : "等待连接"}</Text>
+          <View style={[styles.connectionDot, { backgroundColor: account.connectionStatus === "CONNECTED" ? V2.green : account.connectionStatus === "DISCONNECTED" ? V2.red : V2.amber }]} />
+          <Text style={styles.connectionText}>{account.connectionStatus === "CONNECTED" ? "连接正常" : account.connectionStatus === "DEGRADED" ? "部分延迟" : account.connectionStatus === "DISCONNECTED" ? "连接中断" : "等待连接"}</Text>
         </View>
         <View style={styles.open}><Text style={styles.openText}>查看账户</Text><MaterialIcons name="arrow-forward" size={15} color={V2.text} /></View>
       </View>
@@ -59,19 +59,19 @@ const styles = StyleSheet.create({
   modeIcon: { width: 43, height: 43, borderWidth: 1, borderRadius: 5, alignItems: "center", justifyContent: "center" },
   titleCopy: { flex: 1, minWidth: 0, gap: 3 },
   title: { color: V2.text, fontSize: 15, lineHeight: 20, fontWeight: "900" },
-  mode: { fontSize: 9, fontWeight: "900" },
+  mode: { fontSize: 10, fontWeight: "900" },
   equityLine: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 },
-  equityLabel: { color: V2.textDim, fontSize: 9 },
+  equityLabel: { color: V2.textDim, fontSize: 10 },
   equityValue: { marginTop: 4, color: V2.text, fontSize: 21, lineHeight: 27, fontWeight: "900" },
   pnl: { fontSize: 13, fontWeight: "900" },
   metrics: { minHeight: 52, flexDirection: "row", borderTopWidth: 1, borderBottomWidth: 1, borderColor: V2.border },
   metric: { flex: 1, justifyContent: "center", gap: 3 },
-  metricLabel: { color: V2.textDim, fontSize: 8 },
-  metricValue: { color: V2.text, fontSize: 11, fontWeight: "800" },
+  metricLabel: { color: V2.textDim, fontSize: 10 },
+  metricValue: { color: V2.text, fontSize: 12, fontWeight: "800" },
   footer: { minHeight: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   connection: { flexDirection: "row", alignItems: "center", gap: 6 },
   connectionDot: { width: 6, height: 6, borderRadius: 3 },
-  connectionText: { color: V2.textMuted, fontSize: 9 },
+  connectionText: { color: V2.textMuted, fontSize: 10 },
   open: { flexDirection: "row", alignItems: "center", gap: 4 },
-  openText: { color: V2.text, fontSize: 10, fontWeight: "800" },
+  openText: { color: V2.text, fontSize: 11, fontWeight: "800" },
 });
