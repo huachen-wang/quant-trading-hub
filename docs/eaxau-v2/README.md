@@ -20,7 +20,7 @@
 
 1. [产品与系统架构](PRODUCT_ARCHITECTURE.md)
 2. [API 契约](API_CONTRACT.md)
-3. [Claude Code 后续任务](CLAUDE_UI_HANDOFF.md)
+3. [Claude Code 独立复查任务](CLAUDE_UI_HANDOFF.md)
 4. [实现状态与验收门槛](IMPLEMENTATION_STATUS.md)
 
 ## 已实现预览

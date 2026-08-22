@@ -47,7 +47,7 @@ npx vitest run
 
 ```text
 Test Files  25 passed | 1 skipped (26)
-Tests       89 passed | 1 skipped (90)
+Tests       95 passed | 1 skipped (96)
 ```
 
 唯一跳过项为仓库原有 `auth.logout` 测试；V2 新增契约、分仓引擎、分仓工具和内容编辑器
@@ -61,7 +61,7 @@ npx esbuild server/_core/index.ts \
   --out-extension:.js=.mjs --outdir=dist
 ```
 
-结果：通过，生成 `dist/index.mjs`，约 `330.2 KB`。
+结果：通过，生成 `dist/index.mjs`，约 `332.8 KB`。
 
 ### Web 导出与完整性
 
@@ -109,20 +109,25 @@ node dist/index.mjs
 
 核验结果：
 
-- 1440x900 桌面和 390x844 手机首页均有完整内容，无页面级横向溢出；
+- 1440x900 桌面、1024x768 平板和 390x844 手机前台页面均有完整内容，无页面级横向溢出；
 - 六策略图片全部加载，策略图自然尺寸统一为 960x540；
+- V2 首页 DOM 只挂载六张策略图，首三张为普通优先级、后三张为低优先级；
+- `/search` 不再后台挂载旧首页的十二张商城图片；
 - 首页明确显示 `模拟数据`，没有把 Demo 伪装为实盘；
 - 策略详情长内容在手机端改为单列，无两栏挤压；
 - 分仓、账户、EA 资料库手机端 `scrollWidth` 与视口宽度一致；
 - 本地管理员账号登录成功，V2 内容后台桌面和手机均可见；
 - 新建内容块弹窗在 390px 宽度下完整显示类型、标题、正文、要点、排序、显隐和保存控件；
 - 未观察到空白页、图片失败、内容遮挡或路由 404。
+- 分仓确认、后台未保存关闭和类型切换均使用站内弹层，没有浏览器原生对话框。
 
 ## V1 兼容边界
 
 - `server/routers.ts` 只新增 `v2: v2Router`，原有顶层 procedure 未重命名或删除。
 - V2 所有后端实现位于 `server/v2/**` 和 `server/routers/v2.ts`。
 - V2 内容复用现有 `page_contents`，本轮没有新增迁移或修改表结构。
+- V2 内容排序新增独立 procedure，并通过现有 `page_contents` 的数据库事务整组更新；
+  没有改变任何既有 procedure 的输入或输出。
 - 支付、下载、登录、OAuth、邮件、短信、定时任务和牛帮执行路径未改动。
 - EA 资料库原页面仍为默认 V1 首页实现，V2 通过显式 `variant` 复用。
 

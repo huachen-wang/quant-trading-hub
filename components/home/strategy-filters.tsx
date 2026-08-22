@@ -238,6 +238,8 @@ export const StrategyFilters = memo(function StrategyFilters({
             <Text style={styles.uploadBtnText}>上架 EA</Text>
           </TouchableOpacity>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="搜索策略"
             onPress={onSearchPress}
             style={[styles.searchBtn, { backgroundColor: colors.surface }]}
             activeOpacity={0.7}

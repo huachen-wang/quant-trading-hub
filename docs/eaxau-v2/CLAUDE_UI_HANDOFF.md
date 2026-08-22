@@ -1,163 +1,132 @@
-# Claude Code 后续任务：EAXAU V2 UI 精修
+# Claude Code 独立复查任务：EAXAU V2
 
 更新时间：2026-08-22。
 
-这是一份可直接交给 Claude Code 的限定任务书。EAXAU V2 的产品纵向链路、数据契约、
-Demo/HTTP Provider、校验引擎、页面和后台已经由 Codex 实现。Claude 的任务是独立完成
-第二轮视觉与可访问性精修，不重做架构，也不新增或删减功能。
+这不是继续开发架构的任务。EAXAU V2 的六策略首页、策略详情、两种账户模式、自主分仓、
+EA 资料库、图文后台、Demo/HTTP Provider、数据契约和校验引擎已经实现。Claude Code 的
+职责是作为第二位审查者，先验证，再只修复有证据的问题；没有问题就不要制造代码改动。
 
-## 先阅读
+## 开始前
+
+1. 从最新 `main` 开始，先执行 `git status --short --branch` 和 `git log -12 --oneline`。
+2. 完整阅读 `README.md`、`PRODUCT_ARCHITECTURE.md`、`API_CONTRACT.md`、
+   `IMPLEMENTATION_STATUS.md` 和仓库根目录 `DEPLOYMENT_AUDIT.md`。
+3. 确认 Node.js 为 24.x。不要改锁文件，不要自动升级依赖。
+4. 如果工作区不干净，保留并理解已有修改，不得覆盖、回退或重写他人的提交。
+
+## 已完成，不要重做
+
+- `/v2-preview` 只展示六个核心策略席位，且只挂载六张可见图片。
+- `/v2-preview/strategies/[id]` 已包含净值、指标、持仓、交易及可编辑说明/证据块。
+- `/v2-preview/allocate` 已支持 1 至 3 个平台、推荐方案、手动步进器和桌面拖放快捷方式。
+- `/v2-preview/accounts` 已覆盖签约管理与自主分仓两种只读账户。
+- `/v2-preview/ea-library` 保留原 EA 目录、搜索、筛选、咨询和旧链接能力。
+- `/admin/v2-content` 已支持新建、编辑、显隐、原子排序、删除、预览和未保存保护。
+- 浏览器原生 `alert/confirm` 已替换为站内确认层。
+- 首页卡片回调已稳定化，首三张图普通优先级、后三张低优先级，非当前旧首页不再后台挂载。
+- V1 procedure、支付、下载、登录、OAuth、邮件、短信和牛帮执行路径没有被改写。
+
+## 你的任务
+
+### 1. 独立 UI 验收
+
+逐页检查以下路由，尺寸固定为 1440x900、1024x768、390x844，并额外检查浏览器 200% 缩放：
 
 ```text
-docs/eaxau-v2/README.md
-docs/eaxau-v2/PRODUCT_ARCHITECTURE.md
-docs/eaxau-v2/API_CONTRACT.md
-docs/eaxau-v2/IMPLEMENTATION_STATUS.md
+/v2-preview
+/v2-preview/strategies/jingge-v51
+/v2-preview/allocate
+/v2-preview/accounts
+/v2-preview/accounts/managed-demo-01
+/v2-preview/accounts/self-demo-01
+/v2-preview/ea-library
+/admin/v2-content
 ```
 
-## 已完成，不要重写
+只记录真实问题：横向页面溢出、文本遮挡、按钮不可点击、焦点不可见、状态只靠颜色、图片失败、
+布局跳动或小屏无法完成编辑。横向导航滚动和卡片内部标题省略属于设计行为，不要误报。
 
-- `/v2-preview` 六策略首页。
-- 策略详情、组合曲线、持仓、成交和可编辑图文块。
-- 自主分仓配置器及全部业务校验。
-- 签约管理、自主分仓两类账户页。
-- 独立 EA 资料库页面。
-- `/admin/v2-content` 六策略图文后台。
-- 确定性 Demo Provider 和 Quant Data Core HTTP Provider。
-- V2 Zod 契约、tRPC 路由和单元测试。
+### 2. 三项重点复核
 
-## Claude 负责的任务
+- 在真实桌面 Chrome 中把兼容策略拖入平台桶，确认成功提示；再验证重复、离线和不兼容策略被拒绝。
+- 在 390px 后台完成“打开区块 -> 修改 -> 切换类型 -> 取消 -> 关闭 -> 放弃修改”全过程，
+  确认弹层没有被编辑窗口遮挡。
+- 在 `/v2-preview`、策略详情和 `/search` 检查 DOM 图片数量；非当前 V1 首页不得额外挂载
+  12 张隐藏商城图片。
 
-### A. 三视口 UI 精修
+### 3. 代码审查
 
-只在现有信息架构内改善留白、字号层级、对齐、状态辨识和长文本表现：
+重点检查回归、竞态和可维护性，不做审美性重写：
 
-- 1440x900 桌面；
-- 1024x768 平板；
-- 390x844 手机。
+- 内容块排序是否始终规范化且事务提交；
+- mutation 失败后是否保留编辑内容并给出可恢复反馈；
+- 路由切换是否产生重复请求或隐藏页面图片请求；
+- memo 组件是否仍因不稳定回调失效；
+- `DEMO/LIVE/STALE/OFFLINE` 是否同时用文字或图标表达；
+- V1 根首页、搜索和 EA 详情是否仍能正常进入。
 
-覆盖首页、策略详情、分仓、账户列表、两类账户详情、EA 资料库和内容后台。保持卡片圆角
-不超过 8px，不做卡片套卡片，不添加渐变球、AI 风格文字框或重复图片标题。
+## 允许修复的范围
 
-### B. 可访问性与页面状态
-
-- 检查图标按钮的可读标签、键盘焦点和足够的点击区域。
-- 检查 `loading/empty/demo/live/stale/offline/partial/error` 的文案和布局稳定性。
-- 检查颜色之外是否还有文字/图标表达状态。
-- 修复长名称、最大数字、空字段及 200% 浏览器缩放下的遮挡与横向溢出。
-
-### C. 内容后台易用性
-
-精修 `/admin/v2-content`，但不改变保存格式或 API：
-
-- 策略切换、内容块选择、显隐、排序、编辑和预览更容易扫描；
-- 保存中、保存成功、校验失败、删除确认状态清楚；
-- 小屏仍能完成完整编辑；
-- 不引入新的富文本数据格式。
-
-### D. 桌面拖放快捷方式
-
-在不改变分仓 DTO、校验引擎和按钮操作路径的前提下，为桌面 Web 增加策略拖入已启用平台桶的
-快捷方式：
-
-- 拖放只调用现有“添加兼容策略”动作，不另建一套状态；
-- 不兼容、离线或已存在的策略不可放入，并给出清楚反馈；
-- 键盘和按钮路径必须继续完整可用；
-- 移动端仍使用选择按钮与步进器，不强制长按拖动；
-- 为成功、拒绝和重复拖入补充组件测试或浏览器验收记录。
-
-### E. 前端性能复查
-
-- 检查首屏以下图片懒加载和稳定媒体尺寸；
-- 避免重复查询和无意义重渲染；
-- 只有确认能降低初始包体时才做路由级延迟加载；
-- 提供修改前后的浏览器 Network/Performance 证据，不凭感觉声称提升。
-
-## 允许修改
+只有复现问题后才修改：
 
 ```text
 app/v2-preview/**
 app/admin/v2-content.tsx
 components/v2/**
-lib/v2/content-editor.ts
-lib/v2/allocation.ts
-public/strategy-art-v2/**
-docs/eaxau-v2/CLAUDE_UI_HANDOFF.md
+components/home/strategy-filters.tsx
+lib/v2/**
+docs/eaxau-v2/**
 ```
 
-如测试需要，可修改与上述文件直接对应的 `*.test.ts`。发现后端问题先记录，不要越界修复。
+需要后端、契约、数据库或 V1 路由变更时，只写成 finding，不自行修改。
 
-## 禁止修改
+## 严格禁止
 
-```text
-server/routers.ts
-server/routers/v2.ts
-server/v2/**
-shared/v2/contracts.ts
-drizzle/**
-package.json
-pnpm-lock.yaml
-app/(tabs)/**  （除非只是修复 V2 复用参数且能证明 V1 行为不变）
-```
+- 不修改任何既有 V1 procedure、输入或输出。
+- 不修改 `server/routers.ts`、`server/routers/v2.ts`、`server/v2/**`、`shared/v2/contracts.ts`、
+  `drizzle/**`、`package.json` 或 `pnpm-lock.yaml`。
+- 不接触支付、下载、登录、OAuth、邮件、短信、定时任务或牛帮交易执行。
+- 不把 `DEMO` 改成 `LIVE`，不写“永不爆仓”“保证收益”等不可验证承诺。
+- 不添加新功能，不删除现有功能，不换设计体系，不提交构建产物、本地截图或 `.env`。
+- 不 force push，不 rebase 公共分支，不覆盖他人提交。
 
-还必须遵守：
-
-- 不改任何 V1 procedure、输入、输出、支付、下载、登录或 OAuth 行为。
-- 不接触牛帮数据库、交易执行或内部函数。
-- 不把 `DEMO` 改成 `LIVE`，不伪造实时账户。
-- 不加入下单、平仓、入金或远程修改交易参数的操作。
-- 不用“永不爆仓”“保证收益”等不可证实承诺。
-- 不 force push，不覆盖别人的改动，不提交 `.env`、`web-build`、`dist` 或本地截图。
-
-## 开发与验收命令
-
-Node.js 必须使用 24。安装依赖后执行：
+## 必须执行的验收
 
 ```bash
 npx tsc --noEmit
 npx expo lint
 ADMIN_EMAIL=admin@example.test \
-ADMIN_PASSWORD=test-only \
-JWT_SECRET=test-secret-at-least-32-characters \
+ADMIN_PASSWORD=test-only-password \
+JWT_SECRET=test-only-jwt-secret-at-least-32-characters \
 OAUTH_SERVER_URL=https://api.manus.im \
+EAXAU_V2_ENABLED=true \
 npx vitest run
-npx esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
-EXPO_PUBLIC_API_BASE_URL=http://localhost:3000 npx expo export --platform web --clear
-node scripts/inject-web-bootstrap.mjs
-node scripts/verify-web-build.mjs
+npx esbuild server/_core/index.ts --platform=node --packages=external \
+  --bundle --format=esm --out-extension:.js=.mjs --outdir=dist
+EXPO_PUBLIC_API_BASE_URL=http://localhost:3000 \
+npx expo export --platform web --output-dir web-build --clear
+node scripts/inject-web-bootstrap.js
+node scripts/verify-web-build.js
 git diff --check
 ```
 
-启动本地联调：
+## 交付格式
 
-```bash
-PORT=3000 NODE_ENV=development EAXAU_V2_ENABLED=true npx tsx server/_core/index.ts
-EXPO_PUBLIC_API_BASE_URL=http://localhost:3000 npx expo start --web --port 8081
-```
-
-## 交付要求
-
-1. 从最新 `main` 创建 `claude/v2-ui-polish`，分小提交，不重写历史。
-2. 给出修改文件清单和每项修改的可验证原因。
-3. 提交三个视口的首页、详情、分仓、账户、EA 资料库和后台截图。
-4. 报告每条验收命令的真实结果；失败不能写成通过。
-5. 列出残余问题，明确区分本仓库问题与外部真实数据依赖。
-6. 提供 `git diff --stat` 和证明 V1 API 未改动的 diff。
+1. Findings 按严重度排序，必须有文件/行号或可复现步骤。
+2. 三个视口的页面截图和真实 HTML5 拖放结果。
+3. 每条命令的真实通过/失败数量。
+4. 若有修复，给出小提交、`git diff --stat` 和 V1 未改动证明。
+5. 若没有问题，明确写“未发现需要修改的问题”，不要为了产生提交而改代码。
 
 ## 可直接粘贴给 Claude Code
 
 ```text
-你正在 quant-trading-hub 仓库中执行 EAXAU V2 第二轮 UI 精修。先完整阅读
-docs/eaxau-v2/CLAUDE_UI_HANDOFF.md、PRODUCT_ARCHITECTURE.md、API_CONTRACT.md 和
-IMPLEMENTATION_STATUS.md。现有 V2 功能、契约、Provider、校验引擎和路由已经完成；
-不要重写架构，不新增或删除功能，不修改 V1 API，不触碰牛帮执行路径。
-
-严格限制在任务书“允许修改”的文件内，完成：三视口视觉精修、可访问性/状态复查、
-/admin/v2-content 易用性精修、桌面拖放快捷方式和前端性能证据复查。保留六个核心策略、两种业务模式、
-独立 EA 资料库和所有 DEMO 标识。遇到需要后端改动的问题只记录，不自行改契约。
-
-完成后运行任务书内全部类型、lint、测试、构建和静态验证命令；用 1440x900、
-1024x768、390x844 截图验收，无横向溢出或遮挡。创建 claude/v2-ui-polish 分支，
-分小提交，不 force push。最终发回变更清单、测试原始结论、截图、git diff --stat、
-V1 未改动证明和残余问题。
+请在 quant-trading-hub 最新 main 上执行独立验收。先完整阅读
+docs/eaxau-v2/CLAUDE_UI_HANDOFF.md 及其中列出的架构、契约、状态和部署审计文档。
+现有功能已经开发完成，你不是来重写架构或新增功能的。按任务书检查 1440x900、
+1024x768、390x844 和 200% 缩放，重点实测桌面 HTML5 拖放、390px 内容后台完整编辑流程，
+以及非当前首页是否仍挂载隐藏图片。先报告 findings；只有复现问题后才在允许目录内做最小修复。
+禁止修改 V1 API、V2 后端/契约、数据库、支付、下载、登录、OAuth、牛帮执行、package.json
+和锁文件。保留所有 DEMO 标识，不 force push。完成后运行任务书中的全部验收命令，发回
+截图、测试原始结论、diff stat、V1 未改动证明和残余外部依赖。
 ```
