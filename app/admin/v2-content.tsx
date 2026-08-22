@@ -30,6 +30,7 @@ import { trpc } from "@/lib/trpc";
 
 type EditingState = {
   recordId: number | null;
+  isNew: boolean;
   sortOrder: number;
   isVisible: boolean;
   form: ContentEditorForm;
@@ -159,6 +160,7 @@ export default function V2ContentAdminPage() {
   const openCreate = () => {
     const next = {
       recordId: null,
+      isNew: true,
       sortOrder:
         Math.max(0, ...(content.data?.map((item) => item.sortOrder) ?? [])) + 10,
       isVisible: true,
@@ -422,6 +424,7 @@ export default function V2ContentAdminPage() {
                   onPress={() => {
                     const next = {
                       recordId: item.recordId,
+                      isNew: false,
                       sortOrder: item.sortOrder,
                       isVisible: item.isVisible,
                       form: blockToEditorForm(item.block),
@@ -477,7 +480,7 @@ export default function V2ContentAdminPage() {
           <Pressable style={[styles.modal, isMobile && styles.modalMobile]} onPress={(event) => event.stopPropagation()}>
             <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
               <View style={styles.modalHeading}>
-                <View><Text style={styles.modalEyebrow}>CONTENT BLOCK</Text><Text style={styles.modalTitle}>{editing?.recordId ? "编辑区块" : "新建区块"}</Text></View>
+                <View><Text style={styles.modalEyebrow}>CONTENT BLOCK</Text><Text style={styles.modalTitle}>{editing?.isNew ? "新建区块" : "编辑区块"}</Text></View>
                 <Pressable accessibilityRole="button" accessibilityLabel="关闭编辑窗口" onPress={requestCloseEditor} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}><MaterialIcons name="close" size={20} color={V2.textMuted} /></Pressable>
               </View>
 
