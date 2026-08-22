@@ -3,6 +3,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,11 +23,20 @@ import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
 
 type RiskProfile = AllocationDraft["riskBudget"]["profile"];
 
+function showConfirmSummary() {
+  const title = "确认摘要已生成";
+  const message =
+    "当前是演示方案，不会开户、入金或执行交易。正式流程将增加客户确认、规则版本和审计凭证。";
+  if (Platform.OS === "web") window.alert(`${title}\n${message}`);
+  else Alert.alert(title, message);
+}
+
 export default function AllocationPage() {
   const { strategyId } = useLocalSearchParams<{ strategyId?: string }>();
   const { width } = useWindowDimensions();
   const isMobile = width < 900;
   const [draft, setDraft] = useState<AllocationDraft>();
+  const [capitalFocused, setCapitalFocused] = useState(false);
   const requestedInitial = useRef(false);
   const strategies = trpc.v2.strategies.list.useQuery(undefined, { staleTime: 30_000 });
   const platforms = trpc.v2.platforms.list.useQuery(undefined, { staleTime: 30_000 });
@@ -165,9 +175,11 @@ export default function AllocationPage() {
         <View style={[styles.settings, isMobile && styles.settingsMobile]}>
           <View style={styles.field}>
             <Text style={styles.fieldLabel}>资金基数</Text>
-            <View style={styles.moneyInput}>
+            <View style={[styles.moneyInput, capitalFocused && styles.moneyInputFocused]}>
               <TextInput
                 accessibilityLabel="资金基数"
+                onFocus={() => setCapitalFocused(true)}
+                onBlur={() => setCapitalFocused(false)}
                 value={draft.capital.amount}
                 onChangeText={(value) => {
                   const clean = value.replace(/[^0-9.]/g, "");
@@ -271,12 +283,7 @@ export default function AllocationPage() {
               validation={validate.data}
               isValidating={validate.isPending}
               onValidate={() => validate.mutate(draft)}
-              onConfirm={() =>
-                Alert.alert(
-                  "确认摘要已生成",
-                  "当前是演示方案，不会开户、入金或执行交易。正式流程将增加客户确认、规则版本和审计凭证。",
-                )
-              }
+              onConfirm={showConfirmSummary}
             />
           </View>
         </View>
@@ -327,7 +334,8 @@ const styles = StyleSheet.create({
   settingsMobile: { alignItems: "stretch", flexDirection: "column" },
   field: { minWidth: 220, gap: 6 },
   fieldLabel: { color: V2.textDim, fontSize: 10, fontWeight: "800" },
-  moneyInput: { height: 38, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: V2.borderStrong, borderRadius: 4, overflow: "hidden" },
+  moneyInput: { minHeight: 38, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: V2.borderStrong, borderRadius: 4, overflow: "hidden" },
+  moneyInputFocused: { borderColor: V2.gold },
   input: { flex: 1, height: 38, paddingHorizontal: 11, color: V2.text, fontSize: 13, fontWeight: "800", outlineStyle: "none" } as any,
   currency: { width: 48, color: V2.textMuted, fontSize: 10, fontWeight: "900", textAlign: "center" },
   riskControl: { height: 38, padding: 3, flexDirection: "row", gap: 2, borderWidth: 1, borderColor: V2.border, borderRadius: 4, backgroundColor: V2.surfaceMuted },

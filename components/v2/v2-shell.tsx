@@ -91,7 +91,15 @@ export function V2Shell({ children }: V2ShellProps) {
           {!isMobile ? <View style={styles.desktopNav}>{nav}</View> : null}
 
           <View style={styles.headerActions}>
-            <View style={styles.providerState}>
+            <View
+              accessible
+              accessibilityLabel={
+                status?.provider === "HTTP"
+                  ? "数据来源：Quant Data Core 实时接口"
+                  : "数据来源：确定性模拟数据"
+              }
+              style={styles.providerState}
+            >
               <View
                 style={[
                   styles.providerDot,
@@ -101,11 +109,9 @@ export function V2Shell({ children }: V2ShellProps) {
                   },
                 ]}
               />
-              {!isMobile ? (
-                <Text style={styles.providerText}>
-                  {status?.provider === "HTTP" ? "DATA CORE" : "DEMO"}
-                </Text>
-              ) : null}
+              <Text style={styles.providerText}>
+                {status?.provider === "HTTP" ? "DATA CORE" : "DEMO"}
+              </Text>
             </View>
             <Pressable
               accessibilityRole="button"
@@ -227,7 +233,7 @@ const styles = StyleSheet.create({
   },
   contactText: { color: V2.background, fontSize: 12, fontWeight: "900", letterSpacing: 0 },
   mobileNavWrap: {
-    height: 45,
+    minHeight: 45,
     borderBottomWidth: 1,
     borderBottomColor: V2.border,
     backgroundColor: V2.backgroundRaised,

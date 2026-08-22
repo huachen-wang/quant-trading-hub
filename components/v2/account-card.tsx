@@ -21,7 +21,7 @@ export function AccountCard({ account, onPress }: { account: ServiceAccount; onP
           <MaterialIcons name={managed ? "description" : "account-tree"} size={21} color={modeColor} />
         </View>
         <View style={styles.titleCopy}>
-          <Text style={styles.title}>{account.name}</Text>
+          <Text style={styles.title} numberOfLines={1}>{account.name}</Text>
           <Text style={[styles.mode, { color: modeColor }]}>{managed ? "签约管理" : "自主分仓"}</Text>
         </View>
         <StatusBadge compact dataMode={account.source.dataMode} freshness={account.source.freshness} />

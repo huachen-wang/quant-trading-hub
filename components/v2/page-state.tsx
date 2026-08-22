@@ -4,7 +4,7 @@ import { V2 } from "./tokens";
 
 export function V2LoadingState({ label = "正在同步数据" }: { label?: string }) {
   return (
-    <View style={styles.state}>
+    <View accessibilityLiveRegion="polite" style={styles.state}>
       <ActivityIndicator color={V2.gold} size="large" />
       <Text style={styles.title}>{label}</Text>
       <Text style={styles.detail}>页面结构保持稳定，数据返回后会自动更新。</Text>
@@ -22,7 +22,7 @@ export function V2ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <View style={styles.state}>
+    <View accessibilityRole="alert" style={styles.state}>
       <MaterialIcons name="sync-problem" size={32} color={V2.amber} />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.detail}>{detail}</Text>

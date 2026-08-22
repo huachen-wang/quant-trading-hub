@@ -87,7 +87,7 @@ export function StrategyCard({
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.version}>{strategy.version}</Text>
+          <Text style={styles.version} numberOfLines={1}>{strategy.version}</Text>
           <View style={styles.detailAction}>
             <Text style={styles.detailActionText}>查看数据</Text>
             <MaterialIcons name="arrow-forward" size={15} color={V2.text} />
