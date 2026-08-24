@@ -6,12 +6,13 @@
  *
  * 当前任务：
  *   - 每 5 分钟把 status='pending' 且 expiresAt < now 的订单标记为 expired
- *   - 每天 03:00 清理过期验证码
+ *   - 每 1 分钟把到期资管会话切换为 EXIT_REQUESTED 并禁止新执行
+ *   - 每 6 小时清理过期验证码
  *
  * 未来如果需要更复杂调度（cron 表达式、分布式 lock 等），可以换 node-cron 或 BullMQ。
  */
 
-import { expireStaleOrders } from "../db";
+import { expireDueManagedSessions, expireStaleOrders } from "../db";
 import { cleanupExpiredCodes } from "./verification";
 
 let started = false;
@@ -43,7 +44,21 @@ export function startCron() {
   }, 5 * 60 * 1000);
   intervals.push(orderExpireInterval);
 
-  // 任务 2：每 6 小时清理过期验证码
+  // 任务 2：每分钟关闭已到期资管会话的新执行权。
+  // 这里只改内部状态为 EXIT_REQUESTED，不直接平仓或转币。
+  const managedSessionExpireInterval = setInterval(async () => {
+    try {
+      const count = await expireDueManagedSessions();
+      if (count > 0) {
+        console.log(`[cron] requested exit for ${count} expired managed session(s)`);
+      }
+    } catch (e) {
+      console.error("[cron] managed session expiry failed:", e);
+    }
+  }, 60 * 1000);
+  intervals.push(managedSessionExpireInterval);
+
+  // 任务 3：每 6 小时清理过期验证码
   const codeCleanupInterval = setInterval(async () => {
     try {
       const count = await cleanupExpiredCodes();

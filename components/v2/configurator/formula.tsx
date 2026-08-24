@@ -1,7 +1,12 @@
 import { Text, View } from "react-native";
-import { formatMoney } from "@/components/v2/format";
+import { formatUsdt } from "@/components/v2/format";
 import { styles } from "./styles";
-import type { RiskOption, ServicePath } from "./types";
+import {
+  fundingRouteLabel,
+  type FundingRoute,
+  type ManagedSessionDuration,
+  type RiskOption,
+} from "./types";
 
 export function ConfiguratorHeading({
   isMobile,
@@ -21,16 +26,18 @@ export function ConfiguratorHeading({
           <Text style={styles.eyebrow}>方案参数</Text>
         </View>
         <Text style={[styles.title, isMobile && styles.titleMobile]}>
-          配置资金、风控与执行
+          开启限时资管会话
         </Text>
         <Text style={styles.subtitle}>
           已带入 {selectedStrategyCount}{" "}
-          款策略，所有参数共同组成同一份量化方案。
+          款策略；资金、风险、期限和执行槽共同组成同一份 Managed Session。
         </Text>
       </View>
       <View style={styles.formulaBadge}>
-        <Text style={styles.formulaLabel}>方案结构</Text>
-        <Text style={styles.formulaText}>资金 × 风控 × 策略 × 平台 × 模式</Text>
+        <Text style={styles.formulaLabel}>会话结构</Text>
+        <Text style={styles.formulaText}>
+          资金 × 风控 × 六策略 × 执行槽 × 期限 × U 路由
+        </Text>
       </View>
     </View>
   );
@@ -41,20 +48,22 @@ export function ConfiguratorFormula({
   riskOption,
   strategyCount,
   platformCount,
-  servicePath,
+  durationDays,
+  fundingRoutes,
 }: {
   capital: number;
   riskOption: RiskOption;
   strategyCount: number;
   platformCount: number;
-  servicePath: ServicePath;
+  durationDays: ManagedSessionDuration;
+  fundingRoutes: FundingRoute[];
 }) {
   return (
     <View style={styles.formulaRail}>
       <FormulaStep
         index="01"
-        label="资金"
-        value={formatMoney(capital, "USD", true)}
+        label="USDT 名义资金"
+        value={formatUsdt(capital, true)}
       />
       <FormulaStep
         index="02"
@@ -62,11 +71,12 @@ export function ConfiguratorFormula({
         value={`${riskOption.title} · ${riskOption.drawdown}%`}
       />
       <FormulaStep index="03" label="策略" value={`${strategyCount} / 6`} />
-      <FormulaStep index="04" label="平台" value={`${platformCount} / 3`} />
+      <FormulaStep index="04" label="执行槽" value={`${platformCount} / 2`} />
+      <FormulaStep index="05" label="期限" value={`${durationDays} 天`} />
       <FormulaStep
-        index="05"
-        label="模式"
-        value={servicePath === "BROKER" ? "券商模式" : "资管模式"}
+        index="06"
+        label="U 路由"
+        value={fundingRouteLabel(fundingRoutes)}
       />
     </View>
   );

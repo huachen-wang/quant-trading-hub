@@ -7,9 +7,14 @@ import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
 import { styles } from "./styles";
 import {
   CAPITAL_PRESETS,
+  EXIT_MODE_OPTIONS,
+  FUNDING_ROUTE_OPTIONS,
   RISK_OPTIONS,
+  SESSION_DURATION_OPTIONS,
+  type ExitMode,
+  type FundingRoute,
+  type ManagedSessionDuration,
   type RiskProfile,
-  type ServicePath,
 } from "./types";
 
 export function ConfiguratorControls({
@@ -25,8 +30,13 @@ export function ConfiguratorControls({
   platforms,
   selectedPlatformIds,
   onTogglePlatform,
-  servicePath,
-  onServicePathChange,
+  durationDays,
+  onDurationDaysChange,
+  exitMode,
+  onExitModeChange,
+  fundingRoutes,
+  onToggleFundingRoute,
+  vaultActivationEnabled,
 }: {
   isMobile: boolean;
   capital: string;
@@ -40,8 +50,13 @@ export function ConfiguratorControls({
   platforms: PlatformProfile[];
   selectedPlatformIds: string[];
   onTogglePlatform: (platformId: string) => void;
-  servicePath: ServicePath;
-  onServicePathChange: (value: ServicePath) => void;
+  durationDays: ManagedSessionDuration;
+  onDurationDaysChange: (value: ManagedSessionDuration) => void;
+  exitMode: ExitMode;
+  onExitModeChange: (value: ExitMode) => void;
+  fundingRoutes: FundingRoute[];
+  onToggleFundingRoute: (value: FundingRoute) => void;
+  vaultActivationEnabled: boolean;
 }) {
   const [capitalFocused, setCapitalFocused] = useState(false);
 
@@ -50,8 +65,8 @@ export function ConfiguratorControls({
       <ConfiguratorStep
         index="01"
         icon="account-balance-wallet"
-        title="资金规模"
-        detail="用于检查策略门槛、平台门槛和组合集中度。"
+        title="USDT 名义资金"
+        detail="用于生成资管会话草案，并检查策略门槛、券商门槛与集中度。"
       >
         <View style={[styles.capitalRow, isMobile && styles.stackRow]}>
           <View
@@ -76,7 +91,7 @@ export function ConfiguratorControls({
               placeholderTextColor={V2.textDim}
               style={styles.input}
             />
-            <Text style={styles.currency}>USD</Text>
+            <Text style={styles.currency}>USDT</Text>
           </View>
           <View style={styles.presetRow}>
             {CAPITAL_PRESETS.map((amount) => (
@@ -148,8 +163,8 @@ export function ConfiguratorControls({
       <ConfiguratorStep
         index="03"
         icon="hub"
-        title="策略组合"
-        detail={`已同步 ${selectedStrategyIds.length} 款；离线策略不会进入方案。`}
+        title="六策略资管组合"
+        detail={`已纳入 ${selectedStrategyIds.length} / 6 款。离线策略可保留在 DRAFT，但会阻断激活。`}
       >
         <View style={styles.strategyOptions}>
           {strategies.map((strategy) => {
@@ -208,8 +223,8 @@ export function ConfiguratorControls({
       <ConfiguratorStep
         index="04"
         icon="account-balance"
-        title="交易平台"
-        detail="比较点差、佣金、执行和出金样本，再确定资金放在哪里。"
+        title="券商执行槽"
+        detail="选择 1–2 个券商执行槽；同一会话聚合展示净值与风险。"
       >
         <View style={styles.platformOptions}>
           {platforms.map((platform) => {
@@ -265,28 +280,76 @@ export function ConfiguratorControls({
 
       <ConfiguratorStep
         index="05"
-        icon="tune"
-        title="管理模式"
-        detail="模式决定资金归属、交易执行和双方责任边界。"
+        icon="schedule"
+        title="限时资管会话"
+        detail="资管权限按期限生效；可随时申请结束，并按预选方式处理持仓。"
+      >
+        <View style={styles.sessionGroup}>
+          <View style={[styles.durationOptions, isMobile && styles.stackRow]}>
+            {SESSION_DURATION_OPTIONS.map((option) => (
+              <ChoiceOption
+                key={option.id}
+                active={durationDays === option.id}
+                title={option.title}
+                detail={option.detail}
+                onPress={() => onDurationDaysChange(option.id)}
+              />
+            ))}
+          </View>
+          <View style={styles.permissionBoundary}>
+            <MaterialIcons name="vpn-key" size={19} color={V2.green} />
+            <View style={styles.permissionCopy}>
+              <Text style={styles.permissionTitle}>交易权限不含出金</Text>
+              <Text style={styles.permissionDetail}>
+                项目方可按合同执行开仓、平仓与风控；不获得出金、转账或修改收款地址权限。
+              </Text>
+            </View>
+          </View>
+          <View style={styles.exitBlock}>
+            <Text style={styles.subsectionLabel}>结束会话时</Text>
+            <View style={[styles.modeOptions, isMobile && styles.stackRow]}>
+              {EXIT_MODE_OPTIONS.map((option) => (
+                <ChoiceOption
+                  key={option.id}
+                  active={exitMode === option.id}
+                  title={option.title}
+                  detail={option.detail}
+                  onPress={() => onExitModeChange(option.id)}
+                />
+              ))}
+            </View>
+          </View>
+        </View>
+      </ConfiguratorStep>
+
+      <ConfiguratorStep
+        index="06"
+        icon="currency-exchange"
+        title="USDT 资金路由"
+        detail="直达券商与 Managed Vault 属于同一资管会话；可单选，也可混合。"
         last
       >
         <View style={[styles.modeOptions, isMobile && styles.stackRow]}>
-          <ModeOption
-            active={servicePath === "BROKER"}
-            icon="account-balance"
-            title="券商模式"
-            badge="资金在本人账户"
-            detail="资金直接留在用户本人券商账户，不经过技术方；用户掌握入出金，系统负责策略接入、组合配置与风险观察。"
-            onPress={() => onServicePathChange("BROKER")}
-          />
-          <ModeOption
-            active={servicePath === "MANAGED"}
-            icon="supervisor-account"
-            title="资管模式"
-            badge="技术方代操管理"
-            detail="用户与技术方按约定签订合同，由技术方负责策略部署、交易执行和风险管理；用户在平台查看净值、持仓与回撤。"
-            onPress={() => onServicePathChange("MANAGED")}
-          />
+          {FUNDING_ROUTE_OPTIONS.map((option) => (
+            <FundingRouteOption
+              key={option.id}
+              active={fundingRoutes.includes(option.id)}
+              title={option.title}
+              badge={
+                option.id === "MANAGED_VAULT" && vaultActivationEnabled
+                  ? "能力已开启"
+                  : option.badge
+              }
+              status={
+                option.id === "MANAGED_VAULT" && vaultActivationEnabled
+                  ? "ACTIVE"
+                  : option.status
+              }
+              detail={option.detail}
+              preparingNote={option.id === "MANAGED_VAULT"}
+              onPress={() => onToggleFundingRoute(option.id)}
+            />
+          ))}
         </View>
       </ConfiguratorStep>
     </View>
@@ -323,18 +386,14 @@ function ConfiguratorStep({
   );
 }
 
-function ModeOption({
+function ChoiceOption({
   active,
-  icon,
   title,
-  badge,
   detail,
   onPress,
 }: {
   active: boolean;
-  icon: ComponentProps<typeof MaterialIcons>["name"];
   title: string;
-  badge: string;
   detail: string;
   onPress: () => void;
 }) {
@@ -343,26 +402,69 @@ function ModeOption({
       accessibilityRole="radio"
       accessibilityState={{ checked: active }}
       onPress={onPress}
+      style={[styles.choiceOption, active && styles.optionActive]}
+    >
+      <View style={styles.choiceTopline}>
+        <MaterialIcons
+          name={active ? "radio-button-checked" : "radio-button-unchecked"}
+          size={17}
+          color={active ? V2.gold : V2.textDim}
+        />
+        <Text style={[styles.choiceTitle, active && styles.optionTitleActive]}>
+          {title}
+        </Text>
+      </View>
+      <Text style={styles.choiceDetail}>{detail}</Text>
+    </Pressable>
+  );
+}
+
+function FundingRouteOption({
+  active,
+  title,
+  badge,
+  status,
+  detail,
+  preparingNote,
+  onPress,
+}: {
+  active: boolean;
+  title: string;
+  badge: string;
+  status: "ACTIVE" | "PREPARING";
+  detail: string;
+  preparingNote: boolean;
+  onPress: () => void;
+}) {
+  const accent = status === "ACTIVE" ? V2.green : V2.amber;
+  return (
+    <Pressable
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: active }}
+      onPress={onPress}
       style={[styles.modeOption, active && styles.optionActive]}
     >
       <View style={styles.modeTopline}>
         <MaterialIcons
-          name={icon}
+          name={active ? "check-box" : "check-box-outline-blank"}
           size={20}
           color={active ? V2.gold : V2.textMuted}
         />
         <Text style={[styles.modeTitle, active && styles.optionTitleActive]}>
           {title}
         </Text>
-        <View style={[styles.modeBadge, active && styles.modeBadgeActive]}>
-          <Text
-            style={[styles.modeBadgeText, active && styles.modeBadgeTextActive]}
-          >
-            {badge}
-          </Text>
+        <View style={[styles.modeBadge, { borderColor: `${accent}66` }]}>
+          <Text style={[styles.modeBadgeText, { color: accent }]}>{badge}</Text>
         </View>
       </View>
       <Text style={styles.modeDetail}>{detail}</Text>
+      {preparingNote ? (
+        <Text style={styles.preparingNote}>
+          {status === "ACTIVE"
+            ? "能力开关已开启；每个执行槽仍需逐一完成钱包、托管、合约与授权核验。"
+            : "可纳入混合方案；未配置钱包与合约前只作路由预留，不会执行入金。"}
+        </Text>
+      ) : null}
     </Pressable>
   );
 }

@@ -44,7 +44,9 @@ function AccountCardBase({
             {account.name}
           </Text>
           <Text style={[styles.mode, { color: modeColor }]}>
-            {managed ? "资管模式" : "券商模式"}
+            {managed
+              ? "Managed Session · 合同管理"
+              : "Managed Session · U 直达券商"}
           </Text>
         </View>
         <StatusBadge
@@ -88,7 +90,7 @@ function AccountCardBase({
           </Text>
         </View>
         <View style={styles.metric}>
-          <Text style={styles.metricLabel}>平台</Text>
+          <Text style={styles.metricLabel}>执行槽</Text>
           <Text style={styles.metricValue}>{account.platformIds.length}</Text>
         </View>
       </View>

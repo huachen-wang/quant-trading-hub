@@ -3,8 +3,6 @@ import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
 import { verifyAdminToken } from "../routers/admin-auth";
 
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@eaxau.com";
-
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Platform, Image, Linking, Animated } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert, Platform, Image, Linking, Animated, TextInput } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { trpc } from "@/lib/trpc";
@@ -21,6 +21,9 @@ type PayState =
       address: string;
       chain: "TRC20" | "ERC20";
       qrCodeUrl?: string;
+      amount: string;
+      cnyPerUsdt: string;
+      quoteExpiresAt: string;
       submitted?: boolean;
     };
 
@@ -48,6 +51,7 @@ export default function CheckoutOrderScreen() {
 
   const [payState, setPayState] = useState<PayState>({ kind: "select" });
   const [busy, setBusy] = useState(false);
+  const [txHash, setTxHash] = useState("");
   const [tick, setTick] = useState(0); // 用于触发倒计时刷新
 
   // 订单详情
@@ -97,13 +101,19 @@ export default function CheckoutOrderScreen() {
       const result = await initiateMutation.mutateAsync({ orderNo, method });
 
       if (method === "usdt") {
-        if (!result.addressInfo) throw new Error("USDT 网关未返回收款地址");
+        if (!result.addressInfo || !result.settlementQuote) throw new Error("USDT 网关未返回完整结算报价");
+        setTxHash("");
         setPayState({
           kind: "usdt",
           address: result.addressInfo.address,
           chain: result.addressInfo.chain,
           qrCodeUrl: result.addressInfo.qrCodeUrl,
+          amount: result.settlementQuote.amount,
+          cnyPerUsdt: result.settlementQuote.cnyPerUsdt,
+          quoteExpiresAt: result.settlementQuote.expiresAt,
+          submitted: Boolean(result.submittedTxHash),
         });
+        setTxHash(result.submittedTxHash || "");
       } else {
         // ZPay：跳转支付页
         if (!result.payUrl) throw new Error("支付页 URL 缺失");
@@ -136,10 +146,15 @@ export default function CheckoutOrderScreen() {
 
   const handleConfirmUsdt = async () => {
     if (!orderNo) return;
+    const normalizedTxHash = txHash.trim();
+    if (!/^(?:0x)?[a-fA-F0-9]{64}$/.test(normalizedTxHash)) {
+      showMsg("请填写完整的 64 位链上 Tx Hash");
+      return;
+    }
     setBusy(true);
     try {
-      const result = await markUsdtMutation.mutateAsync({ orderNo });
-      showMsg(result.message || "已提交，等待客服确认");
+      const result = await markUsdtMutation.mutateAsync({ orderNo, txHashOrNote: normalizedTxHash });
+      showMsg(result.message || "已提交，等待链上对账确认");
       setPayState((s) => (s.kind === "usdt" ? { ...s, submitted: true } : s));
       refetch();
     } catch (e: any) {
@@ -343,8 +358,13 @@ export default function CheckoutOrderScreen() {
               {payState.kind === "usdt" && (
                 <View style={[styles.methodCard, glassStyle("subtle") as any]}>
                   <Text style={[styles.sectionTitle, { color: colors.foreground }]}>🪙 USDT 转账（{payState.chain}）</Text>
+                  <View style={styles.usdtQuoteCard}>
+                    <Text style={[styles.usdtLabel, { color: colors.muted }]}>本单应付（锁定至订单过期）</Text>
+                    <Text style={styles.usdtQuoteAmount}>{payState.amount} USDT</Text>
+                    <Text style={[styles.usdtQuoteMeta, { color: colors.muted }]}>1 USDT = ¥{payState.cnyPerUsdt} · 报价到期 {new Date(payState.quoteExpiresAt).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}</Text>
+                  </View>
                   <Text style={[styles.usdtHint, { color: colors.muted }]}>
-                    请使用 USDT 钱包通过 <Text style={{ color: "#D8BC83", fontWeight: "700" }}>{payState.chain}</Text> 网络转账 <Text style={{ color: "#D8BC83", fontWeight: "700" }}>¥{order.amount} 等值的 USDT</Text> 至下方地址：
+                    请使用 <Text style={{ color: "#D8BC83", fontWeight: "700" }}>{payState.chain}</Text> 网络，精确转入 <Text style={{ color: "#D8BC83", fontWeight: "700" }}>{payState.amount} USDT</Text> 至下方地址：
                   </Text>
 
                   <View style={styles.usdtAddrCard}>
@@ -391,19 +411,29 @@ export default function CheckoutOrderScreen() {
                       }}
                     >
                       1. 请务必使用 <Text style={{ color: "#D8BC83" }}>{payState.chain}</Text> 网络（其他网络无法到账，资金可能丢失）{"\n"}
-                      2. 转账完成后请
-                      <Text style={{ color: "#D8BC83" }}>联系客服 Telegram 提供截图</Text>
-                      ，我们会在 30 分钟内确认到账{"\n"}
-                      3. 确认到账后您的订单状态会自动变更为已支付
+                      2. 数量不符、网络不符或报价过期时不会自动交付{"\n"}
+                      3. 转账后提交 Tx Hash，对账通过后订单才生效
                     </Text>
                   </View>
 
                   {!payState.submitted ? (
-                    <TouchableOpacity onPress={handleConfirmUsdt} style={styles.usdtSubmitBtn} disabled={busy} activeOpacity={0.85}>
-                      <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.usdtSubmitInner}>
-                        {busy ? <ActivityIndicator color="#0A1628" /> : <Text style={styles.usdtSubmitText}>✓ 我已转账，请确认</Text>}
-                      </LinearGradient>
-                    </TouchableOpacity>
+                    <>
+                      <Text style={[styles.usdtLabel, { color: colors.muted }]}>Tx Hash / TxID（必填）</Text>
+                      <TextInput
+                        value={txHash}
+                        onChangeText={setTxHash}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        placeholder={payState.chain === "ERC20" ? "0x + 64 位十六进制" : "64 位 TRON TxID"}
+                        placeholderTextColor={colors.muted}
+                        style={[styles.usdtTxInput, { color: colors.foreground, borderColor: colors.border }]}
+                      />
+                      <TouchableOpacity onPress={handleConfirmUsdt} style={styles.usdtSubmitBtn} disabled={busy} activeOpacity={0.85}>
+                        <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.usdtSubmitInner}>
+                          {busy ? <ActivityIndicator color="#0A1628" /> : <Text style={styles.usdtSubmitText}>提交 Tx Hash 待对账</Text>}
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </>
                   ) : (
                     <View style={styles.usdtSubmitted}>
                       <Text
@@ -422,7 +452,7 @@ export default function CheckoutOrderScreen() {
                           marginTop: 4,
                         }}
                       >
-                        若 30 分钟内仍未确认，请联系客服 Telegram 提供截图
+                        系统已保存 Tx Hash，管理员核对链上到账后交付
                       </Text>
                     </View>
                   )}
@@ -649,6 +679,21 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 14,
   },
+  usdtQuoteCard: {
+    backgroundColor: "rgba(52, 211, 153, 0.08)",
+    borderColor: "rgba(52, 211, 153, 0.28)",
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 14,
+  },
+  usdtQuoteAmount: {
+    color: "#34D399",
+    fontSize: 28,
+    fontWeight: "900",
+    marginBottom: 4,
+  },
+  usdtQuoteMeta: { fontSize: 11, lineHeight: 18 },
   usdtAddrCard: {
     backgroundColor: "rgba(245,158,11,0.06)",
     borderColor: "rgba(245,158,11,0.25)",
@@ -694,6 +739,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 12,
     marginBottom: 16,
+  },
+  usdtTxInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 12,
+    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    marginBottom: 12,
   },
   usdtSubmitBtn: { borderRadius: 12, overflow: "hidden" },
   usdtSubmitInner: {

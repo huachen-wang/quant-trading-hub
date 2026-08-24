@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { annualizeReturn, formatAnnualizedReturn } from "./format";
+import { annualizeReturn, formatAnnualizedReturn, formatUsdt } from "./format";
 
 describe("annualized return formatting", () => {
   it("compounds a 90-day return over 365 days", () => {
@@ -18,5 +18,12 @@ describe("annualized return formatting", () => {
     expect(annualizeReturn(-100)).toBeNull();
     expect(annualizeReturn(10, 0)).toBeNull();
     expect(formatAnnualizedReturn(null)).toBe("--");
+  });
+});
+
+describe("USDT amount formatting", () => {
+  it("does not mislabel managed capital as USD", () => {
+    expect(formatUsdt(50_000)).toBe("50,000 USDT");
+    expect(formatUsdt(null)).toBe("--");
   });
 });

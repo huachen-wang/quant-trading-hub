@@ -19,6 +19,11 @@ export type StrategyDetailData = {
   winRate: string | number;
   maxDrawdown: string | number;
   price: string | number;
+  originalPrice?: string | number | null;
+  isFree?: boolean | number | null;
+  saleMode?: "direct" | "inquiry" | null;
+  featuredLink?: string | null;
+  downloadAvailable?: boolean;
   sourceName?: string | null;
   sourceUrl?: string | null;
   evidenceUrl?: string | null;

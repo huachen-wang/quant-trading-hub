@@ -73,5 +73,5 @@ export function getPublicPaymentMethods(): PublicPaymentMethod[] {
 const methodMeta: Record<string, { label: string; icon: string; hint?: string }> = {
   alipay: { label: "支付宝", icon: "💙", hint: "扫码支付，秒到账" },
   wxpay: { label: "微信支付", icon: "💚", hint: "扫码支付，秒到账" },
-  usdt: { label: "USDT", icon: "🪙", hint: "TRC20 链，需联系客服确认" },
+  usdt: { label: "USDT", icon: "🪙", hint: "锁定报价 · 链上 TxID 对账" },
 };

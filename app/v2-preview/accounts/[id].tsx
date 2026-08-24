@@ -94,15 +94,17 @@ export default function AccountDetailPage() {
           </View>
           <View style={styles.headerCopy}>
             <Text style={[styles.mode, { color: accent }]}>
-              {managed ? "资管模式" : "券商模式"}
+              {managed
+                ? "Managed Session · 合同管理"
+                : "Managed Session · U 直达券商"}
             </Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
               {account.name}
             </Text>
             <Text style={styles.subtitle}>
               {managed
-                ? "技术方按合同代操管理 · 客户查看账户运行"
-                : "资金在本人券商账户 · 平台与策略组合运行"}
+                ? "限时交易管理 · 客户保留出金权"
+                : "USDT 直达合作券商 · 项目方只获交易权"}
             </Text>
           </View>
           <View style={styles.headerStatus}>
@@ -183,7 +185,7 @@ export default function AccountDetailPage() {
               {managed ? "合同视图" : "当前方案"}
             </Text>
             <Text style={styles.panelTitle}>
-              {managed ? "资管合同与权限边界" : "当前券商配置方案"}
+              {managed ? "会话合同与权限边界" : "当前券商执行槽"}
             </Text>
             {managed ? (
               <View style={styles.detailRows}>
@@ -195,13 +197,13 @@ export default function AccountDetailPage() {
                       : "等待确认"
                   }
                 />
-                <DetailRow label="配置责任" value="指定技术方" />
-                <DetailRow label="客户权限" value="权益、持仓与交易只读" />
-                <DetailRow label="资金管理" value="按合同由技术方管理" />
+                <DetailRow label="交易责任" value="指定技术方" />
+                <DetailRow label="客户权限" value="查看、申请退出与出金" />
+                <DetailRow label="技术方权限" value="开平仓与风控；不含出金" />
                 <View style={styles.readOnlyNotice}>
                   <MaterialIcons name="visibility" size={18} color={V2.gold} />
                   <Text style={styles.readOnlyText}>
-                    该模式不提供直接修改参数、平仓或调仓操作。
+                    客户可申请结束会话；系统按预选的立即平仓、自然退出或交还持仓流程处理。
                   </Text>
                 </View>
               </View>
@@ -243,7 +245,7 @@ export default function AccountDetailPage() {
 
           <View style={styles.platformPanel}>
             <Text style={styles.panelEyebrow}>数据连接</Text>
-            <Text style={styles.panelTitle}>平台连接</Text>
+            <Text style={styles.panelTitle}>券商执行槽</Text>
             <View style={styles.connectionRows}>
               {account.platformIds.map((platformId, index) => (
                 <View key={platformId} style={styles.connectionRow}>
@@ -345,7 +347,7 @@ export default function AccountDetailPage() {
         <View style={styles.notice}>
           <MaterialIcons name="shield" size={20} color={V2.blue} />
           <Text style={styles.noticeText}>
-            账户页是经过脱敏的只读投影。模拟金额不代表真实资产，真实模式必须通过身份验证、用户授权和数据新鲜度校验。
+            账户页是经过脱敏的只读投影。模拟金额不代表真实资产；真实执行必须通过身份、限时资管授权、券商交易权与数据新鲜度校验，出金权默认为无。
           </Text>
         </View>
       </View>

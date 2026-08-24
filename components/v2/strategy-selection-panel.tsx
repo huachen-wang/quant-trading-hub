@@ -10,6 +10,7 @@ type StrategySelectionPanelProps = {
   compact?: boolean;
   inline?: boolean;
   onRemove: (strategyId: string) => void;
+  onSelectAll: () => void;
   onContinue: () => void;
 };
 
@@ -20,9 +21,11 @@ export function StrategySelectionPanel({
   compact = false,
   inline = false,
   onRemove,
+  onSelectAll,
   onContinue,
 }: StrategySelectionPanelProps) {
   const hasSelection = selectedStrategies.length > 0;
+  const hasFullSelection = selectedStrategies.length === total;
   const selectionChips = hasSelection ? (
     selectedStrategies.map((strategy) => (
       <Pressable
@@ -81,6 +84,10 @@ export function StrategySelectionPanel({
 
         <View style={styles.chipsInline}>{selectionChips}</View>
 
+        {selectedStrategies.length < total ? (
+          <SelectAllButton onPress={onSelectAll} />
+        ) : null}
+
         <View accessibilityLiveRegion="polite" style={styles.feedbackInline}>
           <MaterialIcons
             name={feedback ? "check-circle" : "sync"}
@@ -98,12 +105,12 @@ export function StrategySelectionPanel({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="继续配置量化方案"
-          disabled={!hasSelection}
+          disabled={!hasFullSelection}
           onPress={onContinue}
           style={({ pressed }) => [
             styles.continueButton,
             styles.continueButtonInline,
-            !hasSelection && styles.disabled,
+            !hasFullSelection && styles.disabled,
             pressed && styles.pressed,
           ]}
         >
@@ -143,6 +150,10 @@ export function StrategySelectionPanel({
         {selectionChips}
       </View>
 
+      {selectedStrategies.length < total ? (
+        <SelectAllButton onPress={onSelectAll} />
+      ) : null}
+
       <View
         accessibilityLiveRegion="polite"
         style={[styles.feedback, feedback && styles.feedbackActive]}
@@ -164,17 +175,17 @@ export function StrategySelectionPanel({
         <View style={styles.nextCopy}>
           <Text style={styles.nextLabel}>下一步</Text>
           <Text style={styles.nextValue} numberOfLines={1}>
-            资金 · 风控 · 平台 · 模式
+            资金 · 风控 · 券商槽 · 期限 · U 路由
           </Text>
         </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="继续配置量化方案"
-          disabled={!hasSelection}
+          disabled={!hasFullSelection}
           onPress={onContinue}
           style={({ pressed }) => [
             styles.continueButton,
-            !hasSelection && styles.disabled,
+            !hasFullSelection && styles.disabled,
             pressed && styles.pressed,
           ]}
         >
@@ -183,6 +194,23 @@ export function StrategySelectionPanel({
         </Pressable>
       </View>
     </View>
+  );
+}
+
+function SelectAllButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="将六款策略全部纳入资管会话草案"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.selectAllButton,
+        pressed && styles.pressed,
+      ]}
+    >
+      <MaterialIcons name="done-all" size={15} color={V2.gold} />
+      <Text style={styles.selectAllText}>一键纳入六策略</Text>
+    </Pressable>
   );
 }
 
@@ -301,6 +329,19 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "800",
   },
+  selectAllButton: {
+    minHeight: 30,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.38)",
+    borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    backgroundColor: "rgba(216,188,131,0.05)",
+  },
+  selectAllText: { color: V2.gold, fontSize: 8, fontWeight: "900" },
   emptyState: {
     minHeight: 50,
     flexDirection: "row",

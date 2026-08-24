@@ -39,6 +39,19 @@ export interface InitiateResult {
     address: string;
     qrCodeUrl?: string; // 收款地址二维码图片本地路径
   };
+  /** 给用户的锁定结算报价（仅 USDT 等需要换算的方式） */
+  settlementQuote?: {
+    amount: string;
+    currency: "USDT";
+    sourceAmount: string;
+    sourceCurrency: string;
+    cnyPerUsdt: string;
+    network: "TRC20" | "ERC20";
+    recipientAddress: string;
+    expiresAt: string;
+  };
+  /** 已提交的 Tx Hash；用于刷新收银台后恢复对账状态。 */
+  submittedTxHash?: string;
   /** 网关订单号 */
   gatewayOrderNo?: string;
   /** 备注信息（前端展示给用户） */

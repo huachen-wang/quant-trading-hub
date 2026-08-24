@@ -21,6 +21,14 @@ import {
   DraggableStrategy,
   StrategyDropTarget,
 } from "@/components/v2/allocation/web-dnd";
+import {
+  exitModeLabel,
+  fundingRouteLabel,
+  type ExitMode,
+  type FundingRoute,
+  type ManagedSessionDuration,
+} from "@/components/v2/configurator/types";
+import { buildManagedSessionDraft } from "@/components/v2/configurator/managed-session-draft";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
 import {
   SelectionInspector,
@@ -50,12 +58,18 @@ export default function AllocationPage() {
     platformIds,
     capital: requestedCapital,
     risk: requestedRisk,
+    durationDays: requestedDurationDays,
+    exitMode: requestedExitMode,
+    fundingRoutes: requestedFundingRoutes,
   } = useLocalSearchParams<{
     strategyId?: string;
     strategyIds?: string;
     platformIds?: string;
     capital?: string;
     risk?: string;
+    durationDays?: string;
+    exitMode?: string;
+    fundingRoutes?: string;
   }>();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -64,6 +78,7 @@ export default function AllocationPage() {
   const [draft, setDraft] = useState<AllocationDraft>();
   const [capitalFocused, setCapitalFocused] = useState(false);
   const [summaryVisible, setSummaryVisible] = useState(false);
+  const [draftBuildError, setDraftBuildError] = useState<string>();
   const [draggedStrategyId, setDraggedStrategyId] = useState<string | null>(
     null,
   );
@@ -84,6 +99,26 @@ export default function AllocationPage() {
     null,
   );
   const requestedInitial = useRef(false);
+  const durationDays: ManagedSessionDuration =
+    requestedDurationDays === "30"
+      ? 30
+      : requestedDurationDays === "180"
+        ? 180
+        : 90;
+  const exitMode: ExitMode =
+    requestedExitMode === "CLOSE_NOW" ||
+    requestedExitMode === "HAND_BACK_POSITIONS"
+      ? requestedExitMode
+      : "NO_NEW_ENTRIES";
+  const fundingRoutes = useMemo<FundingRoute[]>(() => {
+    const requested = (requestedFundingRoutes?.split(",") ?? []).filter(
+      (route): route is FundingRoute =>
+        route === "DIRECT_BROKER" || route === "MANAGED_VAULT",
+    );
+    return requested.length
+      ? Array.from(new Set(requested))
+      : ["DIRECT_BROKER"];
+  }, [requestedFundingRoutes]);
   const preferredStrategyIds = useMemo(
     () =>
       Array.from(
@@ -103,7 +138,7 @@ export default function AllocationPage() {
             .map((value) => value.trim())
             .filter(Boolean),
         ),
-      ).slice(0, 3),
+      ).slice(0, 2),
     [platformIds],
   );
   const strategies = trpc.v2.strategies.list.useQuery(undefined, {
@@ -112,8 +147,16 @@ export default function AllocationPage() {
   const platforms = trpc.v2.platforms.list.useQuery(undefined, {
     staleTime: 30_000,
   });
+  const managedCapabilities = trpc.v2.managedSessions.capabilities.useQuery(
+    undefined,
+    {
+      staleTime: 60_000,
+    },
+  );
   const validate = trpc.v2.allocation.validate.useMutation();
+  const validateDraft = validate.mutate;
   const recommend = trpc.v2.allocation.recommend.useMutation();
+  const createSession = trpc.v2.managedSessions.create.useMutation();
 
   useEffect(() => {
     if (!strategies.data || !platforms.data || requestedInitial.current) return;
@@ -164,9 +207,9 @@ export default function AllocationPage() {
 
   useEffect(() => {
     if (!draft) return;
-    const timer = setTimeout(() => validate.mutate(draft), 420);
+    const timer = setTimeout(() => validateDraft(draft), 420);
     return () => clearTimeout(timer);
-  }, [draft]);
+  }, [draft, validateDraft]);
 
   useEffect(() => {
     if (!dropFlash) return;
@@ -219,7 +262,7 @@ export default function AllocationPage() {
 
   const addPlatform = (platform: PlatformProfile) => {
     if (
-      draft.platformBuckets.length >= 3 ||
+      draft.platformBuckets.length >= 2 ||
       selectedPlatformIds.has(platform.id)
     )
       return;
@@ -407,8 +450,36 @@ export default function AllocationPage() {
     ? selectedPlatformIds.has(inspectedPlatform.id)
     : false;
   const inspectedPlatformDisabled = inspectedPlatform
-    ? !inspectedPlatformSelected && draft.platformBuckets.length >= 3
+    ? !inspectedPlatformSelected && draft.platformBuckets.length >= 2
     : false;
+
+  const createManagedSessionDraft = () => {
+    try {
+      const input = buildManagedSessionDraft({
+        draft,
+        strategies: strategies.data ?? [],
+        durationDays,
+        exitMode,
+        fundingRoutes,
+      });
+      setDraftBuildError(undefined);
+      createSession.reset();
+      createSession.mutate(input, {
+        onSuccess: () => setSummaryVisible(true),
+        onError: () => setSummaryVisible(true),
+      });
+    } catch (error) {
+      setDraftBuildError(
+        error instanceof Error ? error.message : "资管会话草案生成失败。",
+      );
+      setSummaryVisible(true);
+    }
+  };
+
+  const creationError = draftBuildError ?? createSession.error?.message;
+  const createdSession = createSession.data;
+  const unavailableStrategyCount =
+    createdSession?.readiness.unavailableStrategyIds.length ?? 0;
 
   return (
     <ScrollView
@@ -418,13 +489,13 @@ export default function AllocationPage() {
       <View style={[styles.page, isMobile && styles.pageMobile]}>
         <View style={[styles.header, isMobile && styles.headerMobile]}>
           <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>分仓配置</Text>
+            <Text style={styles.eyebrow}>MANAGED SESSION</Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
-              券商模式精细选配
+              资管会话执行槽精配
             </Text>
             <Text style={styles.subtitle}>
-              选择 1 至 3
-              个平台，把核心策略分配到资金桶，再由规则引擎检查兼容性、集中度和风险预算。
+              选择 1–2
+              个券商执行槽，把六策略分配到资金桶，再由规则引擎检查兼容性、集中度和风险预算。
             </Text>
           </View>
           <Pressable
@@ -441,9 +512,39 @@ export default function AllocationPage() {
           </Pressable>
         </View>
 
+        <View
+          style={[styles.sessionTerms, isMobile && styles.sessionTermsMobile]}
+        >
+          <View style={styles.sessionTermPrimary}>
+            <View style={styles.sessionTermIcon}>
+              <MaterialIcons name="schedule" size={22} color={V2.gold} />
+            </View>
+            <View style={styles.sessionTermCopy}>
+              <Text style={styles.sessionTermLabel}>会话期限</Text>
+              <Text style={styles.sessionTermValue}>{durationDays} 天</Text>
+              <Text style={styles.sessionTermDetail}>
+                退出：{exitModeLabel(exitMode)} · 交易权不含出金
+              </Text>
+            </View>
+          </View>
+          <View style={styles.sessionTermRoute}>
+            <Text style={styles.sessionTermLabel}>USDT 资金路由</Text>
+            <Text style={styles.sessionRouteValue}>
+              {fundingRouteLabel(fundingRoutes)}
+            </Text>
+            <Text style={styles.sessionTermDetail}>
+              {fundingRoutes.includes("MANAGED_VAULT")
+                ? managedCapabilities.data?.vaultActivationEnabled
+                  ? "Managed Vault 能力开关已开启；实际执行仍需逐槽完成托管、合约与授权核验。"
+                  : "Managed Vault 当前为接入准备状态，未配置前不执行入金。"
+                : "U 直达支持稳定币的合作券商账户。"}
+            </Text>
+          </View>
+        </View>
+
         <View style={[styles.settings, isMobile && styles.settingsMobile]}>
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>资金基数</Text>
+            <Text style={styles.fieldLabel}>USDT 名义资金</Text>
             <View
               style={[
                 styles.moneyInput,
@@ -469,7 +570,7 @@ export default function AllocationPage() {
                 placeholder="50000"
                 placeholderTextColor={V2.textDim}
               />
-              <Text style={styles.currency}>{draft.capital.currency}</Text>
+              <Text style={styles.currency}>USDT</Text>
             </View>
           </View>
           <View style={styles.field}>
@@ -519,7 +620,7 @@ export default function AllocationPage() {
             <View>
               <Text style={styles.pickerTitle}>平台资金桶</Text>
               <Text style={styles.pickerDetail}>
-                已选择 {draft.platformBuckets.length} / 3
+                已选择 {draft.platformBuckets.length} / 2
               </Text>
             </View>
             <Pressable
@@ -537,7 +638,7 @@ export default function AllocationPage() {
           <View style={styles.platformOptions}>
             {platforms.data.map((platform) => {
               const selected = selectedPlatformIds.has(platform.id);
-              const disabled = !selected && draft.platformBuckets.length >= 3;
+              const disabled = !selected && draft.platformBuckets.length >= 2;
               const hovered = hoveredPlatformId === platform.id;
               return (
                 <Pressable
@@ -578,7 +679,7 @@ export default function AllocationPage() {
                     <Text style={styles.platformOptionMeta} numberOfLines={2}>
                       {hovered
                         ? `${platform.commercialTerms.spreadLabel} · P50 出金 ${platform.commercialTerms.withdrawalP50Hours ?? "--"}h`
-                        : `${platform.accountType} · 最低 ${platform.minimumCapital.toLocaleString("zh-CN")} USD`}
+                        : `${platform.accountType} · 参考门槛 ${platform.minimumCapital.toLocaleString("zh-CN")} USDT`}
                     </Text>
                   </View>
                   <MaterialIcons
@@ -695,7 +796,7 @@ export default function AllocationPage() {
                     platform={platform}
                     strategies={strategies.data}
                     totalCapital={capital}
-                    currency={draft.capital.currency}
+                    currency="USDT"
                     dropStatus={bucketDropStatus(bucket, platform)}
                     onChange={(next) => updateBucket(index, next)}
                     onRemove={() => removeBucket(index)}
@@ -717,20 +818,62 @@ export default function AllocationPage() {
               draft={draft}
               validation={validate.data}
               isValidating={validate.isPending}
-              onValidate={() => validate.mutate(draft)}
-              onConfirm={() => setSummaryVisible(true)}
+              isCreating={createSession.isPending}
+              onValidate={() => validateDraft(draft)}
+              onConfirm={createManagedSessionDraft}
             />
+            {createdSession ? (
+              <View style={styles.createdSession}>
+                <View style={styles.createdSessionTopline}>
+                  <MaterialIcons
+                    name="check-circle"
+                    size={19}
+                    color={V2.green}
+                  />
+                  <Text style={styles.createdSessionStatus}>
+                    {createdSession.status}
+                  </Text>
+                </View>
+                <Text style={styles.createdSessionNo}>
+                  {createdSession.sessionNo}
+                </Text>
+                <Text style={styles.createdSessionDetail}>
+                  草案已保存；交易授权 {createdSession.tradeAuthorizationStatus}
+                  ，出金权 {createdSession.withdrawalPermission}
+                  ，执行开关已关闭。
+                </Text>
+                {unavailableStrategyCount ? (
+                  <Text style={styles.createdSessionWarning}>
+                    {unavailableStrategyCount} 款策略当前离线；可保留在
+                    DRAFT，但会阻断激活。
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
           </View>
         </View>
       </View>
       <ActionDialog
         visible={summaryVisible}
-        title="确认摘要已生成"
-        message="当前是演示方案，不会开户、入金或执行交易。正式流程将增加客户确认、规则版本和审计凭证。"
-        tone="success"
-        confirmLabel="知道了"
-        confirmOnly
-        onConfirm={() => setSummaryVisible(false)}
+        title={
+          creationError ? "DRAFT 创建失败" : "Managed Session DRAFT 已创建"
+        }
+        message={
+          creationError
+            ? `${creationError} 草案未保存，也没有转移 USDT 或执行交易。`
+            : `${createdSession?.sessionNo ?? "--"} · DRAFT。本次操作只保存可审阅会话，没有授予交易权、转移 USDT 或执行交易。`
+        }
+        tone={creationError ? "danger" : "success"}
+        confirmLabel={creationError ? "重试创建" : "知道了"}
+        confirmOnly={!creationError}
+        onConfirm={() => {
+          if (creationError) {
+            setSummaryVisible(false);
+            createManagedSessionDraft();
+            return;
+          }
+          setSummaryVisible(false);
+        }}
         onCancel={() => setSummaryVisible(false)}
       />
       <SelectionInspector
@@ -766,7 +909,7 @@ export default function AllocationPage() {
             ? inspectedPlatformSelected
               ? "已选择此平台"
               : inspectedPlatformDisabled
-                ? "最多选择三个平台"
+                ? "最多选择两个券商执行槽"
                 : "选择此平台"
             : inspectedStrategy && inspectorTargetIndex >= 0
               ? `加入 ${platforms.data?.find((item) => item.id === draft.platformBuckets[inspectorTargetIndex]?.platformId)?.name ?? "兼容资金桶"}`
@@ -873,6 +1016,48 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(216,188,131,0.06)",
   },
   recommendText: { color: V2.text, fontSize: 12, fontWeight: "900" },
+  sessionTerms: {
+    minHeight: 92,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.38)",
+    borderRadius: 6,
+    backgroundColor: "rgba(216,188,131,0.05)",
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 14,
+  },
+  sessionTermsMobile: { flexDirection: "column" },
+  sessionTermPrimary: {
+    flex: 1,
+    minWidth: 240,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 11,
+  },
+  sessionTermIcon: {
+    width: 42,
+    height: 42,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.4)",
+    borderRadius: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sessionTermCopy: { flex: 1, minWidth: 0, gap: 3 },
+  sessionTermRoute: {
+    flex: 1.25,
+    minWidth: 280,
+    paddingLeft: 14,
+    borderLeftWidth: 1,
+    borderLeftColor: V2.border,
+    justifyContent: "center",
+    gap: 3,
+  },
+  sessionTermLabel: { color: V2.textDim, fontSize: 9, fontWeight: "800" },
+  sessionTermValue: { color: V2.gold, fontSize: 18, fontWeight: "900" },
+  sessionRouteValue: { color: V2.text, fontSize: 13, fontWeight: "900" },
+  sessionTermDetail: { color: V2.textMuted, fontSize: 9, lineHeight: 14 },
   settings: {
     minHeight: 80,
     padding: 14,
@@ -1029,6 +1214,25 @@ const styles = StyleSheet.create({
   bucketColumn: { flex: 1, minWidth: 0, gap: 13 },
   summaryColumn: { width: 330, flexShrink: 0 },
   summaryColumnMobile: { width: "100%" },
+  createdSession: {
+    marginTop: 12,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: "rgba(66,211,161,0.35)",
+    borderRadius: 6,
+    backgroundColor: "rgba(66,211,161,0.05)",
+    gap: 5,
+  },
+  createdSessionTopline: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  createdSessionStatus: { color: V2.green, fontSize: 10, fontWeight: "900" },
+  createdSessionNo: { color: V2.text, fontSize: 15, fontWeight: "900" },
+  createdSessionDetail: { color: V2.textMuted, fontSize: 9, lineHeight: 14 },
+  createdSessionWarning: { color: V2.amber, fontSize: 9, lineHeight: 14 },
   disabled: { opacity: 0.42 },
   pressed: { opacity: 0.7 },
 });

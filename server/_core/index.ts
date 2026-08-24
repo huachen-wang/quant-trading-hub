@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import * as db from "../db";
 import { runMigrations } from "../migrate";
+import { isProductionRuntime } from "./runtime-env";
 import { registerPaymentRoutes } from "./payment-callback";
 import { registerSecureDownloadRoute } from "./secure-download";
 import { startCron } from "./cron";
@@ -210,29 +211,46 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Enable CORS for all routes - reflect the request origin to support credentials
+  const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const allowedOrigins = new Set([
+    "https://eaxau.com",
+    "https://www.eaxau.com",
+    ...configuredOrigins,
+    ...(!isProductionRuntime()
+      ? ["http://localhost:8081", "http://localhost:3000"]
+      : []),
+  ]);
+
+  // Credentialed CORS 只对明确的站点开放，不再反射任意 Origin。
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin) {
+    if (origin && allowedOrigins.has(origin)) {
       res.header("Access-Control-Allow-Origin", origin);
+      res.header("Vary", "Origin");
+      res.header("Access-Control-Allow-Credentials", "true");
     }
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.header(
       "Access-Control-Allow-Headers",
       "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Token",
     );
-    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("X-Content-Type-Options", "nosniff");
+    res.header("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.header("X-Frame-Options", "SAMEORIGIN");
 
     // Handle preflight requests
     if (req.method === "OPTIONS") {
-      res.sendStatus(200);
+      res.sendStatus(!origin || allowedOrigins.has(origin) ? 204 : 403);
       return;
     }
     next();
   });
 
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(express.json({ limit: "2mb" }));
+  app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
   registerOAuthRoutes(app);
   registerPaymentRoutes(app);
@@ -340,7 +358,7 @@ Sitemap: https://www.eaxau.com/sitemap.xml
       validateWebBuild(webBuildPath, indexPath, cachedIndexHtml);
     } catch (err) {
       console.error('[static] Failed to validate web-build:', err);
-      if (process.env.NODE_ENV === 'production') {
+      if (isProductionRuntime()) {
         throw err;
       }
     }
@@ -399,7 +417,7 @@ Sitemap: https://www.eaxau.com/sitemap.xml
     });
   } else {
     console.warn(`[static] web-build directory not found at ${webBuildPath}`);
-    if (process.env.NODE_ENV === 'production') {
+    if (isProductionRuntime()) {
       throw new Error('[static] web-build/index.html not found. Run pnpm build:web before deployment.');
     }
   }
@@ -411,4 +429,7 @@ Sitemap: https://www.eaxau.com/sitemap.xml
   });
 }
 
-startServer().catch(console.error);
+startServer().catch((error) => {
+  console.error("[startup] Fatal startup error:", error);
+  process.exitCode = 1;
+});

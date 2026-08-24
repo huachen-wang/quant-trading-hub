@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, index, boolean, date } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, index, uniqueIndex, boolean, date } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -553,3 +553,152 @@ export const siteEntries = mysqlTable("site_entries", {
 
 export type SiteEntry = typeof siteEntries.$inferSelect;
 export type InsertSiteEntry = typeof siteEntries.$inferInsert;
+
+// ============================================================
+// 限时资管会话（Managed Session）
+//
+// 这些表只记录资管意图、风险边界与人工审批状态。
+// 不保存券商密码、API Key、私钥、提现凭据，也不触发交易或转币。
+// ============================================================
+export const managedSessions = mysqlTable("managed_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionNo: varchar("sessionNo", { length: 64 }).notNull().unique(),
+  userId: int("userId").notNull(),
+  status: mysqlEnum("status", [
+    "DRAFT",
+    "PENDING_REVIEW",
+    "PENDING_AUTHORIZATION",
+    "READY",
+    "ACTIVE",
+    "EXIT_REQUESTED",
+    "WINDING_DOWN",
+    "ENDED",
+    "CANCELLED",
+    "REJECTED",
+  ]).default("DRAFT").notNull(),
+  termDays: int("termDays").notNull(),
+  capitalMode: mysqlEnum("capitalMode", [
+    "DIRECT_BROKER",
+    "MANAGED_VAULT",
+    "MIXED",
+  ]).notNull(),
+  targetCapital: decimal("targetCapital", { precision: 20, scale: 6 }).notNull(),
+  settlementAsset: mysqlEnum("settlementAsset", ["USDT"]).default("USDT").notNull(),
+  riskProfile: mysqlEnum("riskProfile", [
+    "CONSERVATIVE",
+    "BALANCED",
+    "AGGRESSIVE",
+  ]).notNull(),
+  maxDrawdownPct: decimal("maxDrawdownPct", { precision: 5, scale: 2 }).notNull(),
+  exitMode: mysqlEnum("exitMode", [
+    "IMMEDIATE_CLOSE",
+    "NATURAL_EXIT",
+    "HANDOVER_OPEN_POSITIONS",
+  ]).notNull(),
+  tradeAuthorizationStatus: mysqlEnum("tradeAuthorizationStatus", [
+    "NOT_REQUESTED",
+    "PENDING",
+    "GRANTED",
+    "REVOKED",
+  ]).default("NOT_REQUESTED").notNull(),
+  // 刻意固定为 NONE：资管授权与提现权分离。
+  withdrawalPermission: mysqlEnum("withdrawalPermission", ["NONE"]).default("NONE").notNull(),
+  // 创建和普通状态变更绝不会自动开启执行。
+  executionEnabled: boolean("executionEnabled").default(false).notNull(),
+  version: int("version").default(1).notNull(),
+  submittedAt: timestamp("submittedAt"),
+  activatedAt: timestamp("activatedAt"),
+  expiresAt: timestamp("expiresAt"),
+  exitRequestedAt: timestamp("exitRequestedAt"),
+  endedAt: timestamp("endedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userIdIdx: index("managed_sessions_user_idx").on(table.userId),
+  statusIdx: index("managed_sessions_status_idx").on(table.status),
+  createdAtIdx: index("managed_sessions_created_idx").on(table.createdAt),
+}));
+
+export type ManagedSession = typeof managedSessions.$inferSelect;
+export type InsertManagedSession = typeof managedSessions.$inferInsert;
+
+export const managedSessionStrategies = mysqlTable("managed_session_strategies", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull(),
+  strategyId: varchar("strategyId", { length: 80 }).notNull(),
+  weightPct: decimal("weightPct", { precision: 5, scale: 2 }).notNull(),
+  riskMultiplier: decimal("riskMultiplier", { precision: 4, scale: 2 }).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  sessionIdx: index("managed_strategy_session_idx").on(table.sessionId),
+  uniqueSessionStrategy: uniqueIndex("managed_strategy_unique_idx").on(
+    table.sessionId,
+    table.strategyId,
+  ),
+}));
+
+export type ManagedSessionStrategy = typeof managedSessionStrategies.$inferSelect;
+export type InsertManagedSessionStrategy = typeof managedSessionStrategies.$inferInsert;
+
+export const managedExecutionSlots = mysqlTable("managed_execution_slots", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull(),
+  slotKey: varchar("slotKey", { length: 64 }).notNull(),
+  brokerId: varchar("brokerId", { length: 80 }).notNull(),
+  label: varchar("label", { length: 80 }),
+  capitalWeightPct: decimal("capitalWeightPct", { precision: 5, scale: 2 }).notNull(),
+  fundingSource: mysqlEnum("fundingSource", [
+    "DIRECT_BROKER",
+    "MANAGED_VAULT",
+  ]).notNull(),
+  connectionStatus: mysqlEnum("connectionStatus", [
+    "UNLINKED",
+    "PENDING",
+    "VERIFIED",
+    "REVOKED",
+  ]).default("UNLINKED").notNull(),
+  tradePermission: mysqlEnum("tradePermission", [
+    "NOT_REQUESTED",
+    "PENDING",
+    "GRANTED",
+    "REVOKED",
+  ]).default("NOT_REQUESTED").notNull(),
+  withdrawalPermission: mysqlEnum("withdrawalPermission", ["NONE"]).default("NONE").notNull(),
+  // 只允许保存脱敏别名，不保存账号或凭据。
+  accountAlias: varchar("accountAlias", { length: 80 }),
+  // 只存储外部授权参考号的 SHA-256 摘要。
+  authorizationReference: varchar("authorizationReference", { length: 120 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  sessionIdx: index("managed_slot_session_idx").on(table.sessionId),
+  uniqueSessionBroker: uniqueIndex("managed_slot_broker_unique_idx").on(
+    table.sessionId,
+    table.brokerId,
+  ),
+  uniqueSessionSlot: uniqueIndex("managed_slot_key_unique_idx").on(
+    table.sessionId,
+    table.slotKey,
+  ),
+}));
+
+export type ManagedExecutionSlot = typeof managedExecutionSlots.$inferSelect;
+export type InsertManagedExecutionSlot = typeof managedExecutionSlots.$inferInsert;
+
+export const managedSessionEvents = mysqlTable("managed_session_events", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: int("sessionId").notNull(),
+  actorUserId: int("actorUserId"),
+  eventType: varchar("eventType", { length: 64 }).notNull(),
+  fromStatus: varchar("fromStatus", { length: 32 }),
+  toStatus: varchar("toStatus", { length: 32 }),
+  payload: text("payload"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  sessionIdx: index("managed_event_session_idx").on(table.sessionId),
+  createdAtIdx: index("managed_event_created_idx").on(table.createdAt),
+}));
+
+export type ManagedSessionEvent = typeof managedSessionEvents.$inferSelect;
+export type InsertManagedSessionEvent = typeof managedSessionEvents.$inferInsert;

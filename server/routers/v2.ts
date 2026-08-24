@@ -26,6 +26,7 @@ import {
   saveStoredStrategyDataOverride,
 } from "../v2/data-overrides";
 import { getNiubangPublicPulse } from "../v2/niubang-public-pulse";
+import { managedSessionsRouter } from "./managed-sessions";
 
 function assertV2Enabled() {
   if (process.env.EAXAU_V2_ENABLED === "false") {
@@ -56,6 +57,14 @@ function requirePrivateProviderUser(
       message: "账户数据需要完成身份验证和数据授权。",
     });
   }
+  if (providerKind !== "DEMO") {
+    // 当前上游接口只有全量 /accounts，没有 user/tenant scope。
+    // 在券商适配器提供用户级隔离前必须 fail closed，避免跨客户暴露。
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "真实账户快照尚未完成用户级数据隔离；请先通过资管会话提交脱敏券商授权。",
+    });
+  }
 }
 
 export const v2Router = router({
@@ -70,6 +79,8 @@ export const v2Router = router({
   }),
 
   livePulse: enabledProcedure.query(() => getNiubangPublicPulse()),
+
+  managedSessions: managedSessionsRouter,
 
   overview: enabledProcedure.query(async () => {
     const [overview, overrides] = await Promise.all([

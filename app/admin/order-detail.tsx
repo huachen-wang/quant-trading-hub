@@ -95,16 +95,21 @@ export default function AdminOrderDetailScreen() {
   }
 
   const statusColor = STATUS_COLORS[order.status] || colors.muted;
-  const isPendingUsdt = order.payments?.some(
+  const pendingUsdtPayment = order.payments?.find(
     (p: any) => p.gateway === "usdt-manual" && p.status === "pending"
   );
+  const isPendingUsdt = Boolean(pendingUsdtPayment);
 
   const handleConfirm = async () => {
+    if (!/^(?:0x)?[a-fA-F0-9]{64}$/.test(txHash.trim())) {
+      showMsg("请核对并填写完整的 64 位 Tx Hash");
+      return;
+    }
     setBusy(true);
     try {
       await confirmMutation.mutateAsync({
         orderNo: order.orderNo,
-        gatewayOrderNo: txHash || undefined,
+        gatewayOrderNo: txHash.trim(),
         note: note || undefined,
       });
       showMsg("已确认收款");
@@ -195,6 +200,7 @@ export default function AdminOrderDetailScreen() {
         ) : (
           order.payments.map((p: any) => {
             const pStatusColor = pStatusColorMap[p.status] || colors.muted;
+            const quote = paymentQuote(p.callbackRaw);
             return (
               <View
                 key={p.id}
@@ -217,7 +223,18 @@ export default function AdminOrderDetailScreen() {
                     </Text>
                   </View>
                 </View>
-                <InfoRow label="金额" value={`¥ ${p.amount}`} colors={colors} />
+                <InfoRow label="结算金额" value={`${p.amount} ${p.currency}`} colors={colors} />
+                {quote ? (
+                  <>
+                    <InfoRow label="网络" value={quote.network} colors={colors} />
+                    <InfoRow
+                      label="收款地址"
+                      value={quote.recipientAddress}
+                      valueStyle={{ fontFamily: "monospace", fontSize: 11 }}
+                      colors={colors}
+                    />
+                  </>
+                ) : null}
                 <InfoRow
                   label="网关订单号"
                   value={p.gatewayOrderNo || "—"}
@@ -252,7 +269,10 @@ export default function AdminOrderDetailScreen() {
         {/* 操作区 */}
         {isPendingUsdt && (
           <TouchableOpacity
-            onPress={() => setShowConfirm(true)}
+            onPress={() => {
+              setTxHash(pendingUsdtPayment?.gatewayOrderNo || "");
+              setShowConfirm(true);
+            }}
             style={styles.actionBtn}
             activeOpacity={0.85}
           >
@@ -301,13 +321,13 @@ export default function AdminOrderDetailScreen() {
               确认 USDT 收款
             </Text>
             <Text style={[modalStyles.hint, { color: colors.muted }]}>
-              确认收到金额 ¥{order.amount} 后再操作。此操作不可撤销。
+              请在区块链浏览器核对收款地址与 {pendingUsdtPayment?.amount} {pendingUsdtPayment?.currency}，确认到账后再操作。
             </Text>
             <Text style={[modalStyles.label, { color: colors.muted }]}>链上 Tx Hash</Text>
             <TextInput
               value={txHash}
               onChangeText={setTxHash}
-              placeholder="选填，TRC20/ERC20 tx id"
+              placeholder="必填，TRC20/ERC20 tx id"
               placeholderTextColor={colors.muted}
               style={[modalStyles.input, { color: colors.foreground, borderColor: colors.border }]}
             />
@@ -391,6 +411,18 @@ const pStatusColorMap: Record<string, string> = {
 function paymentMethodLabel(m?: string | null): string {
   if (!m) return "—";
   return ({ alipay: "支付宝", wxpay: "微信支付", usdt: "USDT", qqpay: "QQ 钱包" } as any)[m] || m;
+}
+
+function paymentQuote(raw?: string | null): { network: string; recipientAddress: string } | null {
+  if (!raw) return null;
+  try {
+    const quote = JSON.parse(raw)?.quote;
+    return typeof quote?.network === "string" && typeof quote?.recipientAddress === "string"
+      ? { network: quote.network, recipientAddress: quote.recipientAddress }
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function fmtDate(d: any): string {

@@ -5,9 +5,18 @@
  */
 import mysql from "mysql2/promise";
 import { syncCuratedStrategyCatalog } from "./strategy-catalog";
+import { isProductionRuntime } from "./_core/runtime-env";
+
+export function resolveDatabaseUrl(env: NodeJS.ProcessEnv = process.env) {
+  const databaseUrl = env.DATABASE_URL?.trim();
+  if (!databaseUrl && isProductionRuntime(env)) {
+    throw new Error("[migrate] DATABASE_URL must be configured in production");
+  }
+  return databaseUrl || null;
+}
 
 async function runMigrations() {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = resolveDatabaseUrl();
   if (!databaseUrl) {
     console.warn("[migrate] DATABASE_URL not set, skipping migrations");
     return;
@@ -463,6 +472,90 @@ async function runMigrations() {
     console.log("[migrate] Ensuring user_favorites table exists...");
     await connection.query(createUserFavorites);
 
+    // ───限时资管会话：只建立草案、授权边界和审计状态 ───
+    const managedSessionTables = [
+      `CREATE TABLE IF NOT EXISTS \`managed_sessions\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`sessionNo\` varchar(64) NOT NULL UNIQUE,
+        \`userId\` int NOT NULL,
+        \`status\` enum('DRAFT','PENDING_REVIEW','PENDING_AUTHORIZATION','READY','ACTIVE','EXIT_REQUESTED','WINDING_DOWN','ENDED','CANCELLED','REJECTED') NOT NULL DEFAULT 'DRAFT',
+        \`termDays\` int NOT NULL,
+        \`capitalMode\` enum('DIRECT_BROKER','MANAGED_VAULT','MIXED') NOT NULL,
+        \`targetCapital\` decimal(20,6) NOT NULL,
+        \`settlementAsset\` enum('USDT') NOT NULL DEFAULT 'USDT',
+        \`riskProfile\` enum('CONSERVATIVE','BALANCED','AGGRESSIVE') NOT NULL,
+        \`maxDrawdownPct\` decimal(5,2) NOT NULL,
+        \`exitMode\` enum('IMMEDIATE_CLOSE','NATURAL_EXIT','HANDOVER_OPEN_POSITIONS') NOT NULL,
+        \`tradeAuthorizationStatus\` enum('NOT_REQUESTED','PENDING','GRANTED','REVOKED') NOT NULL DEFAULT 'NOT_REQUESTED',
+        \`withdrawalPermission\` enum('NONE') NOT NULL DEFAULT 'NONE',
+        \`executionEnabled\` boolean NOT NULL DEFAULT false,
+        \`version\` int NOT NULL DEFAULT 1,
+        \`submittedAt\` timestamp NULL DEFAULT NULL,
+        \`activatedAt\` timestamp NULL DEFAULT NULL,
+        \`expiresAt\` timestamp NULL DEFAULT NULL,
+        \`exitRequestedAt\` timestamp NULL DEFAULT NULL,
+        \`endedAt\` timestamp NULL DEFAULT NULL,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX \`managed_sessions_user_idx\` (\`userId\`),
+        INDEX \`managed_sessions_status_idx\` (\`status\`),
+        INDEX \`managed_sessions_created_idx\` (\`createdAt\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS \`managed_session_strategies\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`sessionId\` int NOT NULL,
+        \`strategyId\` varchar(80) NOT NULL,
+        \`weightPct\` decimal(5,2) NOT NULL,
+        \`riskMultiplier\` decimal(4,2) NOT NULL,
+        \`sortOrder\` int NOT NULL DEFAULT 0,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX \`managed_strategy_session_idx\` (\`sessionId\`),
+        UNIQUE INDEX \`managed_strategy_unique_idx\` (\`sessionId\`, \`strategyId\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS \`managed_execution_slots\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`sessionId\` int NOT NULL,
+        \`slotKey\` varchar(64) NOT NULL,
+        \`brokerId\` varchar(80) NOT NULL,
+        \`label\` varchar(80) DEFAULT NULL,
+        \`capitalWeightPct\` decimal(5,2) NOT NULL,
+        \`fundingSource\` enum('DIRECT_BROKER','MANAGED_VAULT') NOT NULL,
+        \`connectionStatus\` enum('UNLINKED','PENDING','VERIFIED','REVOKED') NOT NULL DEFAULT 'UNLINKED',
+        \`tradePermission\` enum('NOT_REQUESTED','PENDING','GRANTED','REVOKED') NOT NULL DEFAULT 'NOT_REQUESTED',
+        \`withdrawalPermission\` enum('NONE') NOT NULL DEFAULT 'NONE',
+        \`accountAlias\` varchar(80) DEFAULT NULL,
+        \`authorizationReference\` varchar(120) DEFAULT NULL,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX \`managed_slot_session_idx\` (\`sessionId\`),
+        UNIQUE INDEX \`managed_slot_broker_unique_idx\` (\`sessionId\`, \`brokerId\`),
+        UNIQUE INDEX \`managed_slot_key_unique_idx\` (\`sessionId\`, \`slotKey\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+      `CREATE TABLE IF NOT EXISTS \`managed_session_events\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`sessionId\` int NOT NULL,
+        \`actorUserId\` int DEFAULT NULL,
+        \`eventType\` varchar(64) NOT NULL,
+        \`fromStatus\` varchar(32) DEFAULT NULL,
+        \`toStatus\` varchar(32) DEFAULT NULL,
+        \`payload\` text DEFAULT NULL,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX \`managed_event_session_idx\` (\`sessionId\`),
+        INDEX \`managed_event_created_idx\` (\`createdAt\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+    ];
+    console.log("[migrate] Ensuring managed session tables exist...");
+    for (const sql of managedSessionTables) await connection.query(sql);
+    const [managedSessionColumns] = await connection.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'managed_sessions'",
+    ) as any[];
+    if (!managedSessionColumns.some((column: any) => column.COLUMN_NAME === "expiresAt")) {
+      await connection.query(
+        "ALTER TABLE `managed_sessions` ADD COLUMN `expiresAt` timestamp NULL DEFAULT NULL AFTER `activatedAt`",
+      );
+      migrationsRun++;
+    }
+
     try {
       const catalogChanges = await syncCuratedStrategyCatalog(connection);
       if (catalogChanges > 0) {
@@ -481,7 +574,8 @@ async function runMigrations() {
     }
   } catch (error) {
     console.error("[migrate] Migration error:", error);
-    // 不抛出错误，允许服务器继续启动
+    // 生产环境必须 fail closed：资管与结算状态不能在半迁移的 schema 上运行。
+    if (isProductionRuntime()) throw error;
   } finally {
     if (connection) {
       await connection.end();

@@ -10,8 +10,10 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { AccountCard } from "@/components/v2/account-card";
+import { formatUsdt } from "@/components/v2/format";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
+import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
 
 type Filter = "ALL" | "MANAGED_CONTRACT" | "SELF_ALLOCATED";
@@ -20,6 +22,7 @@ export default function AccountsPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isMobile = width < 740;
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const [filter, setFilter] = useState<Filter>("ALL");
   const openAccount = useCallback(
     (accountId: string) =>
@@ -28,6 +31,10 @@ export default function AccountsPage() {
   );
   const query = trpc.v2.accounts.list.useQuery(undefined, {
     staleTime: 15_000,
+  });
+  const managedSessions = trpc.v2.managedSessions.list.useQuery(undefined, {
+    enabled: isAuthenticated && !authLoading,
+    staleTime: 10_000,
   });
   const accounts = useMemo(
     () =>
@@ -57,10 +64,11 @@ export default function AccountsPage() {
           <View style={styles.headerCopy}>
             <Text style={styles.eyebrow}>账户总览</Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
-              账户观察
+              Managed Session 账户
             </Text>
             <Text style={styles.subtitle}>
-              资管模式由技术方按合同管理；券商模式的资金保留在用户本人券商账户。两种模式都提供可追溯的净值、持仓与风险记录。
+              六策略、1–2 个券商执行槽与 USDT
+              资金路由统一归入一个限时资管会话；每个会话都保留可追溯的净值、持仓和风险记录。
             </Text>
           </View>
           <View style={styles.demoState}>
@@ -73,24 +81,91 @@ export default function AccountsPage() {
           <ModeExplanation
             icon="description"
             color={V2.gold}
-            title="资管模式"
-            detail="技术方按合同负责策略部署、交易执行和风险管理；客户查看合同状态、权益、持仓与风险事件。"
+            title="Managed Session"
+            detail="技术方在 30/90/180 天期限内按授权执行策略和风控；交易权限不包含出金、转账或修改收款地址。"
           />
           <ModeExplanation
             icon="account-tree"
             color={V2.blue}
-            title="券商模式"
-            detail="资金留在客户本人券商账户，客户掌握入出金；系统展示平台连接、策略贡献和风险预算。"
+            title="双路 USDT 入金"
+            detail="当前可使用 U 直达支持稳定币的合作券商；Managed Vault 可纳入混合方案，未完成配置时明确标记为接入准备中。"
           />
         </View>
+
+        {managedSessions.data?.length ? (
+          <View style={styles.sessionSection}>
+            <View style={styles.sessionSectionHeading}>
+              <View>
+                <Text style={styles.eyebrow}>MY MANAGED SESSIONS</Text>
+                <Text style={styles.sessionSectionTitle}>已保存资管会话</Text>
+              </View>
+              <Text style={styles.count}>
+                {managedSessions.data.length} 个会话
+              </Text>
+            </View>
+            <View style={styles.sessionGrid}>
+              {managedSessions.data.map((session) => (
+                <View key={session.sessionNo} style={styles.sessionCard}>
+                  <View style={styles.sessionCardTopline}>
+                    <Text style={styles.sessionStatus}>{session.status}</Text>
+                    <Text style={styles.sessionTerm}>
+                      {session.termDays} 天
+                    </Text>
+                  </View>
+                  <Text style={styles.sessionNo}>{session.sessionNo}</Text>
+                  <Text style={styles.sessionCapital}>
+                    {formatUsdt(Number(session.targetCapital))}
+                  </Text>
+                  <Text style={styles.sessionMeta}>
+                    6 策略 · {session.executionSlots.length} 执行槽 ·{" "}
+                    {session.capitalMode === "MIXED"
+                      ? "混合 USDT 路由"
+                      : session.capitalMode === "MANAGED_VAULT"
+                        ? "Managed Vault"
+                        : "U 直达券商"}
+                  </Text>
+                  <View style={styles.permissionLine}>
+                    <MaterialIcons
+                      name="lock-outline"
+                      size={15}
+                      color={V2.green}
+                    />
+                    <Text style={styles.permissionText}>
+                      交易权{" "}
+                      {session.tradeAuthorizationStatus === "NOT_REQUESTED"
+                        ? "未申请"
+                        : session.tradeAuthorizationStatus === "PENDING"
+                          ? "待确认"
+                          : session.tradeAuthorizationStatus === "GRANTED"
+                            ? "已授予"
+                            : "已撤销"}{" "}
+                      · 出金权 无 · 执行{" "}
+                      {session.executionEnabled ? "ON" : "OFF"}
+                    </Text>
+                  </View>
+                  {session.readiness.unavailableStrategyIds.length ? (
+                    <Text style={styles.sessionWarning}>
+                      {session.readiness.unavailableStrategyIds.length}{" "}
+                      款策略离线，当前不可激活。
+                    </Text>
+                  ) : session.readiness.vaultActivationBlocked ? (
+                    <Text style={styles.sessionWarning}>
+                      Managed Vault 尚未通过启用门槛。
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.toolbar}>
           <View style={styles.filters}>
             {(
               [
                 ["ALL", "全部"],
-                ["MANAGED_CONTRACT", "资管模式"],
-                ["SELF_ALLOCATED", "券商模式"],
+                ["MANAGED_CONTRACT", "合同管理"],
+                ["SELF_ALLOCATED", "U 直达券商"],
               ] as const
             ).map(([value, label]) => (
               <Pressable
@@ -132,7 +207,7 @@ export default function AccountsPage() {
               size={28}
               color={V2.textDim}
             />
-            <Text style={styles.emptyTitle}>当前模式没有账户</Text>
+            <Text style={styles.emptyTitle}>当前会话类型没有账户</Text>
             <Text style={styles.emptyDetail}>
               切换上方筛选查看其他账户类型。
             </Text>
@@ -143,7 +218,7 @@ export default function AccountsPage() {
           <MaterialIcons name="lock-outline" size={20} color={V2.green} />
           <Text style={styles.noticeText}>
             EAXAU
-            只读取获授权的账户投影，不保存交易密码或提供方原始令牌。真实数据模式下，未完成身份验证或数据授权的请求会被服务端拒绝。
+            只读取获授权的账户投影，不保存交易密码或提供方原始令牌。资管授权和出金权限分离；未完成身份、券商权限或数据授权的请求不得启用执行。
           </Text>
         </View>
       </View>
@@ -243,6 +318,52 @@ const styles = StyleSheet.create({
   modeCopy: { flex: 1, gap: 5 },
   modeTitle: { color: V2.text, fontSize: 13, fontWeight: "900" },
   modeDetail: { color: V2.textMuted, fontSize: 11, lineHeight: 17 },
+  sessionSection: { gap: 12 },
+  sessionSectionHeading: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  sessionSectionTitle: {
+    marginTop: 4,
+    color: V2.text,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  sessionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  sessionCard: {
+    flex: 1,
+    minWidth: 280,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.34)",
+    borderRadius: 6,
+    backgroundColor: "rgba(216,188,131,0.04)",
+    gap: 6,
+  },
+  sessionCardTopline: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  sessionStatus: { color: V2.green, fontSize: 9, fontWeight: "900" },
+  sessionTerm: { color: V2.gold, fontSize: 10, fontWeight: "900" },
+  sessionNo: { color: V2.text, fontSize: 13, fontWeight: "900" },
+  sessionCapital: { color: V2.text, fontSize: 20, fontWeight: "900" },
+  sessionMeta: { color: V2.textMuted, fontSize: 9, lineHeight: 14 },
+  permissionLine: {
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: V2.border,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  permissionText: { flex: 1, color: V2.textMuted, fontSize: 8, lineHeight: 13 },
+  sessionWarning: { color: V2.amber, fontSize: 8, lineHeight: 13 },
   toolbar: {
     minHeight: 44,
     flexDirection: "row",

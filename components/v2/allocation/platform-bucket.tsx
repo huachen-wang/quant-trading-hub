@@ -1,9 +1,15 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
 import type { AllocationBucket } from "@/lib/v2/allocation-types";
 import { clamp, rebalanceBucket } from "@/lib/v2/allocation";
-import { formatMoney } from "../format";
+import { formatMoney, formatUsdt } from "../format";
 import { StatusBadge } from "../status-badge";
 import { V2 } from "../tokens";
 import { Stepper } from "./stepper";
@@ -51,10 +57,16 @@ export function PlatformBucketEditor({
       strategy.source.freshness !== "OFFLINE",
   );
   const bucketCapital = (totalCapital * bucket.capitalWeightPct) / 100;
+  const formatCapital = (value: number, compact = false) =>
+    currency === "USDT"
+      ? formatUsdt(value, compact)
+      : formatMoney(value, currency, compact);
 
   const updateStrategy = (
     strategyId: string,
-    updater: (current: AllocationBucket["strategies"][number]) => AllocationBucket["strategies"][number],
+    updater: (
+      current: AllocationBucket["strategies"][number],
+    ) => AllocationBucket["strategies"][number],
   ) => {
     onChange({
       ...bucket,
@@ -79,13 +91,25 @@ export function PlatformBucketEditor({
   const dropTone = dropStatus ? DROP_TONE[dropStatus.tone] : null;
 
   return (
-    <View style={[styles.bucket, dropTone && { borderColor: `${dropTone.color}88` }]}>
+    <View
+      style={[
+        styles.bucket,
+        dropTone && { borderColor: `${dropTone.color}88` },
+      ]}
+    >
       {dropStatus && dropTone ? (
         <View
           accessibilityLiveRegion="polite"
-          style={[styles.dropBanner, { backgroundColor: `${dropTone.color}10` }]}
+          style={[
+            styles.dropBanner,
+            { backgroundColor: `${dropTone.color}10` },
+          ]}
         >
-          <MaterialIcons name={dropTone.icon} size={15} color={dropTone.color} />
+          <MaterialIcons
+            name={dropTone.icon}
+            size={15}
+            color={dropTone.color}
+          />
           <Text style={[styles.dropBannerText, { color: dropTone.color }]}>
             {dropStatus.message}
           </Text>
@@ -93,26 +117,47 @@ export function PlatformBucketEditor({
       ) : null}
       <View style={[styles.header, isMobile && styles.headerMobile]}>
         <View style={styles.identity}>
-          <View style={styles.code}><Text style={styles.codeText}>{platform.code}</Text></View>
+          <View style={styles.code}>
+            <Text style={styles.codeText}>{platform.code}</Text>
+          </View>
           <View style={styles.identityCopy}>
             <Text style={styles.name}>{platform.name}</Text>
-            <Text style={styles.meta}>{platform.accountType} · {platform.terminals.join("/")}</Text>
+            <Text style={styles.meta}>
+              {platform.accountType} · {platform.terminals.join("/")}
+            </Text>
           </View>
-          <StatusBadge compact dataMode={platform.source.dataMode} freshness={platform.source.freshness} />
+          <StatusBadge
+            compact
+            dataMode={platform.source.dataMode}
+            freshness={platform.source.freshness}
+          />
         </View>
         <View style={styles.headerControls}>
           <Stepper
             compact
             label="平台资金权重"
             value={bucket.capitalWeightPct}
-            onDecrease={() => onChange({ ...bucket, capitalWeightPct: clamp(bucket.capitalWeightPct - 5, 5, 100) })}
-            onIncrease={() => onChange({ ...bucket, capitalWeightPct: clamp(bucket.capitalWeightPct + 5, 5, 100) })}
+            onDecrease={() =>
+              onChange({
+                ...bucket,
+                capitalWeightPct: clamp(bucket.capitalWeightPct - 5, 5, 100),
+              })
+            }
+            onIncrease={() =>
+              onChange({
+                ...bucket,
+                capitalWeightPct: clamp(bucket.capitalWeightPct + 5, 5, 100),
+              })
+            }
           />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`移除 ${platform.name}`}
             onPress={onRemove}
-            style={({ pressed }) => [styles.removeBucket, pressed && styles.pressed]}
+            style={({ pressed }) => [
+              styles.removeBucket,
+              pressed && styles.pressed,
+            ]}
           >
             <MaterialIcons name="delete-outline" size={19} color={V2.red} />
           </Pressable>
@@ -121,21 +166,41 @@ export function PlatformBucketEditor({
 
       <View style={styles.capitalLine}>
         <Text style={styles.capitalLabel}>模拟分配资金</Text>
-        <Text style={styles.capitalValue}>{formatMoney(bucketCapital, currency)}</Text>
-        <Text style={styles.capitalMeta}>平台门槛 {formatMoney(platform.minimumCapital, currency, true)}</Text>
+        <Text style={styles.capitalValue}>{formatCapital(bucketCapital)}</Text>
+        <Text style={styles.capitalMeta}>
+          参考门槛 {formatCapital(platform.minimumCapital, true)}
+        </Text>
       </View>
 
       <View style={styles.strategyRows}>
         {bucket.strategies.map((allocation) => {
-          const strategy = strategies.find((item) => item.id === allocation.strategyId);
+          const strategy = strategies.find(
+            (item) => item.id === allocation.strategyId,
+          );
           if (!strategy) return null;
           return (
-            <View key={allocation.strategyId} style={[styles.strategyRow, isMobile && styles.strategyRowMobile]}>
+            <View
+              key={allocation.strategyId}
+              style={[styles.strategyRow, isMobile && styles.strategyRowMobile]}
+            >
               <View style={styles.strategyIdentity}>
-                <View style={[styles.strategyRail, { backgroundColor: strategy.accent }]} />
+                <View
+                  style={[
+                    styles.strategyRail,
+                    { backgroundColor: strategy.accent },
+                  ]}
+                />
                 <View style={styles.strategyCopy}>
                   <Text style={styles.strategyName}>{strategy.shortName}</Text>
-                  <Text style={styles.strategyMeta}>{strategy.style} · {strategy.riskLevel === "LOW" ? "低" : strategy.riskLevel === "MEDIUM" ? "中" : "高"}风险</Text>
+                  <Text style={styles.strategyMeta}>
+                    {strategy.style} ·{" "}
+                    {strategy.riskLevel === "LOW"
+                      ? "低"
+                      : strategy.riskLevel === "MEDIUM"
+                        ? "中"
+                        : "高"}
+                    风险
+                  </Text>
                 </View>
               </View>
               <View style={styles.strategyControls}>
@@ -143,31 +208,70 @@ export function PlatformBucketEditor({
                   compact
                   label="桶内权重"
                   value={allocation.weightPct}
-                  onDecrease={() => updateStrategy(allocation.strategyId, (current) => ({ ...current, weightPct: clamp(current.weightPct - 5, 0, 100) }))}
-                  onIncrease={() => updateStrategy(allocation.strategyId, (current) => ({ ...current, weightPct: clamp(current.weightPct + 5, 0, 100) }))}
+                  onDecrease={() =>
+                    updateStrategy(allocation.strategyId, (current) => ({
+                      ...current,
+                      weightPct: clamp(current.weightPct - 5, 0, 100),
+                    }))
+                  }
+                  onIncrease={() =>
+                    updateStrategy(allocation.strategyId, (current) => ({
+                      ...current,
+                      weightPct: clamp(current.weightPct + 5, 0, 100),
+                    }))
+                  }
                 />
                 <Stepper
                   compact
                   label="风险倍率"
                   value={allocation.riskMultiplier}
                   suffix="x"
-                  onDecrease={() => updateStrategy(allocation.strategyId, (current) => ({ ...current, riskMultiplier: clamp(Number((current.riskMultiplier - 0.1).toFixed(2)), 0.25, 2) }))}
-                  onIncrease={() => updateStrategy(allocation.strategyId, (current) => ({ ...current, riskMultiplier: clamp(Number((current.riskMultiplier + 0.1).toFixed(2)), 0.25, 2) }))}
+                  onDecrease={() =>
+                    updateStrategy(allocation.strategyId, (current) => ({
+                      ...current,
+                      riskMultiplier: clamp(
+                        Number((current.riskMultiplier - 0.1).toFixed(2)),
+                        0.25,
+                        2,
+                      ),
+                    }))
+                  }
+                  onIncrease={() =>
+                    updateStrategy(allocation.strategyId, (current) => ({
+                      ...current,
+                      riskMultiplier: clamp(
+                        Number((current.riskMultiplier + 0.1).toFixed(2)),
+                        0.25,
+                        2,
+                      ),
+                    }))
+                  }
                 />
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`查看 ${strategy.shortName} 详情`}
                   onPress={() => onInspectStrategy(strategy)}
-                  style={({ pressed }) => [styles.inspectStrategy, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.inspectStrategy,
+                    pressed && styles.pressed,
+                  ]}
                 >
-                  <MaterialIcons name="info-outline" size={17} color={V2.blue} />
+                  <MaterialIcons
+                    name="info-outline"
+                    size={17}
+                    color={V2.blue}
+                  />
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`移除 ${strategy.shortName}`}
                   disabled={bucket.strategies.length <= 1}
                   onPress={() => removeStrategy(allocation.strategyId)}
-                  style={({ pressed }) => [styles.removeStrategy, bucket.strategies.length <= 1 && styles.disabled, pressed && styles.pressed]}
+                  style={({ pressed }) => [
+                    styles.removeStrategy,
+                    bucket.strategies.length <= 1 && styles.disabled,
+                    pressed && styles.pressed,
+                  ]}
                 >
                   <MaterialIcons name="close" size={17} color={V2.textMuted} />
                 </Pressable>
@@ -187,10 +291,19 @@ export function PlatformBucketEditor({
                 accessibilityRole="button"
                 accessibilityLabel={`了解 ${strategy.shortName} 后再添加`}
                 onPress={() => onInspectStrategy(strategy)}
-                style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.addButton,
+                  pressed && styles.pressed,
+                ]}
               >
-                <MaterialIcons name="info-outline" size={15} color={strategy.accent} />
-                <Text style={styles.addButtonText}>了解 {strategy.shortName}</Text>
+                <MaterialIcons
+                  name="info-outline"
+                  size={15}
+                  color={strategy.accent}
+                />
+                <Text style={styles.addButtonText}>
+                  了解 {strategy.shortName}
+                </Text>
               </Pressable>
             ))}
           </View>
@@ -201,38 +314,138 @@ export function PlatformBucketEditor({
 }
 
 const styles = StyleSheet.create({
-  bucket: { borderWidth: 1, borderColor: V2.border, borderRadius: 6, backgroundColor: V2.backgroundRaised, overflow: "hidden" },
-  dropBanner: { minHeight: 30, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 7, borderBottomWidth: 1, borderBottomColor: V2.border },
+  bucket: {
+    borderWidth: 1,
+    borderColor: V2.border,
+    borderRadius: 6,
+    backgroundColor: V2.backgroundRaised,
+    overflow: "hidden",
+  },
+  dropBanner: {
+    minHeight: 30,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: V2.border,
+  },
   dropBannerText: { fontSize: 11, fontWeight: "800" },
-  header: { minHeight: 76, padding: 14, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 18, borderBottomWidth: 1, borderBottomColor: V2.border },
+  header: {
+    minHeight: 76,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: V2.border,
+  },
   headerMobile: { alignItems: "flex-start", flexDirection: "column" },
-  identity: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
-  code: { width: 42, height: 42, borderWidth: 1, borderColor: "rgba(216,188,131,0.4)", borderRadius: 4, backgroundColor: "rgba(216,188,131,0.07)", alignItems: "center", justifyContent: "center" },
+  identity: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  code: {
+    width: 42,
+    height: 42,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.4)",
+    borderRadius: 4,
+    backgroundColor: "rgba(216,188,131,0.07)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   codeText: { color: V2.gold, fontSize: 10, fontWeight: "900" },
   identityCopy: { minWidth: 130, flex: 1, gap: 3 },
   name: { color: V2.text, fontSize: 14, fontWeight: "900" },
   meta: { color: V2.textMuted, fontSize: 10 },
   headerControls: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  removeBucket: { width: 36, height: 34, borderWidth: 1, borderColor: "rgba(240,122,116,0.3)", borderRadius: 4, alignItems: "center", justifyContent: "center" },
-  capitalLine: { minHeight: 42, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: V2.surfaceMuted, borderBottomWidth: 1, borderBottomColor: V2.border },
+  removeBucket: {
+    width: 36,
+    height: 34,
+    borderWidth: 1,
+    borderColor: "rgba(240,122,116,0.3)",
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  capitalLine: {
+    minHeight: 42,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: V2.surfaceMuted,
+    borderBottomWidth: 1,
+    borderBottomColor: V2.border,
+  },
   capitalLabel: { color: V2.textDim, fontSize: 10 },
   capitalValue: { color: V2.text, fontSize: 12, fontWeight: "900" },
   capitalMeta: { marginLeft: "auto", color: V2.textDim, fontSize: 10 },
   strategyRows: {},
-  strategyRow: { minHeight: 84, padding: 13, flexDirection: "row", alignItems: "center", gap: 16, borderBottomWidth: 1, borderBottomColor: V2.border },
+  strategyRow: {
+    minHeight: 84,
+    padding: 13,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: V2.border,
+  },
   strategyRowMobile: { alignItems: "flex-start", flexDirection: "column" },
-  strategyIdentity: { minWidth: 190, flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
+  strategyIdentity: {
+    minWidth: 190,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   strategyRail: { width: 3, height: 34 },
   strategyCopy: { flex: 1, minWidth: 0, gap: 4 },
   strategyName: { color: V2.text, fontSize: 13, fontWeight: "900" },
   strategyMeta: { color: V2.textMuted, fontSize: 10 },
-  strategyControls: { flexDirection: "row", alignItems: "flex-end", gap: 7, flexWrap: "wrap" },
-  removeStrategy: { width: 34, height: 34, borderWidth: 1, borderColor: V2.border, borderRadius: 4, alignItems: "center", justifyContent: "center" },
-  inspectStrategy: { width: 34, height: 34, borderWidth: 1, borderColor: V2.border, borderRadius: 4, alignItems: "center", justifyContent: "center" },
+  strategyControls: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 7,
+    flexWrap: "wrap",
+  },
+  removeStrategy: {
+    width: 34,
+    height: 34,
+    borderWidth: 1,
+    borderColor: V2.border,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inspectStrategy: {
+    width: 34,
+    height: 34,
+    borderWidth: 1,
+    borderColor: V2.border,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   addRow: { padding: 13, gap: 9 },
   addLabel: { color: V2.textDim, fontSize: 10, fontWeight: "800" },
   addOptions: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
-  addButton: { minHeight: 34, paddingHorizontal: 10, borderWidth: 1, borderColor: V2.border, borderRadius: 4, flexDirection: "row", alignItems: "center", gap: 5 },
+  addButton: {
+    minHeight: 34,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: V2.border,
+    borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
   addButtonText: { color: V2.textMuted, fontSize: 11, fontWeight: "700" },
   disabled: { opacity: 0.32 },
   pressed: { opacity: 0.68 },

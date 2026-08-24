@@ -111,7 +111,9 @@ export default function CoreStrategyDetailPage() {
             <MaterialIcons name="arrow-back" size={18} color={V2.textMuted} />
             <Text style={styles.backText}>六款核心策略</Text>
           </Pressable>
-          <Text style={styles.formula}>资金 × 风控 × 策略 × 平台 × 模式</Text>
+          <Text style={styles.formula}>
+            资金 × 风控 × 六策略 × 执行槽 × 限时资管
+          </Text>
         </View>
 
         <View style={[styles.hero, isNarrow && styles.heroNarrow]}>
@@ -339,7 +341,8 @@ export default function CoreStrategyDetailPage() {
               />
             </View>
             <Text style={styles.snapshotHint}>
-              该策略只是量化方案中的一个模块，仍需与资金门槛、风险预算、兼容平台及管理模式共同确定。
+              该策略是六策略资管会话的一个模块，仍需与资金门槛、风险预算、1–2
+              个券商执行槽及会话期限共同确定。
             </Text>
           </View>
         </View>

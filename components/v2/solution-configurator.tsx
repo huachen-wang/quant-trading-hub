@@ -9,9 +9,11 @@ import {
 import { styles } from "@/components/v2/configurator/styles";
 import { SolutionSummary } from "@/components/v2/configurator/summary";
 import {
+  type ExitMode,
+  type FundingRoute,
+  type ManagedSessionDuration,
   RISK_OPTIONS,
   type RiskProfile,
-  type ServicePath,
 } from "@/components/v2/configurator/types";
 import { trpc } from "@/lib/trpc";
 import type {
@@ -39,13 +41,23 @@ export function SolutionConfigurator({
   const isMobile = width < 680;
   const [capital, setCapital] = useState("50000");
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("MEDIUM");
-  const [servicePath, setServicePath] = useState<ServicePath>("BROKER");
+  const [durationDays, setDurationDays] = useState<ManagedSessionDuration>(90);
+  const [exitMode, setExitMode] = useState<ExitMode>("NO_NEW_ENTRIES");
+  const [fundingRoutes, setFundingRoutes] = useState<FundingRoute[]>([
+    "DIRECT_BROKER",
+  ]);
   const [selectedPlatformIds, setSelectedPlatformIds] = useState<string[]>(() =>
-    platforms.slice(0, 2).map((platform) => platform.id),
+    initialExecutionSlots(platforms, strategies),
   );
   const [generatedDraft, setGeneratedDraft] = useState<AllocationDraft>();
   const [generatedSignature, setGeneratedSignature] = useState("");
 
+  const managedCapabilities = trpc.v2.managedSessions.capabilities.useQuery(
+    undefined,
+    {
+      staleTime: 60_000,
+    },
+  );
   const recommendation = trpc.v2.allocation.recommend.useMutation();
   const validation = trpc.v2.allocation.validate.useMutation();
   const selectedStrategies = useMemo(
@@ -63,7 +75,9 @@ export function SolutionConfigurator({
   const signature = [
     capital,
     riskProfile,
-    servicePath,
+    durationDays,
+    exitMode,
+    [...fundingRoutes].sort().join(","),
     [...selectedStrategyIds].sort().join(","),
     [...selectedPlatformIds].sort().join(","),
   ].join("|");
@@ -81,7 +95,7 @@ export function SolutionConfigurator({
         platform.supportedStrategyIds.includes(strategy.id),
       ),
   );
-  const selectedOffline = selectedStrategies.some(
+  const selectedOfflineStrategies = selectedStrategies.filter(
     (strategy) => strategy.source.freshness === "OFFLINE",
   );
   const generatedIsCurrent =
@@ -100,11 +114,12 @@ export function SolutionConfigurator({
       : [];
   const canGenerate =
     numericCapital > 0 &&
-    selectedStrategies.length > 0 &&
+    selectedStrategies.length === 6 &&
     selectedPlatforms.length > 0 &&
+    selectedPlatforms.length <= 2 &&
+    fundingRoutes.length > 0 &&
     missingCompatibility.length === 0 &&
     unusedSelectedPlatforms.length === 0 &&
-    !selectedOffline &&
     !recommendation.isPending &&
     !validation.isPending;
 
@@ -113,8 +128,19 @@ export function SolutionConfigurator({
       if (current.includes(platformId)) {
         return current.filter((id) => id !== platformId);
       }
-      if (current.length >= 3) return current;
+      if (current.length >= 2) return current;
       return [...current, platformId];
+    });
+  };
+
+  const toggleFundingRoute = (route: FundingRoute) => {
+    setFundingRoutes((current) => {
+      if (current.includes(route)) {
+        return current.length === 1
+          ? current
+          : current.filter((item) => item !== route);
+      }
+      return [...current, route];
     });
   };
 
@@ -149,6 +175,9 @@ export function SolutionConfigurator({
         platformIds: selectedPlatformIds.join(","),
         capital: String(Math.round(numericCapital)),
         risk: riskProfile,
+        durationDays: String(durationDays),
+        exitMode,
+        fundingRoutes: fundingRoutes.join(","),
       },
     } as never);
   };
@@ -164,7 +193,8 @@ export function SolutionConfigurator({
         riskOption={riskOption}
         strategyCount={selectedStrategies.length}
         platformCount={selectedPlatforms.length}
-        servicePath={servicePath}
+        durationDays={durationDays}
+        fundingRoutes={fundingRoutes}
       />
       <View
         style={[styles.configurator, isNarrow && styles.configuratorNarrow]}
@@ -182,8 +212,15 @@ export function SolutionConfigurator({
           platforms={platforms}
           selectedPlatformIds={selectedPlatformIds}
           onTogglePlatform={togglePlatform}
-          servicePath={servicePath}
-          onServicePathChange={setServicePath}
+          durationDays={durationDays}
+          onDurationDaysChange={setDurationDays}
+          exitMode={exitMode}
+          onExitModeChange={setExitMode}
+          fundingRoutes={fundingRoutes}
+          onToggleFundingRoute={toggleFundingRoute}
+          vaultActivationEnabled={
+            managedCapabilities.data?.vaultActivationEnabled ?? false
+          }
         />
         <SolutionSummary
           isNarrow={isNarrow}
@@ -192,7 +229,13 @@ export function SolutionConfigurator({
           selectedStrategies={selectedStrategies}
           selectedPlatforms={selectedPlatforms}
           allPlatforms={platforms}
-          servicePath={servicePath}
+          selectedOfflineStrategies={selectedOfflineStrategies}
+          durationDays={durationDays}
+          exitMode={exitMode}
+          fundingRoutes={fundingRoutes}
+          vaultActivationEnabled={
+            managedCapabilities.data?.vaultActivationEnabled ?? false
+          }
           missingCompatibility={missingCompatibility}
           unusedSelectedPlatforms={unusedSelectedPlatforms}
           generatedIsCurrent={generatedIsCurrent}
@@ -209,4 +252,37 @@ export function SolutionConfigurator({
       </View>
     </View>
   );
+}
+
+function initialExecutionSlots(
+  platforms: PlatformProfile[],
+  strategies: CoreStrategy[],
+) {
+  const candidates = platforms.flatMap((left, leftIndex) => [
+    [left],
+    ...platforms
+      .slice(leftIndex + 1)
+      .map((right) => [left, right] as PlatformProfile[]),
+  ]);
+  const ranked = candidates
+    .map((items) => ({
+      items,
+      coverage: new Set(
+        items.flatMap((platform) => platform.supportedStrategyIds),
+      ).size,
+    }))
+    .sort(
+      (left, right) =>
+        right.coverage - left.coverage ||
+        right.items.length - left.items.length,
+    );
+  const strategyIds = new Set(strategies.map((strategy) => strategy.id));
+  const complete = ranked.find((candidate) =>
+    [...strategyIds].every((id) =>
+      candidate.items.some((platform) =>
+        platform.supportedStrategyIds.includes(id),
+      ),
+    ),
+  );
+  return (complete ?? ranked[0])?.items.map((platform) => platform.id) ?? [];
 }

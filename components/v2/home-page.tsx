@@ -25,7 +25,14 @@ import { StrategySelectionPanel } from "@/components/v2/strategy-selection-panel
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
 import { trpc } from "@/lib/trpc";
 
-const DEFAULT_SELECTION = ["jingge-v51", "quantum-queen"];
+const DEFAULT_SELECTION = [
+  "jingge-v51",
+  "night-hunter",
+  "quantum-queen",
+  "gold-reaper",
+  "black-aura",
+  "bitcoin-core",
+];
 const LIVE_PULSE_ACCENTS = [
   V2.green,
   V2.gold,
@@ -187,6 +194,11 @@ export default function V2HomePage() {
     });
   };
 
+  const selectAllStrategies = () => {
+    setSelectedStrategyIds(data.strategies.map((strategy) => strategy.id));
+    setSelectionFeedback("六款策略已全部纳入 DRAFT");
+  };
+
   return (
     <ScrollView
       ref={scrollRef}
@@ -219,12 +231,12 @@ export default function V2HomePage() {
               <View style={styles.eyebrowRow}>
                 <Text style={styles.stageIndex}>01</Text>
                 <View style={styles.eyebrowRule} />
-                <Text style={styles.eyebrow}>核心量化组合</Text>
+                <Text style={styles.eyebrow}>六策略 · MANAGED SESSION</Text>
               </View>
               <Text
                 style={[styles.stageTitle, isMobile && styles.stageTitleMobile]}
               >
-                六策略收益与组合
+                六策略限时资管
               </Text>
               <Text style={styles.stageSubtitle}>{dataNoticeCopy}</Text>
             </View>
@@ -298,6 +310,7 @@ export default function V2HomePage() {
               total={data.strategies.length}
               feedback={selectionFeedback}
               onRemove={toggleStrategy}
+              onSelectAll={selectAllStrategies}
               onContinue={scrollToBuilder}
             />
           </View>
@@ -319,6 +332,7 @@ export default function V2HomePage() {
           <MaterialIcons name="verified-user" size={20} color={V2.amber} />
           <Text style={styles.riskText}>
             历史收益、胜率和模型回撤不代表未来结果。正式启用前仍需核验数据源、券商实体、账户权限、合同责任和当前平台条款。
+            资管授权只包含约定期限内的交易与风控，不包含出金、转账或修改收款地址。
           </Text>
         </View>
       </View>

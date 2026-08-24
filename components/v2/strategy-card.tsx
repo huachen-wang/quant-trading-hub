@@ -276,7 +276,13 @@ function StrategyCardBase({
           ]}
           numberOfLines={1}
         >
-          {unavailable ? "暂不可选" : selected ? "组合中" : "点选加入"}
+          {unavailable
+            ? selected
+              ? "DRAFT 中 · 不可激活"
+              : "暂不可选"
+            : selected
+              ? "组合中"
+              : "点选加入"}
         </Text>
         <Pressable
           accessibilityRole="link"

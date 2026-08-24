@@ -21,13 +21,13 @@ type V2ShellProps = { children: ReactNode };
 const NAV_ITEMS = [
   { label: "核心策略", path: "/", activeOn: "/", icon: "insights" },
   {
-    label: "方案选配",
+    label: "资管会话",
     path: "/?configure=1",
     activeOn: "CONFIGURE",
     icon: "tune",
   },
   {
-    label: "实盘账户",
+    label: "会话账户",
     path: "/v2-preview/accounts",
     activeOn: "/v2-preview/accounts",
     icon: "monitor-heart",

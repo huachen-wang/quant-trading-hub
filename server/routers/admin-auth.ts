@@ -7,11 +7,35 @@ import { publicProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import "../_core/ensure-webcrypto";
 import { SignJWT, jwtVerify } from "jose";
+import { isProductionRuntime } from "../_core/runtime-env";
 
-// 从环境变量读取管理员凭证
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@eaxau.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin123";
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+export function resolveAdminConfig(
+  name: "ADMIN_EMAIL" | "ADMIN_PASSWORD" | "JWT_SECRET",
+  developmentFallback: string,
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const configured = env[name]?.trim();
+  if (configured) return configured;
+  if (isProductionRuntime(env)) {
+    throw new Error(`[admin-auth] ${name} must be configured in production`);
+  }
+  return developmentFallback;
+}
+
+// 本地开发保留便捷默认值；生产环境缺少任一项时在启动阶段 fail closed。
+const ADMIN_EMAIL = resolveAdminConfig("ADMIN_EMAIL", "admin@eaxau.com");
+const ADMIN_PASSWORD = resolveAdminConfig("ADMIN_PASSWORD", "admin123");
+const JWT_SECRET = resolveAdminConfig("JWT_SECRET", "local-development-admin-secret");
+
+if (
+  isProductionRuntime() &&
+  (ADMIN_PASSWORD === "admin123" ||
+    ADMIN_PASSWORD === "change-me" ||
+    JWT_SECRET === "your-secret-key-change-in-production" ||
+    JWT_SECRET === "change-me")
+) {
+  throw new Error("[admin-auth] Refusing insecure production admin credentials");
+}
 
 // JWT密钥（用于签名和验证）
 const secret = new TextEncoder().encode(JWT_SECRET);

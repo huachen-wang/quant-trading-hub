@@ -1,8 +1,21 @@
-import { eq, and, desc, asc, sql, or, like } from "drizzle-orm";
+import { eq, and, desc, asc, sql, or, like, lt, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../drizzle/schema";
 import type { VerificationPurpose, VerificationTargetType } from "./_core/verification";
+import type {
+  ManagedSessionDraftInput,
+  ManagedSessionStatus,
+} from "../shared/managed-sessions/contracts";
+import {
+  createMockManagedSessionDraft,
+  getMockManagedSessionByNo,
+  listMockManagedSessions,
+  replaceMockManagedSessionDraft,
+  transitionMockManagedSession,
+  updateMockManagedExecutionSlot,
+} from "./managed-sessions/mock-store";
+import type { ManagedTransitionPatch } from "./managed-sessions/state-machine";
 import {
   createMockComment,
   createMockAnonymousComment,
@@ -33,6 +46,7 @@ import {
   getMockOrderById,
   getMockOrderByOrderNo,
   getMockPaymentById,
+  getMockPaymentByGatewayOrderNo,
   getMockPaymentsByOrderId,
   getMockPromoProducts,
   getMockSiteSetting,
@@ -50,7 +64,7 @@ import {
   updateMockStrategy,
 } from "./mock-data";
 
-const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings, backtestData: backtestDataTable, cooperationCards, cooperationPlans, promoProducts, verificationCodes, userFavorites, categories, orders, payments } = schema;
+const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings, backtestData: backtestDataTable, cooperationCards, cooperationPlans, promoProducts, verificationCodes, userFavorites, categories, orders, payments, managedSessions, managedSessionStrategies, managedExecutionSlots, managedSessionEvents } = schema;
 
 let pool: mysql.Pool | null = null;
 let db: any = null;
@@ -1453,6 +1467,17 @@ export async function getActivePaymentByOrderId(orderId: number) {
   return rows[0] || null;
 }
 
+export async function getPaymentByGatewayOrderNo(gatewayOrderNo: string) {
+  const database = await getDb();
+  if (!database) return getMockPaymentByGatewayOrderNo(gatewayOrderNo);
+  const rows = await database
+    .select()
+    .from(payments)
+    .where(eq(payments.gatewayOrderNo, gatewayOrderNo))
+    .limit(1);
+  return rows[0] || null;
+}
+
 export async function listPendingUsdtPayments() {
   const db = await getDb();
   if (!db) return listMockPendingUsdtPayments();
@@ -1462,7 +1487,8 @@ export async function listPendingUsdtPayments() {
     .where(
       and(
         eq(payments.gateway, "usdt-manual"),
-        eq(payments.status, "pending")
+        eq(payments.status, "pending"),
+        isNotNull(payments.gatewayOrderNo)
       )
     )
     .orderBy(desc(payments.createdAt));
@@ -1473,6 +1499,8 @@ export async function listPendingUsdtPayments() {
 export async function hasUserPurchased(userId: number, strategyId: number): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
+  // 只信任完成支付的订单。旧 purchases 表曾允许客户端直接写入，不能作为
+  // EA 私有文件的授权来源；历史记录需另行人工核验后迁移为 paid order。
   const paidOrders = await db
     .select()
     .from(orders)
@@ -1485,13 +1513,7 @@ export async function hasUserPurchased(userId: number, strategyId: number): Prom
       )
     )
     .limit(1);
-  if (paidOrders.length > 0) return true;
-  const purchaseRows = await db
-    .select()
-    .from(purchases)
-    .where(and(eq(purchases.userId, userId), eq(purchases.strategyId, strategyId)))
-    .limit(1);
-  return purchaseRows.length > 0;
+  return paidOrders.length > 0;
 }
 
 export async function recordDownload(userId: number, strategyId: number) {
@@ -1583,4 +1605,353 @@ export async function deleteSiteEntry(id: number) {
   if (!db) return deleteMockSiteEntry(id);
   await db.delete(schema.siteEntries).where(eq(schema.siteEntries.id, id));
   return { ok: true };
+}
+
+// ============================================================
+// 限时资管会话 CRUD
+// ============================================================
+
+async function hydrateManagedSession(database: any, session: any) {
+  const [strategyRows, slotRows, eventRows] = await Promise.all([
+    database
+      .select()
+      .from(managedSessionStrategies)
+      .where(eq(managedSessionStrategies.sessionId, session.id))
+      .orderBy(asc(managedSessionStrategies.sortOrder)),
+    database
+      .select()
+      .from(managedExecutionSlots)
+      .where(eq(managedExecutionSlots.sessionId, session.id))
+      .orderBy(asc(managedExecutionSlots.id)),
+    database
+      .select()
+      .from(managedSessionEvents)
+      .where(eq(managedSessionEvents.sessionId, session.id))
+      .orderBy(asc(managedSessionEvents.createdAt), asc(managedSessionEvents.id)),
+  ]);
+  return {
+    ...session,
+    strategies: strategyRows,
+    executionSlots: slotRows,
+    events: eventRows,
+  };
+}
+
+export async function createManagedSessionDraft(
+  userId: number,
+  sessionNo: string,
+  input: ManagedSessionDraftInput,
+) {
+  const database = await getDb();
+  if (!database) return createMockManagedSessionDraft(userId, sessionNo, input);
+
+  await database.transaction(async (tx: any) => {
+    await tx.insert(managedSessions).values({
+      sessionNo,
+      userId,
+      status: "DRAFT",
+      termDays: input.termDays,
+      capitalMode: input.capitalMode,
+      targetCapital: input.targetCapital,
+      settlementAsset: "USDT",
+      riskProfile: input.riskProfile,
+      maxDrawdownPct: input.maxDrawdownPct.toFixed(2),
+      exitMode: input.exitMode,
+      tradeAuthorizationStatus: "NOT_REQUESTED",
+      withdrawalPermission: "NONE",
+      executionEnabled: false,
+      version: 1,
+    });
+    const rows = await tx
+      .select({ id: managedSessions.id })
+      .from(managedSessions)
+      .where(eq(managedSessions.sessionNo, sessionNo))
+      .limit(1);
+    const sessionId = rows[0]?.id;
+    if (!sessionId) throw new Error("无法创建资管会话");
+
+    await tx.insert(managedSessionStrategies).values(
+      input.strategies.map((item, index) => ({
+        sessionId,
+        strategyId: item.strategyId,
+        weightPct: item.weightPct.toFixed(2),
+        riskMultiplier: item.riskMultiplier.toFixed(2),
+        sortOrder: index + 1,
+      })),
+    );
+    await tx.insert(managedExecutionSlots).values(
+      input.executionSlots.map((item, index) => ({
+        sessionId,
+        slotKey: `SLOT-${index + 1}-${sessionNo.slice(-6)}`,
+        brokerId: item.brokerId,
+        label: item.label ?? null,
+        capitalWeightPct: item.capitalWeightPct.toFixed(2),
+        fundingSource: item.fundingSource,
+        connectionStatus: "UNLINKED",
+        tradePermission: "NOT_REQUESTED",
+        withdrawalPermission: "NONE",
+      })),
+    );
+    await tx.insert(managedSessionEvents).values({
+      sessionId,
+      actorUserId: userId,
+      eventType: "DRAFT_CREATED",
+      fromStatus: null,
+      toStatus: "DRAFT",
+      payload: JSON.stringify({
+        strategyCount: input.strategies.length,
+        executionSlotCount: input.executionSlots.length,
+        executionSideEffects: false,
+      }),
+    });
+  });
+  return getManagedSessionByNo(sessionNo);
+}
+
+export async function getManagedSessionByNo(sessionNo: string) {
+  const database = await getDb();
+  if (!database) return getMockManagedSessionByNo(sessionNo);
+  const rows = await database
+    .select()
+    .from(managedSessions)
+    .where(eq(managedSessions.sessionNo, sessionNo))
+    .limit(1);
+  return rows[0] ? hydrateManagedSession(database, rows[0]) : null;
+}
+
+export async function listManagedSessions(userId?: number) {
+  const database = await getDb();
+  if (!database) return listMockManagedSessions(userId);
+  const base = database.select().from(managedSessions).$dynamic();
+  const rows = userId === undefined
+    ? await base.orderBy(desc(managedSessions.createdAt)).limit(100)
+    : await base
+        .where(eq(managedSessions.userId, userId))
+        .orderBy(desc(managedSessions.createdAt))
+        .limit(100);
+  return Promise.all(rows.map((row: any) => hydrateManagedSession(database, row)));
+}
+
+export async function replaceManagedSessionDraft(
+  sessionNo: string,
+  input: ManagedSessionDraftInput,
+) {
+  const database = await getDb();
+  if (!database) return replaceMockManagedSessionDraft(sessionNo, input);
+  const existing = await getManagedSessionByNo(sessionNo);
+  if (!existing) return null;
+
+  await database.transaction(async (tx: any) => {
+    const updateResult = await tx
+      .update(managedSessions)
+      .set({
+        termDays: input.termDays,
+        capitalMode: input.capitalMode,
+        targetCapital: input.targetCapital,
+        settlementAsset: "USDT",
+        riskProfile: input.riskProfile,
+        maxDrawdownPct: input.maxDrawdownPct.toFixed(2),
+        exitMode: input.exitMode,
+        version: sql`${managedSessions.version} + 1`,
+      })
+      .where(
+        and(
+          eq(managedSessions.id, existing.id),
+          eq(managedSessions.status, "DRAFT"),
+        ),
+      );
+    const affected = Number(
+      (updateResult as any)[0]?.affectedRows ??
+      (updateResult as any).rowsAffected ??
+      0,
+    );
+    if (affected === 0) {
+      throw new Error("资管草案已被提交或其他操作更新，请刷新后重试");
+    }
+    await tx
+      .delete(managedSessionStrategies)
+      .where(eq(managedSessionStrategies.sessionId, existing.id));
+    await tx
+      .delete(managedExecutionSlots)
+      .where(eq(managedExecutionSlots.sessionId, existing.id));
+    await tx.insert(managedSessionStrategies).values(
+      input.strategies.map((item, index) => ({
+        sessionId: existing.id,
+        strategyId: item.strategyId,
+        weightPct: item.weightPct.toFixed(2),
+        riskMultiplier: item.riskMultiplier.toFixed(2),
+        sortOrder: index + 1,
+      })),
+    );
+    await tx.insert(managedExecutionSlots).values(
+      input.executionSlots.map((item, index) => ({
+        sessionId: existing.id,
+        slotKey: `SLOT-${index + 1}-${sessionNo.slice(-6)}`,
+        brokerId: item.brokerId,
+        label: item.label ?? null,
+        capitalWeightPct: item.capitalWeightPct.toFixed(2),
+        fundingSource: item.fundingSource,
+        connectionStatus: "UNLINKED",
+        tradePermission: "NOT_REQUESTED",
+        withdrawalPermission: "NONE",
+      })),
+    );
+    await tx.insert(managedSessionEvents).values({
+      sessionId: existing.id,
+      actorUserId: existing.userId,
+      eventType: "DRAFT_UPDATED",
+      fromStatus: "DRAFT",
+      toStatus: "DRAFT",
+      payload: JSON.stringify({ executionSideEffects: false }),
+    });
+  });
+  return getManagedSessionByNo(sessionNo);
+}
+
+export async function transitionManagedSession(
+  sessionNo: string,
+  opts: {
+    actorUserId: number | null;
+    expectedFrom: ManagedSessionStatus;
+    toStatus: ManagedSessionStatus;
+    eventType: string;
+    tradeAuthorizationStatus?: "NOT_REQUESTED" | "PENDING" | "GRANTED" | "REVOKED";
+    executionEnabled?: boolean;
+    timestamps?: ManagedTransitionPatch;
+    eventPayload?: Record<string, unknown>;
+  },
+) {
+  const database = await getDb();
+  if (!database) {
+    return transitionMockManagedSession(
+      sessionNo,
+      opts.actorUserId,
+      opts.toStatus,
+      opts.eventType,
+      opts,
+    );
+  }
+  const existing = await getManagedSessionByNo(sessionNo);
+  if (!existing) return null;
+  const update: Record<string, unknown> = {
+    status: opts.toStatus,
+    version: sql`${managedSessions.version} + 1`,
+    ...(opts.timestamps ?? {}),
+  };
+  if (opts.tradeAuthorizationStatus) {
+    update.tradeAuthorizationStatus = opts.tradeAuthorizationStatus;
+  }
+  if (opts.executionEnabled !== undefined) {
+    update.executionEnabled = opts.executionEnabled;
+  }
+  await database.transaction(async (tx: any) => {
+    const result = await tx
+      .update(managedSessions)
+      .set(update)
+      .where(
+        and(
+          eq(managedSessions.id, existing.id),
+          eq(managedSessions.status, opts.expectedFrom),
+        ),
+      );
+    const affected = Number(
+      (result as any)[0]?.affectedRows ?? (result as any).rowsAffected ?? 0,
+    );
+    if (affected === 0) {
+      throw new Error("资管会话已被其他操作更新，请刷新后重试");
+    }
+    await tx.insert(managedSessionEvents).values({
+      sessionId: existing.id,
+      actorUserId: opts.actorUserId,
+      eventType: opts.eventType,
+      fromStatus: opts.expectedFrom,
+      toStatus: opts.toStatus,
+      payload: opts.eventPayload ? JSON.stringify(opts.eventPayload) : null,
+    });
+  });
+  return getManagedSessionByNo(sessionNo);
+}
+
+export async function updateManagedExecutionSlot(
+  sessionNo: string,
+  slotKey: string,
+  input: {
+    connectionStatus: "UNLINKED" | "PENDING" | "VERIFIED" | "REVOKED";
+    tradePermission: "NOT_REQUESTED" | "PENDING" | "GRANTED" | "REVOKED";
+    accountAlias?: string | null;
+    authorizationReference?: string | null;
+    actorUserId: number;
+  },
+) {
+  const database = await getDb();
+  if (!database) {
+    return updateMockManagedExecutionSlot(sessionNo, slotKey, input);
+  }
+  const session = await getManagedSessionByNo(sessionNo);
+  if (!session) return null;
+  const slot = session.executionSlots.find((item: any) => item.slotKey === slotKey);
+  if (!slot) return null;
+  await database.transaction(async (tx: any) => {
+    await tx
+      .update(managedExecutionSlots)
+      .set({
+        connectionStatus: input.connectionStatus,
+        tradePermission: input.tradePermission,
+        withdrawalPermission: "NONE",
+        accountAlias: input.accountAlias ?? null,
+        authorizationReference: input.authorizationReference ?? null,
+      })
+      .where(eq(managedExecutionSlots.id, slot.id));
+    await tx.insert(managedSessionEvents).values({
+      sessionId: session.id,
+      actorUserId: input.actorUserId,
+      eventType: "EXECUTION_SLOT_REVIEWED",
+      fromStatus: session.status,
+      toStatus: session.status,
+      payload: JSON.stringify({
+        slotKey,
+        connectionStatus: input.connectionStatus,
+        tradePermission: input.tradePermission,
+        withdrawalPermission: "NONE",
+      }),
+    });
+  });
+  return getManagedSessionByNo(sessionNo);
+}
+
+export async function expireDueManagedSessions(now = new Date()): Promise<number> {
+  const database = await getDb();
+  if (!database) return 0;
+  const due = await database
+    .select({ sessionNo: managedSessions.sessionNo })
+    .from(managedSessions)
+    .where(
+      and(
+        eq(managedSessions.status, "ACTIVE"),
+        lt(managedSessions.expiresAt, now),
+      ),
+    )
+    .limit(100);
+  let expired = 0;
+  for (const session of due) {
+    try {
+      const updated = await transitionManagedSession(session.sessionNo, {
+        actorUserId: null,
+        expectedFrom: "ACTIVE",
+        toStatus: "EXIT_REQUESTED",
+        eventType: "TERM_EXPIRED",
+        executionEnabled: false,
+        timestamps: { exitRequestedAt: now },
+        eventPayload: {
+          opensDisabled: true,
+          externalTransferTriggered: false,
+          externalOrderTriggered: false,
+        },
+      });
+      if (updated) expired += 1;
+    } catch {
+      // 其他实例已更新该会话，下一轮会重新核对。
+    }
+  }
+  return expired;
 }

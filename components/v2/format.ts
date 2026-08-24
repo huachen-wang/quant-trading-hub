@@ -41,6 +41,15 @@ export function formatMoney(
   }).format(value);
 }
 
+export function formatUsdt(value: number | null, compact = false) {
+  if (value === null || !Number.isFinite(value)) return "--";
+  const amount = new Intl.NumberFormat("zh-CN", {
+    notation: compact ? "compact" : "standard",
+    maximumFractionDigits: compact ? 1 : 2,
+  }).format(value);
+  return `${amount} USDT`;
+}
+
 export function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "--";

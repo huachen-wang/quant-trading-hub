@@ -630,9 +630,18 @@ export function getMockActivePaymentByOrderId(orderId: number) {
   return getMockPaymentsByOrderId(orderId)[0] || null;
 }
 
+export function getMockPaymentByGatewayOrderNo(gatewayOrderNo: string) {
+  return mockPayments.find((payment) => payment.gatewayOrderNo === gatewayOrderNo) || null;
+}
+
 export function listMockPendingUsdtPayments() {
   return mockPayments
-    .filter((payment) => payment.gateway === "usdt-manual" && payment.status === "pending")
+    .filter(
+      (payment) =>
+        payment.gateway === "usdt-manual" &&
+        payment.status === "pending" &&
+        Boolean(payment.gatewayOrderNo),
+    )
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 

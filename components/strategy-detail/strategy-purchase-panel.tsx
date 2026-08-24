@@ -13,6 +13,9 @@ export function StrategyPurchasePanel({
   colors,
   onContact,
 }: StrategyPurchasePanelProps) {
+  const isDirect = strategy.saleMode === "direct";
+  const isFree = Boolean(strategy.isFree);
+  const acquisitionLabel = isDirect ? (isFree ? "免费获取" : `¥ ${strategy.price}`) : "联系咨询";
   return (
     <View style={styles.section}>
       <View style={[styles.actionCard, { backgroundColor: colors.surface }]}>
@@ -22,7 +25,7 @@ export function StrategyPurchasePanel({
               获取方式
             </Text>
             <Text style={[styles.inquiryValue, { color: "#C9A96E" }]}>
-              联系咨询
+              {acquisitionLabel}
             </Text>
           </View>
           <View style={styles.priceRight}>
@@ -30,20 +33,20 @@ export function StrategyPurchasePanel({
               交付服务
             </Text>
             <Text style={[styles.downloadValue, { color: colors.foreground }]}>
-              版本确认
+              {isDirect && strategy.downloadAvailable ? "付款后解锁" : "版本确认"}
             </Text>
           </View>
         </View>
 
         <PurchaseActions
-          saleMode="inquiry"
+          saleMode={strategy.saleMode === "direct" ? "direct" : "inquiry"}
           productId={strategy.id}
           productKind="strategy"
           price={strategy.price}
-          originalPrice={null}
-          isFree={false}
-          featuredLink={null}
-          downloadRequiresContact
+          originalPrice={strategy.originalPrice}
+          isFree={isFree}
+          featuredLink={strategy.featuredLink}
+          downloadRequiresContact={!strategy.downloadAvailable}
           onContact={onContact}
         />
       </View>

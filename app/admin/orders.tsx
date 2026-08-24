@@ -58,11 +58,15 @@ export default function AdminOrdersScreen() {
 
   const handleConfirmUsdt = async () => {
     if (!confirmOrder) return;
+    if (!/^(?:0x)?[a-fA-F0-9]{64}$/.test(txHash.trim())) {
+      showMsg("请核对并填写完整的 64 位 Tx Hash");
+      return;
+    }
     setBusy(true);
     try {
       await confirmUsdtMutation.mutateAsync({
         orderNo: confirmOrder.orderNo,
-        gatewayOrderNo: txHash || undefined,
+        gatewayOrderNo: txHash.trim(),
         note: adminNote || undefined,
       });
       showMsg("订单已确认为已支付");
@@ -146,7 +150,8 @@ export default function AdminOrdersScreen() {
             <View style={[styles.tablePanel, { borderColor: colors.border }]}>
               {orders.map((order: any) => {
                 const statusColor = STATUS_COLORS[order.status] || colors.muted;
-                const isPendingUsdt = pendingUsdt?.some((p: any) => p.orderId === order.id);
+                const pendingPayment = pendingUsdt?.find((p: any) => p.orderId === order.id);
+                const isPendingUsdt = Boolean(pendingPayment);
                 return (
                   <View
                     key={order.id}
@@ -186,7 +191,10 @@ export default function AdminOrdersScreen() {
 
                     {isPendingUsdt ? (
                       <TouchableOpacity
-                        onPress={() => setConfirmOrder(order)}
+                        onPress={() => {
+                          setConfirmOrder({ ...order, pendingPayment });
+                          setTxHash(pendingPayment?.gatewayOrderNo || "");
+                        }}
                         style={styles.confirmBtn}
                         activeOpacity={0.85}
                       >
@@ -222,10 +230,10 @@ export default function AdminOrdersScreen() {
               确认 USDT 收款
             </Text>
             <Text style={[modalStyles.hint, { color: colors.muted }]}>
-              确认收到 {confirmOrder?.productTitle} 订单（¥{confirmOrder?.amount}）的 USDT 转账后再点击确认。此操作不可撤销。
+              请在区块链浏览器核对收款地址与 {confirmOrder?.pendingPayment?.amount} {confirmOrder?.pendingPayment?.currency}，确认到账后再操作。
             </Text>
             <Text style={[modalStyles.label, { color: colors.muted }]}>
-              链上 Tx Hash（选填，可后期补）
+              链上 Tx Hash（必填）
             </Text>
             <TextInput
               value={txHash}
