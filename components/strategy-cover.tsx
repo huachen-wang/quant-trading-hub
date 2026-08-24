@@ -66,7 +66,7 @@ export function StrategyCover({
           <View
             style={[styles.brandMark, { backgroundColor: artwork.accent }]}
           />
-          <Text style={styles.brand}>EAXAU</Text>
+          <Text style={styles.brand}>AI量化联盟</Text>
         </View>
         <View style={styles.platformChip}>
           <Text style={styles.platform}>{`${platform} · ${productLabel}`}</Text>

@@ -19,7 +19,7 @@ export function PlatformGuideSection({ colors, onPress }: PlatformGuideSectionPr
           <View style={{ flex: 1 }}>
             <Text style={[styles.platformGuideTitle, { color: colors.foreground }]}>需要交易环境支持？</Text>
             <Text style={[styles.platformGuideDesc, { color: colors.muted }]}>
-              EAXAU 帮你匹配最适合这款EA的合规交易平台，让策略发挥最大价值
+              AI量化联盟帮你梳理适配该EA的交易环境与风险边界
             </Text>
           </View>
           <Text style={[styles.platformGuideArrow, { color: colors.primary }]}>→</Text>

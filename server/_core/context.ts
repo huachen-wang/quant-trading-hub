@@ -25,8 +25,8 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
     if (payload && payload.role === "admin") {
       // 创建一个虚拟admin用户对象，满足adminProcedure的检查
       user = {
-        id: 0,
-        openId: "admin-jwt",
+        id: payload.adminId,
+        openId: `admin-jwt:${payload.adminId}`,
         name: "管理员",
         email: payload.email,
         passwordHash: null,

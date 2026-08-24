@@ -44,12 +44,20 @@ function timeOnly(value: string) {
 }
 
 function sourceName(source: SourceMeta) {
+  if (source.dataMode === "DEMO") return "DEMO FEED";
   if (/niubang/i.test(`${source.provider} ${source.label}`)) {
     if (source.freshness === "FRESH") return "NIUBANG LIVE";
     if (source.freshness === "STALE") return "NIUBANG 延迟";
     return "NIUBANG 离线";
   }
   return source.dataMode;
+}
+
+function displayItemName(item: LiveFeedItem, source: SourceMeta) {
+  if (source.dataMode !== "DEMO") return item.name;
+  return item.name
+    .replace(/实盘/g, "演示")
+    .replace(/稳定盈利[！!]*/g, "波动测试");
 }
 
 export function LiveFeedStrip({
@@ -95,11 +103,12 @@ export function LiveFeedStrip({
     () =>
       items.map((item) => {
         const positive = item.changePct !== null && item.changePct >= 0;
+        const displayName = displayItemName(item, source);
         return (
           <Pressable
             key={item.id}
             accessibilityRole="link"
-            accessibilityLabel={`查看 ${item.name} ${item.changeLabel}数据`}
+            accessibilityLabel={`查看 ${displayName} ${item.changeLabel}数据`}
             onPress={() => onOpen(item)}
             style={({ pressed }) => [
               styles.ticker,
@@ -112,7 +121,7 @@ export function LiveFeedStrip({
                 style={[styles.strategyDot, { backgroundColor: item.accent }]}
               />
               <Text style={styles.tickerName} numberOfLines={1}>
-                {item.name}
+                {displayName}
               </Text>
               <Text style={styles.changeLabel}>{item.changeLabel}</Text>
               <Text
@@ -133,7 +142,7 @@ export function LiveFeedStrip({
           </Pressable>
         );
       }),
-    [isMobile, items, onOpen],
+    [isMobile, items, onOpen, source],
   );
 
   return (

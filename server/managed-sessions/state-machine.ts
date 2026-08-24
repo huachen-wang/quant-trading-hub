@@ -1,5 +1,8 @@
 import crypto from "node:crypto";
-import type { ManagedSessionStatus } from "../../shared/managed-sessions/contracts";
+import type {
+  BrokerFundingStatus,
+  ManagedSessionStatus,
+} from "../../shared/managed-sessions/contracts";
 
 export const MANAGED_SESSION_TRANSITIONS: Record<
   ManagedSessionStatus,
@@ -29,7 +32,7 @@ export function assertManagedSessionTransition(
   to: ManagedSessionStatus,
 ) {
   if (!canTransitionManagedSession(from, to)) {
-    throw new Error(`资管会话状态不允许从 ${from} 变更为 ${to}`);
+    throw new Error(`资管委托状态不允许从 ${from} 变更为 ${to}`);
   }
 }
 
@@ -42,17 +45,9 @@ export function generateManagedSessionNo(now = new Date()) {
   return `MS${date}${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
 }
 
-export function managedSessionExpiresAt(
-  termDays: 30 | 90 | 180,
-  activatedAt = new Date(),
-) {
-  return new Date(activatedAt.getTime() + termDays * 24 * 60 * 60 * 1000);
-}
-
 export type ManagedTransitionPatch = Partial<{
   submittedAt: Date;
   activatedAt: Date;
-  expiresAt: Date;
   exitRequestedAt: Date;
   endedAt: Date;
   executionEnabled: boolean;
@@ -77,4 +72,48 @@ export function timestampsForManagedTransition(
     default:
       return {};
   }
+}
+
+export const BROKER_FUNDING_TRANSITIONS: Record<
+  BrokerFundingStatus,
+  readonly BrokerFundingStatus[]
+> = {
+  DRAFT: ["WAITING_ACCOUNT", "WAITING_INSTRUCTIONS", "CANCELLED"],
+  WAITING_ACCOUNT: ["WAITING_INSTRUCTIONS", "EXCEPTION", "CANCELLED"],
+  WAITING_INSTRUCTIONS: ["READY_TO_FUND", "EXCEPTION", "CANCELLED"],
+  READY_TO_FUND: ["TX_SUBMITTED", "EXCEPTION", "CANCELLED"],
+  TX_SUBMITTED: ["RECEIVED", "BROKER_CREDIT_PENDING", "CREDITED", "EXCEPTION"],
+  RECEIVED: ["RECONCILED", "EXCEPTION"],
+  RECONCILED: ["AWAITING_PAYOUT", "EXCEPTION"],
+  AWAITING_PAYOUT: ["PAYOUT_SUBMITTED", "EXCEPTION"],
+  PAYOUT_SUBMITTED: ["BROKER_CREDIT_PENDING", "CREDITED", "EXCEPTION"],
+  BROKER_CREDIT_PENDING: ["CREDITED", "EXCEPTION"],
+  CREDITED: [],
+  EXCEPTION: [
+    "WAITING_ACCOUNT",
+    "WAITING_INSTRUCTIONS",
+    "READY_TO_FUND",
+    "TX_SUBMITTED",
+    "RECEIVED",
+    "CANCELLED",
+  ],
+  CANCELLED: [],
+};
+
+export function assertBrokerFundingTransition(
+  from: BrokerFundingStatus,
+  to: BrokerFundingStatus,
+) {
+  if (!BROKER_FUNDING_TRANSITIONS[from].includes(to)) {
+    throw new Error(`券商入金状态不允许从 ${from} 变更为 ${to}`);
+  }
+}
+
+export function generateBrokerFundingIntentNo(now = new Date()) {
+  const date = [
+    now.getUTCFullYear(),
+    String(now.getUTCMonth() + 1).padStart(2, "0"),
+    String(now.getUTCDate()).padStart(2, "0"),
+  ].join("");
+  return `BF${date}${crypto.randomBytes(5).toString("hex").toUpperCase()}`;
 }

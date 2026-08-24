@@ -21,13 +21,13 @@ type V2ShellProps = { children: ReactNode };
 const NAV_ITEMS = [
   { label: "核心策略", path: "/", activeOn: "/", icon: "insights" },
   {
-    label: "资管会话",
+    label: "资管选配",
     path: "/?configure=1",
     activeOn: "CONFIGURE",
     icon: "tune",
   },
   {
-    label: "会话账户",
+    label: "资管账户",
     path: "/v2-preview/accounts",
     activeOn: "/v2-preview/accounts",
     icon: "monitor-heart",
@@ -114,14 +114,17 @@ export function V2Shell({ children }: V2ShellProps) {
         <View style={styles.headerInner}>
           <Pressable
             accessibilityRole="link"
-            accessibilityLabel="返回 EAXAU 首页"
+            accessibilityLabel="返回 AI量化联盟首页"
             onPress={() => router.push("/" as never)}
             style={({ pressed }) => [
               styles.brandButton,
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.brand}>EAXAU</Text>
+            <View style={styles.brandCopy}>
+              <Text style={styles.brand}>AI量化联盟</Text>
+              <Text style={styles.brandDomain}>eaxau.com</Text>
+            </View>
             <View style={styles.brandRule} />
           </Pressable>
 
@@ -225,18 +228,20 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   brandButton: {
-    width: 124,
+    width: 164,
     height: 44,
     justifyContent: "center",
   },
+  brandCopy: { flexDirection: "row", alignItems: "baseline", gap: 6 },
   brand: {
     color: V2.text,
-    fontSize: 27,
-    lineHeight: 31,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: "900",
     letterSpacing: 0,
   },
-  brandRule: { width: 68, height: 2, marginTop: 2, backgroundColor: V2.gold },
+  brandDomain: { color: V2.textDim, fontSize: 7, fontWeight: "800" },
+  brandRule: { width: 86, height: 2, marginTop: 2, backgroundColor: V2.gold },
   desktopNav: {
     flex: 1,
     height: 60,

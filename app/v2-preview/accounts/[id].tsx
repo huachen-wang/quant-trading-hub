@@ -95,16 +95,16 @@ export default function AccountDetailPage() {
           <View style={styles.headerCopy}>
             <Text style={[styles.mode, { color: accent }]}>
               {managed
-                ? "Managed Session · 合同管理"
-                : "Managed Session · U 直达券商"}
+                ? "AI量化联盟 · 资管账户"
+                : "AI量化联盟 · 券商账户投影"}
             </Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
               {account.name}
             </Text>
             <Text style={styles.subtitle}>
               {managed
-                ? "限时交易管理 · 客户保留出金权"
-                : "USDT 直达合作券商 · 项目方只获交易权"}
+                ? "客户本人持有账户 · 项目方仅获约定交易权"
+                : "USDT 入金逐笔核对 · 项目方无提款权"}
             </Text>
           </View>
           <View style={styles.headerStatus}>
@@ -185,7 +185,7 @@ export default function AccountDetailPage() {
               {managed ? "合同视图" : "当前方案"}
             </Text>
             <Text style={styles.panelTitle}>
-              {managed ? "会话合同与权限边界" : "当前券商执行槽"}
+              {managed ? "资管合同与权限边界" : "当前券商执行槽"}
             </Text>
             {managed ? (
               <View style={styles.detailRows}>
@@ -203,7 +203,7 @@ export default function AccountDetailPage() {
                 <View style={styles.readOnlyNotice}>
                   <MaterialIcons name="visibility" size={18} color={V2.gold} />
                   <Text style={styles.readOnlyText}>
-                    客户可申请结束会话；系统按预选的立即平仓、自然退出或交还持仓流程处理。
+                    客户可按合同申请终止资管；已有仓位的处理以双方合同与实际风控指令为准。
                   </Text>
                 </View>
               </View>
@@ -347,7 +347,7 @@ export default function AccountDetailPage() {
         <View style={styles.notice}>
           <MaterialIcons name="shield" size={20} color={V2.blue} />
           <Text style={styles.noticeText}>
-            账户页是经过脱敏的只读投影。模拟金额不代表真实资产；真实执行必须通过身份、限时资管授权、券商交易权与数据新鲜度校验，出金权默认为无。
+            账户页是经过脱敏的只读投影。模拟金额不代表真实资产；真实执行必须通过身份、资管授权、券商交易权与数据新鲜度校验，提款权始终与交易权分离。
           </Text>
         </View>
       </View>

@@ -17,7 +17,7 @@ describe("V2 allocation engine", () => {
     expect(result.valid).toBe(true);
     expect(result.estimated.modeledDrawdownPct).toBeGreaterThan(0);
     expect(result.issues.some((item) => item.code === "DEMO_DATA")).toBe(true);
-    expect(result.termsVersions).toHaveProperty("atlas-prime");
+    expect(result.termsVersions).toHaveProperty("exness");
   });
 
   it("blocks a draft whose platform weights do not total 100 percent", () => {
@@ -30,11 +30,11 @@ describe("V2 allocation engine", () => {
     ).toBe(true);
   });
 
-  it("blocks incompatible and offline strategies", () => {
+  it("blocks an offline strategy even when every supported broker is compatible", () => {
     const draft = structuredClone(DEFAULT_ALLOCATION);
     draft.platformBuckets = [
       {
-        platformId: "atlas-prime",
+        platformId: "exness",
         capitalWeightPct: 100,
         strategies: [
           { strategyId: "bitcoin-core", weightPct: 100, riskMultiplier: 1 },
@@ -43,9 +43,7 @@ describe("V2 allocation engine", () => {
     ];
     const result = validateAllocation(draft, DEMO_PLATFORMS, DEMO_STRATEGIES);
     expect(result.valid).toBe(false);
-    expect(result.issues.map((item) => item.code)).toEqual(
-      expect.arrayContaining(["INCOMPATIBLE_STRATEGY", "STRATEGY_OFFLINE"]),
-    );
+    expect(result.issues.map((item) => item.code)).toContain("STRATEGY_OFFLINE");
   });
 
   it("returns a deterministic risk-aware recommendation", async () => {
@@ -68,13 +66,13 @@ describe("V2 allocation engine", () => {
     const result = await provider.recommendAllocation({
       capital: { amount: "50000", currency: "USD" },
       riskProfile: "MEDIUM",
-      platformIds: ["atlas-prime", "meridian"],
+      platformIds: ["exness", "ic-markets"],
       strategyIds: ["jingge-v51", "quantum-queen"],
     });
 
     expect(result.platformBuckets.map((bucket) => bucket.platformId)).toEqual([
-      "atlas-prime",
-      "meridian",
+      "exness",
+      "ic-markets",
     ]);
     expect(
       Array.from(

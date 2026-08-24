@@ -25,7 +25,6 @@ export function StrategySelectionPanel({
   onContinue,
 }: StrategySelectionPanelProps) {
   const hasSelection = selectedStrategies.length > 0;
-  const hasFullSelection = selectedStrategies.length === total;
   const selectionChips = hasSelection ? (
     selectedStrategies.map((strategy) => (
       <Pressable
@@ -105,12 +104,12 @@ export function StrategySelectionPanel({
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="继续配置量化方案"
-          disabled={!hasFullSelection}
+          disabled={!hasSelection}
           onPress={onContinue}
           style={({ pressed }) => [
             styles.continueButton,
             styles.continueButtonInline,
-            !hasFullSelection && styles.disabled,
+            !hasSelection && styles.disabled,
             pressed && styles.pressed,
           ]}
         >
@@ -175,17 +174,17 @@ export function StrategySelectionPanel({
         <View style={styles.nextCopy}>
           <Text style={styles.nextLabel}>下一步</Text>
           <Text style={styles.nextValue} numberOfLines={1}>
-            资金 · 风控 · 券商槽 · 期限 · U 路由
+            资金 · 风控 · 策略权重 · 券商槽 · U 路由
           </Text>
         </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="继续配置量化方案"
-          disabled={!hasFullSelection}
+          disabled={!hasSelection}
           onPress={onContinue}
           style={({ pressed }) => [
             styles.continueButton,
-            !hasFullSelection && styles.disabled,
+            !hasSelection && styles.disabled,
             pressed && styles.pressed,
           ]}
         >
@@ -201,7 +200,7 @@ function SelectAllButton({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="将六款策略全部纳入资管会话草案"
+      accessibilityLabel="选择全部六款可选策略"
       onPress={onPress}
       style={({ pressed }) => [
         styles.selectAllButton,
@@ -209,7 +208,7 @@ function SelectAllButton({ onPress }: { onPress: () => void }) {
       ]}
     >
       <MaterialIcons name="done-all" size={15} color={V2.gold} />
-      <Text style={styles.selectAllText}>一键纳入六策略</Text>
+      <Text style={styles.selectAllText}>一键全选 6 款</Text>
     </Pressable>
   );
 }

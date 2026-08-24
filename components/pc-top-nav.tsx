@@ -137,7 +137,7 @@ export function PcTopNav() {
           <Pressable
             style={[styles.logo, isMobile && styles.logoMobile]}
             onPress={() => goTo("/(tabs)")}
-            accessibilityLabel="EAXAU"
+            accessibilityLabel="AI量化联盟"
           >
             <BrandWordmark size="sm" />
           </Pressable>

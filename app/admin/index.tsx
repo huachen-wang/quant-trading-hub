@@ -82,6 +82,20 @@ export default function AdminDashboard() {
 
   const menuItems = [
     {
+      code: "MGT",
+      title: "资管委托接入",
+      route: "/admin/alliance-sessions",
+      count: 0,
+      description: "审核委托、核验券商账户与交易权、显式启用",
+    },
+    {
+      code: "FND",
+      title: "券商入金与代收",
+      route: "/admin/broker-funding",
+      count: 0,
+      description: "直充核对、专属代收、动态验证转出与券商到账",
+    },
+    {
       code: "DAT",
       title: "V2 策略数据",
       route: "/admin/v2-data",
@@ -208,7 +222,7 @@ export default function AdminDashboard() {
         <View style={[styles.dashboardShell, isDesktop && styles.dashboardShellDesktop]}>
           <View style={styles.headerRow}>
             <View style={styles.headerMain}>
-              <Text style={[styles.kicker, { color: colors.primary }]}>EAXAU CONTROL ROOM</Text>
+              <Text style={[styles.kicker, { color: colors.primary }]}>AI量化联盟 CONTROL ROOM</Text>
               <Text style={[styles.title, { color: colors.foreground }]}>管理员后台</Text>
               <Text style={[styles.subtitle, { color: colors.muted }]}>
                 内容、订单、订阅与合作资源集中管理

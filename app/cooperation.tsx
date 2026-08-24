@@ -30,38 +30,38 @@ const CARD_THEMES = [
 // ─── 默认策略档案（后台无数据时展示） ───
 const DEFAULT_CARDS: any[] = [
   {
-    id: -1, title: "极限黄金对冲 Pro", subtitle: "日均几百~几千单 · 回撤稳定",
-    description: "专业级对冲策略，多账户分散风险，回撤可控。已有多个工作室实盘运行超过6个月，经历多次极端行情考验。",
-    badge: "热门", badgeColor: "red", strategyType: "对冲策略", platform: "MT4",
-    observeNote: "私聊备注「极限对冲」获取观摩账户",
+    id: -1, title: "极限黄金对冲 Pro", subtitle: "高频对冲结构 · 成本与滑点敏感",
+    description: "对冲与高频交易可能放大点差、滑点和执行风险；真实账户时长、回撤与极端行情证据待逐项核验。",
+    badge: "高频风险", badgeColor: "red", strategyType: "对冲策略", platform: "MT4",
+    observeNote: "联系获取可复核账户或报告（如有）",
     coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/ZHsaMQOjNNmhOyDO.png", galleryImages: null,
   },
   {
-    id: -2, title: "一单一结（武汉小艺）", subtitle: "日均20-80单 · 历史零爆仓",
-    description: "极致安全的一次一单策略，历史零爆仓记录。适合风险厌恶型客户和保守型工作室，口碑极佳。",
-    badge: "零爆仓", badgeColor: "green", strategyType: "一次一单", platform: "MT5",
-    observeNote: "私聊备注「一单一结」获取观摩账户",
+    id: -2, title: "一单一结（武汉小艺）", subtitle: "单笔结算结构 · 历史证据待核验",
+    description: "一次一单不等于低风险；需独立核验真实账户、时间区间、最大回撤、未平仓与入金变动，不作零爆仓承诺。",
+    badge: "待核验", badgeColor: "green", strategyType: "一次一单", platform: "MT5",
+    observeNote: "联系获取可复核账户或报告（如有）",
     coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/UVwvYYtrcWTlJENF.png", galleryImages: null,
   },
   {
-    id: -3, title: "超级黄金调优 2026", subtitle: "两个月战绩600%",
-    description: "主力网格策略，经过深度参数调优。高收益高风险，适合激进型工作室。已有多个实盘账户验证。",
-    badge: "主力", badgeColor: "gold", strategyType: "网格策略", platform: "MT4",
-    observeNote: "私聊备注「超级调优」获取观摩账户",
+    id: -3, title: "超级黄金调优 2026", subtitle: "网格策略 · 高收益目标伴随高回撤",
+    description: "网格和参数调优结果可能存在过拟合；演示、回测或短周期收益不代表真实长期表现。",
+    badge: "高风险", badgeColor: "gold", strategyType: "网格策略", platform: "MT4",
+    observeNote: "联系获取可复核账户或报告（如有）",
     coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/LXzzcgHZcdfIghSr.png", galleryImages: null,
   },
   {
-    id: -4, title: "趋势刷单 · EAXAU独家版", subtitle: "单边1000点暴跌不爆仓",
-    description: "趋势马丁策略，抗单能力极强。独家调优版本，市面无同款。经过2024年多次极端行情验证。",
-    badge: "独家", badgeColor: "gold", strategyType: "趋势马丁", platform: "MT4",
-    observeNote: "私聊备注「趋势刷单」获取观摩账户",
+    id: -4, title: "趋势刷单 · AI量化联盟筛选版", subtitle: "趋势马丁 · 极端单边风险",
+    description: "马丁加仓会在持续单边行情中快速放大保证金与爆仓风险；极端行情参数和真实账户证据待核验。",
+    badge: "马丁风险", badgeColor: "gold", strategyType: "趋势马丁", platform: "MT4",
+    observeNote: "联系获取可复核账户或报告（如有）",
     coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/vNtkFswQtKnMDizI.png", galleryImages: null,
   },
   {
-    id: -5, title: "点金订单流", subtitle: "四维共振 · 专业机构选择",
-    description: "机构级订单流分析系统，四维共振信号。适合专业交易团队和工作室，是我们的旗舰产品。",
-    badge: "旗舰", badgeColor: "gold", strategyType: "订单流", platform: "MT4/MT5",
-    observeNote: "私聊备注「点金订单流」获取观摩账户",
+    id: -5, title: "点金订单流", subtitle: "多维信号 · 执行效果待核验",
+    description: "订单流信号需结合数据源、延迟、执行与样本外结果评估；不使用‘机构级’或类似背书作为收益证明。",
+    badge: "证据待补", badgeColor: "gold", strategyType: "订单流", platform: "MT4/MT5",
+    observeNote: "联系获取可复核账户或报告（如有）",
     coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/wjERAPAgIuvumwkn.png", galleryImages: null,
   },
 ];
@@ -128,23 +128,23 @@ export default function CooperationPage() {
             <View style={s.heroAccent} />
             <View style={s.heroBadge}>
               <View style={s.liveDot} />
-              <Text style={s.heroBadgeText}>EAXAU · 策略源头</Text>
+              <Text style={s.heroBadgeText}>AI量化联盟 · 策略合作</Text>
             </View>
             <Text style={s.heroTitle}>工作室深度合作</Text>
-            <Text style={s.heroTagline}>源码掌控 · 独家优化 · 源头直供</Text>
+            <Text style={s.heroTagline}>策略筛选 · 技术适配 · 风险披露</Text>
             <Text style={s.heroDesc}>
-              我们持有全网200+款主流EA的源码{"\n"}
-              具备100%破解与独家优化能力{"\n"}
-              与我们合作 = 源头价 + 独家版 + 终身技术支持
+              展示可选 EA 与技术服务，不作绝对收益或不爆仓承诺{"\n"}
+              源码来源、商业授权、历史数据与真实账户需逐项核验{"\n"}
+              正式合作以授权证明、可复核证据与签署合同为准
             </Text>
 
             {/* 核心数据 */}
             <View style={s.statsRow}>
               {[
-                { num: "200+", label: "EA源码库" },
-                { num: "30+", label: "合作工作室" },
-                { num: "50+", label: "独家调优版" },
-                { num: "7×24", label: "技术支持" },
+                { num: "6", label: "当前可选策略" },
+                { num: "1–6", label: "单笔方案选配" },
+                { num: "100%", label: "权重合计" },
+                { num: "NONE", label: "提现权" },
               ].map((item, i) => (
                 <View key={i} style={s.statItem}>
                   <Text style={s.statNum}>{item.num}</Text>
@@ -168,7 +168,7 @@ export default function CooperationPage() {
             <View style={s.sectionLine} />
             <Text style={s.sectionLabel}>STRATEGY PORTFOLIO</Text>
             <Text style={s.sectionTitle}>精选策略档案</Text>
-            <Text style={s.sectionSubtitle}>每一款都经过实盘验证 · 点击查看详情与观摩</Text>
+            <Text style={s.sectionSubtitle}>点击查看数据口径、证据状态与风险；无可复核证据的内容不作实盘结论</Text>
           </View>
 
           {/* ═══ 策略卡片 - 全新视觉设计 ═══ */}
@@ -290,10 +290,10 @@ export default function CooperationPage() {
             {[
               { icon: "diamond", title: "策略选型", desc: "根据资金量、风险偏好、客户类型，精准推荐最适合的策略组合", color: "#D8BC83" },
               { icon: "construct", title: "深度调优", desc: "针对合作平台的点差、杠杆、延迟进行专属参数优化", color: "#3B82F6" },
-              { icon: "analytics", title: "实盘观摩", desc: "所有策略均提供实盘观摩账户，数据透明可查，眼见为实", color: "#10B981" },
-              { icon: "headset", title: "1对1陪跑", desc: "专属技术顾问，7×24小时响应，从部署到运维全程陪跑", color: "#EF4444" },
-              { icon: "cash", title: "源头直供", desc: "成本直降80%，比市面任何渠道都便宜。发我对比给你更优价", color: "#C9A96E" },
-              { icon: "infinite", title: "无限授权", desc: "有效期内不限窗口、不限账户，一个价格覆盖所有需求", color: "#06B6D4" },
+              { icon: "analytics", title: "证据核验", desc: "如有可复核账户或报告则标明时间区间与数据口径；无证据时明确标记待核验", color: "#10B981" },
+              { icon: "headset", title: "1对1部署协助", desc: "技术响应时段、服务周期与运维边界以签署合同为准", color: "#EF4444" },
+              { icon: "cash", title: "报价可对比", desc: "对比版本、授权、交付清单与服务周期，不作全网最低价承诺", color: "#C9A96E" },
+              { icon: "document-text", title: "授权范围明示", desc: "窗口、账户、终端与客户数均以权利人授权及合同为准", color: "#06B6D4" },
             ].map((item, i) => (
               <View key={i} style={[s.supportCard]}
             >
@@ -313,7 +313,7 @@ export default function CooperationPage() {
             <View style={s.sectionLine} />
             <Text style={s.sectionLabel}>CUSTOM EA SERVICE</Text>
             <Text style={s.sectionTitle}>专属EA定制服务</Text>
-            <Text style={s.sectionSubtitle}>你的策略，你的品牌 · 从源码到版权全部归你</Text>
+            <Text style={s.sectionSubtitle}>你的策略，你的品牌 · 源码、二次开发与品牌权利以书面授权为准</Text>
           </View>
 
           <View style={[s.customEABlock]}>
@@ -324,16 +324,16 @@ export default function CooperationPage() {
               </View>
               <Text style={s.customEATitle}>为工作室量身打造专属EA</Text>
               <Text style={s.customEADesc}>
-                我们提供从策略开发到品牌包装的一站式定制服务。将成熟策略改造成工作室的专属产品，完全属于你的品牌。
+                提供从策略开发到品牌适配的定制服务。仅在权利人授权范围内处理源码、名称、界面和二次开发。
               </Text>
 
               <View style={s.customEAFeatures}>
                 {[
                   { icon: "brush", text: "自定义策略名称，打造工作室专属品牌形象" },
                   { icon: "options", text: "专属调优模式，根据平台环境深度优化参数" },
-                  { icon: "infinite", text: "无限授权不受限，不限账户、不限终端、不限客户" },
-                  { icon: "shield-checkmark", text: "版权信息替换为工作室自有品牌与联系方式" },
-                  { icon: "rocket", text: "从源码编译到最终交付，全流程透明可控" },
+                  { icon: "document-text", text: "账户、终端与客户授权范围在合同中明示" },
+                  { icon: "shield-checkmark", text: "品牌与联系方式替换需符合原权利人授权" },
+                  { icon: "rocket", text: "从来源/授权核验到最终交付保留记录" },
                 ].map((f, i) => (
                   <View key={i} style={s.customEAFeatureRow}>
                     <View style={s.customEAFeatureIcon}>
@@ -365,9 +365,9 @@ export default function CooperationPage() {
 
           <View style={s.plansRow}>
             {(plans && plans.length > 0 ? plans : [
-              { id: -1, title: "试用合作", badge: "零门槛", price: "免费", priceNote: "体验", features: '["可选一款策略实盘测试","无资金量要求","不拿佣金","指定合作平台账户授权"]' },
+              { id: -1, title: "试用合作", badge: "低成本验证", price: "免费", priceNote: "体验", features: '["可选一款策略做模拟或小额验证","先确认数据口径与风险上限","不以截图作为到账或收益证明","券商账户只授予约定交易权"]' },
               { id: -2, title: "策略授权", badge: "推荐", price: "¥1,000/月", priceNote: "¥2,500/年", features: '["有效期内无限开窗口/授权","永久免费更新迭代","不需要分成"]' },
-              { id: -3, title: "源码买断", badge: null, price: "¥9,800起", priceNote: null, features: '["完整源码交付·支持二次开发","终身技术支持","不限平台·无限开窗口/授权"]' },
+              { id: -3, title: "源码授权合作", badge: null, price: "¥9,800起", priceNote: null, features: '["仅交付来源可核验且拥有商业授权的源码","技术支持周期以签署合同为准","平台、账户与二次开发授权范围以合同为准"]' },
             ]).map((plan: any, idx: number) => {
               const isMain = idx === 1 || plan.badge === "推荐";
               return (
@@ -416,9 +416,9 @@ export default function CooperationPage() {
 
         {/* 底部免责 */}
         <View style={s.footer}>
-          <View style={s.footerBrand}><View style={s.liveDot} /><Text style={s.footerBrandText}>EAXAU</Text></View>
-          <Text style={s.footerSlogan}>源头价直供 · 策略持续更新 · 全方位技术支持</Text>
-          <Text style={s.footerDisclaimer}>免责声明：不同平台行情、点差、延迟存在差异，策略表现因此可能不同。我们不作收益保证，不做本金承诺，仅提供优质工具。</Text>
+          <View style={s.footerBrand}><View style={s.liveDot} /><Text style={s.footerBrandText}>AI量化联盟</Text></View>
+          <Text style={s.footerSlogan}>授权可核验 · 证据可复核 · 技术服务以合同为准</Text>
+          <Text style={s.footerDisclaimer}>免责声明：不同平台行情、点差、延迟存在差异，策略表现因此可能不同。我们不作收益保证，不做本金承诺，仅展示工具、证据状态与技术服务信息。</Text>
         </View>
       </ScrollView>
 
@@ -462,7 +462,7 @@ export default function CooperationPage() {
               {/* 截图画廊 */}
               {parseGallery(selectedCard?.galleryImages).length > 0 && (
                 <View style={s.modalGallery}>
-                  <Text style={s.modalSectionTitle}>实盘观摩截图</Text>
+                  <Text style={s.modalSectionTitle}>观摩/证据材料（需核验口径）</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {parseGallery(selectedCard?.galleryImages).map((img: string, i: number) => (
                       <TouchableOpacity key={i} onPress={() => { setGalleryIndex(i); setShowGallery(true); }}>

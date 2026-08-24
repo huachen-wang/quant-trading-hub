@@ -7,9 +7,8 @@
  *   3. 用户按锁定报价转账，提交链上 tx hash
  *   4. Admin 核对网络、收款地址、tx hash 和实际到账金额后手动确认
  *
- * 这是早期阶段的简化方案。等业务量起来后，可以升级为：
- *   - 接入 TronLink / OKLink Pay / 链上监控自动到账
- *   - 上传截图到 Vercel Blob / R2 自动 OCR 校验
+ * MANUAL 模式必须配置管理员 TOTP 并逐笔核验。自动化首选 BVNK Hosted
+ * Payment + webhook，Cobo 可作企业钱包替代；适配器完成前保持 fail closed。
  */
 
 import type {
@@ -20,6 +19,7 @@ import type {
   CallbackVerifyResult,
 } from "./gateway";
 import { isUsdtPaymentEnabled } from "../../../constants/features";
+import { isAdminTotpConfigured } from "../admin-totp";
 
 class UsdtManualGateway implements PaymentGateway {
   readonly name = "usdt-manual";
@@ -35,10 +35,29 @@ class UsdtManualGateway implements PaymentGateway {
     return Number(process.env.USDT_CNY_PER_USDT || "");
   }
 
+  private get defaultNetwork(): "TRC20" | "ERC20" | null {
+    const value = process.env.USDT_DEFAULT_NETWORK?.trim().toUpperCase();
+    return value === "TRC20" || value === "ERC20" ? value : null;
+  }
+
+  private get configuredChain(): "TRC20" | "ERC20" | null {
+    const hasTrc20 = /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(this.trc20Address);
+    const hasErc20 = /^0x[a-fA-F0-9]{40}$/.test(this.erc20Address);
+    if (this.trc20Address && !hasTrc20) return null;
+    if (this.erc20Address && !hasErc20) return null;
+    if (hasTrc20 && hasErc20) {
+      if (this.defaultNetwork === "TRC20") return "TRC20";
+      if (this.defaultNetwork === "ERC20") return "ERC20";
+      return null;
+    }
+    return hasTrc20 ? "TRC20" : hasErc20 ? "ERC20" : null;
+  }
+
   isEnabled(): boolean {
     return (
       isUsdtPaymentEnabled() &&
-      (!!this.trc20Address || !!this.erc20Address) &&
+      isAdminTotpConfigured() &&
+      this.configuredChain !== null &&
       Number.isFinite(this.cnyPerUsdt) &&
       this.cnyPerUsdt > 0
     );
@@ -53,8 +72,8 @@ class UsdtManualGateway implements PaymentGateway {
       throw new Error("USDT 支付未配置或未启用");
     }
 
-    // 优先 TRC20（手续费低，主流），有则用，没有降级 ERC20
-    const chain = this.trc20Address ? "TRC20" : "ERC20";
+    const chain = this.configuredChain;
+    if (!chain) throw new Error("USDT 地址或唯一默认网络配置无效");
     const address = chain === "TRC20" ? this.trc20Address : this.erc20Address;
 
     const sourceAmount = Number(opts.order.amount);

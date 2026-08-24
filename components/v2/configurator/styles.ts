@@ -230,6 +230,9 @@ export const styles = StyleSheet.create({
     borderTopColor: V2.border,
   },
   platformFact: { color: V2.textMuted, fontSize: 8, lineHeight: 12 },
+  brokerLinks: { gap: 6, paddingTop: 7, borderTopWidth: 1, borderTopColor: V2.border },
+  brokerLink: { flexDirection: "row", alignItems: "center", gap: 4 },
+  brokerLinkText: { color: V2.gold, fontSize: 8, lineHeight: 13, fontWeight: "800" },
   sessionGroup: { gap: 12 },
   durationOptions: { flexDirection: "row", gap: 8 },
   choiceOption: {

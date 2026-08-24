@@ -140,23 +140,23 @@ export default function PromoPage() {
 
             {/* 主标题 */}
             <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-              <Text style={s.heroTitle}>全网EA源头提货</Text>
+              <Text style={s.heroTitle}>EA 商品与技术服务</Text>
             </Animated.View>
             <View style={s.heroTitleLine} />
-            <Text style={s.heroSubtitle}>SOURCE DIRECT · BEST PRICE</Text>
+            <Text style={s.heroSubtitle}>LICENSE CHECK · USDT ORDER · RISK DISCLOSURE</Text>
 
             <Text style={s.heroDesc}>
-              我们不是中间商 —— 我们就是源头{"\n"}
-              全网所有主流EA，我们均持有源码或具备独家优化能力
+              购买前核对版本、授权范围、交付清单与证据状态{"\n"}
+              EA 销售款使用独立 USDT 订单对账，与券商入金及资管代收严格分账
             </Text>
 
             {/* 核心数据 */}
             <View style={s.heroStats}>
               {[
-                { num: "200+", label: "EA源码库", icon: "code-slash" },
-                { num: "50+", label: "独家优化", icon: "flash" },
-                { num: "1000+", label: "服务客户", icon: "people" },
-                { num: "24h", label: "极速发货", icon: "rocket" },
+                { num: "USDT", label: "独立订单", icon: "cash" },
+                { num: "TX", label: "链上对账", icon: "link" },
+                { num: "AUTH", label: "授权核验", icon: "shield-checkmark" },
+                { num: "EVID", label: "证据状态", icon: "document-text" },
               ].map((stat, i) => (
                 <View key={i} style={s.heroStatItem}>
                   <Ionicons name={stat.icon as any} size={16} color="#A8895A" />
@@ -168,7 +168,7 @@ export default function PromoPage() {
 
             {/* 权威标签条 */}
             <View style={s.authorityStrip}>
-              {["源码级掌控", "正版授权", "独家优化", "全网最低价"].map((tag, i) => (
+              {["来源待核验", "授权以合同为准", "证据状态明示", "历史不代表未来"].map((tag, i) => (
                 <View key={i} style={s.authorityTag}>
                   <Ionicons name="checkmark-circle" size={12} color="#A8895A" />
                   <Text style={s.authorityTagText}>{tag}</Text>
@@ -207,7 +207,7 @@ export default function PromoPage() {
           </View>
           <View style={s.resultTip}>
             <Ionicons name="pricetag" size={13} color="#10B981" />
-            <Text style={s.resultTipText}>全部比官方价低 30-70%</Text>
+            <Text style={s.resultTipText}>价格、授权与交付范围以当次订单确认为准</Text>
           </View>
         </View>
 
@@ -258,12 +258,12 @@ export default function PromoPage() {
           <Text style={s.whySectionTitle}>为什么在这里提货？</Text>
           <View style={s.whyGrid}>
             {[
-              { icon: "diamond", title: "源头直供", desc: "持有全网主流EA源码\n非二手倒卖", color: "#A8895A" },
-              { icon: "shield-checkmark", title: "正版保障", desc: "官方授权或源码编译\n杜绝后门木马", color: "#22C55E" },
-              { icon: "rocket", title: "极速发货", desc: "付款后即时交付\n紧急需求可加急", color: "#3B82F6" },
-              { icon: "build", title: "专属EA定制", desc: "自定义名称与调优模式\n无限授权 · 版权归属工作室", color: "#7AA2C7" },
-              { icon: "headset", title: "终身售后", desc: "免费更新迭代\n技术问题随时响应", color: "#34D399" },
-              { icon: "cash", title: "全网最低", desc: "源头价格\n比任何渠道都便宜", color: "#EF4444" },
+              { icon: "diamond", title: "来源核验", desc: "商品来源与可销售性\n需有可复核记录", color: "#A8895A" },
+              { icon: "shield-checkmark", title: "授权边界", desc: "账户数、终端与二次开发\n以书面合同为准", color: "#22C55E" },
+              { icon: "rocket", title: "交付清单", desc: "文件、版本和服务周期\n在付款前确认", color: "#3B82F6" },
+              { icon: "build", title: "技术适配", desc: "名称、参数与平台适配\n不改变原始授权", color: "#7AA2C7" },
+              { icon: "headset", title: "服务周期", desc: "更新与技术支持\n以订单/合同为准", color: "#34D399" },
+              { icon: "cash", title: "独立对账", desc: "EA 购买款\n不与资管入金混用", color: "#EF4444" },
             ].map((item, i) => (
               <View key={i} style={s.whyItem}>
                 <View style={[s.whyIconWrap, { backgroundColor: `${item.color}20` }]}>
@@ -281,7 +281,7 @@ export default function PromoPage() {
           <LinearGradient colors={["#1E293B", "#0A1628"]} style={s.bottomCtaInner}>
             <Ionicons name="search" size={32} color="#A8895A" />
             <Text style={s.bottomCtaTitle}>没找到想要的EA？</Text>
-            <Text style={s.bottomCtaDesc}>告诉我们名字，全网EA我们都能搞到源码{"\n"}支持专属EA定制：自定义策略名称与调优模式{"\n"}无限授权不受限 · 版权与联系方式替换为工作室品牌</Text>
+            <Text style={s.bottomCtaDesc}>告诉我们需要的 EA 名称与版本，我们先核验来源、授权与可交付范围。{"\n"}如需参数或界面适配，二次开发与品牌使用权以权利人授权及签署合同为准。</Text>
             <TouchableOpacity style={s.bottomCtaBtn} onPress={() => setShowContact(true)}>
               <Ionicons name="chatbubbles" size={18} color="#0A1628" />
               <Text style={s.bottomCtaBtnText}>联系客服定制</Text>

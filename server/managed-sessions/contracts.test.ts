@@ -15,10 +15,36 @@ const sixStrategies = [
 }));
 
 describe("managed session draft contract", () => {
-  it("accepts a six-strategy mixed direct broker and vault draft", () => {
+  const baseDraft = {
+    onboardingMode: "SELF_OPENED" as const,
+    fundsRoute: "BROKER_DIRECT" as const,
+    targetCapital: "10000",
+    riskProfile: "CONSERVATIVE" as const,
+    maxDrawdownPct: 8,
+    executionSlots: [
+      { brokerId: "exness" as const, capitalWeightPct: 100 },
+    ],
+  };
+
+  it.each([
+    [[{ strategyId: "jingge-v51", weightPct: 100, riskMultiplier: 1 }]],
+    [[
+      { strategyId: "jingge-v51", weightPct: 34, riskMultiplier: 1 },
+      { strategyId: "night-hunter", weightPct: 33, riskMultiplier: 1 },
+      { strategyId: "quantum-queen", weightPct: 33, riskMultiplier: 1 },
+    ]],
+    [sixStrategies],
+  ])("accepts a selectable 1–6 strategy subset", (strategies) => {
+    expect(
+      managedSessionDraftInputSchema.parse({ ...baseDraft, strategies })
+        .strategies,
+    ).toHaveLength(strategies.length);
+  });
+
+  it("accepts the fixed six strategies with broker-direct onboarding", () => {
     const parsed = managedSessionDraftInputSchema.parse({
-      termDays: 90,
-      capitalMode: "MIXED",
+      onboardingMode: "SELF_OPENED",
+      fundsRoute: "BROKER_DIRECT",
       targetCapital: "50000",
       settlementAsset: "USDT",
       riskProfile: "BALANCED",
@@ -27,14 +53,12 @@ describe("managed session draft contract", () => {
       strategies: sixStrategies,
       executionSlots: [
         {
-          brokerId: "atlas-prime",
+          brokerId: "exness",
           capitalWeightPct: 60,
-          fundingSource: "DIRECT_BROKER",
         },
         {
-          brokerId: "vertex",
+          brokerId: "ic-markets",
           capitalWeightPct: 40,
-          fundingSource: "MANAGED_VAULT",
         },
       ],
     });
@@ -44,10 +68,10 @@ describe("managed session draft contract", () => {
     expect(parsed.settlementAsset).toBe("USDT");
   });
 
-  it("rejects duplicate strategies and inconsistent mixed funding", () => {
+  it("rejects duplicate strategies and platform collection without assisted onboarding", () => {
     const result = managedSessionDraftInputSchema.safeParse({
-      termDays: 30,
-      capitalMode: "MIXED",
+      onboardingMode: "SELF_OPENED",
+      fundsRoute: "PLATFORM_COLLECTION",
       targetCapital: "10000",
       riskProfile: "CONSERVATIVE",
       maxDrawdownPct: 8,
@@ -58,23 +82,47 @@ describe("managed session draft contract", () => {
       })),
       executionSlots: [
         {
-          brokerId: "atlas-prime",
+          brokerId: "exness",
           capitalWeightPct: 50,
-          fundingSource: "DIRECT_BROKER",
         },
         {
-          brokerId: "vertex",
+          brokerId: "ic-markets",
           capitalWeightPct: 50,
-          fundingSource: "DIRECT_BROKER",
         },
       ],
     });
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(
-        result.error.issues.map((issue) => issue.message).join(" "),
-      ).toMatch(/6 款不重复策略.*MIXED/);
+      const messages = result.error.issues.map((issue) => issue.message);
+      expect(messages.some((message) => /已选策略不得重复/.test(message))).toBe(true);
+      expect(messages.some((message) => /平台代收仅适用/.test(message))).toBe(true);
     }
+  });
+
+  it("rejects strategies outside the fixed six-item catalog", () => {
+    expect(
+      managedSessionDraftInputSchema.safeParse({
+        ...baseDraft,
+        strategies: [
+          { strategyId: "unknown-strategy", weightPct: 100, riskMultiplier: 1 },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects the removed term and vault fields instead of silently accepting them", () => {
+    const result = managedSessionDraftInputSchema.safeParse({
+      onboardingMode: "PLATFORM_ASSISTED",
+      fundsRoute: "BROKER_DIRECT",
+      targetCapital: "10000",
+      riskProfile: "CONSERVATIVE",
+      maxDrawdownPct: 8,
+      strategies: sixStrategies,
+      executionSlots: [{ brokerId: "blueberry-markets", capitalWeightPct: 100 }],
+      termDays: 90,
+      capitalMode: "MANAGED_VAULT",
+    });
+    expect(result.success).toBe(false);
   });
 });

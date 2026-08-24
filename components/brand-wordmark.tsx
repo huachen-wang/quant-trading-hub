@@ -29,12 +29,13 @@ export function BrandWordmark({
     <View style={[styles.root, align === "center" && styles.center, style]}>
       <Text
         accessibilityRole="text"
-        accessibilityLabel="EAXAU"
+        accessibilityLabel="AI量化联盟"
         selectable={false}
         style={[styles.word, metrics]}
       >
-        EAX<Text style={styles.accent}>AU</Text>
+        AI量化<Text style={styles.accent}>联盟</Text>
       </Text>
+      <Text style={styles.domain}>eaxau.com</Text>
     </View>
   );
 }
@@ -54,5 +55,12 @@ const styles = StyleSheet.create({
   },
   accent: {
     color: "#D8BC83",
+  },
+  domain: {
+    marginTop: -2,
+    color: "rgba(226,232,240,0.48)",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.8,
   },
 });

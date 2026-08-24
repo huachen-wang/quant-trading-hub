@@ -95,7 +95,7 @@ export function FloatingSideNav() {
 
   // ==== 项目矩阵 ====
   const matrixSites = [
-    { code: "EAX", label: "EAXAU", sub: "eaxau.com", current: true },
+    { code: "AIQ", label: "AI量化联盟", sub: "eaxau.com", current: true },
     { code: "SRC", label: "源码研究台", sub: "即将上线", disabled: true },
     { code: "XAU", label: "点金", sub: "ddxau.com", url: "https://ddxau.com" },
     { code: "AI", label: "量化风云榜", sub: "eaea.ai", url: "https://eaea.ai" },
@@ -190,7 +190,7 @@ export function FloatingSideNav() {
             <View style={styles.divider} />
 
             {/* 区 2：项目矩阵 */}
-            <SectionTitle en="EAXAU MATRIX" zh="项目矩阵" />
+            <SectionTitle en="AI QUANT MATRIX" zh="项目矩阵" />
             <View style={{ paddingHorizontal: 12 }}>
               {matrixSites.map((s, i) => (
                 <Pressable
@@ -279,7 +279,7 @@ export function FloatingSideNav() {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              EAXAU © 2026 · Quant Source Desk
+              AI量化联盟 © 2026 · eaxau.com
             </Text>
           </View>
         </View>

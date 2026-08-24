@@ -42,7 +42,7 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
   const qq = contactData?.contact_qq?.trim() || CONTACT_FALLBACKS.qq;
   const wechat = contactData?.contact_wechat?.trim() || CONTACT_FALLBACKS.wechat;
   const description = contactData?.contact_description?.trim() || CONTACT_FALLBACKS.description;
-  const title = contactData?.contact_title?.trim() || "联系 EAXAU";
+  const title = contactData?.contact_title?.trim() || "联系 AI量化联盟";
   const subtitle = contactData?.contact_subtitle?.trim() || "获取 EA 文件 · 部署支持 · 商务授权";
 
   const contactMethods = [

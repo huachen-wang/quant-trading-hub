@@ -1,36 +1,53 @@
 import { describe, expect, it } from "vitest";
 import {
-  FUNDING_ROUTE_OPTIONS,
-  SESSION_DURATION_OPTIONS,
-  exitModeLabel,
-  fundingRouteLabel,
+  ALLIANCE_BROKERS,
+  ASSISTED_FUNDING_STEPS,
+  BROKER_FUNDING_STEPS,
+  BROKER_FUNDING_WARNINGS,
+  FUNDING_PATH_OPTIONS,
+  ONBOARDING_OPTIONS,
+  fundingPathLabel,
+  onboardingModeLabel,
 } from "./types";
 
-describe("managed session configurator options", () => {
-  it("supports 30, 90 and 180 day sessions", () => {
-    expect(SESSION_DURATION_OPTIONS.map((option) => option.id)).toEqual([
-      30, 90, 180,
+describe("AI量化联盟前端产品约束", () => {
+  it("只展示三家可选执行券商并使用公开 broker id", () => {
+    expect(ALLIANCE_BROKERS.map((broker) => broker.id)).toEqual([
+      "exness",
+      "ic-markets",
+      "blueberry-markets",
+    ]);
+    expect(ALLIANCE_BROKERS.map((broker) => broker.name)).toEqual([
+      "Exness",
+      "IC Markets",
+      "Blueberry Markets",
     ]);
   });
 
-  it("distinguishes the active broker route from the preparing vault route", () => {
-    expect(FUNDING_ROUTE_OPTIONS).toMatchObject([
-      { id: "DIRECT_BROKER", status: "ACTIVE" },
-      { id: "MANAGED_VAULT", status: "PREPARING" },
+  it("接入方式只有自主开户与平台协助", () => {
+    expect(ONBOARDING_OPTIONS.map((option) => option.id)).toEqual([
+      "SELF_OPENED",
+      "PLATFORM_ASSISTED",
     ]);
+    expect(onboardingModeLabel("SELF_OPENED")).toBe("客户自主开户");
+    expect(onboardingModeLabel("PLATFORM_ASSISTED")).toBe("平台协助接入");
   });
 
-  it("labels direct, vault and mixed USDT routes", () => {
-    expect(fundingRouteLabel(["DIRECT_BROKER"])).toBe("U 直达券商");
-    expect(fundingRouteLabel(["MANAGED_VAULT"])).toBe("Managed Vault");
-    expect(fundingRouteLabel(["DIRECT_BROKER", "MANAGED_VAULT"])).toBe(
-      "混合路由",
-    );
+  it("入金路线没有期限或 Vault 概念", () => {
+    expect(FUNDING_PATH_OPTIONS.map((option) => option.id)).toEqual([
+      "BROKER_DIRECT",
+      "PLATFORM_COLLECTION",
+    ]);
+    expect(fundingPathLabel("BROKER_DIRECT")).toBe("U 直达本人券商");
+    expect(fundingPathLabel("PLATFORM_COLLECTION")).toBe("平台专属地址代收");
   });
 
-  it("keeps all three exit instructions explicit", () => {
-    expect(exitModeLabel("CLOSE_NOW")).toBe("立即平仓");
-    expect(exitModeLabel("NO_NEW_ENTRIES")).toBe("自然退出");
-    expect(exitModeLabel("HAND_BACK_POSITIONS")).toBe("交还持仓");
+  it("两条入金路径压缩为五步并保留独立 txHash/到账核对", () => {
+    expect(BROKER_FUNDING_STEPS).toHaveLength(5);
+    expect(ASSISTED_FUNDING_STEPS).toHaveLength(5);
+    expect(BROKER_FUNDING_STEPS.join(" ")).toContain("txHash");
+    expect(ASSISTED_FUNDING_STEPS.join(" ")).toContain("外部企业钱包");
+    expect(BROKER_FUNDING_WARNINGS.join(" ")).toContain("错链");
+    expect(BROKER_FUNDING_WARNINGS.join(" ")).toContain("未到账");
   });
 });

@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createDemoOverview, DEMO_STRATEGIES } from "./demo-data";
+import {
+  createDemoOverview,
+  DEMO_PLATFORMS,
+  DEMO_STRATEGIES,
+} from "./demo-data";
 import { HttpQuantDataProvider } from "./http-provider";
 
 function provider() {
@@ -58,5 +62,31 @@ describe("HttpQuantDataProvider", () => {
     );
 
     await expect(provider().listStrategies()).rejects.toBeTruthy();
+  });
+
+  it("rejects well-formed but non-canonical strategy and broker catalogs", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            { ...DEMO_STRATEGIES[0], id: "replacement" },
+            ...DEMO_STRATEGIES.slice(1),
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            { ...DEMO_PLATFORMS[0], id: "replacement" },
+            ...DEMO_PLATFORMS.slice(1),
+          ]),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(provider().listStrategies()).rejects.toThrow(/canonical ID/);
+    await expect(provider().listPlatforms()).rejects.toThrow(/canonical ID/);
   });
 });

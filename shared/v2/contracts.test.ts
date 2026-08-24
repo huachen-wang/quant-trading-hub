@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   accountSchema,
+  alliancePlatformCatalogSchema,
+  allianceStrategyCatalogSchema,
   allocationDraftSchema,
-  coreStrategySchema,
   overviewSchema,
-  platformSchema,
 } from "./contracts";
 import {
   createDemoOverview,
@@ -23,10 +23,32 @@ describe("EAXAU V2 contracts", () => {
   });
 
   it("keeps every demo object inside the public DTO contract", () => {
-    expect(() => coreStrategySchema.array().parse(DEMO_STRATEGIES)).not.toThrow();
-    expect(() => platformSchema.array().parse(DEMO_PLATFORMS)).not.toThrow();
+    expect(() => allianceStrategyCatalogSchema.parse(DEMO_STRATEGIES)).not.toThrow();
+    expect(() => alliancePlatformCatalogSchema.parse(DEMO_PLATFORMS)).not.toThrow();
     expect(() => accountSchema.array().parse(DEMO_ACCOUNTS)).not.toThrow();
     expect(() => allocationDraftSchema.parse(DEFAULT_ALLOCATION)).not.toThrow();
+  });
+
+  it("fails closed when an upstream provider replaces a strategy or broker id", () => {
+    const overview = createDemoOverview();
+    expect(() =>
+      overviewSchema.parse({
+        ...overview,
+        strategies: [
+          { ...overview.strategies[0], id: "unapproved-strategy" },
+          ...overview.strategies.slice(1),
+        ],
+      }),
+    ).toThrow(/canonical ID/);
+    expect(() =>
+      overviewSchema.parse({
+        ...overview,
+        platforms: [
+          { ...overview.platforms[0], id: "unapproved-broker" },
+          ...overview.platforms.slice(1),
+        ],
+      }),
+    ).toThrow(/canonical ID/);
   });
 
   it("never marks deterministic preview data as LIVE", () => {

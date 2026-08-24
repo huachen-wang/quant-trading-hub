@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, sql, or, like, lt, isNotNull } from "drizzle-orm";
+import { eq, and, desc, asc, sql, or, like, isNull, isNotNull, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../drizzle/schema";
@@ -14,6 +14,19 @@ import {
   replaceMockManagedSessionDraft,
   transitionMockManagedSession,
   updateMockManagedExecutionSlot,
+  appendMockBrokerFundingAuditEvent,
+  assignMockCollectionAddress,
+  createMockBrokerFundingIntent,
+  createMockCollectionAddress,
+  findMockBrokerFundingByTxHash,
+  getMockBrokerFundingIntent,
+  getMockCollectionApproval,
+  listMockBrokerFundingIntents,
+  listMockCollectionAddresses,
+  listMockCollectionApprovals,
+  markMockCollectionAddressUsed,
+  transitionMockBrokerFundingIntent,
+  upsertMockCollectionApproval,
 } from "./managed-sessions/mock-store";
 import type { ManagedTransitionPatch } from "./managed-sessions/state-machine";
 import {
@@ -58,16 +71,23 @@ import {
   listMockPendingUsdtPayments,
   listMockSiteEntries,
   markMockOrderPaid,
+  markMockOrderRefunded,
   searchMockStrategies,
   updateMockSiteEntry,
   updateMockPayment,
   updateMockStrategy,
+  createMockCommerceUsdtEvent,
+  listMockCommerceUsdtEvents,
+  listMockUsdtPayments,
+  reserveMockChainTransaction,
+  releaseMockChainTransaction,
 } from "./mock-data";
 
-const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings, backtestData: backtestDataTable, cooperationCards, cooperationPlans, promoProducts, verificationCodes, userFavorites, categories, orders, payments, managedSessions, managedSessionStrategies, managedExecutionSlots, managedSessionEvents } = schema;
+const { users, strategies, trades, comments, purchases, downloads, anonymousComments, listingRequests, groupBuys, notifications, siteSettings, backtestData: backtestDataTable, cooperationCards, cooperationPlans, promoProducts, verificationCodes, userFavorites, categories, orders, payments, commerceUsdtEvents, chainTxRegistry, adminTotpUses, managedSessions, managedSessionStrategies, managedExecutionSlots, managedSessionEvents, managedBrokerFundingIntents, managedBrokerFundingEvents, managedCollectionAddresses, managedBrokerCollectionApprovals } = schema;
 
 let pool: mysql.Pool | null = null;
 let db: any = null;
+const mockAdminTotpUses = new Set<string>();
 
 function getPool() {
   if (!pool) {
@@ -1402,6 +1422,15 @@ export async function markOrderPaid(
     .where(eq(orders.id, orderId));
 }
 
+export async function markOrderRefunded(orderId: number) {
+  const database = await getDb();
+  if (!database) return markMockOrderRefunded(orderId);
+  await database
+    .update(orders)
+    .set({ status: "refunded" })
+    .where(eq(orders.id, orderId));
+}
+
 export async function cancelOrder(orderId: number) {
   const db = await getDb();
   if (!db) return cancelMockOrder(orderId);
@@ -1492,6 +1521,422 @@ export async function listPendingUsdtPayments() {
       )
     )
     .orderBy(desc(payments.createdAt));
+}
+
+export async function createCommerceUsdtEvent(data: {
+  paymentId: number;
+  orderId: number;
+  actorUserId?: number | null;
+  eventType: string;
+  payload?: string | null;
+}) {
+  const database = await getDb();
+  if (!database) return createMockCommerceUsdtEvent(data);
+  await database.insert(commerceUsdtEvents).values(data);
+}
+
+export async function listCommerceUsdtEvents(paymentId: number) {
+  const database = await getDb();
+  if (!database) return listMockCommerceUsdtEvents(paymentId);
+  return database
+    .select()
+    .from(commerceUsdtEvents)
+    .where(eq(commerceUsdtEvents.paymentId, paymentId))
+    .orderBy(asc(commerceUsdtEvents.createdAt), asc(commerceUsdtEvents.id));
+}
+
+export async function listUsdtPayments(input?: {
+  reviewStatus?: string;
+  limit?: number;
+}) {
+  const database = await getDb();
+  if (!database) return listMockUsdtPayments(input);
+  const conditions: any[] = [eq(payments.gateway, "usdt-manual")];
+  if (input?.reviewStatus) {
+    conditions.push(eq(payments.usdtReviewStatus, input.reviewStatus as any));
+  }
+  const rows = await database
+    .select()
+    .from(payments)
+    .where(and(...conditions))
+    .orderBy(desc(payments.createdAt))
+    .limit(input?.limit ?? 100);
+  return Promise.all(
+    rows.map(async (payment: any) => ({
+      ...payment,
+      events: await listCommerceUsdtEvents(payment.id),
+    })),
+  );
+}
+
+type ChainTransactionUsage =
+  | "COMMERCE_INBOUND"
+  | "BROKER_DIRECT_INBOUND"
+  | "COLLECTION_INBOUND"
+  | "COLLECTION_PAYOUT"
+  | "COLLECTION_REFUND"
+  | "COMMERCE_REFUND";
+
+function normalizeChainTransaction(input: {
+  network: string;
+  normalizedHash: string;
+}) {
+  const upperNetwork = input.network.trim().toUpperCase();
+  const network =
+    upperNetwork === "TRC20"
+      ? "TRON"
+      : upperNetwork === "ERC20"
+        ? "ETHEREUM"
+        : upperNetwork === "BEP20"
+          ? "BSC"
+          : upperNetwork;
+  const normalizedHash =
+    network === "SOLANA" || network === "OTHER"
+      ? input.normalizedHash.trim()
+      : input.normalizedHash.trim().replace(/^0x/i, "").toLowerCase();
+  return { network, normalizedHash };
+}
+
+async function occupyChainTransactionInTx(
+  tx: any,
+  input: {
+    network: string;
+    normalizedHash: string;
+    usageType: ChainTransactionUsage;
+    referenceNo: string;
+    actorUserId?: number | null;
+  },
+) {
+  const rows = await tx
+    .select()
+    .from(chainTxRegistry)
+    .where(
+      and(
+        eq(chainTxRegistry.network, input.network),
+        eq(chainTxRegistry.normalizedHash, input.normalizedHash),
+      ),
+    )
+    .limit(1)
+    .for("update");
+  const existing = rows[0];
+  if (existing) {
+    if (
+      existing.usageType === input.usageType &&
+      existing.referenceNo === input.referenceNo
+    ) {
+      return;
+    }
+    throw new Error("该链上交易已被另一 USDT 账路占用");
+  }
+  try {
+    await tx.insert(chainTxRegistry).values(input);
+  } catch {
+    // A concurrent transaction may have inserted after the SELECT. The unique
+    // key is authoritative; callers retry from fresh state instead of guessing.
+    throw new Error("该链上交易已被另一 USDT 账路占用");
+  }
+}
+
+/**
+ * Atomically occupies an inbound chain transaction, updates the merchant USDT
+ * payment, appends its audit event and (only for a true MATCHED result) marks
+ * the order paid. Any CAS/event/order failure rolls the registry insert back.
+ */
+export async function reconcileCommerceUsdtAtomically(input: {
+  paymentId: number;
+  orderId: number;
+  orderNo: string;
+  actorUserId: number;
+  network: string;
+  normalizedHash: string;
+  expectedPaymentStatus: "pending" | "success" | "failed" | "refunded";
+  paymentUpdate: Partial<typeof payments.$inferInsert>;
+  eventType: string;
+  eventPayload: string;
+  markOrderPaid: boolean;
+}) {
+  const key = normalizeChainTransaction(input);
+  const registryInput = {
+    ...key,
+    usageType: "COMMERCE_INBOUND" as const,
+    referenceNo: input.orderNo,
+    actorUserId: input.actorUserId,
+  };
+  const database = await getDb();
+  if (!database) {
+    const payment = getMockPaymentById(input.paymentId);
+    const order = getMockOrderById(input.orderId);
+    if (!payment || payment.status !== input.expectedPaymentStatus) {
+      throw new Error("支付记录已被其他操作更新，请刷新后重试");
+    }
+    if (input.markOrderPaid && (!order || order.status !== "pending")) {
+      throw new Error("订单已被其他通道更新，请重新对账");
+    }
+    reserveMockChainTransaction(registryInput);
+    try {
+      updateMockPayment(input.paymentId, input.paymentUpdate);
+      createMockCommerceUsdtEvent({
+        paymentId: input.paymentId,
+        orderId: input.orderId,
+        actorUserId: input.actorUserId,
+        eventType: input.eventType,
+        payload: input.eventPayload,
+      });
+      if (input.markOrderPaid) {
+        markMockOrderPaid(input.orderId, {
+          paymentMethod: "usdt",
+          paymentGateway: "usdt-manual",
+        });
+      }
+    } catch (error) {
+      releaseMockChainTransaction(registryInput);
+      throw error;
+    }
+    return;
+  }
+
+  await database.transaction(async (tx: any) => {
+    await occupyChainTransactionInTx(tx, registryInput);
+    const paymentResult = await tx
+      .update(payments)
+      .set(input.paymentUpdate)
+      .where(
+        and(
+          eq(payments.id, input.paymentId),
+          eq(payments.status, input.expectedPaymentStatus),
+        ),
+      );
+    const paymentAffected = Number(
+      (paymentResult as any)[0]?.affectedRows ??
+        (paymentResult as any).rowsAffected ??
+        0,
+    );
+    if (paymentAffected !== 1) {
+      throw new Error("支付记录已被其他操作更新，请刷新后重试");
+    }
+    await tx.insert(commerceUsdtEvents).values({
+      paymentId: input.paymentId,
+      orderId: input.orderId,
+      actorUserId: input.actorUserId,
+      eventType: input.eventType,
+      payload: input.eventPayload,
+    });
+    if (input.markOrderPaid) {
+      const orderResult = await tx
+        .update(orders)
+        .set({
+          status: "paid",
+          paidAt: new Date(),
+          paymentMethod: "usdt",
+          paymentGateway: "usdt-manual",
+        })
+        .where(and(eq(orders.id, input.orderId), eq(orders.status, "pending")));
+      const orderAffected = Number(
+        (orderResult as any)[0]?.affectedRows ??
+          (orderResult as any).rowsAffected ??
+          0,
+      );
+      if (orderAffected !== 1) {
+        throw new Error("订单已被其他通道更新，请重新对账");
+      }
+    }
+  });
+}
+
+/** Final merchant-USDT refund ledger write; external wallets execute the tx. */
+export async function recordCommerceUsdtRefundAtomically(input: {
+  paymentId: number;
+  orderId: number;
+  orderNo: string;
+  actorUserId: number;
+  network: string;
+  normalizedHash: string;
+  expectedPaymentStatus: "pending" | "success" | "failed" | "refunded";
+  paymentUpdate: Partial<typeof payments.$inferInsert>;
+  eventPayload: string;
+  markOrderRefunded: boolean;
+}) {
+  const key = normalizeChainTransaction(input);
+  const registryInput = {
+    ...key,
+    usageType: "COMMERCE_REFUND" as const,
+    referenceNo: input.orderNo,
+    actorUserId: input.actorUserId,
+  };
+  const database = await getDb();
+  if (!database) {
+    const payment = getMockPaymentById(input.paymentId);
+    const order = getMockOrderById(input.orderId);
+    if (
+      !payment ||
+      payment.status !== input.expectedPaymentStatus ||
+      payment.refundTxHash
+    ) {
+      throw new Error("退款记录已被其他操作更新，请刷新后重试");
+    }
+    if (
+      input.markOrderRefunded &&
+      (!order || order.status !== "paid" || order.paymentGateway !== "usdt-manual")
+    ) {
+      throw new Error("订单状态已变更，不能登记全额退款");
+    }
+    reserveMockChainTransaction(registryInput);
+    try {
+      updateMockPayment(input.paymentId, input.paymentUpdate);
+      createMockCommerceUsdtEvent({
+        paymentId: input.paymentId,
+        orderId: input.orderId,
+        actorUserId: input.actorUserId,
+        eventType: "USDT_REFUND_TX_RECORDED",
+        payload: input.eventPayload,
+      });
+      if (input.markOrderRefunded) markMockOrderRefunded(input.orderId);
+    } catch (error) {
+      releaseMockChainTransaction(registryInput);
+      throw error;
+    }
+    return;
+  }
+  await database.transaction(async (tx: any) => {
+    await occupyChainTransactionInTx(tx, registryInput);
+    const paymentResult = await tx
+      .update(payments)
+      .set(input.paymentUpdate)
+      .where(
+        and(
+          eq(payments.id, input.paymentId),
+          eq(payments.status, input.expectedPaymentStatus),
+          isNull(payments.refundTxHash),
+        ),
+      );
+    const paymentAffected = Number(
+      (paymentResult as any)[0]?.affectedRows ??
+        (paymentResult as any).rowsAffected ??
+        0,
+    );
+    if (paymentAffected !== 1) {
+      throw new Error("退款记录已被其他操作更新，请刷新后重试");
+    }
+    await tx.insert(commerceUsdtEvents).values({
+      paymentId: input.paymentId,
+      orderId: input.orderId,
+      actorUserId: input.actorUserId,
+      eventType: "USDT_REFUND_TX_RECORDED",
+      payload: input.eventPayload,
+    });
+    if (input.markOrderRefunded) {
+      const orderResult = await tx
+        .update(orders)
+        .set({ status: "refunded" })
+        .where(
+          and(
+            eq(orders.id, input.orderId),
+            eq(orders.status, "paid"),
+            eq(orders.paymentGateway, "usdt-manual"),
+          ),
+        );
+      const orderAffected = Number(
+        (orderResult as any)[0]?.affectedRows ??
+          (orderResult as any).rowsAffected ??
+          0,
+      );
+      if (orderAffected !== 1) {
+        throw new Error("订单状态已变更，不能登记全额退款");
+      }
+    }
+  });
+}
+
+export async function reserveChainTransaction(input: {
+  network: string;
+  normalizedHash: string;
+  usageType: ChainTransactionUsage;
+  referenceNo: string;
+  actorUserId?: number | null;
+}) {
+  const { network, normalizedHash } = normalizeChainTransaction(input);
+  const normalizedInput = { ...input, network, normalizedHash };
+  const database = await getDb();
+  if (!database) return reserveMockChainTransaction(normalizedInput);
+  const readExisting = async () => {
+    const rows = await database
+      .select()
+      .from(chainTxRegistry)
+      .where(
+        and(
+          eq(chainTxRegistry.network, normalizedInput.network),
+          eq(chainTxRegistry.normalizedHash, normalizedInput.normalizedHash),
+        ),
+      )
+      .limit(1);
+    return rows[0] ?? null;
+  };
+  const existing = await readExisting();
+  if (existing) {
+    if (
+      existing.usageType === normalizedInput.usageType &&
+      existing.referenceNo === normalizedInput.referenceNo
+    ) {
+      return existing;
+    }
+    throw new Error("该链上交易已被另一 USDT 账路占用");
+  }
+  try {
+    await database.insert(chainTxRegistry).values(normalizedInput);
+  } catch (error) {
+    const raced = await readExisting();
+    if (
+      raced?.usageType === normalizedInput.usageType &&
+      raced.referenceNo === normalizedInput.referenceNo
+    ) {
+      return raced;
+    }
+    throw error;
+  }
+  return readExisting();
+}
+
+export async function releaseChainTransactionReservation(input: {
+  network: string;
+  normalizedHash: string;
+  usageType: ChainTransactionUsage;
+  referenceNo: string;
+}) {
+  const { network, normalizedHash } = normalizeChainTransaction(input);
+  const normalizedInput = { ...input, network, normalizedHash };
+  const database = await getDb();
+  if (!database) return releaseMockChainTransaction(normalizedInput);
+  await database
+    .delete(chainTxRegistry)
+    .where(
+      and(
+        eq(chainTxRegistry.network, normalizedInput.network),
+        eq(chainTxRegistry.normalizedHash, normalizedInput.normalizedHash),
+        eq(chainTxRegistry.usageType, normalizedInput.usageType),
+        eq(chainTxRegistry.referenceNo, normalizedInput.referenceNo),
+      ),
+    );
+}
+
+export async function consumeAdminTotpStep(input: {
+  adminId: number;
+  timeStep: number;
+  action: string;
+}) {
+  const database = await getDb();
+  if (!database) {
+    const key = `${input.adminId}:${input.timeStep}`;
+    if (mockAdminTotpUses.has(key)) {
+      throw new Error("该动态码已用于另一个敏感操作，请等待下一个动态码");
+    }
+    mockAdminTotpUses.add(key);
+    return;
+  }
+  try {
+    await database.insert(adminTotpUses).values(input);
+  } catch {
+    throw new Error("该动态码已用于另一个敏感操作，请等待下一个动态码");
+  }
 }
 
 // ==================== Bundle B: 购买权限 / 下载记录 / Profile 编辑 ====================
@@ -1608,7 +2053,7 @@ export async function deleteSiteEntry(id: number) {
 }
 
 // ============================================================
-// 限时资管会话 CRUD
+// AI 量化联盟委托 CRUD（历史表名保留 managed_sessions）
 // ============================================================
 
 async function hydrateManagedSession(database: any, session: any) {
@@ -1650,8 +2095,10 @@ export async function createManagedSessionDraft(
       sessionNo,
       userId,
       status: "DRAFT",
-      termDays: input.termDays,
-      capitalMode: input.capitalMode,
+      termDays: 0,
+      capitalMode: "DIRECT_BROKER",
+      onboardingMode: input.onboardingMode,
+      fundsRoute: input.fundsRoute,
       targetCapital: input.targetCapital,
       settlementAsset: "USDT",
       riskProfile: input.riskProfile,
@@ -1686,7 +2133,7 @@ export async function createManagedSessionDraft(
         brokerId: item.brokerId,
         label: item.label ?? null,
         capitalWeightPct: item.capitalWeightPct.toFixed(2),
-        fundingSource: item.fundingSource,
+        fundingSource: "DIRECT_BROKER",
         connectionStatus: "UNLINKED",
         tradePermission: "NOT_REQUESTED",
         withdrawalPermission: "NONE",
@@ -1745,8 +2192,10 @@ export async function replaceManagedSessionDraft(
     const updateResult = await tx
       .update(managedSessions)
       .set({
-        termDays: input.termDays,
-        capitalMode: input.capitalMode,
+        termDays: 0,
+        capitalMode: "DIRECT_BROKER",
+        onboardingMode: input.onboardingMode,
+        fundsRoute: input.fundsRoute,
         targetCapital: input.targetCapital,
         settlementAsset: "USDT",
         riskProfile: input.riskProfile,
@@ -1790,7 +2239,7 @@ export async function replaceManagedSessionDraft(
         brokerId: item.brokerId,
         label: item.label ?? null,
         capitalWeightPct: item.capitalWeightPct.toFixed(2),
-        fundingSource: item.fundingSource,
+        fundingSource: "DIRECT_BROKER",
         connectionStatus: "UNLINKED",
         tradePermission: "NOT_REQUESTED",
         withdrawalPermission: "NONE",
@@ -1919,39 +2368,420 @@ export async function updateManagedExecutionSlot(
   return getManagedSessionByNo(sessionNo);
 }
 
-export async function expireDueManagedSessions(now = new Date()): Promise<number> {
+// ==================== 客户券商 USDT 入金账路 ====================
+
+async function hydrateBrokerFundingIntent(database: any, row: any) {
+  const events = await database
+    .select()
+    .from(managedBrokerFundingEvents)
+    .where(eq(managedBrokerFundingEvents.fundingIntentId, row.id))
+    .orderBy(
+      asc(managedBrokerFundingEvents.createdAt),
+      asc(managedBrokerFundingEvents.id),
+    );
+  return { ...row, events };
+}
+
+export async function createBrokerFundingIntent(
+  session: any,
+  slot: any,
+  intentNo: string,
+  expectedAmount: string,
+) {
   const database = await getDb();
-  if (!database) return 0;
-  const due = await database
-    .select({ sessionNo: managedSessions.sessionNo })
-    .from(managedSessions)
+  if (!database) {
+    return createMockBrokerFundingIntent(
+      session,
+      slot,
+      intentNo,
+      expectedAmount,
+    );
+  }
+  await database.transaction(async (tx: any) => {
+    await tx.insert(managedBrokerFundingIntents).values({
+      intentNo,
+      sessionId: session.id,
+      slotId: slot.id,
+      userId: session.userId,
+      brokerId: slot.brokerId,
+      status: "DRAFT",
+      asset: "USDT",
+      fundsRoute: session.fundsRoute,
+      custodyProvider: "MANUAL",
+      expectedAmount,
+      screeningStatus:
+        session.fundsRoute === "PLATFORM_COLLECTION" ? "PENDING" : null,
+    });
+    const rows = await tx
+      .select({ id: managedBrokerFundingIntents.id })
+      .from(managedBrokerFundingIntents)
+      .where(eq(managedBrokerFundingIntents.intentNo, intentNo))
+      .limit(1);
+    if (!rows[0]?.id) throw new Error("无法创建券商入金记录");
+    await tx.insert(managedBrokerFundingEvents).values({
+      fundingIntentId: rows[0].id,
+      sessionId: session.id,
+      actorUserId: session.userId,
+      eventType: "FUNDING_INTENT_CREATED",
+      fromStatus: null,
+      toStatus: "DRAFT",
+      payload: JSON.stringify({
+        fundsRoute: session.fundsRoute,
+        asset: "USDT",
+        externalTransferTriggered: false,
+      }),
+    });
+  });
+  return getBrokerFundingIntentByNo(intentNo);
+}
+
+export async function getBrokerFundingIntentByNo(intentNo: string) {
+  const database = await getDb();
+  if (!database) return getMockBrokerFundingIntent(intentNo);
+  const rows = await database
+    .select()
+    .from(managedBrokerFundingIntents)
+    .where(eq(managedBrokerFundingIntents.intentNo, intentNo))
+    .limit(1);
+  return rows[0]
+    ? hydrateBrokerFundingIntent(database, rows[0])
+    : null;
+}
+
+export async function listBrokerFundingIntents(input: {
+  userId?: number;
+  sessionId?: number;
+  status?: string;
+  fundsRoute?: string;
+  limit?: number;
+} = {}) {
+  const database = await getDb();
+  if (!database) return listMockBrokerFundingIntents(input);
+  const conditions: any[] = [];
+  if (input.userId !== undefined) {
+    conditions.push(eq(managedBrokerFundingIntents.userId, input.userId));
+  }
+  if (input.sessionId !== undefined) {
+    conditions.push(eq(managedBrokerFundingIntents.sessionId, input.sessionId));
+  }
+  if (input.status) {
+    conditions.push(eq(managedBrokerFundingIntents.status, input.status as any));
+  }
+  if (input.fundsRoute) {
+    conditions.push(
+      eq(managedBrokerFundingIntents.fundsRoute, input.fundsRoute as any),
+    );
+  }
+  const query = database.select().from(managedBrokerFundingIntents).$dynamic();
+  const rows = conditions.length
+    ? await query
+        .where(and(...conditions))
+        .orderBy(desc(managedBrokerFundingIntents.createdAt))
+        .limit(input.limit ?? 100)
+    : await query
+        .orderBy(desc(managedBrokerFundingIntents.createdAt))
+        .limit(input.limit ?? 100);
+  return Promise.all(
+    rows.map((row: any) => hydrateBrokerFundingIntent(database, row)),
+  );
+}
+
+export async function findBrokerFundingByTransactionReference(value: string) {
+  const database = await getDb();
+  if (!database) return findMockBrokerFundingByTxHash(value);
+  const rows = await database
+    .select()
+    .from(managedBrokerFundingIntents)
     .where(
-      and(
-        eq(managedSessions.status, "ACTIVE"),
-        lt(managedSessions.expiresAt, now),
+      or(
+        eq(managedBrokerFundingIntents.txHash, value),
+        eq(managedBrokerFundingIntents.payoutTxHash, value),
+        eq(managedBrokerFundingIntents.refundTxHash, value),
       ),
     )
-    .limit(100);
-  let expired = 0;
-  for (const session of due) {
-    try {
-      const updated = await transitionManagedSession(session.sessionNo, {
-        actorUserId: null,
-        expectedFrom: "ACTIVE",
-        toStatus: "EXIT_REQUESTED",
-        eventType: "TERM_EXPIRED",
-        executionEnabled: false,
-        timestamps: { exitRequestedAt: now },
-        eventPayload: {
-          opensDisabled: true,
-          externalTransferTriggered: false,
-          externalOrderTriggered: false,
-        },
-      });
-      if (updated) expired += 1;
-    } catch {
-      // 其他实例已更新该会话，下一轮会重新核对。
-    }
+    .limit(1);
+  return rows[0]
+    ? hydrateBrokerFundingIntent(database, rows[0])
+    : null;
+}
+
+export async function transitionBrokerFundingIntent(
+  intentNo: string,
+  expectedFrom: string | string[],
+  toStatus: string,
+  actorUserId: number,
+  eventType: string,
+  patch: Record<string, unknown> = {},
+  eventPayload: Record<string, unknown> = {},
+) {
+  const database = await getDb();
+  if (!database) {
+    return transitionMockBrokerFundingIntent(
+      intentNo,
+      expectedFrom,
+      toStatus,
+      actorUserId,
+      eventType,
+      patch,
+      eventPayload,
+    );
   }
-  return expired;
+  const existing = await getBrokerFundingIntentByNo(intentNo);
+  if (!existing) return null;
+  const expected = Array.isArray(expectedFrom) ? expectedFrom : [expectedFrom];
+  await database.transaction(async (tx: any) => {
+    const result = await tx
+      .update(managedBrokerFundingIntents)
+      .set({ ...patch, status: toStatus as any })
+      .where(
+        and(
+          eq(managedBrokerFundingIntents.id, existing.id),
+          inArray(managedBrokerFundingIntents.status, expected as any),
+        ),
+      );
+    const affected = Number(
+      (result as any)[0]?.affectedRows ?? (result as any).rowsAffected ?? 0,
+    );
+    if (affected === 0) {
+      throw new Error("券商入金记录已被其他操作更新，请刷新后重试");
+    }
+    await tx.insert(managedBrokerFundingEvents).values({
+      fundingIntentId: existing.id,
+      sessionId: existing.sessionId,
+      actorUserId,
+      eventType,
+      fromStatus: existing.status,
+      toStatus,
+      payload: Object.keys(eventPayload).length
+        ? JSON.stringify(eventPayload)
+        : null,
+    });
+  });
+  return getBrokerFundingIntentByNo(intentNo);
+}
+
+export async function appendBrokerFundingAuditEvent(
+  intentNo: string,
+  actorUserId: number,
+  eventType: string,
+  patch: Record<string, unknown> = {},
+  eventPayload: Record<string, unknown> = {},
+) {
+  const database = await getDb();
+  if (!database) {
+    return appendMockBrokerFundingAuditEvent(
+      intentNo,
+      actorUserId,
+      eventType,
+      patch,
+      eventPayload,
+    );
+  }
+  const existing = await getBrokerFundingIntentByNo(intentNo);
+  if (!existing) return null;
+  await database.transaction(async (tx: any) => {
+    await tx
+      .update(managedBrokerFundingIntents)
+      .set(patch)
+      .where(eq(managedBrokerFundingIntents.id, existing.id));
+    await tx.insert(managedBrokerFundingEvents).values({
+      fundingIntentId: existing.id,
+      sessionId: existing.sessionId,
+      actorUserId,
+      eventType,
+      fromStatus: existing.status,
+      toStatus: existing.status,
+      payload: Object.keys(eventPayload).length
+        ? JSON.stringify(eventPayload)
+        : null,
+    });
+  });
+  return getBrokerFundingIntentByNo(intentNo);
+}
+
+export async function createCollectionAddress(input: {
+  label: string;
+  network: string;
+  address: string;
+  depositTag?: string | null;
+  createdBy: number;
+}) {
+  const database = await getDb();
+  if (!database) return createMockCollectionAddress(input);
+  await database.insert(managedCollectionAddresses).values({
+    ...input,
+    asset: "USDT",
+    status: "AVAILABLE",
+  });
+  const rows = await database
+    .select()
+    .from(managedCollectionAddresses)
+    .where(
+      and(
+        eq(managedCollectionAddresses.network, input.network),
+        eq(managedCollectionAddresses.address, input.address),
+      ),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listCollectionAddresses(status?: string) {
+  const database = await getDb();
+  if (!database) return listMockCollectionAddresses(status);
+  const query = database.select().from(managedCollectionAddresses).$dynamic();
+  return status
+    ? query
+        .where(eq(managedCollectionAddresses.status, status as any))
+        .orderBy(asc(managedCollectionAddresses.id))
+    : query.orderBy(asc(managedCollectionAddresses.id));
+}
+
+export async function assignCollectionAddress(
+  intentNo: string,
+  addressId: number,
+  actorUserId: number,
+  instructionsExpireAt?: Date | null,
+  eligibility?: {
+    referenceHash: string;
+    attestedAt: Date;
+  },
+) {
+  const database = await getDb();
+  if (!database) {
+    return assignMockCollectionAddress(
+      intentNo,
+      addressId,
+      actorUserId,
+      instructionsExpireAt,
+      eligibility,
+    );
+  }
+  const intent = await getBrokerFundingIntentByNo(intentNo);
+  if (!intent) return null;
+  const rows = await database
+    .select()
+    .from(managedCollectionAddresses)
+    .where(eq(managedCollectionAddresses.id, addressId))
+    .limit(1);
+  const address = rows[0];
+  if (!address) return null;
+  await database.transaction(async (tx: any) => {
+    const reserve = await tx
+      .update(managedCollectionAddresses)
+      .set({
+        status: "RESERVED",
+        currentFundingIntentId: intent.id,
+        reservedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(managedCollectionAddresses.id, addressId),
+          eq(managedCollectionAddresses.status, "AVAILABLE"),
+          sql`${managedCollectionAddresses.currentFundingIntentId} IS NULL`,
+        ),
+      );
+    const reserved = Number(
+      (reserve as any)[0]?.affectedRows ?? (reserve as any).rowsAffected ?? 0,
+    );
+    if (reserved === 0) throw new Error("代收地址已被分配或不可用");
+    const updateIntent = await tx
+      .update(managedBrokerFundingIntents)
+      .set({
+        status: "READY_TO_FUND",
+        collectionAddressId: address.id,
+        instructionSource: "PLATFORM_ADDRESS_POOL",
+        custodyProvider: "MANUAL",
+        network: address.network,
+        depositAddress: address.address,
+        depositTag: address.depositTag,
+        instructionsIssuedAt: new Date(),
+        instructionsExpireAt: instructionsExpireAt ?? null,
+        customerEligibilityReferenceHash:
+          eligibility?.referenceHash ?? null,
+        customerEligibilityAttestedBy: eligibility ? actorUserId : null,
+        customerEligibilityAttestedAt: eligibility?.attestedAt ?? null,
+      })
+      .where(
+        and(
+          eq(managedBrokerFundingIntents.id, intent.id),
+          eq(managedBrokerFundingIntents.status, "WAITING_INSTRUCTIONS"),
+        ),
+      );
+    const updated = Number(
+      (updateIntent as any)[0]?.affectedRows ??
+        (updateIntent as any).rowsAffected ??
+        0,
+    );
+    if (updated === 0) throw new Error("入金记录当前不能分配代收地址");
+    await tx.insert(managedBrokerFundingEvents).values({
+      fundingIntentId: intent.id,
+      sessionId: intent.sessionId,
+      actorUserId,
+      eventType: "COLLECTION_ADDRESS_ASSIGNED",
+      fromStatus: intent.status,
+      toStatus: "READY_TO_FUND",
+      payload: JSON.stringify({
+        addressId,
+        network: address.network,
+        customerScopeAttested: Boolean(eligibility),
+      }),
+    });
+  });
+  return getBrokerFundingIntentByNo(intentNo);
+}
+
+export async function markCollectionAddressUsed(fundingIntentId: number) {
+  const database = await getDb();
+  if (!database) return markMockCollectionAddressUsed(fundingIntentId);
+  await database
+    .update(managedCollectionAddresses)
+    .set({ status: "USED", usedAt: new Date() })
+    .where(
+      and(
+        eq(managedCollectionAddresses.currentFundingIntentId, fundingIntentId),
+        eq(managedCollectionAddresses.status, "RESERVED"),
+      ),
+    );
+}
+
+export async function getBrokerCollectionApproval(brokerId: string) {
+  const database = await getDb();
+  if (!database) return getMockCollectionApproval(brokerId);
+  const rows = await database
+    .select()
+    .from(managedBrokerCollectionApprovals)
+    .where(eq(managedBrokerCollectionApprovals.brokerId, brokerId))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function listBrokerCollectionApprovals() {
+  const database = await getDb();
+  if (!database) return listMockCollectionApprovals();
+  return database
+    .select()
+    .from(managedBrokerCollectionApprovals)
+    .orderBy(asc(managedBrokerCollectionApprovals.brokerId));
+}
+
+export async function upsertBrokerCollectionApproval(input: any) {
+  const database = await getDb();
+  if (!database) return upsertMockCollectionApproval(input);
+  await database
+    .insert(managedBrokerCollectionApprovals)
+    .values(input)
+    .onDuplicateKeyUpdate({
+      set: {
+        status: input.status,
+        approvalReferenceHash: input.approvalReferenceHash,
+        allowedNetworks: input.allowedNetworks,
+        minimumAmount: input.minimumAmount,
+        maximumAmount: input.maximumAmount,
+        reviewedBy: input.reviewedBy,
+        approvedAt: input.approvedAt,
+        note: input.note,
+      },
+    });
+  return getBrokerCollectionApproval(input.brokerId);
 }

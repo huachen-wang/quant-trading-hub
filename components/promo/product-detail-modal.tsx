@@ -143,7 +143,7 @@ export function PromoProductDetailModal({
 
             <View style={s.safetyNote}>
               <Ionicons name="shield-checkmark" size={14} color="#F1F5F9" />
-              <Text style={s.safetyNoteText}>源头直供 · 正版授权 · 终身售后</Text>
+              <Text style={s.safetyNoteText}>来源可核验 · 授权以书面记录为准 · 服务周期以订单为准</Text>
             </View>
           </ScrollView>
         </View>

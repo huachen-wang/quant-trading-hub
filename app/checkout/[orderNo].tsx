@@ -52,6 +52,8 @@ export default function CheckoutOrderScreen() {
   const [payState, setPayState] = useState<PayState>({ kind: "select" });
   const [busy, setBusy] = useState(false);
   const [txHash, setTxHash] = useState("");
+  const [payerWalletAddress, setPayerWalletAddress] = useState("");
+  const [payerOwnershipAttested, setPayerOwnershipAttested] = useState(false);
   const [tick, setTick] = useState(0); // 用于触发倒计时刷新
 
   // 订单详情
@@ -103,6 +105,8 @@ export default function CheckoutOrderScreen() {
       if (method === "usdt") {
         if (!result.addressInfo || !result.settlementQuote) throw new Error("USDT 网关未返回完整结算报价");
         setTxHash("");
+        setPayerWalletAddress("");
+        setPayerOwnershipAttested(false);
         setPayState({
           kind: "usdt",
           address: result.addressInfo.address,
@@ -151,9 +155,22 @@ export default function CheckoutOrderScreen() {
       showMsg("请填写完整的 64 位链上 Tx Hash");
       return;
     }
+    if (payerWalletAddress.trim().length < 8) {
+      showMsg("请填写本次实际付款钱包地址");
+      return;
+    }
+    if (!payerOwnershipAttested) {
+      showMsg("请确认付款钱包由本人或已授权主体控制");
+      return;
+    }
     setBusy(true);
     try {
-      const result = await markUsdtMutation.mutateAsync({ orderNo, txHashOrNote: normalizedTxHash });
+      const result = await markUsdtMutation.mutateAsync({
+        orderNo,
+        txHashOrNote: normalizedTxHash,
+        payerWalletAddress: payerWalletAddress.trim(),
+        payerOwnershipAttested: true,
+      });
       showMsg(result.message || "已提交，等待链上对账确认");
       setPayState((s) => (s.kind === "usdt" ? { ...s, submitted: true } : s));
       refetch();
@@ -219,20 +236,6 @@ export default function CheckoutOrderScreen() {
     );
   }
 
-  if (!order) {
-    const needsLogin = /login|unauthorized|10001/i.test(orderError?.message || "");
-    return (
-      <View style={styles.centerFull}>
-        <Text style={styles.emptyIcon}>!</Text>
-        <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{needsLogin ? "需要登录" : "订单不存在"}</Text>
-        <Text style={[styles.emptyText, { color: colors.muted }]}>{needsLogin ? "请先登录后查看订单，或返回首页重新选择商品。" : "没有找到这个订单，可能已经失效或订单号有误。"}</Text>
-        <TouchableOpacity onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)} style={styles.emptyBtn}>
-          <Text style={styles.emptyBtnText}>{needsLogin ? "去登录" : "返回首页"}</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   const statusLabel = STATUS_LABELS[order.status] || order.status;
   const statusColor = STATUS_COLORS[order.status] || colors.muted;
   const isPending = order.status === "pending" && remainingSeconds > 0;
@@ -251,7 +254,14 @@ export default function CheckoutOrderScreen() {
           {/* 顶部品牌行 */}
           <View style={styles.brandRow}>
             <View style={styles.liveDot} />
-            <Text style={styles.brandText}>EAXAU 安全收银台</Text>
+            <Text style={styles.brandText}>AI量化联盟 · EA商城安全收银台</Text>
+          </View>
+          <View style={styles.ledgerBoundary}>
+            <Text style={styles.ledgerBoundaryTitle}>EA 商城独立收银</Text>
+            <Text style={[styles.ledgerBoundaryText, { color: colors.muted }]}>
+              本页只结算 EA 文件/商品订单，不用于客户券商直充或资管平台代收。
+              三类资金使用独立订单、地址、txHash 与后台对账记录。
+            </Text>
           </View>
 
           {/* 订单卡片 */}
@@ -412,12 +422,34 @@ export default function CheckoutOrderScreen() {
                     >
                       1. 请务必使用 <Text style={{ color: "#D8BC83" }}>{payState.chain}</Text> 网络（其他网络无法到账，资金可能丢失）{"\n"}
                       2. 数量不符、网络不符或报价过期时不会自动交付{"\n"}
-                      3. 转账后提交 Tx Hash，对账通过后订单才生效
+                      3. 转账后提交付款钱包与 Tx Hash，对账通过后订单才生效{"\n"}
+                      4. EA 商城收款与券商入金、资管代收完全分账
                     </Text>
                   </View>
 
                   {!payState.submitted ? (
                     <>
+                      <Text style={[styles.usdtLabel, { color: colors.muted }]}>本次实际付款钱包（必填）</Text>
+                      <TextInput
+                        value={payerWalletAddress}
+                        onChangeText={setPayerWalletAddress}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        placeholder={payState.chain === "ERC20" ? "0x 开头的钱包地址" : "T 开头的 TRON 钱包地址"}
+                        placeholderTextColor={colors.muted}
+                        style={[styles.usdtTxInput, { color: colors.foreground, borderColor: colors.border }]}
+                      />
+                      <TouchableOpacity
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: payerOwnershipAttested }}
+                        onPress={() => setPayerOwnershipAttested((value) => !value)}
+                        style={styles.attestationRow}
+                      >
+                        <View style={[styles.attestationBox, payerOwnershipAttested && styles.attestationBoxChecked]}>
+                          <Text style={styles.attestationMark}>{payerOwnershipAttested ? "✓" : ""}</Text>
+                        </View>
+                        <Text style={[styles.attestationText, { color: colors.muted }]}>我确认该付款钱包由本人或已授权主体控制；退款如适用，只能退回经核验的原付款钱包。</Text>
+                      </TouchableOpacity>
                       <Text style={[styles.usdtLabel, { color: colors.muted }]}>Tx Hash / TxID（必填）</Text>
                       <TextInput
                         value={txHash}
@@ -428,7 +460,12 @@ export default function CheckoutOrderScreen() {
                         placeholderTextColor={colors.muted}
                         style={[styles.usdtTxInput, { color: colors.foreground, borderColor: colors.border }]}
                       />
-                      <TouchableOpacity onPress={handleConfirmUsdt} style={styles.usdtSubmitBtn} disabled={busy} activeOpacity={0.85}>
+                      <TouchableOpacity
+                        onPress={handleConfirmUsdt}
+                        style={[styles.usdtSubmitBtn, (busy || !payerOwnershipAttested) && styles.disabled]}
+                        disabled={busy || !payerOwnershipAttested}
+                        activeOpacity={0.85}
+                      >
                         <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.usdtSubmitInner}>
                           {busy ? <ActivityIndicator color="#0A1628" /> : <Text style={styles.usdtSubmitText}>提交 Tx Hash 待对账</Text>}
                         </LinearGradient>
@@ -562,6 +599,24 @@ const styles = StyleSheet.create({
     color: "#D8BC83",
     fontWeight: "700",
     letterSpacing: 1.6,
+  },
+  ledgerBoundary: {
+    marginBottom: 12,
+    padding: 11,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.28)",
+    borderRadius: 6,
+    backgroundColor: "rgba(216,188,131,0.04)",
+    gap: 3,
+  },
+  ledgerBoundaryTitle: {
+    color: "#D8BC83",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  ledgerBoundaryText: {
+    fontSize: 9,
+    lineHeight: 15,
   },
   orderCard: {
     flexDirection: "row",
@@ -749,7 +804,29 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
     marginBottom: 12,
   },
+  attestationRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 9,
+    marginBottom: 14,
+  },
+  attestationBox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.4)",
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attestationBoxChecked: {
+    borderColor: "#34D399",
+    backgroundColor: "rgba(52,211,153,0.12)",
+  },
+  attestationMark: { color: "#34D399", fontSize: 13, fontWeight: "900" },
+  attestationText: { flex: 1, fontSize: 11, lineHeight: 17 },
   usdtSubmitBtn: { borderRadius: 12, overflow: "hidden" },
+  disabled: { opacity: 0.42 },
   usdtSubmitInner: {
     paddingVertical: 14,
     alignItems: "center",

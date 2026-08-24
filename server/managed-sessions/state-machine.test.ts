@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   assertManagedSessionTransition,
+  assertBrokerFundingTransition,
   canTransitionManagedSession,
-  managedSessionExpiresAt,
 } from "./state-machine";
 
 describe("managed session state machine", () => {
-  it("supports the reviewed authorization and time-bounded exit path", () => {
+  it("supports the reviewed authorization and user-requested exit path", () => {
     const path = [
       "DRAFT",
       "PENDING_REVIEW",
@@ -39,13 +39,15 @@ describe("managed session state machine", () => {
     );
   });
 
-  it("computes a deterministic term expiry from activation time", () => {
-    const start = new Date("2026-08-24T00:00:00.000Z");
-    expect(managedSessionExpiresAt(30, start).toISOString()).toBe(
-      "2026-09-23T00:00:00.000Z",
-    );
-    expect(managedSessionExpiresAt(180, start).toISOString()).toBe(
-      "2027-02-20T00:00:00.000Z",
-    );
+  it("does not allow an exception to jump over reconciliation or dual approval", () => {
+    expect(() =>
+      assertBrokerFundingTransition("EXCEPTION", "PAYOUT_SUBMITTED"),
+    ).toThrow(/EXCEPTION.*PAYOUT_SUBMITTED/);
+    expect(() =>
+      assertBrokerFundingTransition("EXCEPTION", "BROKER_CREDIT_PENDING"),
+    ).toThrow(/EXCEPTION.*BROKER_CREDIT_PENDING/);
+    expect(() =>
+      assertBrokerFundingTransition("EXCEPTION", "RECEIVED"),
+    ).not.toThrow();
   });
 });

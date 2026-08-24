@@ -112,7 +112,7 @@ export default function CoreStrategyDetailPage() {
             <Text style={styles.backText}>六款核心策略</Text>
           </Pressable>
           <Text style={styles.formula}>
-            资金 × 风控 × 六策略 × 执行槽 × 限时资管
+            USDT 计划资金 × 风控 × 六策略 × 可选券商 × 接入方式
           </Text>
         </View>
 
@@ -341,8 +341,8 @@ export default function CoreStrategyDetailPage() {
               />
             </View>
             <Text style={styles.snapshotHint}>
-              该策略是六策略资管会话的一个模块，仍需与资金门槛、风险预算、1–2
-              个券商执行槽及会话期限共同确定。
+              该策略是 AI量化联盟六策略组合的一个模块，仍需与资金门槛、风险预算、
+              1–3 家可选券商及账户授权共同核验。
             </Text>
           </View>
         </View>

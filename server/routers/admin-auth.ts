@@ -8,6 +8,13 @@ import { TRPCError } from "@trpc/server";
 import "../_core/ensure-webcrypto";
 import { SignJWT, jwtVerify } from "jose";
 import { isProductionRuntime } from "../_core/runtime-env";
+import crypto from "node:crypto";
+import {
+  assertSecurityAttemptAllowed,
+  clearSecurityFailures,
+  recordSecurityFailure,
+  requestIp,
+} from "../_core/admin-security-throttle";
 
 export function resolveAdminConfig(
   name: "ADMIN_EMAIL" | "ADMIN_PASSWORD" | "JWT_SECRET",
@@ -40,14 +47,47 @@ if (
 // JWT密钥（用于签名和验证）
 const secret = new TextEncoder().encode(JWT_SECRET);
 
+type AdminAccount = { id: number; email: string; password: string };
+
+function stableLegacyAdminId(email: string) {
+  const fragment = crypto.createHash("sha256").update(email.toLowerCase()).digest().readUInt32BE(0);
+  return 1_000_000_000 + (fragment % 1_000_000_000);
+}
+
+const ADMIN_ACCOUNT: AdminAccount = {
+  id: stableLegacyAdminId(ADMIN_EMAIL),
+  email: ADMIN_EMAIL.toLowerCase(),
+  password: ADMIN_PASSWORD,
+};
+
+if (
+  isProductionRuntime() &&
+  ["admin123", "change-me", "password1234"].includes(
+    ADMIN_ACCOUNT.password,
+  )
+) {
+  throw new Error("[admin-auth] Refusing insecure production admin account password");
+}
+
+function timingSafeTextEqual(left: string, right: string) {
+  const leftDigest = crypto.createHash("sha256").update(left).digest();
+  const rightDigest = crypto.createHash("sha256").update(right).digest();
+  return crypto.timingSafeEqual(leftDigest, rightDigest);
+}
+
 /**
  * 签发管理员JWT token
  */
-async function signAdminToken(email: string): Promise<string> {
-  const token = await new SignJWT({ email, role: "admin" })
+async function signAdminToken(account: AdminAccount): Promise<string> {
+  const token = await new SignJWT({
+    email: account.email,
+    role: "admin",
+    adminId: account.id,
+  })
     .setProtectedHeader({ alg: "HS256" })
+    .setSubject(`admin:${account.id}`)
     .setIssuedAt()
-    .setExpirationTime("7d") // token有效期7天
+    .setExpirationTime("8h")
     .sign(secret);
   return token;
 }
@@ -55,11 +95,26 @@ async function signAdminToken(email: string): Promise<string> {
 /**
  * 验证管理员JWT token
  */
-export async function verifyAdminToken(token: string): Promise<{ email: string; role: string } | null> {
+export async function verifyAdminToken(token: string): Promise<{
+  adminId: number;
+  email: string;
+  role: "admin";
+} | null> {
   try {
     const { payload } = await jwtVerify(token, secret);
-    if (payload.role === "admin" && typeof payload.email === "string") {
-      return { email: payload.email, role: payload.role };
+    if (
+      payload.role === "admin" &&
+      typeof payload.email === "string" &&
+      typeof payload.adminId === "number" &&
+      payload.sub === `admin:${payload.adminId}` &&
+      ADMIN_ACCOUNT.id === payload.adminId &&
+      ADMIN_ACCOUNT.email === payload.email
+    ) {
+      return {
+        adminId: payload.adminId,
+        email: payload.email,
+        role: "admin",
+      };
     }
     return null;
   } catch (error) {
@@ -79,22 +134,38 @@ export const adminAuthRouter = router({
         password: z.string().min(1),
       })
     )
-    .mutation(async ({ input }) => {
-      // 验证管理员凭证
-      if (input.email !== ADMIN_EMAIL || input.password !== ADMIN_PASSWORD) {
+    .mutation(async ({ ctx, input }) => {
+      const account = ADMIN_ACCOUNT;
+      const principal = input.email.toLowerCase();
+      const ip = requestIp(ctx.req);
+      try {
+        assertSecurityAttemptAllowed("ADMIN_LOGIN", principal, ip);
+      } catch (error) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: error instanceof Error ? error.message : "登录尝试过多",
+        });
+      }
+      if (
+        !timingSafeTextEqual(principal, account.email) ||
+        !timingSafeTextEqual(input.password, account.password)
+      ) {
+        recordSecurityFailure("ADMIN_LOGIN", principal, ip);
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "邮箱或密码错误",
         });
       }
+      clearSecurityFailures("ADMIN_LOGIN", principal, ip);
 
       // 签发JWT token
-      const token = await signAdminToken(input.email);
+      const token = await signAdminToken(account);
 
       return {
         success: true,
         token,
-        email: input.email,
+        email: account.email,
+        adminId: account.id,
       };
     }),
 
@@ -120,6 +191,7 @@ export const adminAuthRouter = router({
       return {
         valid: true,
         email: payload.email,
+        adminId: payload.adminId,
       };
     }),
 });

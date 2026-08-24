@@ -6,15 +6,19 @@ const keys = [
   "USDT_TRC20_ADDRESS",
   "USDT_ERC20_ADDRESS",
   "USDT_CNY_PER_USDT",
+  "USDT_DEFAULT_NETWORK",
+  "ADMIN_TOTP_SECRET_BASE32",
 ] as const;
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
 
 describe("USDT manual settlement quote", () => {
   beforeEach(() => {
     process.env.ENABLE_USDT_PAYMENT = "true";
-    process.env.USDT_TRC20_ADDRESS = "TExampleMerchantAddress";
+    process.env.USDT_TRC20_ADDRESS = `T${"A".repeat(33)}`;
     delete process.env.USDT_ERC20_ADDRESS;
     process.env.USDT_CNY_PER_USDT = "7.2000";
+    process.env.ADMIN_TOTP_SECRET_BASE32 =
+      "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
   });
 
   afterEach(() => {
@@ -47,7 +51,7 @@ describe("USDT manual settlement quote", () => {
 
     expect(result.addressInfo).toMatchObject({
       chain: "TRC20",
-      address: "TExampleMerchantAddress",
+      address: `T${"A".repeat(33)}`,
     });
     expect(result.settlementQuote).toEqual({
       amount: "13.89",
@@ -56,7 +60,7 @@ describe("USDT manual settlement quote", () => {
       sourceCurrency: "CNY",
       cnyPerUsdt: "7.2000",
       network: "TRC20",
-      recipientAddress: "TExampleMerchantAddress",
+      recipientAddress: `T${"A".repeat(33)}`,
       expiresAt: expiresAt.toISOString(),
     });
   });

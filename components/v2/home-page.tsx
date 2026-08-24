@@ -27,11 +27,8 @@ import { trpc } from "@/lib/trpc";
 
 const DEFAULT_SELECTION = [
   "jingge-v51",
-  "night-hunter",
   "quantum-queen",
-  "gold-reaper",
   "black-aura",
-  "bitcoin-core",
 ];
 const LIVE_PULSE_ACCENTS = [
   V2.green,
@@ -172,15 +169,17 @@ export default function V2HomePage() {
 
   const toggleStrategy = (id: string) => {
     const strategy = data.strategies.find((item) => item.id === id);
-    if (!strategy || strategy.source.freshness === "OFFLINE") return;
-    const wasSelected = selectedStrategyIds.includes(id);
+    if (!strategy) return;
+    const removing = selectedStrategyIds.includes(id);
     setSelectedStrategyIds((current) =>
-      current.includes(id)
+      removing
         ? current.filter((strategyId) => strategyId !== id)
         : [...current, id],
     );
     setSelectionFeedback(
-      `${strategy.shortName}${wasSelected ? "已移出" : "已加入"}组合`,
+      removing
+        ? `已移出 ${strategy.shortName}`
+        : `已加入 ${strategy.shortName}`,
     );
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
     feedbackTimer.current = setTimeout(() => setSelectionFeedback(""), 1800);
@@ -196,7 +195,7 @@ export default function V2HomePage() {
 
   const selectAllStrategies = () => {
     setSelectedStrategyIds(data.strategies.map((strategy) => strategy.id));
-    setSelectionFeedback("六款策略已全部纳入 DRAFT");
+    setSelectionFeedback("已选择全部 6 款可选策略");
   };
 
   return (
@@ -231,12 +230,12 @@ export default function V2HomePage() {
               <View style={styles.eyebrowRow}>
                 <Text style={styles.stageIndex}>01</Text>
                 <View style={styles.eyebrowRule} />
-                <Text style={styles.eyebrow}>六策略 · MANAGED SESSION</Text>
+                <Text style={styles.eyebrow}>AI量化联盟 · 六策略</Text>
               </View>
               <Text
                 style={[styles.stageTitle, isMobile && styles.stageTitleMobile]}
               >
-                六策略限时资管
+                六款策略 · 自由选配 1–6 款
               </Text>
               <Text style={styles.stageSubtitle}>{dataNoticeCopy}</Text>
             </View>
@@ -321,10 +320,7 @@ export default function V2HomePage() {
           style={styles.builderAnchor}
         >
           <SolutionConfigurator
-            strategies={data.strategies}
-            platforms={data.platforms}
-            selectedStrategyIds={selectedStrategyIds}
-            onToggleStrategy={toggleStrategy}
+            strategies={selectedStrategies}
           />
         </View>
 
@@ -332,7 +328,8 @@ export default function V2HomePage() {
           <MaterialIcons name="verified-user" size={20} color={V2.amber} />
           <Text style={styles.riskText}>
             历史收益、胜率和模型回撤不代表未来结果。正式启用前仍需核验数据源、券商实体、账户权限、合同责任和当前平台条款。
-            资管授权只包含约定期限内的交易与风控，不包含出金、转账或修改收款地址。
+            资管授权只包含约定的交易与风控权限，不包含出金、转账或修改收款地址。
+            EA 销售款、券商直充与资管代收严格分账；任何入金完成状态均以券商实际到账为准。
           </Text>
         </View>
       </View>

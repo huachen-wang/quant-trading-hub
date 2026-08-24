@@ -175,7 +175,7 @@ export function AllocationSummary({
           <MaterialIcons name="check-circle" size={18} color={V2.background} />
         )}
         <Text style={styles.confirmText}>
-          {isCreating ? "正在创建 DRAFT" : "创建 Managed Session DRAFT"}
+          {isCreating ? "正在创建草案" : "创建资管方案草案"}
         </Text>
       </Pressable>
       <Text style={styles.disclaimer}>

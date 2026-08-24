@@ -1,9 +1,10 @@
 import {
   accountSchema,
+  alliancePlatformCatalogSchema,
+  allianceStrategyCatalogSchema,
   allocationDraftSchema,
   coreStrategySchema,
   overviewSchema,
-  platformSchema,
   type AllocationRequest,
 } from "../../shared/v2/contracts";
 import type { QuantDataProvider } from "./provider";
@@ -52,7 +53,9 @@ export class HttpQuantDataProvider implements QuantDataProvider {
   }
 
   async listStrategies() {
-    return coreStrategySchema.array().parse(await this.request("/v1/strategies"));
+    return allianceStrategyCatalogSchema.parse(
+      await this.request("/v1/strategies"),
+    );
   }
 
   async getStrategy(id: string) {
@@ -67,7 +70,9 @@ export class HttpQuantDataProvider implements QuantDataProvider {
   }
 
   async listPlatforms() {
-    return platformSchema.array().parse(await this.request("/v1/platforms"));
+    return alliancePlatformCatalogSchema.parse(
+      await this.request("/v1/platforms"),
+    );
   }
 
   async listAccounts() {

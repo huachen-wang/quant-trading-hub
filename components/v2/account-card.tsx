@@ -45,8 +45,8 @@ function AccountCardBase({
           </Text>
           <Text style={[styles.mode, { color: modeColor }]}>
             {managed
-              ? "Managed Session · 合同管理"
-              : "Managed Session · U 直达券商"}
+              ? "AI量化联盟 · 资管账户"
+              : "AI量化联盟 · 券商账户投影"}
           </Text>
         </View>
         <StatusBadge

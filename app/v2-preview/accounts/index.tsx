@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback } from "react";
 import {
   Pressable,
   ScrollView,
@@ -12,213 +12,156 @@ import {
 import { AccountCard } from "@/components/v2/account-card";
 import { formatUsdt } from "@/components/v2/format";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
+import {
+  fundingPathLabel,
+  onboardingModeLabel,
+} from "@/components/v2/configurator/types";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
 import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
-
-type Filter = "ALL" | "MANAGED_CONTRACT" | "SELF_ALLOCATED";
 
 export default function AccountsPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isMobile = width < 740;
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const [filter, setFilter] = useState<Filter>("ALL");
+  const accountsQuery = trpc.v2.accounts.list.useQuery(undefined, {
+    staleTime: 15_000,
+  });
+  const plansQuery = trpc.v2.managedSessions.list.useQuery(undefined, {
+    enabled: isAuthenticated && !authLoading,
+    staleTime: 10_000,
+  });
   const openAccount = useCallback(
     (accountId: string) =>
       router.push(`/v2-preview/accounts/${accountId}` as never),
     [router],
   );
-  const query = trpc.v2.accounts.list.useQuery(undefined, {
-    staleTime: 15_000,
-  });
-  const managedSessions = trpc.v2.managedSessions.list.useQuery(undefined, {
-    enabled: isAuthenticated && !authLoading,
-    staleTime: 10_000,
-  });
-  const accounts = useMemo(
-    () =>
-      query.data?.filter(
-        (account) => filter === "ALL" || account.serviceMode === filter,
-      ) ?? [],
-    [filter, query.data],
-  );
 
-  if (query.isLoading) return <V2LoadingState label="正在同步账户投影" />;
-  if (!query.data) {
+  if (accountsQuery.isLoading)
+    return <V2LoadingState label="正在同步资管账户投影" />;
+  if (!accountsQuery.data) {
     return (
       <V2ErrorState
-        detail={query.error?.message || "账户接口没有返回数据。"}
-        onRetry={() => query.refetch()}
+        detail={accountsQuery.error?.message || "账户接口没有返回数据。"}
+        onRetry={() => accountsQuery.refetch()}
       />
     );
   }
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.scrollContent}
-    >
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
       <View style={[styles.page, isMobile && styles.pageMobile]}>
         <View style={[styles.header, isMobile && styles.headerMobile]}>
           <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>账户总览</Text>
+            <Text style={styles.eyebrow}>AI量化联盟 · 账户总览</Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
-              Managed Session 账户
+              资管方案与账户投影
             </Text>
             <Text style={styles.subtitle}>
-              六策略、1–2 个券商执行槽与 USDT
-              资金路由统一归入一个限时资管会话；每个会话都保留可追溯的净值、持仓和风险记录。
+              六策略可分配到 1–3 家可选券商。客户本人持有券商账户；项目方只在授权后执行约定交易与风控，不拥有提款权。
             </Text>
           </View>
           <View style={styles.demoState}>
             <View style={styles.demoDot} />
-            <Text style={styles.demoText}>模拟账户</Text>
+            <Text style={styles.demoText}>账户数据以证据标签为准</Text>
           </View>
         </View>
 
-        <View style={styles.modeExplanations}>
-          <ModeExplanation
-            icon="description"
-            color={V2.gold}
-            title="Managed Session"
-            detail="技术方在 30/90/180 天期限内按授权执行策略和风控；交易权限不包含出金、转账或修改收款地址。"
+        <View style={[styles.boundaryGrid, isMobile && styles.boundaryGridMobile]}>
+          <BoundaryCard
+            icon="account-balance"
+            title="U 直达本人券商"
+            detail="客户从券商客户门户取得当次网络、地址与标签，转账后提交 txHash，最终以券商实际入账为准。"
           />
-          <ModeExplanation
-            icon="account-tree"
-            color={V2.blue}
-            title="双路 USDT 入金"
-            detail="当前可使用 U 直达支持稳定币的合作券商；Managed Vault 可纳入混合方案，未完成配置时明确标记为接入准备中。"
+          <BoundaryCard
+            icon="receipt-long"
+            title="平台专属地址代收"
+            detail="仅在书面通道批准后使用单笔专属代收单；客户侧只显示确认中、转入券商中、已到账或异常。"
+          />
+          <BoundaryCard
+            icon="lock-outline"
+            title="权限隔离"
+            detail="交易权不含提款、转账或修改入金地址权限；私钥、助记词与券商密码不进入平台。"
           />
         </View>
 
-        {managedSessions.data?.length ? (
-          <View style={styles.sessionSection}>
-            <View style={styles.sessionSectionHeading}>
+        {plansQuery.data?.length ? (
+          <View style={styles.planSection}>
+            <View style={styles.sectionHeading}>
               <View>
-                <Text style={styles.eyebrow}>MY MANAGED SESSIONS</Text>
-                <Text style={styles.sessionSectionTitle}>已保存资管会话</Text>
+                <Text style={styles.eyebrow}>MY ASSET MANAGEMENT PLANS</Text>
+                <Text style={styles.sectionTitle}>已保存资管方案</Text>
               </View>
-              <Text style={styles.count}>
-                {managedSessions.data.length} 个会话
-              </Text>
+              <Text style={styles.count}>{plansQuery.data.length} 个方案</Text>
             </View>
-            <View style={styles.sessionGrid}>
-              {managedSessions.data.map((session) => (
-                <View key={session.sessionNo} style={styles.sessionCard}>
-                  <View style={styles.sessionCardTopline}>
-                    <Text style={styles.sessionStatus}>{session.status}</Text>
-                    <Text style={styles.sessionTerm}>
-                      {session.termDays} 天
+            <View style={styles.planGrid}>
+              {plansQuery.data.map((plan) => (
+                <View key={plan.sessionNo} style={styles.planCard}>
+                  <View style={styles.planTopline}>
+                    <Text style={styles.planStatus}>{planStatusLabel(plan.status)}</Text>
+                    <Text style={styles.planBrokerCount}>
+                      {plan.executionSlots.length} 家券商
                     </Text>
                   </View>
-                  <Text style={styles.sessionNo}>{session.sessionNo}</Text>
-                  <Text style={styles.sessionCapital}>
-                    {formatUsdt(Number(session.targetCapital))}
+                  <Text style={styles.planNo}>{plan.sessionNo}</Text>
+                  <Text style={styles.planCapital}>
+                    {formatUsdt(Number(plan.targetCapital))}
                   </Text>
-                  <Text style={styles.sessionMeta}>
-                    6 策略 · {session.executionSlots.length} 执行槽 ·{" "}
-                    {session.capitalMode === "MIXED"
-                      ? "混合 USDT 路由"
-                      : session.capitalMode === "MANAGED_VAULT"
-                        ? "Managed Vault"
-                        : "U 直达券商"}
+                  <Text style={styles.planMeta}>
+                    已选 {plan.strategies.length} / 6 款策略 · {onboardingModeLabel(plan.onboardingMode)} · {" "}
+                    {fundingPathLabel(plan.fundsRoute)}
                   </Text>
                   <View style={styles.permissionLine}>
-                    <MaterialIcons
-                      name="lock-outline"
-                      size={15}
-                      color={V2.green}
-                    />
+                    <MaterialIcons name="shield" size={15} color={V2.green} />
                     <Text style={styles.permissionText}>
-                      交易权{" "}
-                      {session.tradeAuthorizationStatus === "NOT_REQUESTED"
-                        ? "未申请"
-                        : session.tradeAuthorizationStatus === "PENDING"
-                          ? "待确认"
-                          : session.tradeAuthorizationStatus === "GRANTED"
-                            ? "已授予"
-                            : "已撤销"}{" "}
-                      · 出金权 无 · 执行{" "}
-                      {session.executionEnabled ? "ON" : "OFF"}
+                      交易授权 {permissionLabel(plan.tradeAuthorizationStatus)} · 提款权 无 ·
+                      执行 {plan.executionEnabled ? "ON" : "OFF"}
                     </Text>
                   </View>
-                  {session.readiness.unavailableStrategyIds.length ? (
-                    <Text style={styles.sessionWarning}>
-                      {session.readiness.unavailableStrategyIds.length}{" "}
-                      款策略离线，当前不可激活。
-                    </Text>
-                  ) : session.readiness.vaultActivationBlocked ? (
-                    <Text style={styles.sessionWarning}>
-                      Managed Vault 尚未通过启用门槛。
+                  {plan.readiness.unavailableStrategyIds.length ? (
+                    <Text style={styles.warningText}>
+                      {plan.readiness.unavailableStrategyIds.length} 款策略当前离线，不能启用交易。
                     </Text>
                   ) : null}
                 </View>
               ))}
             </View>
           </View>
+        ) : isAuthenticated ? (
+          <View style={styles.emptyPlan}>
+            <MaterialIcons name="assignment" size={24} color={V2.textDim} />
+            <Text style={styles.emptyTitle}>尚未保存资管方案</Text>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.push("/?configure=1" as never)}
+              style={styles.configureLink}
+            >
+              <Text style={styles.configureLinkText}>开始配置六策略方案</Text>
+            </Pressable>
+          </View>
         ) : null}
 
-        <View style={styles.toolbar}>
-          <View style={styles.filters}>
-            {(
-              [
-                ["ALL", "全部"],
-                ["MANAGED_CONTRACT", "合同管理"],
-                ["SELF_ALLOCATED", "U 直达券商"],
-              ] as const
-            ).map(([value, label]) => (
-              <Pressable
-                key={value}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: filter === value }}
-                onPress={() => setFilter(value)}
-                style={[styles.filter, filter === value && styles.filterActive]}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    filter === value && styles.filterTextActive,
-                  ]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            ))}
+        <View style={styles.sectionHeading}>
+          <View>
+            <Text style={styles.eyebrow}>READ-ONLY ACCOUNT PROJECTION</Text>
+            <Text style={styles.sectionTitle}>账户数据视图</Text>
           </View>
-          <Text style={styles.count}>{accounts.length} 个账户</Text>
+          <Text style={styles.count}>{accountsQuery.data.length} 个账户</Text>
         </View>
-
-        <View style={styles.grid}>
-          {accounts.map((account) => (
-            <View
-              key={account.id}
-              style={{ width: isMobile ? "100%" : "49.25%" }}
-            >
+        <View style={styles.accountGrid}>
+          {accountsQuery.data.map((account) => (
+            <View key={account.id} style={{ width: isMobile ? "100%" : "49.25%" }}>
               <AccountCard account={account} onPress={openAccount} />
             </View>
           ))}
         </View>
 
-        {!accounts.length ? (
-          <View style={styles.empty}>
-            <MaterialIcons
-              name="account-balance-wallet"
-              size={28}
-              color={V2.textDim}
-            />
-            <Text style={styles.emptyTitle}>当前会话类型没有账户</Text>
-            <Text style={styles.emptyDetail}>
-              切换上方筛选查看其他账户类型。
-            </Text>
-          </View>
-        ) : null}
-
         <View style={styles.notice}>
-          <MaterialIcons name="lock-outline" size={20} color={V2.green} />
+          <MaterialIcons name="info-outline" size={20} color={V2.blue} />
           <Text style={styles.noticeText}>
-            EAXAU
-            只读取获授权的账户投影，不保存交易密码或提供方原始令牌。资管授权和出金权限分离；未完成身份、券商权限或数据授权的请求不得启用执行。
+            当前账户视图可能包含模拟或后台维护数据，请以各卡片的数据模式与同步时间为准。
+            草案、txHash 申报、链上确认和券商到账是独立状态；页面不会据此声称真实券商 API 或自动交易已经接通。
           </Text>
         </View>
       </View>
@@ -226,191 +169,91 @@ export default function AccountsPage() {
   );
 }
 
-function ModeExplanation({
+function BoundaryCard({
   icon,
-  color,
   title,
   detail,
 }: {
-  icon: "description" | "account-tree";
-  color: string;
+  icon: "account-balance" | "receipt-long" | "lock-outline";
   title: string;
   detail: string;
 }) {
   return (
-    <View style={styles.modeExplanation}>
-      <MaterialIcons name={icon} size={22} color={color} />
-      <View style={styles.modeCopy}>
-        <Text style={styles.modeTitle}>{title}</Text>
-        <Text style={styles.modeDetail}>{detail}</Text>
+    <View style={styles.boundaryCard}>
+      <MaterialIcons name={icon} size={21} color={V2.gold} />
+      <View style={styles.boundaryCopy}>
+        <Text style={styles.boundaryTitle}>{title}</Text>
+        <Text style={styles.boundaryDetail}>{detail}</Text>
       </View>
     </View>
   );
 }
 
+function permissionLabel(value: string) {
+  return value === "GRANTED"
+    ? "已授予"
+    : value === "PENDING"
+      ? "待确认"
+      : value === "REVOKED"
+        ? "已撤销"
+        : "未申请";
+}
+
+function planStatusLabel(value: string) {
+  const labels: Record<string, string> = {
+    DRAFT: "方案草案",
+    PENDING_REVIEW: "审核中",
+    READY_FOR_AUTHORIZATION: "待交易授权",
+    ACTIVE: "运行中",
+    EXIT_REQUESTED: "退出处理中",
+    COMPLETED: "已结束",
+    CANCELLED: "已取消",
+    REJECTED: "未通过",
+  };
+  return labels[value] ?? value;
+}
+
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: V2.background },
   scrollContent: { paddingBottom: 58 },
-  page: {
-    width: "100%",
-    maxWidth: V2_LAYOUT.maxWidth,
-    alignSelf: "center",
-    paddingHorizontal: V2_LAYOUT.pagePaddingDesktop,
-    paddingTop: 26,
-    gap: 28,
-  },
-  pageMobile: {
-    paddingHorizontal: V2_LAYOUT.pagePaddingMobile,
-    paddingTop: 18,
-  },
-  header: {
-    minHeight: 122,
-    paddingBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: V2.border,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 20,
-  },
-  headerMobile: { alignItems: "flex-start", flexDirection: "column" },
-  headerCopy: { flex: 1, minWidth: 0, gap: 6 },
-  eyebrow: { color: V2.gold, fontSize: 10, fontWeight: "900" },
-  title: {
-    color: V2.text,
-    fontSize: 34,
-    lineHeight: 42,
-    fontWeight: "900",
-    letterSpacing: 0,
-  },
-  titleMobile: { fontSize: 29, lineHeight: 36 },
-  subtitle: {
-    color: V2.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    maxWidth: 760,
-  },
-  demoState: {
-    minHeight: 34,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "rgba(231,183,95,0.36)",
-    borderRadius: 4,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-  },
+  page: { width: "100%", maxWidth: V2_LAYOUT.maxWidth, alignSelf: "center", paddingHorizontal: V2_LAYOUT.pagePaddingDesktop, paddingTop: 24, gap: 26 },
+  pageMobile: { paddingHorizontal: V2_LAYOUT.pagePaddingMobile, paddingTop: 14 },
+  header: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 18 },
+  headerMobile: { flexDirection: "column" },
+  headerCopy: { flex: 1, maxWidth: 780, gap: 5 },
+  eyebrow: { color: V2.gold, fontSize: 9, fontWeight: "900" },
+  title: { color: V2.text, fontSize: 29, lineHeight: 36, fontWeight: "900" },
+  titleMobile: { fontSize: 23, lineHeight: 29 },
+  subtitle: { color: V2.textMuted, fontSize: 11, lineHeight: 18 },
+  demoState: { paddingHorizontal: 10, minHeight: 32, borderWidth: 1, borderColor: V2.border, borderRadius: 4, flexDirection: "row", alignItems: "center", gap: 7 },
   demoDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: V2.amber },
-  demoText: { color: V2.amber, fontSize: 10, fontWeight: "900" },
-  modeExplanations: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  modeExplanation: {
-    flex: 1,
-    minWidth: 270,
-    minHeight: 94,
-    padding: 15,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: V2.border,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  modeCopy: { flex: 1, gap: 5 },
-  modeTitle: { color: V2.text, fontSize: 13, fontWeight: "900" },
-  modeDetail: { color: V2.textMuted, fontSize: 11, lineHeight: 17 },
-  sessionSection: { gap: 12 },
-  sessionSectionHeading: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  sessionSectionTitle: {
-    marginTop: 4,
-    color: V2.text,
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  sessionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  sessionCard: {
-    flex: 1,
-    minWidth: 280,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "rgba(216,188,131,0.34)",
-    borderRadius: 6,
-    backgroundColor: "rgba(216,188,131,0.04)",
-    gap: 6,
-  },
-  sessionCardTopline: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  sessionStatus: { color: V2.green, fontSize: 9, fontWeight: "900" },
-  sessionTerm: { color: V2.gold, fontSize: 10, fontWeight: "900" },
-  sessionNo: { color: V2.text, fontSize: 13, fontWeight: "900" },
-  sessionCapital: { color: V2.text, fontSize: 20, fontWeight: "900" },
-  sessionMeta: { color: V2.textMuted, fontSize: 9, lineHeight: 14 },
-  permissionLine: {
-    marginTop: 4,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: V2.border,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
+  demoText: { color: V2.textMuted, fontSize: 9, fontWeight: "800" },
+  boundaryGrid: { flexDirection: "row", gap: 10 },
+  boundaryGridMobile: { flexDirection: "column" },
+  boundaryCard: { flex: 1, padding: 14, borderWidth: 1, borderColor: V2.border, borderRadius: 5, backgroundColor: V2.backgroundRaised, flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  boundaryCopy: { flex: 1, gap: 4 },
+  boundaryTitle: { color: V2.text, fontSize: 12, fontWeight: "900" },
+  boundaryDetail: { color: V2.textMuted, fontSize: 9, lineHeight: 15 },
+  planSection: { gap: 11 },
+  sectionHeading: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12 },
+  sectionTitle: { marginTop: 4, color: V2.text, fontSize: 18, fontWeight: "900" },
+  count: { color: V2.textDim, fontSize: 9 },
+  planGrid: { flexDirection: "row", flexWrap: "wrap", gap: 11 },
+  planCard: { flex: 1, minWidth: 285, padding: 14, borderWidth: 1, borderColor: "rgba(216,188,131,0.34)", borderRadius: 6, backgroundColor: "rgba(216,188,131,0.04)", gap: 6 },
+  planTopline: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 9 },
+  planStatus: { color: V2.green, fontSize: 9, fontWeight: "900" },
+  planBrokerCount: { color: V2.gold, fontSize: 9, fontWeight: "900" },
+  planNo: { color: V2.text, fontSize: 13, fontWeight: "900" },
+  planCapital: { color: V2.text, fontSize: 20, fontWeight: "900" },
+  planMeta: { color: V2.textMuted, fontSize: 9, lineHeight: 14 },
+  permissionLine: { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: V2.border, flexDirection: "row", alignItems: "center", gap: 6 },
   permissionText: { flex: 1, color: V2.textMuted, fontSize: 8, lineHeight: 13 },
-  sessionWarning: { color: V2.amber, fontSize: 8, lineHeight: 13 },
-  toolbar: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  filters: {
-    minHeight: 40,
-    padding: 3,
-    flexDirection: "row",
-    gap: 2,
-    borderWidth: 1,
-    borderColor: V2.border,
-    borderRadius: 4,
-    backgroundColor: V2.surfaceMuted,
-  },
-  filter: {
-    minHeight: 32,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 2,
-  },
-  filterActive: { backgroundColor: V2.surface },
-  filterText: { color: V2.textMuted, fontSize: 11, fontWeight: "700" },
-  filterTextActive: { color: V2.gold, fontWeight: "900" },
-  count: { color: V2.textDim, fontSize: 10 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
-  empty: {
-    minHeight: 260,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: V2.border,
-  },
-  emptyTitle: { color: V2.text, fontSize: 14, fontWeight: "900" },
-  emptyDetail: { color: V2.textMuted, fontSize: 11 },
-  notice: {
-    paddingTop: 18,
-    borderTopWidth: 1,
-    borderTopColor: V2.border,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  noticeText: { flex: 1, color: V2.textMuted, fontSize: 11, lineHeight: 18 },
+  warningText: { color: V2.amber, fontSize: 8, lineHeight: 13 },
+  emptyPlan: { minHeight: 130, borderWidth: 1, borderColor: V2.border, borderRadius: 5, alignItems: "center", justifyContent: "center", gap: 7 },
+  emptyTitle: { color: V2.text, fontSize: 12, fontWeight: "900" },
+  configureLink: { paddingVertical: 5 },
+  configureLinkText: { color: V2.gold, fontSize: 9, fontWeight: "900" },
+  accountGrid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
+  notice: { paddingTop: 18, borderTopWidth: 1, borderTopColor: V2.border, flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  noticeText: { flex: 1, color: V2.textMuted, fontSize: 10, lineHeight: 17 },
 });
