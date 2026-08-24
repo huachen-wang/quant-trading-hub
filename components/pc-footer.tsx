@@ -91,7 +91,7 @@ export function PcFooter() {
 
           <View style={styles.col}>
             <Text style={styles.colHeading}>产品</Text>
-            <Pressable style={styles.linkItem} onPress={() => router.push("/(tabs)" as any)}>
+            <Pressable style={styles.linkItem} onPress={() => router.push("/market" as any)}>
               <Text style={styles.linkText}>策略广场</Text>
             </Pressable>
             <Pressable style={styles.linkItem} onPress={() => router.push("/cooperation" as any)}>

@@ -65,7 +65,7 @@ export default function FavoritesScreen() {
       <Text style={[styles.emptyTitle, { color: colors.foreground }]}>还没有收藏任何策略</Text>
       <Text style={[styles.emptyText, { color: colors.muted }]}>收藏感兴趣的 EA 后，这里会形成你的策略观察列表。</Text>
       <TouchableOpacity
-        onPress={() => router.push("/(tabs)" as any)}
+        onPress={() => router.push("/market" as any)}
         style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
         activeOpacity={0.8}
       >

@@ -85,7 +85,7 @@ export default function UserRegisterScreen() {
       if (Platform.OS === "web" && typeof window !== "undefined") {
         window.location.href = "/";
       } else {
-        router.replace("/(tabs)" as any);
+        router.replace("/" as any);
       }
     } catch (e: any) {
       showMsg(e.message || "注册失败");
@@ -123,7 +123,7 @@ export default function UserRegisterScreen() {
       if (Platform.OS === "web" && typeof window !== "undefined") {
         window.location.href = "/";
       } else {
-        router.replace("/(tabs)" as any);
+        router.replace("/" as any);
       }
     } catch (e: any) {
       showMsg(e.message || "注册失败");

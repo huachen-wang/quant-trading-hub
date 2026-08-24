@@ -91,7 +91,7 @@ export default function CheckoutSuccessScreen() {
           </View>
           <Text style={[styles.title, { color: colors.foreground }]}>{needsLogin ? "需要登录" : "订单不存在"}</Text>
           <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>{needsLogin ? "请先登录后查看支付结果，或返回首页重新选择商品。" : "没有找到支付结果，请返回首页重新选择商品。"}</Text>
-          <TouchableOpacity onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)} style={styles.cta}>
+          <TouchableOpacity onPress={() => router.replace((needsLogin ? "/auth/login" : "/") as any)} style={styles.cta}>
             <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
               <Text style={styles.ctaText}>{needsLogin ? "去登录" : "返回首页"}</Text>
             </LinearGradient>
@@ -124,7 +124,7 @@ export default function CheckoutSuccessScreen() {
           </View>
           <Text style={[styles.title, { color: colors.foreground }]}>订单已{order.status === "cancelled" ? "取消" : "过期"}</Text>
           <Text style={[styles.subtitle, { color: colors.muted }]}>请重新下单</Text>
-          <TouchableOpacity onPress={() => router.replace("/(tabs)" as any)} style={styles.cta}>
+          <TouchableOpacity onPress={() => router.replace("/" as any)} style={styles.cta}>
             <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
               <Text style={styles.ctaText}>返回首页</Text>
             </LinearGradient>
@@ -206,7 +206,7 @@ export default function CheckoutSuccessScreen() {
           </TouchableOpacity>
 
           <View style={styles.btnRow}>
-            <TouchableOpacity onPress={() => router.replace("/(tabs)/profile" as any)} style={[styles.secondaryBtn, { borderColor: colors.border }]}>
+            <TouchableOpacity onPress={() => router.replace("/profile" as any)} style={[styles.secondaryBtn, { borderColor: colors.border }]}>
               <Text
                 style={{
                   color: colors.foreground,
@@ -217,7 +217,7 @@ export default function CheckoutSuccessScreen() {
                 查看我的订单
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.replace("/(tabs)" as any)} style={[styles.secondaryBtn, { borderColor: colors.border }]}>
+            <TouchableOpacity onPress={() => router.replace("/" as any)} style={[styles.secondaryBtn, { borderColor: colors.border }]}>
               <Text
                 style={{
                   color: colors.foreground,

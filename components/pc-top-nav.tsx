@@ -54,14 +54,14 @@ export function PcTopNav() {
   const isMobile = !isDesktop;
 
   const isActive = (path: string) => {
-    if (path === "/") return pathname === "/" || pathname === "/(tabs)";
+    if (path === "/") return pathname === "/";
     return pathname?.startsWith(path) ?? false;
   };
 
   const navItems = [
-    { href: "/(tabs)", label: "策略广场" },
-    { href: "/(tabs)/group-buy", label: "合购" },
-    { href: "/(tabs)/subscribe", label: "订阅" },
+    { href: "/market", label: "策略广场" },
+    { href: "/group-buy", label: "合购" },
+    { href: "/subscribe", label: "订阅" },
     { href: "/cooperation", label: "合作授权" },
     { href: "/promo", label: "限时促销" },
   ];
@@ -74,7 +74,7 @@ export function PcTopNav() {
     setUserMenuOpen(false);
     try {
       await logout();
-      router.replace("/(tabs)" as any);
+      router.replace("/" as any);
     } catch (e) {
       console.error("logout failed", e);
     }
@@ -110,7 +110,7 @@ export function PcTopNav() {
     return (
       <Pressable
         onPress={() =>
-          isMobile ? goTo("/(tabs)/profile") : setUserMenuOpen((v) => !v)
+          isMobile ? goTo("/profile") : setUserMenuOpen((v) => !v)
         }
         style={[styles.userPill, isMobile && styles.userPillMobile]}
       >
@@ -136,7 +136,7 @@ export function PcTopNav() {
           {/* Logo */}
           <Pressable
             style={[styles.logo, isMobile && styles.logoMobile]}
-            onPress={() => goTo("/(tabs)")}
+            onPress={() => goTo("/")}
             accessibilityLabel="AI量化联盟"
           >
             <BrandWordmark size="sm" />
@@ -200,19 +200,19 @@ export function PcTopNav() {
             </View>
             <Pressable
               style={styles.userMenuItem}
-              onPress={() => goTo("/(tabs)/profile")}
+              onPress={() => goTo("/profile")}
             >
               <Text style={styles.userMenuItemText}>个人中心</Text>
             </Pressable>
             <Pressable
               style={styles.userMenuItem}
-              onPress={() => goTo("/(tabs)/profile")}
+              onPress={() => goTo("/profile")}
             >
               <Text style={styles.userMenuItemText}>我的订单</Text>
             </Pressable>
             <Pressable
               style={styles.userMenuItem}
-              onPress={() => goTo("/(tabs)/favorites")}
+              onPress={() => goTo("/favorites")}
             >
               <Text style={styles.userMenuItemText}>我的收藏</Text>
             </Pressable>

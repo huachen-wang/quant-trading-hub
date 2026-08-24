@@ -59,22 +59,22 @@ export function FloatingSideNav() {
       code: "MKT",
       label: "策略广场",
       sub: "浏览全部 EA 策略",
-      href: "/(tabs)",
-      matchPaths: ["/", "/(tabs)"],
+      href: "/market",
+      matchPaths: ["/market"],
     },
     {
       code: "GB",
       label: "合购",
       sub: "拼单更优惠",
-      href: "/(tabs)/group-buy",
-      matchPaths: ["/(tabs)/group-buy", "/group-buy"],
+      href: "/group-buy",
+      matchPaths: ["/group-buy"],
     },
     {
       code: "ACC",
       label: "订阅",
       sub: "月度精选 EA 推送",
-      href: "/(tabs)/subscribe",
-      matchPaths: ["/(tabs)/subscribe", "/subscribe"],
+      href: "/subscribe",
+      matchPaths: ["/subscribe"],
     },
     {
       code: "B2B",
@@ -197,7 +197,7 @@ export function FloatingSideNav() {
                   key={i}
                   onPress={() => {
                     if (s.disabled) return;
-                    if (s.current) goTo("/(tabs)");
+                    if (s.current) goTo("/");
                     else if (s.url) openExternal(s.url);
                   }}
                   style={({ hovered }: any) => [

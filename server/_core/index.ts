@@ -17,6 +17,7 @@ import { assertFundingCustodyProviderReady } from "./payments/funding-custody-pr
 import { isAdminTotpConfigured } from "./admin-totp";
 import { safeJsonLd } from "./seo-json";
 import { buildContentSecurityPolicy } from "./http-security";
+import { legacyRouteRedirect } from "./legacy-route-redirect";
 
 // ES模块中获取__dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -334,6 +335,9 @@ Sitemap: https://www.eaxau.com/sitemap.xml
       createContext,
     }),
   );
+
+  // 兼容曾经暴露给用户的 Expo 内部路由组 URL，避免进入 SPA 后显示 Unmatched Route。
+  app.use(legacyRouteRedirect);
 
   // 静态文件服务 - 为Web应用提供静态文件
   const webBuildPath = path.resolve(process.cwd(), 'web-build');

@@ -197,7 +197,7 @@ export default function CheckoutOrderScreen() {
     try {
       await cancelMutation.mutateAsync({ orderNo });
       showMsg("订单已取消");
-      router.replace("/(tabs)" as any);
+      router.replace("/" as any);
     } catch (e: any) {
       showMsg(e.message);
     }
@@ -228,7 +228,7 @@ export default function CheckoutOrderScreen() {
           <Text style={styles.emptyIcon}>!</Text>
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{needsLogin ? "需要登录" : "订单不存在"}</Text>
           <Text style={[styles.emptyText, { color: colors.muted }]}>{needsLogin ? "请先登录后查看订单，或返回首页重新选择商品。" : "没有找到这个订单，可能已经失效或订单号有误。"}</Text>
-          <TouchableOpacity onPress={() => router.replace((needsLogin ? "/auth/login" : "/(tabs)") as any)} style={styles.emptyBtn}>
+          <TouchableOpacity onPress={() => router.replace((needsLogin ? "/auth/login" : "/") as any)} style={styles.emptyBtn}>
             <Text style={styles.emptyBtnText}>{needsLogin ? "去登录" : "返回首页"}</Text>
           </TouchableOpacity>
         </View>
@@ -519,7 +519,7 @@ export default function CheckoutOrderScreen() {
               >
                 请重新下单
               </Text>
-              <TouchableOpacity onPress={() => router.replace("/(tabs)" as any)} style={[styles.usdtSubmitBtn, { marginTop: 16 }]}>
+              <TouchableOpacity onPress={() => router.replace("/" as any)} style={[styles.usdtSubmitBtn, { marginTop: 16 }]}>
                 <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.usdtSubmitInner}>
                   <Text style={styles.usdtSubmitText}>返回首页</Text>
                 </LinearGradient>
