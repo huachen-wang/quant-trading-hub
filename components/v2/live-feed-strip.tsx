@@ -54,10 +54,10 @@ function sourceName(source: SourceMeta) {
 }
 
 function displayItemName(item: LiveFeedItem, source: SourceMeta) {
-  if (source.dataMode !== "DEMO") return item.name;
-  return item.name
-    .replace(/实盘/g, "演示")
-    .replace(/稳定盈利[！!]*/g, "波动测试");
+  const neutralName = item.name.replace(/稳定盈利[！!]*/g, "公开观察");
+  return source.dataMode === "DEMO"
+    ? neutralName.replace(/实盘/g, "演示")
+    : neutralName;
 }
 
 export function LiveFeedStrip({
