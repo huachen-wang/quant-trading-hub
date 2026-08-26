@@ -85,7 +85,7 @@ export default function UserRegisterScreen() {
       if (Platform.OS === "web" && typeof window !== "undefined") {
         window.location.href = "/";
       } else {
-        router.replace("/(tabs)" as any);
+        router.replace("/" as any);
       }
     } catch (e: any) {
       showMsg(e.message || "注册失败");
@@ -123,7 +123,7 @@ export default function UserRegisterScreen() {
       if (Platform.OS === "web" && typeof window !== "undefined") {
         window.location.href = "/";
       } else {
-        router.replace("/(tabs)" as any);
+        router.replace("/" as any);
       }
     } catch (e: any) {
       showMsg(e.message || "注册失败");
@@ -140,7 +140,7 @@ export default function UserRegisterScreen() {
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <UserAuthCard
           title="注册"
-          subtitle="加入 EAXAU · 验证邮箱后解锁完整功能与 EA 福利"
+          subtitle="加入 AI量化联盟 · 验证邮箱后解锁完整功能与 EA 福利"
           footer={
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 }}>
               <Text style={{ color: colors.muted, fontSize: 13 }}>已有账号？</Text>

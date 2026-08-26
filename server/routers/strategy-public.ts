@@ -2,6 +2,14 @@ import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 
+export function toPublicStrategy(strategy: Record<string, any>): any {
+  const { downloadUrl: _privateAssetUrl, ...publicFields } = strategy;
+  return {
+    ...publicFields,
+    downloadAvailable: Boolean(_privateAssetUrl),
+  };
+}
+
 export const strategiesRouter = router({
   list: publicProcedure
     .input(
@@ -15,7 +23,10 @@ export const strategiesRouter = router({
         offset: z.number().min(0).optional(),
       }),
     )
-    .query(({ input }) => db.getStrategies(input)),
+    .query(async ({ input }) => {
+      const rows = await db.getStrategies(input);
+      return rows.map((row: any) => toPublicStrategy(row));
+    }),
 
   detail: publicProcedure
     .input(z.object({ id: z.number() }))
@@ -23,7 +34,7 @@ export const strategiesRouter = router({
       const strategy = await db.getStrategyById(input.id);
       if (!strategy) throw new Error("Strategy not found");
       await db.incrementStrategyViewCount(input.id);
-      return strategy;
+      return toPublicStrategy(strategy);
     }),
 
   backtestData: publicProcedure
@@ -32,7 +43,10 @@ export const strategiesRouter = router({
 
   search: publicProcedure
     .input(z.object({ keyword: z.string().min(1), limit: z.number().optional() }))
-    .query(({ input }) => db.searchStrategies(input.keyword, input.limit)),
+    .query(async ({ input }) => {
+      const rows = await db.searchStrategies(input.keyword, input.limit);
+      return rows.map((row: any) => toPublicStrategy(row));
+    }),
 });
 
 export const commentsRouter = router({
@@ -83,37 +97,25 @@ export const tradesRouter = router({
 });
 
 export const purchasesRouter = router({
-  create: protectedProcedure
-    .input(
-      z.object({
-        strategyId: z.number(),
-        price: z.string(),
-      }),
-    )
-    .mutation(({ ctx, input }) => {
-      return db.createPurchase({
-        userId: ctx.user.id,
-        strategyId: input.strategyId,
-        price: input.price,
-      });
-    }),
-
-  list: protectedProcedure.query(({ ctx }) => db.getUserPurchases(ctx.user.id)),
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await db.getUserPurchases(ctx.user.id);
+    return rows.map((row: any) => ({
+      ...row,
+      strategy: row.strategy ? toPublicStrategy(row.strategy) : null,
+    }));
+  }),
 
   hasPurchased: protectedProcedure
     .input(z.object({ strategyId: z.number() }))
-    .query(({ ctx, input }) => db.hasPurchased(ctx.user.id, input.strategyId)),
+    .query(({ ctx, input }) => db.hasUserPurchased(ctx.user.id, input.strategyId)),
 });
 
 export const downloadsRouter = router({
-  create: protectedProcedure
-    .input(z.object({ strategyId: z.number() }))
-    .mutation(({ ctx, input }) => {
-      return db.createDownload({
-        userId: ctx.user.id,
-        strategyId: input.strategyId,
-      });
-    }),
-
-  list: protectedProcedure.query(({ ctx }) => db.getUserDownloads(ctx.user.id)),
+  list: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await db.getUserDownloads(ctx.user.id);
+    return rows.map((row: any) => ({
+      ...row,
+      strategy: row.strategy ? toPublicStrategy(row.strategy) : null,
+    }));
+  }),
 });

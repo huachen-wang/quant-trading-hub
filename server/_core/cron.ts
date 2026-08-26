@@ -6,7 +6,7 @@
  *
  * 当前任务：
  *   - 每 5 分钟把 status='pending' 且 expiresAt < now 的订单标记为 expired
- *   - 每天 03:00 清理过期验证码
+ *   - 每 6 小时清理过期验证码
  *
  * 未来如果需要更复杂调度（cron 表达式、分布式 lock 等），可以换 node-cron 或 BullMQ。
  */
@@ -43,7 +43,8 @@ export function startCron() {
   }, 5 * 60 * 1000);
   intervals.push(orderExpireInterval);
 
-  // 任务 2：每 6 小时清理过期验证码
+  // 任务 2：每 6 小时清理过期验证码。
+  // AI 量化联盟为正常长期委托，不存在到期自动退出任务。
   const codeCleanupInterval = setInterval(async () => {
     try {
       const count = await cleanupExpiredCodes();

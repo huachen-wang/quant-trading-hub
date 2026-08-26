@@ -10,7 +10,7 @@ import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
 import type { AllocationBucket } from "@/lib/v2/allocation-types";
 import { clamp, rebalanceBucket } from "@/lib/v2/allocation";
 import { useLanguage } from "@/lib/language";
-import { formatMoney } from "../format";
+import { formatMoney, formatUsdt } from "../format";
 import { StatusBadge } from "../status-badge";
 import { V2 } from "../tokens";
 import { Stepper } from "./stepper";
@@ -59,6 +59,10 @@ export function PlatformBucketEditor({
       strategy.source.freshness !== "OFFLINE",
   );
   const bucketCapital = (totalCapital * bucket.capitalWeightPct) / 100;
+  const formatCapital = (value: number, compact = false) =>
+    currency === "USDT"
+      ? formatUsdt(value, compact, locale)
+      : formatMoney(value, currency, compact, locale);
 
   const updateStrategy = (
     strategyId: string,
@@ -168,14 +172,12 @@ export function PlatformBucketEditor({
 
       <View style={styles.capitalLine}>
         <Text style={styles.capitalLabel}>
-          {text("模拟分配资金", "Allocated capital", "رأس المال الموزع")}
+          {text("模拟分配资金", "Modeled allocation", "التوزيع المحسوب")}
         </Text>
-        <Text style={styles.capitalValue}>
-          {formatMoney(bucketCapital, currency, false, locale)}
-        </Text>
+        <Text style={styles.capitalValue}>{formatCapital(bucketCapital)}</Text>
         <Text style={styles.capitalMeta}>
-          {text("平台门槛", "Platform minimum", "الحد الأدنى للمنصة")}{" "}
-          {formatMoney(platform.minimumCapital, currency, true, locale)}
+          {text("参考门槛", "Reference minimum", "الحد الأدنى المرجعي")}{" "}
+          {formatCapital(platform.minimumCapital, true)}
         </Text>
       </View>
 
@@ -326,7 +328,11 @@ export function PlatformBucketEditor({
                   color={strategy.accent}
                 />
                 <Text style={styles.addButtonText}>
-                  {text("了解", "Review", "مراجعة")} {strategy.shortName}
+                  {text(
+                    `了解 ${strategy.shortName}`,
+                    `Review ${strategy.shortName}`,
+                    `مراجعة ${strategy.shortName}`,
+                  )}
                 </Text>
               </Pressable>
             ))}

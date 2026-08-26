@@ -146,7 +146,7 @@ const EA_MARKET_DATA = [
 
 // EAXAU 筛选标准
 const SCREENING_CRITERIA = [
-  { icon: "180D", label: "180天+实盘验证", desc: "所有策略必须提供不少于180天的真实实盘数据" },
+  { icon: "EVID", label: "证据状态明示", desc: "区分模拟、回测、后台维护与可复核真实账户数据" },
   { icon: "DD", label: "最大回撤<25%", desc: "严格风控标准，剔除高风险策略" },
   { icon: "SR", label: "夏普比率>1.0", desc: "单位风险获得的回报必须达标" },
   { icon: "PF", label: "盈利因子>1.5", desc: "总盈利至少是总亏损的1.5倍" },
@@ -154,8 +154,8 @@ const SCREENING_CRITERIA = [
 
 // 订阅权益 - 突出EA领取
 const SUBSCRIBE_BENEFITS = [
-  { icon: "EA", title: "免费获得实战EA", desc: "提交即可获得一款经过实盘验证的精选EA策略" },
-  { icon: "NEW", title: "新策略上架通知", desc: "第一时间获取通过审核的优质EA策略" },
+  { icon: "EA", title: "免费申请 EA 试用材料", desc: "提交后获取一款 EA 演示/试用材料，数据与授权状态以证据页为准" },
+  { icon: "NEW", title: "新策略上架通知", desc: "获取已标注数据类型、证据状态与风险说明的 EA 信息" },
   { icon: "DATA", title: "行业数据报告", desc: "定期推送EA市场分析和趋势洞察" },
   { icon: "1:1", title: "1对1部署指导", desc: "专属策略顾问协助您完成EA安装与参数配置" },
 ];
@@ -338,15 +338,15 @@ export default function SubscribeScreen() {
           <View style={[styles.subscribeHero, isDesktop && styles.subscribeHeroDesktop]}>
             {/* 页面标题 */}
             <View style={[styles.headerSection, isDesktop && styles.headerSectionDesktop]}>
-              <Text style={styles.headerKicker}>EAXAU STRATEGY ACCESS</Text>
-              <Text style={[styles.pageTitle, isDesktop && styles.pageTitleDesktop, { color: colors.foreground }]}>免费领取实战 EA</Text>
+              <Text style={styles.headerKicker}>AI量化联盟 STRATEGY ACCESS</Text>
+              <Text style={[styles.pageTitle, isDesktop && styles.pageTitleDesktop, { color: colors.foreground }]}>免费申请 EA 试用材料</Text>
               <Text style={[styles.pageSubtitle, isDesktop && styles.pageSubtitleDesktop, { color: colors.muted }]}>
-                留下您的联系方式，系统将自动为您发送一款经过实盘验证的精选 EA 策略
+                留下您的联系方式，获取一款 EA 演示/试用材料；请以证据页的数据类型、同步时间与风险标签为准
               </Text>
               {isDesktop && (
                 <View style={styles.heroAuditPanel}>
                   {[
-                    ["实盘筛选", "180D+"],
+                    ["证据状态", "明示"],
                     ["部署指导", "1:1"],
                     ["策略顾问", "在线"],
                   ].map(([label, value]) => (
@@ -370,7 +370,7 @@ export default function SubscribeScreen() {
                     <View style={styles.subscribeHeaderText}>
                       <Text style={[styles.subscribeTitle, { color: colors.foreground }]}>立即领取 EA 策略</Text>
                       <Text style={[styles.subscribeDesc, { color: colors.muted }]}>
-                        提交联系方式后，我们将为您发送精选EA并提供部署指导
+                        提交联系方式后，我们将发送 EA 演示/试用材料与风险说明，并提供部署指导
                       </Text>
                     </View>
                   </View>
@@ -472,7 +472,7 @@ export default function SubscribeScreen() {
                   </View>
                 ))}
                 <Text style={[styles.dataSource, { color: colors.muted }]}>
-                  数据来源：EAXAU 数据库 200+ EA策略分析
+                  数据来源：AI量化联盟数据库 200+ EA策略分析
                 </Text>
               </GlassCard>
             </View>
@@ -481,7 +481,7 @@ export default function SubscribeScreen() {
           {/* ===== EAXAU 筛选标准 ===== */}
           <FadeInView delay={300}>
             <View style={styles.dataSection}>
-              <Text style={[styles.dataSectionTitle, { color: colors.foreground }]}>EAXAU 筛选标准</Text>
+              <Text style={[styles.dataSectionTitle, { color: colors.foreground }]}>AI量化联盟筛选标准</Text>
               <Text style={[styles.dataSectionSub, { color: colors.muted }]}>
                 我们用严格的审核机制，为你过滤掉虚假宣传和高风险EA
               </Text>
@@ -507,7 +507,7 @@ export default function SubscribeScreen() {
               <GlassCard intensity="medium" accentColor={colors.primary} highlight style={styles.guideInner}>
                 <Text style={[styles.guideTitle, { color: colors.foreground }]}>好策略，配好平台</Text>
                 <Text style={[styles.guideDesc, { color: colors.muted }]}>
-                  EAXAU 不仅帮你筛选优质EA策略，还为你匹配最适合的合规交易平台。告诉我们你的需求，我们帮你做好功课。
+                  AI量化联盟不仅帮你筛选EA策略，也会梳理可选券商、账户权限与风险边界。告诉我们你的需求，我们协助完成资料核验。
                 </Text>
                 <TouchableOpacity
                   onPress={handleConsult}

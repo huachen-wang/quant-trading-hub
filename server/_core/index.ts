@@ -9,9 +9,15 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import * as db from "../db";
 import { runMigrations } from "../migrate";
+import { isProductionRuntime } from "./runtime-env";
 import { registerPaymentRoutes } from "./payment-callback";
 import { registerSecureDownloadRoute } from "./secure-download";
 import { startCron } from "./cron";
+import { assertFundingCustodyProviderReady } from "./payments/funding-custody-provider";
+import { isAdminTotpConfigured } from "./admin-totp";
+import { safeJsonLd } from "./seo-json";
+import { buildContentSecurityPolicy } from "./http-security";
+import { legacyRouteRedirect } from "./legacy-route-redirect";
 
 // ES模块中获取__dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -39,10 +45,10 @@ async function generateStrategyMetaHtml(strategyId: number, indexHtml: string): 
     const strategy = await db.getStrategyById(strategyId);
     if (!strategy) return null;
 
-    const title = `${strategy.title} - EAXAU`;
+    const title = `${strategy.title} - AI量化联盟 | EAXAU`;
     const description = strategy.description
       ? strategy.description.substring(0, 160)
-      : `${strategy.title} - ${strategy.platform}平台EA策略，总收益率${strategy.totalReturn}%，胜率${strategy.winRate}%。EAXAU 精选策略展示。`;
+      : `${strategy.title} - AI量化联盟的 ${strategy.platform} EA 策略资料与风险边界展示。历史数据不代表未来结果。`;
     const url = `https://www.eaxau.com/strategy/${strategyId}`;
     const pairs = strategy.pairs || '';
 
@@ -70,15 +76,15 @@ async function generateStrategyMetaHtml(strategyId: number, indexHtml: string): 
     <meta name="twitter:description" content="${escapeHtml(description)}" />
     ${strategy.coverImage ? `<meta name="twitter:image" content="${escapeHtml(strategy.coverImage)}" />` : ''}
     <link rel="canonical" href="${url}" />
-    <meta name="keywords" content="${escapeHtml(strategy.title)},${escapeHtml(strategy.platform)},${escapeHtml(pairs)},EA策略,量化交易,EAXAU,Source Desk" />
-    <script type="application/ld+json">${JSON.stringify({
+    <meta name="keywords" content="${escapeHtml(strategy.title)},${escapeHtml(strategy.platform)},${escapeHtml(pairs)},EA策略,AI量化联盟,EAXAU" />
+    <script type="application/ld+json">${safeJsonLd({
       "@context": "https://schema.org",
       "@type": "Product",
       "name": strategy.title,
       "description": description,
       "url": url,
       ...(strategy.coverImage ? { "image": strategy.coverImage } : {}),
-      "brand": { "@type": "Brand", "name": "EAXAU" },
+      "brand": { "@type": "Brand", "name": "AI量化联盟" },
       "offers": {
         "@type": "Offer",
         "price": strategy.isFree ? "0" : (strategy.price || "0"),
@@ -108,8 +114,8 @@ async function generateHomeMetaHtml(indexHtml: string): Promise<string> {
     const itemList = {
       "@context": "https://schema.org",
       "@type": "ItemList",
-      "name": "EAXAU 精选EA策略",
-      "description": "EAXAU 精选MT4/MT5 EA策略展示",
+      "name": "AI量化联盟 EA策略",
+      "description": "AI量化联盟 MT4/MT5 EA策略资料与风险边界展示",
       "numberOfItems": strategies.length,
       "itemListElement": strategies.map((s: any, i: number) => ({
         "@type": "ListItem",
@@ -121,7 +127,7 @@ async function generateHomeMetaHtml(indexHtml: string): Promise<string> {
 
     return indexHtml.replace(
       '</head>',
-      `<script type="application/ld+json">${JSON.stringify(itemList)}</script>\n</head>`
+      `<script type="application/ld+json">${safeJsonLd(itemList)}</script>\n</head>`
     );
   } catch (error) {
     console.error('[SEO] Error generating home meta:', error);
@@ -201,6 +207,11 @@ function isStaticAssetRequest(reqPath: string): boolean {
 }
 
 async function startServer() {
+  // BVNK/Cobo 适配器在实际凭据、Webhook 和幂等对账完成前 fail closed。
+  // 当前 MANUAL 只记录外部企业钱包/托管商的操作，服务器不签名转币。
+  assertFundingCustodyProviderReady();
+  // 未配置 TOTP 时只禁用企业代收；若已配置则启动时立即校验强度与 Base32 格式。
+  isAdminTotpConfigured();
   // 自动执行数据库迁移（安全的，可重复执行）
   console.log("[startup] Running database migrations...");
   await runMigrations();
@@ -210,29 +221,50 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Enable CORS for all routes - reflect the request origin to support credentials
+  const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const allowedOrigins = new Set([
+    "https://eaxau.com",
+    "https://www.eaxau.com",
+    ...configuredOrigins,
+    ...(!isProductionRuntime()
+      ? ["http://localhost:8081", "http://localhost:3000"]
+      : []),
+  ]);
+
+  // Credentialed CORS 只对明确的站点开放，不再反射任意 Origin。
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin) {
+    if (origin && allowedOrigins.has(origin)) {
       res.header("Access-Control-Allow-Origin", origin);
+      res.header("Vary", "Origin");
+      res.header("Access-Control-Allow-Credentials", "true");
     }
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.header(
       "Access-Control-Allow-Headers",
       "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Token",
     );
-    res.header("Access-Control-Allow-Credentials", "true");
+    res.header("X-Content-Type-Options", "nosniff");
+    res.header("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.header("X-Frame-Options", "SAMEORIGIN");
+    res.header(
+      "Content-Security-Policy",
+      buildContentSecurityPolicy(isProductionRuntime()),
+    );
 
     // Handle preflight requests
     if (req.method === "OPTIONS") {
-      res.sendStatus(200);
+      res.sendStatus(!origin || allowedOrigins.has(origin) ? 204 : 403);
       return;
     }
     next();
   });
 
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.use(express.json({ limit: "2mb" }));
+  app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
   registerOAuthRoutes(app);
   registerPaymentRoutes(app);
@@ -304,6 +336,9 @@ Sitemap: https://www.eaxau.com/sitemap.xml
     }),
   );
 
+  // 兼容曾经暴露给用户的 Expo 内部路由组 URL，避免进入 SPA 后显示 Unmatched Route。
+  app.use(legacyRouteRedirect);
+
   // 静态文件服务 - 为Web应用提供静态文件
   const webBuildPath = path.resolve(process.cwd(), 'web-build');
   console.log(`[static] serving files from ${webBuildPath}`);
@@ -340,7 +375,7 @@ Sitemap: https://www.eaxau.com/sitemap.xml
       validateWebBuild(webBuildPath, indexPath, cachedIndexHtml);
     } catch (err) {
       console.error('[static] Failed to validate web-build:', err);
-      if (process.env.NODE_ENV === 'production') {
+      if (isProductionRuntime()) {
         throw err;
       }
     }
@@ -399,7 +434,7 @@ Sitemap: https://www.eaxau.com/sitemap.xml
     });
   } else {
     console.warn(`[static] web-build directory not found at ${webBuildPath}`);
-    if (process.env.NODE_ENV === 'production') {
+    if (isProductionRuntime()) {
       throw new Error('[static] web-build/index.html not found. Run pnpm build:web before deployment.');
     }
   }
@@ -411,4 +446,7 @@ Sitemap: https://www.eaxau.com/sitemap.xml
   });
 }
 
-startServer().catch(console.error);
+startServer().catch((error) => {
+  console.error("[startup] Fatal startup error:", error);
+  process.exitCode = 1;
+});

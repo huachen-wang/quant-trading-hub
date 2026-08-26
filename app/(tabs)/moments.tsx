@@ -57,9 +57,9 @@ const pricingTiers = [
     name: "免费策略包",
     priceLabel: "¥0",
     period: "",
-    description: "直接送你3款实盘验证EA，先跑起来",
+    description: "提供 3 款 EA 演示/试用材料，数据口径与授权需先核验",
     features: [
-      "3款精选EA策略（即插即用）",
+      "3款 EA 演示/试用材料（先核对授权与参数）",
       "策略部署视频教程",
       "EA避坑指南 2026版",
       "策略互换社区入场券",
@@ -71,15 +71,15 @@ const pricingTiers = [
   },
   {
     id: "premium",
-    name: "EAXAU 精选会员",
+    name: "AI量化联盟精选会员",
     priceLabel: "免费试用一款",
     period: "",
     description: "先体验再决定 · 零风险入场",
     features: [
-      "全部8款精选EA策略使用权",
+      "六款目录中所选 EA 的试用/使用权（以授权为准）",
       "策略参数配置方案（即插即用）",
       "专属1对1策略部署指导",
-      "实盘信号跟单通道",
+      "证据状态与策略报告",
       "策略互换社区·核心圈",
       "每月策略表现报告",
       "新策略入库优先体验",
@@ -98,8 +98,8 @@ const pricingTiers = [
     features: [
       "精选会员全部权益",
       "专属EA定制 · 自定义策略名称与调优模式",
-      "无限授权 · 不限账户、不限终端、不限客户",
-      "版权与联系方式替换为工作室自有品牌",
+      "账户、终端与客户授权范围以合同为准",
+      "品牌与联系方式替换需符合原权利人授权",
       "独立服务器部署 + API对接",
       "风控系统搭建 + 合规架构建议",
     ],
@@ -110,10 +110,10 @@ const pricingTiers = [
 ];
 
 const freeItems = [
-  { name: "3款精选EA策略（即插即用）", desc: "从117款中筛选出来的，直接装上MT4/MT5就能跑", tag: "EA文件 · 含参数配置", viral: true },
+  { name: "3款 EA 试用/演示材料", desc: "安装前先核对 MT4/MT5 版本、授权和风险参数", tag: "EA文件 · 参数说明", viral: true },
   { name: "策略部署教程（手把手）", desc: "从安装到参数配置，10分钟搞定", tag: "视频教程 · 20分钟", viral: true },
-  { name: "EA避坑指南 2026版", desc: "我们花28万踩过的坑，你不用再踩一遍", tag: "PDF · 47页", viral: true },
-  { name: "策略互换社区入场券", desc: "和200+实盘交易者交流策略、共享资源", tag: "Telegram社区", viral: false },
+  { name: "EA避坑指南 2026版", desc: "检查过拟合、加仓、滑点、授权与数据口径", tag: "PDF · 风险清单", viral: true },
+  { name: "策略交流社区入场券", desc: "交流策略与风险核验经验，不构成投资建议", tag: "Telegram社区", viral: false },
 ];
 
 // ===== 主组件 =====
@@ -209,15 +209,15 @@ export default function CooperationScreen() {
 
                       <Text style={styles.bannerTitle}>工作室深度合作</Text>
                       <Text style={styles.bannerSubtitle}>
-                        策略源码掌控 · 独家优化 · 源头直供
+                        来源核验 · 技术适配 · 风险披露
                       </Text>
 
                       {/* 核心数据 */}
                       <View style={styles.bannerStats}>
                         {[
-                          { num: "200+", label: "EA源码", color: "#D8BC83" },
-                          { num: "30+", label: "合作工作室", color: "#60A5FA" },
-                          { num: "50+", label: "独家版", color: "#34D399" },
+                          { num: "AUTH", label: "授权核验", color: "#D8BC83" },
+                          { num: "EVID", label: "证据状态", color: "#60A5FA" },
+                          { num: "RISK", label: "风险披露", color: "#34D399" },
                         ].map((s, i) => (
                           <View key={i} style={styles.bannerStatItem}>
                             <Text style={[styles.bannerStatNum, { color: s.color }]}>{s.num}</Text>
@@ -314,7 +314,7 @@ export default function CooperationScreen() {
               <View style={styles.priceNote}>
                 <Text style={styles.priceNoteText}>
                   <Text style={{ color: GOLD, fontWeight: "600" }}>关于价格：</Text>
-                  我们测试117款EA花了¥280,000。现在你可以免费试用一款精选策略，亲身体验24个月实盘验证的结果。
+                  现在可免费申请一款演示/试用策略；请先核对数据类型、时间区间、最大回撤与商业授权。
                   <Text style={{ color: "rgba(255,255,255,0.95)", fontWeight: "700" }}>零成本入场</Text>
                   ，满意再谈合作。
                 </Text>
@@ -332,7 +332,7 @@ export default function CooperationScreen() {
               </View>
               <Text style={[styles.heroTitle, { marginTop: 10 }]}>先拿3款EA跑起来</Text>
               <Text style={[styles.heroSubtitle, { alignSelf: "center", marginTop: 8 }]}>
-                从117款中精选的3款EA策略，免费送你。
+                提供 3 款 EA 演示/试用材料，历史结果不代表未来。
               </Text>
 
               <View style={{ flexDirection: isMobile ? "column" : "row", flexWrap: "wrap", gap: isMobile ? 12 : 14, marginTop: 28 }}>
@@ -376,14 +376,14 @@ export default function CooperationScreen() {
                   </View>
                   <Text style={styles.customEATitle}>你的策略，你的品牌</Text>
                   <Text style={styles.customEADesc}>
-                    为工作室量身打造专属EA策略。源头低价拿货，自定义策略名称与调优模式，无限授权不受限，版权与联系方式全部替换为工作室自有品牌。
+                    为工作室提供 EA 名称、参数与界面适配。源码、二次开发、账户数与品牌使用权均以权利人授权及签署合同为准。
                   </Text>
                   <View style={styles.customEAFeatures}>
                     {[
                       "♦ 自定义策略名称 & 调优模式",
-                      "♦ 无限授权：不限账户、不限终端、不限客户",
-                      "♦ 版权信息 & 联系方式替换为工作室品牌",
-                      "♦ 从源码编译到最终交付，全流程透明",
+                      "♦ 账户、终端与客户授权范围在合同中明示",
+                      "♦ 品牌与联系方式替换需符合原授权",
+                      "♦ 从来源/授权核验到最终交付保留记录",
                     ].map((text, i) => (
                       <Text key={i} style={styles.customEAFeatureText}>{text}</Text>
                     ))}

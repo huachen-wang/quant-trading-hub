@@ -64,28 +64,10 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
     contactData?.contact_telegram_link?.trim() ||
     CONTACT_FALLBACKS.telegramLink;
   const qq = contactData?.contact_qq?.trim() || CONTACT_FALLBACKS.qq;
-  const wechat =
-    contactData?.contact_wechat?.trim() || CONTACT_FALLBACKS.wechat;
-  const description =
-    language === "zh" && contactData?.contact_description?.trim()
-      ? contactData.contact_description.trim()
-      : text(
-          CONTACT_FALLBACKS.description,
-          "Mention the strategy name when contacting us. Our advisor will confirm the version, deployment requirements and delivery method.",
-          "اذكر اسم الاستراتيجية عند التواصل. سيؤكد المستشار الإصدار ومتطلبات النشر وطريقة التسليم.",
-        );
-  const title =
-    language === "zh" && contactData?.contact_title?.trim()
-      ? contactData.contact_title.trim()
-      : text("联系 EAXAU", "Contact EAXAU", "تواصل مع EAXAU");
-  const subtitle =
-    language === "zh" && contactData?.contact_subtitle?.trim()
-      ? contactData.contact_subtitle.trim()
-      : text(
-          "获取 EA 文件 · 部署支持 · 商务授权",
-          "EA delivery · Deployment support · Commercial licensing",
-          "تسليم EA · دعم النشر · الترخيص التجاري",
-        );
+  const wechat = contactData?.contact_wechat?.trim() || CONTACT_FALLBACKS.wechat;
+  const description = contactData?.contact_description?.trim() || CONTACT_FALLBACKS.description;
+  const title = contactData?.contact_title?.trim() || "联系 AI量化联盟";
+  const subtitle = contactData?.contact_subtitle?.trim() || "获取 EA 文件 · 部署支持 · 商务授权";
 
   const contactMethods = [
     ...(telegram

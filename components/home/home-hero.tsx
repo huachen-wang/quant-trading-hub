@@ -15,13 +15,13 @@ export function HomeHero() {
       <View style={[styles.copy, isDesktop && styles.copyDesktop]}>
         <View style={styles.eyebrowRow}>
           <View style={styles.eyebrowRail} />
-          <Text style={styles.eyebrow}>EAXAU SOURCE LIBRARY</Text>
+          <Text style={styles.eyebrow}>AI量化联盟 · EAXAU.COM</Text>
         </View>
         <Text style={[styles.title, isDesktop && styles.titleDesktop]}>
-          全网 EA 源头提货
+          六策略资管与 EA 源码商城
         </Text>
         <Text style={[styles.subtitle, isDesktop && styles.subtitleDesktop]}>
-          策略筛选、版本确认与源码交付，一站完成
+          资管入金、券商接入与 EA 销售结算独立分账
         </Text>
       </View>
 

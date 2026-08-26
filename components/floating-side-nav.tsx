@@ -59,22 +59,22 @@ export function FloatingSideNav() {
       code: "MKT",
       label: "策略广场",
       sub: "浏览全部 EA 策略",
-      href: "/(tabs)",
-      matchPaths: ["/", "/(tabs)"],
+      href: "/market",
+      matchPaths: ["/market"],
     },
     {
       code: "GB",
       label: "合购",
       sub: "拼单更优惠",
-      href: "/(tabs)/group-buy",
-      matchPaths: ["/(tabs)/group-buy", "/group-buy"],
+      href: "/group-buy",
+      matchPaths: ["/group-buy"],
     },
     {
       code: "ACC",
       label: "订阅",
       sub: "月度精选 EA 推送",
-      href: "/(tabs)/subscribe",
-      matchPaths: ["/(tabs)/subscribe", "/subscribe"],
+      href: "/subscribe",
+      matchPaths: ["/subscribe"],
     },
     {
       code: "B2B",
@@ -95,7 +95,7 @@ export function FloatingSideNav() {
 
   // ==== 项目矩阵 ====
   const matrixSites = [
-    { code: "EAX", label: "EAXAU", sub: "eaxau.com", current: true },
+    { code: "AIQ", label: "AI量化联盟", sub: "eaxau.com", current: true },
     { code: "SRC", label: "源码研究台", sub: "即将上线", disabled: true },
     { code: "XAU", label: "点金", sub: "ddxau.com", url: "https://ddxau.com" },
     { code: "AI", label: "量化风云榜", sub: "eaea.ai", url: "https://eaea.ai" },
@@ -190,14 +190,14 @@ export function FloatingSideNav() {
             <View style={styles.divider} />
 
             {/* 区 2：项目矩阵 */}
-            <SectionTitle en="EAXAU MATRIX" zh="项目矩阵" />
+            <SectionTitle en="AI QUANT MATRIX" zh="项目矩阵" />
             <View style={{ paddingHorizontal: 12 }}>
               {matrixSites.map((s, i) => (
                 <Pressable
                   key={i}
                   onPress={() => {
                     if (s.disabled) return;
-                    if (s.current) goTo("/(tabs)");
+                    if (s.current) goTo("/");
                     else if (s.url) openExternal(s.url);
                   }}
                   style={({ hovered }: any) => [
@@ -279,7 +279,7 @@ export function FloatingSideNav() {
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
-              EAXAU © 2026 · Quant Source Desk
+              AI量化联盟 © 2026 · eaxau.com
             </Text>
           </View>
         </View>

@@ -16,7 +16,11 @@ import { StatusBadge } from "@/components/v2/status-badge";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
 import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
-import { localizeAccount, localizeStrategy } from "@/lib/v2/localized-content";
+import {
+  localizeAccount,
+  localizePlatform,
+  localizeStrategy,
+} from "@/lib/v2/localized-content";
 
 type Tab = "positions" | "trades";
 
@@ -76,9 +80,10 @@ export default function AccountDetailPage() {
   const account = localizeAccount(accountQuery.data, language);
   const managed = account.serviceMode === "MANAGED_CONTRACT";
   const accent = managed ? V2.gold : V2.blue;
-  const platformName = (platformId: string) =>
-    platformQuery.data?.find((item) => item.id === platformId)?.name ??
-    platformId;
+  const platformName = (platformId: string) => {
+    const platform = platformQuery.data?.find((item) => item.id === platformId);
+    return platform ? localizePlatform(platform, language).name : platformId;
+  };
   const strategyName = (strategyId: string) => {
     const strategy = strategyQuery.data?.find((item) => item.id === strategyId);
     return strategy
@@ -127,8 +132,16 @@ export default function AccountDetailPage() {
           <View style={styles.headerCopy}>
             <Text style={[styles.mode, { color: accent }]}>
               {managed
-                ? text("资管模式", "Managed mode", "إدارة مفوضة")
-                : text("券商模式", "Broker mode", "نمط الوسيط")}
+                ? text(
+                    "AI量化联盟 · 资管账户",
+                    "AI Quant Alliance · Managed account",
+                    "تحالف EAXAU الكمي · حساب مُدار",
+                  )
+                : text(
+                    "AI量化联盟 · 券商账户投影",
+                    "AI Quant Alliance · Broker account view",
+                    "تحالف EAXAU الكمي · عرض حساب الوسيط",
+                  )}
             </Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
               {account.name}
@@ -136,14 +149,14 @@ export default function AccountDetailPage() {
             <Text style={styles.subtitle}>
               {managed
                 ? text(
-                    "技术方按合同代操管理 · 客户查看账户运行",
-                    "Provider managed under contract · Client view only",
-                    "إدارة بواسطة المزود بموجب عقد · عرض للعميل",
+                    "客户本人持有账户 · 项目方仅获约定交易权",
+                    "Client-owned account · Provider receives agreed trading permission only",
+                    "الحساب مملوك للعميل · المزود يملك صلاحية التداول المتفق عليها فقط",
                   )
                 : text(
-                    "资金在本人券商账户 · 平台与策略组合运行",
-                    "Funds in the user's broker account · Platform and strategy mix",
-                    "الأموال في حساب الوسيط الخاص بالمستخدم · مزيج منصات واستراتيجيات",
+                    "USDT 入金逐笔核对 · 项目方无提款权",
+                    "Every USDT deposit is reconciled · No provider withdrawal rights",
+                    "تتم مطابقة كل إيداع USDT · لا يملك المزود حق السحب",
                   )}
             </Text>
           </View>
@@ -252,9 +265,9 @@ export default function AccountDetailPage() {
                     "عقد الإدارة وحدود الصلاحيات",
                   )
                 : text(
-                    "当前券商配置方案",
-                    "Current broker configuration",
-                    "إعداد الوسيط الحالي",
+                    "当前券商执行槽",
+                    "Current broker execution slots",
+                    "حسابات التنفيذ الحالية لدى الوسطاء",
                   )}
             </Text>
             {managed ? (
@@ -272,36 +285,48 @@ export default function AccountDetailPage() {
                   }
                 />
                 <DetailRow
-                  label={text("配置责任", "Configuration", "مسؤولية الإعداد")}
+                  label={text(
+                    "交易责任",
+                    "Trading responsibility",
+                    "مسؤولية التداول",
+                  )}
                   value={text(
                     "指定技术方",
-                    "Assigned provider",
+                    "Designated provider",
                     "المزود المحدد",
                   )}
                 />
                 <DetailRow
-                  label={text("客户权限", "Client access", "صلاحيات العميل")}
+                  label={text(
+                    "客户权限",
+                    "Client permissions",
+                    "صلاحيات العميل",
+                  )}
                   value={text(
-                    "权益、持仓与交易只读",
-                    "Read-only equity, positions and trades",
-                    "عرض فقط لحقوق الحساب والمراكز والصفقات",
+                    "查看、申请退出与出金",
+                    "View, request exit and withdraw",
+                    "العرض وطلب الخروج والسحب",
                   )}
                 />
                 <DetailRow
-                  label={text("资金管理", "Fund management", "إدارة الأموال")}
+                  label={text(
+                    "技术方权限",
+                    "Provider permissions",
+                    "صلاحيات المزود",
+                  )}
                   value={text(
-                    "按合同由技术方管理",
-                    "Provider managed under contract",
-                    "إدارة بواسطة المزود بموجب العقد",
+                    "开平仓与风控；不含出金",
+                    "Open/close positions and risk control; no withdrawals",
+                    "فتح وإغلاق المراكز وضبط المخاطر؛ دون سحب",
                   )}
                 />
                 <View style={styles.readOnlyNotice}>
                   <MaterialIcons name="visibility" size={18} color={V2.gold} />
                   <Text style={styles.readOnlyText}>
                     {text(
-                      "该模式不提供直接修改参数、平仓或调仓操作。",
-                      "This mode does not allow direct parameter changes, closing positions or rebalancing.",
-                      "لا يسمح هذا النمط بتعديل المعايير أو إغلاق المراكز أو إعادة التوازن مباشرة.",
+                      "客户可按合同申请终止资管；已有仓位的处理以双方合同与实际风控指令为准。",
+                      "The client may request termination under the contract. Existing positions follow the agreement and current risk instructions.",
+                      "يمكن للعميل طلب إنهاء الإدارة وفقا للعقد. تخضع المراكز القائمة للاتفاق وتعليمات المخاطر الحالية.",
                     )}
                   </Text>
                 </View>
@@ -349,7 +374,11 @@ export default function AccountDetailPage() {
               {text("数据连接", "DATA CONNECTION", "اتصال البيانات")}
             </Text>
             <Text style={styles.panelTitle}>
-              {text("平台连接", "Platform connections", "اتصالات المنصات")}
+              {text(
+                "券商执行槽",
+                "Broker execution slots",
+                "حسابات تنفيذ الوسطاء",
+              )}
             </Text>
             <View style={styles.connectionRows}>
               {account.platformIds.map((platformId, index) => (
@@ -471,9 +500,9 @@ export default function AccountDetailPage() {
           <MaterialIcons name="shield" size={20} color={V2.blue} />
           <Text style={styles.noticeText}>
             {text(
-              "账户页是经过脱敏的只读投影。模拟金额不代表真实资产，真实模式必须通过身份验证、用户授权和数据新鲜度校验。",
-              "This page is a masked, read-only account projection. Demo values do not represent real assets. Live mode requires identity verification, user authorization and data-freshness checks.",
-              "هذه الصفحة عرض مقنع للقراءة فقط. القيم التجريبية لا تمثل أصولا حقيقية، ويتطلب الوضع الحي التحقق من الهوية وتفويض المستخدم وفحص حداثة البيانات.",
+              "账户页是经过脱敏的只读投影。模拟金额不代表真实资产；真实执行必须通过身份、资管授权、券商交易权与数据新鲜度校验，提款权始终与交易权分离。",
+              "This is a masked, read-only account view. Demo amounts are not real assets. Live execution requires identity, managed authorization, broker trading permission and data-freshness checks. Withdrawal rights always remain separate from trading permission.",
+              "هذه واجهة حساب للقراءة فقط مع إخفاء الهوية. المبالغ التجريبية ليست أصولا حقيقية. يتطلب التنفيذ الحي التحقق من الهوية وتفويض الإدارة وصلاحية التداول وحداثة البيانات، وتبقى صلاحية السحب منفصلة دائما عن التداول.",
             )}
           </Text>
         </View>

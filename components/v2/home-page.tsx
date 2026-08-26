@@ -30,7 +30,7 @@ import {
   localizeStrategies,
 } from "@/lib/v2/localized-content";
 
-const DEFAULT_SELECTION = ["jingge-v51", "quantum-queen"];
+const DEFAULT_SELECTION = ["jingge-v51", "quantum-queen", "black-aura"];
 const LIVE_PULSE_ACCENTS = [
   V2.green,
   V2.gold,
@@ -214,24 +214,24 @@ export default function V2HomePage() {
 
   const toggleStrategy = (id: string) => {
     const strategy = data.strategies.find((item) => item.id === id);
-    if (!strategy || strategy.source.freshness === "OFFLINE") return;
-    const wasSelected = selectedStrategyIds.includes(id);
+    if (!strategy) return;
+    const removing = selectedStrategyIds.includes(id);
     setSelectedStrategyIds((current) =>
-      current.includes(id)
+      removing
         ? current.filter((strategyId) => strategyId !== id)
         : [...current, id],
     );
     setSelectionFeedback(
-      wasSelected
+      removing
         ? text(
-            `${strategy.shortName}已移出组合`,
-            `${strategy.shortName} removed from portfolio`,
-            `تمت إزالة ${strategy.shortName} من المحفظة`,
+            `已移出 ${strategy.shortName}`,
+            `Removed ${strategy.shortName}`,
+            `تمت إزالة ${strategy.shortName}`,
           )
         : text(
-            `${strategy.shortName}已加入组合`,
-            `${strategy.shortName} added to portfolio`,
-            `تمت إضافة ${strategy.shortName} إلى المحفظة`,
+            `已加入 ${strategy.shortName}`,
+            `Added ${strategy.shortName}`,
+            `تمت إضافة ${strategy.shortName}`,
           ),
     );
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
@@ -244,6 +244,17 @@ export default function V2HomePage() {
       y: Math.max(0, builderY - 16),
       animated: true,
     });
+  };
+
+  const selectAllStrategies = () => {
+    setSelectedStrategyIds(data.strategies.map((strategy) => strategy.id));
+    setSelectionFeedback(
+      text(
+        "已选择全部 6 款可选策略",
+        "All six strategies selected",
+        "تم اختيار الاستراتيجيات الست",
+      ),
+    );
   };
 
   return (
@@ -280,9 +291,9 @@ export default function V2HomePage() {
                 <View style={styles.eyebrowRule} />
                 <Text style={styles.eyebrow}>
                   {text(
-                    "核心量化组合",
-                    "CORE QUANT PORTFOLIO",
-                    "محفظة الكوانت الأساسية",
+                    "AI量化联盟 · 六策略",
+                    "AI QUANT ALLIANCE · SIX STRATEGIES",
+                    "تحالف EAXAU الكمي · ست استراتيجيات",
                   )}
                 </Text>
               </View>
@@ -290,9 +301,9 @@ export default function V2HomePage() {
                 style={[styles.stageTitle, isMobile && styles.stageTitleMobile]}
               >
                 {text(
-                  "六策略收益与组合",
-                  "Six strategies. One portfolio.",
-                  "ست استراتيجيات. محفظة واحدة.",
+                  "六款策略 · 自由选配 1–6 款",
+                  "Six strategies · Select any 1–6",
+                  "ست استراتيجيات · اختر من 1 إلى 6",
                 )}
               </Text>
               <Text style={styles.stageSubtitle}>{dataNoticeCopy}</Text>
@@ -384,6 +395,7 @@ export default function V2HomePage() {
               total={data.strategies.length}
               feedback={selectionFeedback}
               onRemove={toggleStrategy}
+              onSelectAll={selectAllStrategies}
               onContinue={scrollToBuilder}
             />
           </View>
@@ -393,21 +405,16 @@ export default function V2HomePage() {
           onLayout={(event) => setBuilderY(event.nativeEvent.layout.y)}
           style={styles.builderAnchor}
         >
-          <SolutionConfigurator
-            strategies={data.strategies}
-            platforms={data.platforms}
-            selectedStrategyIds={selectedStrategyIds}
-            onToggleStrategy={toggleStrategy}
-          />
+          <SolutionConfigurator strategies={selectedStrategies} />
         </View>
 
         <View style={styles.riskNotice}>
           <MaterialIcons name="verified-user" size={20} color={V2.amber} />
           <Text style={styles.riskText}>
             {text(
-              "历史收益、胜率和模型回撤不代表未来结果。正式启用前仍需核验数据源、券商实体、账户权限、合同责任和当前平台条款。",
-              "Historical returns, win rates and modeled drawdowns do not predict future results. Verify the data source, broker entity, account permissions, contractual duties and current platform terms before activation.",
-              "العوائد التاريخية ونسب الفوز والتراجعات النموذجية لا تتنبأ بالنتائج المستقبلية. تحقق من مصدر البيانات وكيان الوسيط وصلاحيات الحساب والالتزامات التعاقدية وشروط المنصة قبل التفعيل.",
+              "历史收益、胜率和模型回撤不代表未来结果。正式启用前仍需核验数据源、券商实体、账户权限、合同责任和当前平台条款。资管授权只包含约定的交易与风控权限，不包含出金、转账或修改收款地址。EA 销售款、券商直充与资管代收严格分账；任何入金完成状态均以券商实际到账为准。",
+              "Historical returns, win rates and modeled drawdowns do not predict future results. Verify the data source, broker entity, account permissions, contractual duties and current platform terms before activation. Managed authorization covers agreed trading and risk controls only, never withdrawals, transfers or deposit-address changes. EA sales, direct broker funding and managed collection are reconciled separately; funding is complete only when the broker actually credits the account.",
+              "لا تمثل العوائد أو نسب الفوز أو التراجعات المحسوبة نتائج مستقبلية. يجب التحقق من مصدر البيانات وكيان الوسيط وصلاحيات الحساب والالتزامات التعاقدية وشروط المنصة قبل التفعيل. يشمل تفويض الإدارة التداول وضبط المخاطر المتفق عليهما فقط، ولا يشمل السحب أو التحويل أو تغيير عنوان الإيداع. تُفصل حسابات بيع EA والإيداع المباشر والتحصيل المُدار، ولا يكتمل الإيداع إلا بعد القيد الفعلي لدى الوسيط.",
             )}
           </Text>
         </View>

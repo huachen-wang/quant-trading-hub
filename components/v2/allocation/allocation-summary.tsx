@@ -11,19 +11,21 @@ import type {
   AllocationValidation,
 } from "@/shared/v2/contracts";
 import { useLanguage } from "@/lib/language";
-import { formatMoney } from "../format";
+import { formatUsdt } from "../format";
 import { V2 } from "../tokens";
 
 export function AllocationSummary({
   draft,
   validation,
   isValidating,
+  isCreating,
   onValidate,
   onConfirm,
 }: {
   draft: AllocationDraft;
   validation?: AllocationValidation;
   isValidating: boolean;
+  isCreating: boolean;
   onValidate: () => void;
   onConfirm: () => void;
 }) {
@@ -36,7 +38,7 @@ export function AllocationSummary({
     validation?.issues.filter((item) => item.severity === "ERROR") ?? [];
   const warnings =
     validation?.issues.filter((item) => item.severity === "WARNING") ?? [];
-  const canConfirm = Boolean(validation?.valid) && !isValidating;
+  const canConfirm = Boolean(validation?.valid) && !isValidating && !isCreating;
 
   return (
     <View style={styles.summary}>
@@ -54,25 +56,20 @@ export function AllocationSummary({
 
       <View style={styles.summaryMetrics}>
         <SummaryMetric
-          label={text("资金基数", "Capital base", "رأس المال الأساسي")}
-          value={formatMoney(
-            Number(draft.capital.amount),
-            draft.capital.currency,
-            true,
-            locale,
-          )}
+          label={text("USDT 名义资金", "Notional USDT", "قيمة USDT الاسمية")}
+          value={formatUsdt(Number(draft.capital.amount), true, locale)}
         />
         <SummaryMetric
-          label={text("平台权重", "Platform weight", "وزن المنصات")}
+          label={text("平台权重", "Platform weight", "وزن المنصة")}
           value={`${platformTotal}%`}
           color={Math.abs(platformTotal - 100) < 0.05 ? V2.green : V2.red}
         />
         <SummaryMetric
-          label={text("平台数量", "Platforms", "المنصات")}
-          value={`${draft.platformBuckets.length} / 3`}
+          label={text("执行槽数量", "Execution slots", "حسابات التنفيذ")}
+          value={`${draft.platformBuckets.length} / 2`}
         />
         <SummaryMetric
-          label={text("模型回撤", "Modeled drawdown", "التراجع النموذجي")}
+          label={text("模型回撤", "Modeled drawdown", "التراجع المحسوب")}
           value={
             validation
               ? `${validation.estimated.modeledDrawdownPct ?? "--"}%`
@@ -100,9 +97,8 @@ export function AllocationSummary({
         </Text>
         <Text style={styles.ruleValue}>
           {validation?.estimated.annualizedKnownCosts
-            ? formatMoney(
+            ? formatUsdt(
                 Number(validation.estimated.annualizedKnownCosts.amount),
-                validation.estimated.annualizedKnownCosts.currency,
                 false,
                 locale,
               )
@@ -121,7 +117,7 @@ export function AllocationSummary({
 
       <View style={styles.issueHeader}>
         <Text style={styles.issueHeaderText}>
-          {text("检查结果", "Results", "النتائج")}
+          {text("检查结果", "Validation results", "نتائج التحقق")}
         </Text>
         <Text style={styles.issueCount}>
           {text(
@@ -176,8 +172,8 @@ export function AllocationSummary({
                 )
               : text(
                   "修改方案后点击重新校验。",
-                  "Validate again after changing the plan.",
-                  "أعد التحقق بعد تعديل الخطة.",
+                  "After editing the plan, validate again.",
+                  "بعد تعديل الخطة، أعد التحقق.",
                 )}
           </Text>
         )}
@@ -208,16 +204,26 @@ export function AllocationSummary({
           pressed && styles.pressed,
         ]}
       >
-        <MaterialIcons name="check-circle" size={18} color={V2.background} />
+        {isCreating ? (
+          <ActivityIndicator size="small" color={V2.background} />
+        ) : (
+          <MaterialIcons name="check-circle" size={18} color={V2.background} />
+        )}
         <Text style={styles.confirmText}>
-          {text("生成确认摘要", "Generate confirmation", "إنشاء ملخص التأكيد")}
+          {isCreating
+            ? text("正在创建草案", "Creating draft", "جارٍ إنشاء المسودة")
+            : text(
+                "创建资管方案草案",
+                "Create managed plan draft",
+                "إنشاء مسودة خطة الإدارة",
+              )}
         </Text>
       </Pressable>
       <Text style={styles.disclaimer}>
         {text(
-          "演示环境只生成摘要，不开户、不入金、不执行交易。",
-          "The demo generates a summary only. It does not open accounts, deposit funds or execute trades.",
-          "ينشئ العرض التجريبي ملخصا فقط ولا يفتح حسابات أو يودع أموالا أو ينفذ صفقات.",
+          "草案只生成可审阅摘要；授权、入金与执行是后续独立步骤。",
+          "A draft creates a reviewable summary only. Authorization, funding and execution are separate later steps.",
+          "تنشئ المسودة ملخصا قابلا للمراجعة فقط. التفويض والإيداع والتنفيذ خطوات مستقلة لاحقة.",
         )}
       </Text>
     </View>

@@ -21,8 +21,19 @@ import {
   markOrderPaid,
   createPayment,
   updatePayment,
-  getActivePaymentByOrderId,
+  getPaymentsByOrderId,
 } from "../db";
+
+export function findZpayPaymentAttempt(
+  attempts: Array<{ gateway: string; method: string }>,
+  paymentMethod: string | null | undefined,
+) {
+  return attempts.find(
+    (payment) =>
+      payment.gateway === zpayGateway.name &&
+      (!paymentMethod || payment.method === paymentMethod),
+  );
+}
 
 export function registerPaymentRoutes(app: Express): void {
   // ZPay 用 form-encoded POST，需要先确保 body parser 启用
@@ -50,13 +61,8 @@ export function registerPaymentRoutes(app: Express): void {
         return res.status(404).send("order not found");
       }
 
-      // 2. 幂等：已支付订单直接返回 success
-      if (order.status === "paid") {
-        console.log(`[zpay/notify] order ${outTradeNo} already paid, returning success`);
-        return res.send(zpayGateway.successResponseText());
-      }
-
-      // 3. 验签 + 业务校验
+      // 2. 验签 + 业务校验。即使订单已被另一通道支付，也要验签并记录
+      // 这笔晚到款，避免双付后丢失对账证据。
       const verifyResult = await zpayGateway.verifyCallback({
         payload,
         expectedOrderNo: outTradeNo,
@@ -69,7 +75,7 @@ export function registerPaymentRoutes(app: Express): void {
         return res.status(400).send("verify failed");
       }
 
-      // 4. 验证金额
+      // 3. 验证金额
       if (
         typeof verifyResult.amount === "number" &&
         Math.abs(verifyResult.amount - parseFloat(String(order.amount))) > 0.01
@@ -86,8 +92,12 @@ export function registerPaymentRoutes(app: Express): void {
         return res.send(zpayGateway.successResponseText());
       }
 
-      // 5. 更新或创建 payment 记录
-      const existingPayment = await getActivePaymentByOrderId(order.id);
+      // 4. 只更新对应的 ZPay 尝试，绝不能覆盖该订单最新的 USDT 意图。
+      const paymentAttempts = await getPaymentsByOrderId(order.id);
+      const existingPayment = findZpayPaymentAttempt(
+        paymentAttempts,
+        verifyResult.paymentMethod,
+      ) as any;
       if (existingPayment) {
         await updatePayment(existingPayment.id, {
           status: "success",
@@ -112,7 +122,14 @@ export function registerPaymentRoutes(app: Express): void {
         });
       }
 
-      // 6. 更新订单状态
+      if (order.status === "paid") {
+        console.warn(
+          `[zpay/notify] verified late payment for already-paid order ${outTradeNo}; recorded for reconciliation`,
+        );
+        return res.send(zpayGateway.successResponseText());
+      }
+
+      // 5. 更新订单状态
       await markOrderPaid(order.id, {
         paymentMethod: verifyResult.paymentMethod || null,
         paymentGateway: zpayGateway.name,
@@ -120,7 +137,7 @@ export function registerPaymentRoutes(app: Express): void {
 
       console.log(`[zpay/notify] ✓ order ${outTradeNo} marked as paid`);
 
-      // 7. 给 ZPay 返回 "success"
+      // 6. 给 ZPay 返回 "success"
       return res.send(zpayGateway.successResponseText());
     } catch (err: any) {
       console.error("[zpay/notify] handler error:", err);

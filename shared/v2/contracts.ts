@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  ALLIANCE_BROKER_IDS,
+  ALLIANCE_STRATEGY_IDS,
+} from "../managed-sessions/contracts";
 
 export const dataModeSchema = z.enum(["DEMO", "CUSTOM", "LIVE", "HYBRID"]);
 export const freshnessSchema = z.enum(["FRESH", "STALE", "OFFLINE"]);
@@ -203,6 +207,53 @@ export const platformSchema = z.object({
   source: sourceMetaSchema,
 });
 
+function exactCatalogIds(
+  values: Array<{ id: string }>,
+  expectedIds: readonly string[],
+) {
+  const actual = new Set(values.map((value) => value.id));
+  return (
+    actual.size === expectedIds.length &&
+    expectedIds.every((id) => actual.has(id))
+  );
+}
+
+export const allianceStrategyCatalogSchema = z
+  .array(coreStrategySchema)
+  .length(ALLIANCE_STRATEGY_IDS.length)
+  .superRefine((strategies, ctx) => {
+    if (!exactCatalogIds(strategies, ALLIANCE_STRATEGY_IDS)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "AI量化联盟策略目录必须与六个 canonical ID 完全一致",
+      });
+    }
+  });
+
+export const alliancePlatformCatalogSchema = z
+  .array(platformSchema)
+  .length(ALLIANCE_BROKER_IDS.length)
+  .superRefine((platforms, ctx) => {
+    if (!exactCatalogIds(platforms, ALLIANCE_BROKER_IDS)) {
+      ctx.addIssue({
+        code: "custom",
+        message: "AI量化联盟券商目录必须与三个 canonical ID 完全一致",
+      });
+    }
+    platforms.forEach((platform, platformIndex) => {
+      const invalid = platform.supportedStrategyIds.filter(
+        (id) => !(ALLIANCE_STRATEGY_IDS as readonly string[]).includes(id),
+      );
+      if (invalid.length) {
+        ctx.addIssue({
+          code: "custom",
+          path: [platformIndex, "supportedStrategyIds"],
+          message: `券商覆盖了非 canonical 策略：${invalid.join("、")}`,
+        });
+      }
+    });
+  });
+
 export const allocationStrategySchema = z.object({
   strategyId: z.string(),
   weightPct: z.number().min(0).max(100),
@@ -307,8 +358,8 @@ export const overviewSchema = z.object({
     activeStrategies: z.number().int().min(0).max(6),
     equitySeries: z.array(equityPointSchema),
   }),
-  strategies: z.array(coreStrategySchema).length(6),
-  platforms: z.array(platformSchema),
+  strategies: allianceStrategyCatalogSchema,
+  platforms: alliancePlatformCatalogSchema,
   source: sourceMetaSchema,
 });
 

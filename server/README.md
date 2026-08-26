@@ -189,13 +189,15 @@ export type InsertItem = typeof items.$inferInsert;
 
 ### Running Migrations
 
-After editing the schema, push changes to the database:
+After editing the schema, run the same idempotent migration entry point used by production startup:
 
 ```bash
 pnpm db:push
 ```
 
-This runs `drizzle-kit generate` and `drizzle-kit migrate`.
+This runs `server/migrate.ts` with a MySQL advisory lock and
+`INFORMATION_SCHEMA` checks. Files under `drizzle/*.sql` are review artifacts;
+do not replay them against a database already upgraded by the server migrator.
 
 ### Query Helpers
 

@@ -311,9 +311,15 @@ function StrategyCardBase({
           numberOfLines={1}
         >
           {unavailable
-            ? text("暂不可选", "Unavailable", "غير متاح")
+            ? selected
+              ? text(
+                  "DRAFT 中 · 不可激活",
+                  "In draft · Cannot activate",
+                  "ضمن المسودة · لا يمكن التفعيل",
+                )
+              : text("暂不可选", "Unavailable", "غير متاح")
             : selected
-              ? text("组合中", "In portfolio", "ضمن المحفظة")
+              ? text("组合中", "Selected", "ضمن الخطة")
               : text("点选加入", "Select to add", "اختر للإضافة")}
         </Text>
         <Pressable

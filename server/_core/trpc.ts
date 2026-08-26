@@ -27,5 +27,12 @@ const requireUser = t.middleware(async (opts) => {
 
 export const protectedProcedure = t.procedure.use(requireUser);
 
-// 简化版本：移除admin验证，直接允许访问
-export const adminProcedure = t.procedure;
+export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  if (ctx.user.role !== "admin") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: NOT_ADMIN_ERR_MSG,
+    });
+  }
+  return next();
+});

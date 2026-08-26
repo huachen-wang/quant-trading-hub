@@ -51,8 +51,16 @@ function AccountCardBase({
           </Text>
           <Text style={[styles.mode, { color: modeColor }]}>
             {managed
-              ? text("资管模式", "Managed mode", "إدارة مفوضة")
-              : text("券商模式", "Broker mode", "نمط الوسيط")}
+              ? text(
+                  "AI量化联盟 · 资管账户",
+                  "AI Quant Alliance · Managed account",
+                  "تحالف EAXAU الكمي · حساب مُدار",
+                )
+              : text(
+                  "AI量化联盟 · 券商账户投影",
+                  "AI Quant Alliance · Broker account view",
+                  "تحالف EAXAU الكمي · عرض حساب الوسيط",
+                )}
           </Text>
         </View>
         <StatusBadge
@@ -103,7 +111,7 @@ function AccountCardBase({
         </View>
         <View style={styles.metric}>
           <Text style={styles.metricLabel}>
-            {text("平台", "Platforms", "المنصات")}
+            {text("执行槽", "Execution slots", "حسابات التنفيذ")}
           </Text>
           <Text style={styles.metricValue}>{account.platformIds.length}</Text>
         </View>

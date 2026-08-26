@@ -315,6 +315,10 @@ let mockPayments: PaymentRecord[] = [
   },
 ];
 let nextPaymentId = mockPayments.length + 1;
+let nextCommerceUsdtEventId = 1;
+let mockCommerceUsdtEvents: any[] = [];
+let nextChainTxRegistryId = 1;
+let mockChainTxRegistry: any[] = [];
 
 let mockSiteEntries = [
   { id: 1, emoji: "📚", label: "EA 教程", href: "/subscribe", sortOrder: 10, enabled: true, createdAt: new Date(now), updatedAt: new Date(now) },
@@ -573,6 +577,12 @@ export function markMockOrderPaid(
   });
 }
 
+export function markMockOrderRefunded(orderId: number) {
+  const order = getMockOrderById(orderId);
+  if (!order) return;
+  Object.assign(order, { status: "refunded", updatedAt: new Date() });
+}
+
 export function cancelMockOrder(orderId: number) {
   const order = getMockOrderById(orderId);
   if (!order) return;
@@ -630,10 +640,92 @@ export function getMockActivePaymentByOrderId(orderId: number) {
   return getMockPaymentsByOrderId(orderId)[0] || null;
 }
 
+export function getMockPaymentByGatewayOrderNo(gatewayOrderNo: string) {
+  return mockPayments.find((payment) => payment.gatewayOrderNo === gatewayOrderNo) || null;
+}
+
 export function listMockPendingUsdtPayments() {
   return mockPayments
-    .filter((payment) => payment.gateway === "usdt-manual" && payment.status === "pending")
+    .filter(
+      (payment) =>
+        payment.gateway === "usdt-manual" &&
+        payment.status === "pending" &&
+        Boolean(payment.gatewayOrderNo),
+    )
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export function createMockCommerceUsdtEvent(data: any) {
+  const row = {
+    id: nextCommerceUsdtEventId++,
+    ...data,
+    createdAt: data.createdAt ?? new Date(),
+  };
+  mockCommerceUsdtEvents.push(row);
+  return row;
+}
+
+export function listMockCommerceUsdtEvents(paymentId: number) {
+  return mockCommerceUsdtEvents
+    .filter((event) => event.paymentId === paymentId)
+    .sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+}
+
+export function listMockUsdtPayments(input?: {
+  reviewStatus?: string;
+  limit?: number;
+}) {
+  return mockPayments
+    .filter(
+      (payment) =>
+        payment.gateway === "usdt-manual" &&
+        (!input?.reviewStatus ||
+          payment.usdtReviewStatus === input.reviewStatus),
+    )
+    .slice(0, input?.limit ?? 100)
+    .map((payment) => ({
+      ...payment,
+      events: listMockCommerceUsdtEvents(payment.id),
+    }));
+}
+
+export function reserveMockChainTransaction(input: any) {
+  const existing = mockChainTxRegistry.find(
+    (item) =>
+      item.network === input.network &&
+      item.normalizedHash === input.normalizedHash,
+  );
+  if (existing) {
+    if (
+      existing.usageType === input.usageType &&
+      existing.referenceNo === input.referenceNo
+    ) {
+      return existing;
+    }
+    throw new Error("该链上交易已被另一账路占用");
+  }
+  const row = {
+    id: nextChainTxRegistryId++,
+    ...input,
+    createdAt: new Date(),
+  };
+  mockChainTxRegistry.push(row);
+  return row;
+}
+
+export function releaseMockChainTransaction(input: any) {
+  mockChainTxRegistry = mockChainTxRegistry.filter(
+    (item) =>
+      !(
+        item.network === input.network &&
+        item.normalizedHash === input.normalizedHash &&
+        item.usageType === input.usageType &&
+        item.referenceNo === input.referenceNo
+      ),
+  );
 }
 
 export function listMockSiteEntries(params?: { enabled?: boolean; all?: boolean }) {

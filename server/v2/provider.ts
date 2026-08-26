@@ -61,7 +61,7 @@ export class DemoQuantDataProvider implements QuantDataProvider {
       input.riskProfile === "LOW" || capital < 18_000
         ? [
             {
-              platformId: "meridian",
+              platformId: "ic-markets",
               capitalWeightPct: 100,
               strategies: [
                 {
@@ -80,7 +80,7 @@ export class DemoQuantDataProvider implements QuantDataProvider {
         : capital < 40_000
           ? [
               {
-                platformId: "atlas-prime",
+                platformId: "exness",
                 capitalWeightPct: 55,
                 strategies: [
                   {
@@ -96,7 +96,7 @@ export class DemoQuantDataProvider implements QuantDataProvider {
                 ],
               },
               {
-                platformId: "meridian",
+                platformId: "ic-markets",
                 capitalWeightPct: 45,
                 strategies: [
                   {

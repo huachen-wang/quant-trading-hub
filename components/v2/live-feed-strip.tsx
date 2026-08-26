@@ -44,10 +44,10 @@ function timeOnly(value: string, locale: AppLocale) {
   }).format(date);
 }
 
-function sourceName(
-  source: SourceMeta,
-  text: (chinese: string, english: string, arabic?: string) => string,
-) {
+type Translate = (zh: string, en: string, ar?: string) => string;
+
+function sourceName(source: SourceMeta, text: Translate) {
+  if (source.dataMode === "DEMO") return "DEMO FEED";
   if (/niubang/i.test(`${source.provider} ${source.label}`)) {
     if (source.freshness === "FRESH") return "NIUBANG LIVE";
     if (source.freshness === "STALE") {
@@ -56,6 +56,13 @@ function sourceName(
     return text("NIUBANG 离线", "NIUBANG OFFLINE", "NIUBANG غير متصل");
   }
   return source.dataMode;
+}
+
+function displayItemName(item: LiveFeedItem, source: SourceMeta) {
+  const neutralName = item.name.replace(/稳定盈利[！!]*/g, "公开观察");
+  return source.dataMode === "DEMO"
+    ? neutralName.replace(/实盘/g, "演示")
+    : neutralName;
 }
 
 export function LiveFeedStrip({
@@ -102,14 +109,15 @@ export function LiveFeedStrip({
     () =>
       items.map((item) => {
         const positive = item.changePct !== null && item.changePct >= 0;
+        const displayName = displayItemName(item, source);
         return (
           <Pressable
             key={item.id}
             accessibilityRole="link"
             accessibilityLabel={text(
-              `查看 ${item.name} ${item.changeLabel}数据`,
-              `View ${item.name} ${item.changeLabel} data`,
-              `عرض بيانات ${item.changeLabel} لـ ${item.name}`,
+              `查看 ${displayName} ${item.changeLabel}数据`,
+              `View ${displayName} ${item.changeLabel} data`,
+              `عرض بيانات ${item.changeLabel} لـ ${displayName}`,
             )}
             onPress={() => onOpen(item)}
             style={({ pressed }) => [
@@ -123,7 +131,7 @@ export function LiveFeedStrip({
                 style={[styles.strategyDot, { backgroundColor: item.accent }]}
               />
               <Text style={styles.tickerName} numberOfLines={1}>
-                {item.name}
+                {displayName}
               </Text>
               <Text style={styles.changeLabel}>{item.changeLabel}</Text>
               <Text
@@ -144,7 +152,7 @@ export function LiveFeedStrip({
           </Pressable>
         );
       }),
-    [isMobile, items, locale, onOpen, text],
+    [isMobile, items, locale, onOpen, source, text],
   );
 
   return (

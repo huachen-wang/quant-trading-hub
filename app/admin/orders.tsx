@@ -40,6 +40,10 @@ export default function AdminOrdersScreen() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [confirmOrder, setConfirmOrder] = useState<any | null>(null);
   const [txHash, setTxHash] = useState("");
+  const [receivedAmount, setReceivedAmount] = useState("");
+  const [confirmations, setConfirmations] = useState("1");
+  const [observedNetwork, setObservedNetwork] = useState<"TRC20" | "ERC20">("TRC20");
+  const [commerceTotpCode, setCommerceTotpCode] = useState("");
   const [adminNote, setAdminNote] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -49,7 +53,7 @@ export default function AdminOrdersScreen() {
   });
 
   const { data: pendingUsdt } = trpc.orders.adminPendingUsdt.useQuery();
-  const confirmUsdtMutation = trpc.orders.adminConfirmUsdt.useMutation();
+  const confirmUsdtMutation = trpc.orders.adminReconcileUsdt.useMutation();
 
   const showMsg = (msg: string) => {
     if (Platform.OS === "web") alert(msg);
@@ -58,16 +62,39 @@ export default function AdminOrdersScreen() {
 
   const handleConfirmUsdt = async () => {
     if (!confirmOrder) return;
+    if (!/^(?:0x)?[a-fA-F0-9]{64}$/.test(txHash.trim())) {
+      showMsg("请核对并填写完整的 64 位 Tx Hash");
+      return;
+    }
+    if (!Number.isFinite(Number(receivedAmount)) || Number(receivedAmount) <= 0) {
+      showMsg("请填写大于 0 的链上实收金额");
+      return;
+    }
+    if (!Number.isInteger(Number(confirmations)) || Number(confirmations) < 1) {
+      showMsg("至少需要 1 个链上确认");
+      return;
+    }
+    if (!/^\d{6}$/.test(commerceTotpCode)) {
+      showMsg("请输入当前 6 位动态验证码");
+      return;
+    }
     setBusy(true);
     try {
       await confirmUsdtMutation.mutateAsync({
         orderNo: confirmOrder.orderNo,
-        gatewayOrderNo: txHash || undefined,
+        gatewayOrderNo: txHash.trim(),
+        receivedAmount,
+        confirmations: Number(confirmations),
+        observedNetwork,
+        totpCode: commerceTotpCode,
         note: adminNote || undefined,
       });
-      showMsg("订单已确认为已支付");
+      showMsg("已记录链上实收并完成对账；异常结果请进入订单详情处理");
       setConfirmOrder(null);
       setTxHash("");
+      setReceivedAmount("");
+      setConfirmations("1");
+      setCommerceTotpCode("");
       setAdminNote("");
       refetch();
     } catch (e: any) {
@@ -96,7 +123,7 @@ export default function AdminOrdersScreen() {
               USDT 转账等待确认：{pendingUsdt.length} 笔
             </Text>
             <Text style={{ color: colors.muted, fontSize: 12, marginTop: 4 }}>
-              核对客服收到的截图后，点击下方对应订单的「确认收款」按钮
+              必须在区块浏览器或企业钱包核对收款地址、金额、网络与确认数；客户截图不作为到账证明。
             </Text>
           </View>
         ) : null}
@@ -146,7 +173,8 @@ export default function AdminOrdersScreen() {
             <View style={[styles.tablePanel, { borderColor: colors.border }]}>
               {orders.map((order: any) => {
                 const statusColor = STATUS_COLORS[order.status] || colors.muted;
-                const isPendingUsdt = pendingUsdt?.some((p: any) => p.orderId === order.id);
+                const pendingPayment = pendingUsdt?.find((p: any) => p.orderId === order.id);
+                const isPendingUsdt = Boolean(pendingPayment);
                 return (
                   <View
                     key={order.id}
@@ -186,7 +214,17 @@ export default function AdminOrdersScreen() {
 
                     {isPendingUsdt ? (
                       <TouchableOpacity
-                        onPress={() => setConfirmOrder(order)}
+                        onPress={() => {
+                          setConfirmOrder({ ...order, pendingPayment });
+                          setTxHash(pendingPayment?.gatewayOrderNo || "");
+                          setReceivedAmount(
+                            String(pendingPayment?.quotedAmount || pendingPayment?.amount || ""),
+                          );
+                          setObservedNetwork(
+                            pendingPayment?.settlementNetwork === "ERC20" ? "ERC20" : "TRC20",
+                          );
+                          setCommerceTotpCode("");
+                        }}
                         style={styles.confirmBtn}
                         activeOpacity={0.85}
                       >
@@ -214,7 +252,10 @@ export default function AdminOrdersScreen() {
         visible={!!confirmOrder}
         transparent
         animationType="fade"
-        onRequestClose={() => setConfirmOrder(null)}
+        onRequestClose={() => {
+          setConfirmOrder(null);
+          setCommerceTotpCode("");
+        }}
       >
         <View style={modalStyles.overlay}>
           <View style={[modalStyles.box, { backgroundColor: colors.surface }]}>
@@ -222,10 +263,10 @@ export default function AdminOrdersScreen() {
               确认 USDT 收款
             </Text>
             <Text style={[modalStyles.hint, { color: colors.muted }]}>
-              确认收到 {confirmOrder?.productTitle} 订单（¥{confirmOrder?.amount}）的 USDT 转账后再点击确认。此操作不可撤销。
+              请在区块链浏览器核对收款地址与 {confirmOrder?.pendingPayment?.amount} {confirmOrder?.pendingPayment?.currency}，确认到账后再操作。
             </Text>
             <Text style={[modalStyles.label, { color: colors.muted }]}>
-              链上 Tx Hash（选填，可后期补）
+              链上 Tx Hash（必填）
             </Text>
             <TextInput
               value={txHash}
@@ -233,6 +274,53 @@ export default function AdminOrdersScreen() {
               placeholder="例如 0x... 或 TRC20 tx id"
               placeholderTextColor={colors.muted}
               style={[modalStyles.input, { color: colors.foreground, borderColor: colors.border }]}
+            />
+            <Text style={[modalStyles.label, { color: colors.muted }]}>实际收到 USDT</Text>
+            <TextInput
+              value={receivedAmount}
+              onChangeText={(value) => setReceivedAmount(value.replace(/[^0-9.]/g, ""))}
+              placeholder="按链上实收填写"
+              placeholderTextColor={colors.muted}
+              keyboardType="decimal-pad"
+              style={[modalStyles.input, { color: colors.foreground, borderColor: colors.border }]}
+            />
+            <Text style={[modalStyles.label, { color: colors.muted }]}>链上确认数</Text>
+            <TextInput
+              value={confirmations}
+              onChangeText={(value) => setConfirmations(value.replace(/[^0-9]/g, ""))}
+              placeholder="1"
+              placeholderTextColor={colors.muted}
+              keyboardType="number-pad"
+              style={[modalStyles.input, { color: colors.foreground, borderColor: colors.border }]}
+            />
+            <Text style={[modalStyles.label, { color: colors.muted }]}>观测网络</Text>
+            <View style={modalStyles.networkRow}>
+              {(["TRC20", "ERC20"] as const).map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  onPress={() => setObservedNetwork(item)}
+                  style={[
+                    modalStyles.networkButton,
+                    { borderColor: observedNetwork === item ? "#D8BC83" : colors.border },
+                  ]}
+                >
+                  <Text style={{ color: observedNetwork === item ? "#D8BC83" : colors.muted, fontWeight: "800" }}>
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[modalStyles.label, { color: colors.muted }]}>动态验证码</Text>
+            <TextInput
+              accessibilityLabel="EA商城对账六位动态验证码"
+              value={commerceTotpCode}
+              onChangeText={(value) => setCommerceTotpCode(value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="当前 6 位动态验证码"
+              placeholderTextColor={colors.muted}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={6}
+              style={[modalStyles.input, modalStyles.totpInput, { color: colors.foreground, borderColor: colors.border }]}
             />
             <Text style={[modalStyles.label, { color: colors.muted }]}>
               备注（选填）
@@ -256,15 +344,21 @@ export default function AdminOrdersScreen() {
             />
             <View style={modalStyles.btnRow}>
               <TouchableOpacity
-                onPress={() => setConfirmOrder(null)}
+                onPress={() => {
+                  setConfirmOrder(null);
+                  setCommerceTotpCode("");
+                }}
                 style={[modalStyles.cancelBtn, { borderColor: colors.border }]}
               >
                 <Text style={{ color: colors.muted }}>取消</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleConfirmUsdt}
-                disabled={busy}
-                style={[modalStyles.okBtn, { opacity: busy ? 0.6 : 1 }]}
+                disabled={busy || !/^\d{6}$/.test(commerceTotpCode)}
+                style={[
+                  modalStyles.okBtn,
+                  { opacity: busy || !/^\d{6}$/.test(commerceTotpCode) ? 0.6 : 1 },
+                ]}
               >
                 <LinearGradient
                   colors={["#A8895A", "#C9A96E"]}
@@ -386,6 +480,16 @@ const modalStyles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 13,
   },
+  networkRow: { flexDirection: "row", gap: 8 },
+  networkButton: {
+    flex: 1,
+    minHeight: 38,
+    borderWidth: 1,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  totpInput: { letterSpacing: 7, fontWeight: "900" },
   btnRow: { flexDirection: "row", gap: 8, marginTop: 16 },
   cancelBtn: {
     flex: 1,

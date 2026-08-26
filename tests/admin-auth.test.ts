@@ -21,4 +21,13 @@ describe("Admin Authentication", () => {
     expect(verifyAdminToken).toBeDefined();
     expect(typeof verifyAdminToken).toBe("function");
   });
+
+  it("fails closed when production admin credentials are missing", async () => {
+    const { resolveAdminConfig } = await import("../server/routers/admin-auth");
+    expect(() =>
+      resolveAdminConfig("ADMIN_PASSWORD", "admin123", {
+        NODE_ENV: "production",
+      }),
+    ).toThrow("ADMIN_PASSWORD must be configured in production");
+  });
 });

@@ -9,150 +9,123 @@ import {
 import { styles } from "@/components/v2/configurator/styles";
 import { SolutionSummary } from "@/components/v2/configurator/summary";
 import {
+  getAllianceBrokers,
   getRiskOptions,
+  type AllianceBrokerId,
+  type FundingPath,
+  type OnboardingMode,
   type RiskProfile,
-  type ServicePath,
 } from "@/components/v2/configurator/types";
 import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
-import type {
-  AllocationDraft,
-  CoreStrategy,
-  PlatformProfile,
-} from "@/shared/v2/contracts";
+import type { CoreStrategy } from "@/shared/v2/contracts";
 
 type SolutionConfiguratorProps = {
   strategies: CoreStrategy[];
-  platforms: PlatformProfile[];
-  selectedStrategyIds: string[];
-  onToggleStrategy: (strategyId: string) => void;
 };
 
 export function SolutionConfigurator({
   strategies,
-  platforms,
-  selectedStrategyIds,
-  onToggleStrategy,
 }: SolutionConfiguratorProps) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isNarrow = width < 1020;
   const isMobile = width < 680;
   const { language } = useLanguage();
+  const riskOptions = getRiskOptions(language);
+  const allianceBrokers = getAllianceBrokers(language);
   const [capital, setCapital] = useState("50000");
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("MEDIUM");
-  const [servicePath, setServicePath] = useState<ServicePath>("BROKER");
-  const [selectedPlatformIds, setSelectedPlatformIds] = useState<string[]>(() =>
-    platforms.slice(0, 2).map((platform) => platform.id),
-  );
-  const [generatedDraft, setGeneratedDraft] = useState<AllocationDraft>();
+  const [brokerIds, setBrokerIds] = useState<AllianceBrokerId[]>(["exness"]);
+  const [onboardingMode, setOnboardingMode] =
+    useState<OnboardingMode>("SELF_OPENED");
+  const [fundingPath, setFundingPath] = useState<FundingPath>("BROKER_DIRECT");
   const [generatedSignature, setGeneratedSignature] = useState("");
-
-  const recommendation = trpc.v2.allocation.recommend.useMutation();
-  const validation = trpc.v2.allocation.validate.useMutation();
-  const selectedStrategies = useMemo(
-    () =>
-      strategies.filter((strategy) =>
-        selectedStrategyIds.includes(strategy.id),
-      ),
-    [selectedStrategyIds, strategies],
+  const capabilities = trpc.v2.managedSessions.capabilities.useQuery(
+    undefined,
+    {
+      staleTime: 60_000,
+    },
   );
-  const selectedPlatforms = useMemo(
-    () =>
-      platforms.filter((platform) => selectedPlatformIds.includes(platform.id)),
-    [platforms, selectedPlatformIds],
+
+  const numericCapital = Number(capital) || 0;
+  const riskOption = riskOptions.find((item) => item.id === riskProfile)!;
+  const brokers = allianceBrokers.filter((item) => brokerIds.includes(item.id));
+  const capabilityBrokers = (
+    capabilities.data as
+      | {
+          brokers?: {
+            id: string;
+            collectionApproval?:
+              | "NOT_APPROVED"
+              | "PENDING"
+              | "APPROVED"
+              | "SUSPENDED";
+            collectionOperational?: boolean;
+          }[];
+        }
+      | undefined
+  )?.brokers;
+  const collectionApprovals = Object.fromEntries(
+    allianceBrokers.map((broker) => {
+      const capability = capabilityBrokers?.find(
+        (item) => item.id === broker.id,
+      );
+      const approval = capability?.collectionApproval ?? "PENDING";
+      return [
+        broker.id,
+        approval === "APPROVED" && capability?.collectionOperational !== true
+          ? "PENDING"
+          : approval,
+      ];
+    }),
+  ) as Record<
+    AllianceBrokerId,
+    "NOT_APPROVED" | "PENDING" | "APPROVED" | "SUSPENDED"
+  >;
+  const strategyIds = useMemo(
+    () => strategies.map((strategy) => strategy.id),
+    [strategies],
   );
   const signature = [
     capital,
     riskProfile,
-    servicePath,
-    [...selectedStrategyIds].sort().join(","),
-    [...selectedPlatformIds].sort().join(","),
+    [...brokerIds].sort().join(","),
+    onboardingMode,
+    fundingPath,
+    strategyIds.join(","),
   ].join("|");
-  const riskOption = getRiskOptions(language).find(
-    (item) => item.id === riskProfile,
-  )!;
-  const numericCapital = Number(capital) || 0;
-  const missingCompatibility = selectedStrategies.filter(
-    (strategy) =>
-      !selectedPlatforms.some((platform) =>
-        platform.supportedStrategyIds.includes(strategy.id),
-      ),
-  );
-  const unusedSelectedPlatforms = selectedPlatforms.filter(
-    (platform) =>
-      !selectedStrategies.some((strategy) =>
-        platform.supportedStrategyIds.includes(strategy.id),
-      ),
-  );
-  const selectedOffline = selectedStrategies.some(
-    (strategy) => strategy.source.freshness === "OFFLINE",
-  );
-  const generatedIsCurrent =
-    Boolean(generatedDraft) && generatedSignature === signature;
-  const generatedErrors =
-    generatedIsCurrent && !validation.isPending
-      ? (validation.data?.issues.filter(
-          (issue) => issue.severity === "ERROR",
-        ) ?? [])
-      : [];
-  const generatedWarnings =
-    generatedIsCurrent && !validation.isPending
-      ? (validation.data?.issues.filter(
-          (issue) => issue.severity === "WARNING",
-        ) ?? [])
-      : [];
+  const generated = generatedSignature === signature;
   const canGenerate =
-    numericCapital > 0 &&
-    selectedStrategies.length > 0 &&
-    selectedPlatforms.length > 0 &&
-    missingCompatibility.length === 0 &&
-    unusedSelectedPlatforms.length === 0 &&
-    !selectedOffline &&
-    !recommendation.isPending &&
-    !validation.isPending;
+    numericCapital > 0 && strategies.length > 0 && brokerIds.length > 0;
 
-  const togglePlatform = (platformId: string) => {
-    setSelectedPlatformIds((current) => {
-      if (current.includes(platformId)) {
-        return current.filter((id) => id !== platformId);
+  const changeOnboardingMode = (mode: OnboardingMode) => {
+    setOnboardingMode(mode);
+    if (mode === "SELF_OPENED") setFundingPath("BROKER_DIRECT");
+  };
+
+  const toggleBroker = (nextBrokerId: AllianceBrokerId) => {
+    setBrokerIds((current) => {
+      if (current.includes(nextBrokerId)) {
+        return current.length === 1
+          ? current
+          : current.filter((id) => id !== nextBrokerId);
       }
-      if (current.length >= 3) return current;
-      return [...current, platformId];
+      return current.length >= 3 ? current : [...current, nextBrokerId];
     });
+    setFundingPath("BROKER_DIRECT");
   };
 
-  const generateSolution = () => {
-    if (!canGenerate) return;
-    const requestedSignature = signature;
-    recommendation.mutate(
-      {
-        capital: {
-          amount: String(Math.round(numericCapital * 100) / 100),
-          currency: "USD",
-        },
-        riskProfile,
-        platformIds: selectedPlatformIds,
-        strategyIds: selectedStrategyIds,
-      },
-      {
-        onSuccess: (draft) => {
-          setGeneratedDraft(draft);
-          setGeneratedSignature(requestedSignature);
-          validation.mutate(draft);
-        },
-      },
-    );
-  };
-
-  const openAdvancedAllocation = () => {
+  const openOnboarding = () => {
     router.push({
       pathname: "/v2-preview/allocate",
       params: {
-        strategyIds: selectedStrategyIds.join(","),
-        platformIds: selectedPlatformIds.join(","),
-        capital: String(Math.round(numericCapital)),
+        strategyIds: strategyIds.join(","),
+        capital: String(Math.round(numericCapital * 100) / 100),
         risk: riskProfile,
+        brokerIds: brokerIds.join(","),
+        onboardingMode,
+        fundsRoute: fundingPath,
       },
     } as never);
   };
@@ -161,14 +134,15 @@ export function SolutionConfigurator({
     <View style={styles.section}>
       <ConfiguratorHeading
         isMobile={isMobile}
-        selectedStrategyCount={selectedStrategies.length}
+        selectedStrategyCount={strategies.length}
       />
       <ConfiguratorFormula
         capital={numericCapital}
         riskOption={riskOption}
-        strategyCount={selectedStrategies.length}
-        platformCount={selectedPlatforms.length}
-        servicePath={servicePath}
+        strategyCount={strategies.length}
+        brokers={brokers}
+        onboardingMode={onboardingMode}
+        fundingPath={fundingPath}
       />
       <View
         style={[styles.configurator, isNarrow && styles.configuratorNarrow]}
@@ -181,34 +155,26 @@ export function SolutionConfigurator({
           riskProfile={riskProfile}
           onRiskProfileChange={setRiskProfile}
           strategies={strategies}
-          selectedStrategyIds={selectedStrategyIds}
-          onToggleStrategy={onToggleStrategy}
-          platforms={platforms}
-          selectedPlatformIds={selectedPlatformIds}
-          onTogglePlatform={togglePlatform}
-          servicePath={servicePath}
-          onServicePathChange={setServicePath}
+          brokerIds={brokerIds}
+          onToggleBroker={toggleBroker}
+          onboardingMode={onboardingMode}
+          onOnboardingModeChange={changeOnboardingMode}
+          fundingPath={fundingPath}
+          onFundingPathChange={setFundingPath}
+          collectionApprovals={collectionApprovals}
         />
         <SolutionSummary
           isNarrow={isNarrow}
           numericCapital={numericCapital}
           riskOption={riskOption}
-          selectedStrategies={selectedStrategies}
-          selectedPlatforms={selectedPlatforms}
-          allPlatforms={platforms}
-          servicePath={servicePath}
-          missingCompatibility={missingCompatibility}
-          unusedSelectedPlatforms={unusedSelectedPlatforms}
-          generatedIsCurrent={generatedIsCurrent}
-          generatedDraft={generatedDraft}
-          validationData={validation.data}
-          isValidating={validation.isPending}
-          generatedErrorCount={generatedErrors.length}
-          generatedWarningCount={generatedWarnings.length}
+          strategies={strategies}
+          brokers={brokers}
+          onboardingMode={onboardingMode}
+          fundingPath={fundingPath}
+          generated={generated}
           canGenerate={canGenerate}
-          isGenerating={recommendation.isPending}
-          onGenerate={generateSolution}
-          onAdvanced={openAdvancedAllocation}
+          onGenerate={() => setGeneratedSignature(signature)}
+          onContinue={openOnboarding}
         />
       </View>
     </View>

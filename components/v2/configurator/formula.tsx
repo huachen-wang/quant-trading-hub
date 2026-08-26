@@ -1,8 +1,14 @@
 import { Text, View } from "react-native";
-import { formatMoney } from "@/components/v2/format";
+import { formatUsdt } from "@/components/v2/format";
 import { useLanguage } from "@/lib/language";
 import { styles } from "./styles";
-import type { RiskOption, ServicePath } from "./types";
+import type {
+  AllianceBroker,
+  FundingPath,
+  OnboardingMode,
+  RiskOption,
+} from "./types";
+import { fundingPathLabel, onboardingModeLabel } from "./types";
 
 export function ConfiguratorHeading({
   isMobile,
@@ -21,33 +27,33 @@ export function ConfiguratorHeading({
           <Text style={styles.headingIndex}>02</Text>
           <View style={styles.headingRule} />
           <Text style={styles.eyebrow}>
-            {text("方案参数", "PLAN PARAMETERS", "معايير الخطة")}
+            {text("资管接入方案", "MANAGED ONBOARDING", "إعداد الإدارة الكمية")}
           </Text>
         </View>
         <Text style={[styles.title, isMobile && styles.titleMobile]}>
           {text(
-            "配置资金、风控与执行",
-            "Configure capital, risk and execution",
-            "إعداد رأس المال والمخاطر والتنفيذ",
+            "配置 AI量化联盟资管方案",
+            "Configure an AI Quant Alliance plan",
+            "إعداد خطة تحالف EAXAU الكمي",
           )}
         </Text>
         <Text style={styles.subtitle}>
           {text(
-            `已带入 ${selectedStrategyCount} 款策略，所有参数共同组成同一份量化方案。`,
-            `${selectedStrategyCount} strategies selected. Every parameter contributes to one quant plan.`,
-            `تم اختيار ${selectedStrategyCount} استراتيجيات. جميع المعايير تشكل خطة كمية واحدة.`,
+            `从 6 款可选策略中已选 ${selectedStrategyCount} 款；设置权重、券商与接入方式后，USDT 由客户直接存入本人券商账户。`,
+            `${selectedStrategyCount} of 6 strategies selected. Set weights, brokers and onboarding; USDT is deposited into the client's own broker account.`,
+            `تم اختيار ${selectedStrategyCount} من 6 استراتيجيات. حدّد الأوزان والوسطاء وطريقة الربط؛ وتودع USDT في حساب العميل الشخصي لدى الوسيط.`,
           )}
         </Text>
       </View>
       <View style={styles.formulaBadge}>
         <Text style={styles.formulaLabel}>
-          {text("方案结构", "PLAN FORMULA", "معادلة الخطة")}
+          {text("方案结构", "PLAN STRUCTURE", "هيكل الخطة")}
         </Text>
         <Text style={styles.formulaText}>
           {text(
-            "资金 × 风控 × 策略 × 平台 × 模式",
-            "Capital × Risk × Strategy × Platform × Mode",
-            "رأس المال × المخاطر × الاستراتيجية × المنصة × النمط",
+            "USDT 计划资金 × 风控 × 所选策略 × 券商 × 接入方式",
+            "USDT capital × Risk × Strategies × Brokers × Onboarding",
+            "رأس مال USDT × المخاطر × الاستراتيجيات × الوسطاء × الربط",
           )}
         </Text>
       </View>
@@ -59,22 +65,24 @@ export function ConfiguratorFormula({
   capital,
   riskOption,
   strategyCount,
-  platformCount,
-  servicePath,
+  brokers,
+  onboardingMode,
+  fundingPath,
 }: {
   capital: number;
   riskOption: RiskOption;
   strategyCount: number;
-  platformCount: number;
-  servicePath: ServicePath;
+  brokers: AllianceBroker[];
+  onboardingMode: OnboardingMode;
+  fundingPath: FundingPath;
 }) {
-  const { locale, text } = useLanguage();
+  const { language, locale, text } = useLanguage();
   return (
     <View style={styles.formulaRail}>
       <FormulaStep
         index="01"
-        label={text("资金", "Capital", "رأس المال")}
-        value={formatMoney(capital, "USD", true, locale)}
+        label={text("计划资金", "Planned capital", "رأس المال المخطط")}
+        value={formatUsdt(capital, true, locale)}
       />
       <FormulaStep
         index="02"
@@ -83,22 +91,23 @@ export function ConfiguratorFormula({
       />
       <FormulaStep
         index="03"
-        label={text("策略", "Strategy", "الاستراتيجية")}
+        label={text("策略", "Strategies", "الاستراتيجيات")}
         value={`${strategyCount} / 6`}
       />
       <FormulaStep
         index="04"
-        label={text("平台", "Platform", "المنصة")}
-        value={`${platformCount} / 3`}
+        label={text("可选券商", "Brokers", "الوسطاء")}
+        value={brokers.map((broker) => broker.name).join(" / ")}
       />
       <FormulaStep
         index="05"
-        label={text("模式", "Mode", "النمط")}
-        value={
-          servicePath === "BROKER"
-            ? text("券商模式", "Broker", "الوسيط")
-            : text("资管模式", "Managed", "إدارة مفوضة")
-        }
+        label={text("接入方式", "Onboarding", "طريقة الربط")}
+        value={onboardingModeLabel(onboardingMode, language)}
+      />
+      <FormulaStep
+        index="06"
+        label={text("入金路线", "Funding route", "مسار الإيداع")}
+        value={fundingPathLabel(fundingPath, language)}
       />
     </View>
   );

@@ -73,7 +73,7 @@ export default function UserLoginScreen() {
       if (Platform.OS === "web" && typeof window !== "undefined") {
         window.location.href = "/";  // 硬刷新，确保 useAuth 立即读取新 cookie
       } else {
-        router.replace("/(tabs)" as any);
+        router.replace("/" as any);
       }
     } catch (e: any) {
       showError(e.message || "登录失败");
@@ -97,7 +97,7 @@ export default function UserLoginScreen() {
       if (Platform.OS === "web" && typeof window !== "undefined") {
         window.location.href = "/";  // 硬刷新，确保 useAuth 立即读取新 cookie
       } else {
-        router.replace("/(tabs)" as any);
+        router.replace("/" as any);
       }
     } catch (e: any) {
       showError(e.message || "登录失败");

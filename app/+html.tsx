@@ -1,4 +1,3 @@
-import { ScrollViewStyleReset } from "expo-router/html";
 import type { PropsWithChildren } from "react";
 
 /**
@@ -18,34 +17,38 @@ export default function Root({ children }: PropsWithChildren) {
           name="viewport"
           content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
+        <meta
+          httpEquiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self' 'unsafe-inline'; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' https: wss:; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+        />
 
         {/* ===== SEO Core Meta Tags ===== */}
-        <title>EAXAU | 专业EA策略展示与量化交易合作平台</title>
-        <meta name="description" content="EAXAU（eaxau.com）是专业的MT4/MT5 EA策略展示与筛选平台，提供精选量化交易策略的实盘数据、权益曲线和回测报告。同时帮助交易者匹配最适合的合规交易环境，提供策略筛选、平台对接、技术支持等一站式服务。" />
-        <meta name="keywords" content="EAXAU,量化交易,EA策略,MT4,MT5,外汇EA,自动化交易,EA展示,量化合作,交易策略,实盘数据,权益曲线,eaxau" />
-        <meta name="author" content="EAXAU" />
+        <title>AI量化联盟 | 六策略资管与EA商城</title>
+        <meta name="description" content="AI量化联盟（eaxau.com）提供六款量化策略展示与资管接入选配，并为EA文件提供独立USDT订单结算。资管入金与EA销售款严格分账。" />
+        <meta name="keywords" content="AI量化联盟,量化交易,EA策略,MT4,MT5,六策略,资管接入,USDT结算,eaxau" />
+        <meta name="author" content="AI量化联盟" />
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
         <link rel="canonical" href="https://www.eaxau.com/" />
 
         {/* ===== Open Graph (社交媒体分享) ===== */}
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="EAXAU" />
-        <meta property="og:title" content="EAXAU | 专业EA策略展示与量化交易合作平台" />
-        <meta property="og:description" content="精选MT4/MT5 EA策略展示，实盘数据透明可查。帮助交易者筛选优质策略、匹配合规交易平台，提供一站式量化交易服务。" />
+        <meta property="og:site_name" content="AI量化联盟" />
+        <meta property="og:title" content="AI量化联盟 | 六策略资管与EA商城" />
+        <meta property="og:description" content="六策略资管接入选配、可选券商通道与独立EA商城USDT订单结算。" />
         <meta property="og:url" content="https://www.eaxau.com/" />
         <meta property="og:locale" content="zh_CN" />
 
         {/* ===== Twitter Card ===== */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="EAXAU | 专业EA策略展示与量化交易合作平台" />
-        <meta name="twitter:description" content="精选MT4/MT5 EA策略展示，实盘数据透明可查。策略筛选+平台匹配，一站式量化交易服务。" />
+        <meta name="twitter:title" content="AI量化联盟 | 六策略资管与EA商城" />
+        <meta name="twitter:description" content="六策略资管接入选配与EA商城USDT订单结算。" />
 
         {/* ===== Mobile App Meta ===== */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-title" content="EAXAU" />
+        <meta name="apple-mobile-web-app-title" content="AI量化联盟" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="theme-color" content="#10B981" />
-        <meta name="application-name" content="EAXAU" />
+        <meta name="application-name" content="AI量化联盟" />
 
         {/* ===== JSON-LD Structured Data ===== */}
         <script
@@ -54,10 +57,10 @@ export default function Root({ children }: PropsWithChildren) {
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "WebSite",
-              "name": "EAXAU",
-              "alternateName": "EAXAU Source Desk",
+              "name": "AI量化联盟",
+              "alternateName": "eaxau.com",
               "url": "https://www.eaxau.com",
-              "description": "专业的MT4/MT5 EA策略展示平台，提供精选量化交易策略的实盘数据展示，促成工作室合作。",
+              "description": "六策略资管接入选配与EA商城USDT独立订单结算平台。",
               "potentialAction": {
                 "@type": "SearchAction",
                 "target": "https://www.eaxau.com/search?q={search_term_string}",
@@ -72,9 +75,9 @@ export default function Root({ children }: PropsWithChildren) {
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              "name": "EAXAU",
+              "name": "AI量化联盟",
               "url": "https://www.eaxau.com",
-              "description": "专业EA策略展示与量化交易合作平台",
+              "description": "六策略资管与EA商城平台",
               "sameAs": []
             }),
           }}

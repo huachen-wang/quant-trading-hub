@@ -47,6 +47,9 @@ export function StrategyCard({
   platform,
   totalReturn,
   winRate,
+  price,
+  isFree,
+  saleMode,
   pairs,
   tags,
   productType,
@@ -249,7 +252,11 @@ export function StrategyCard({
                   ]}
                   numberOfLines={1}
                 >
-                  {text("联系咨询", "Contact", "تواصل معنا")}
+                  {saleMode === "direct"
+                    ? isFree
+                      ? "免费获取"
+                      : `¥${price} · 可用 U`
+                    : "联系咨询"}
                 </Text>
               </View>
               <View style={styles.bottomRight}>
@@ -259,7 +266,7 @@ export function StrategyCard({
                     { color: colors.muted, fontSize: metaSize },
                   ]}
                 >
-                  {text("版本确认", "Verify version", "تأكيد الإصدار")}
+                  {saleMode === "direct" ? "线上结算" : "版本确认"}
                 </Text>
               </View>
             </View>

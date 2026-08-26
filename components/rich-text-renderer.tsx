@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, Platform, StyleSheet } from "react-native";
 import { useColors } from "@/hooks/use-colors";
+import { sanitizeRichHtml } from "@/components/sanitize-rich-html";
 
 interface RichTextRendererProps {
   /** 富文本 HTML 字符串（来自 strategies.richDescription） */
@@ -15,7 +16,7 @@ interface RichTextRendererProps {
  * 富文本渲染器
  *
  * 设计：
- *  - Web 平台直接用 <div dangerouslySetInnerHTML>，配合品牌主题 CSS 渲染
+ *  - Web 平台先经过严格 allowlist sanitize，再用原生 div 渲染
  *  - 移动端做基础解析（段落、换行、加粗），不引入额外依赖
  *  - 都没有时回退到纯文本
  *
@@ -24,7 +25,7 @@ interface RichTextRendererProps {
  */
 export function RichTextRenderer({ html, fallback, maxWidth }: RichTextRendererProps) {
   const colors = useColors();
-  const content = (html || "").trim();
+  const content = sanitizeRichHtml(html).trim();
 
   // 内容空时回退到纯文本
   if (!content) {
@@ -37,9 +38,7 @@ export function RichTextRenderer({ html, fallback, maxWidth }: RichTextRendererP
   }
 
   if (Platform.OS === "web") {
-    // Web 端：用 React.createElement 渲染原生 div + dangerouslySetInnerHTML
-    // 注意：HTML 是后台编辑的可信内容（不是用户上传），XSS 风险可控
-    // 如果未来允许用户提交 HTML，必须接 DOMPurify 做 sanitize
+    // Web 端只接收上方 allowlist sanitizer 的输出；后台内容也不视为可信输入。
     return React.createElement("div", {
       className: "eaxau-rich-content",
       style: {

@@ -148,7 +148,7 @@ export function PurchaseActions({
         </TouchableOpacity>
 
         <Text style={[styles.priceFootnote, { color: colors.muted }]}>
-          支付后立即解锁下载 · 支持支付宝/微信/USDT
+          支付后解锁受控下载 · 可选 USDT 链上结算
         </Text>
       </View>
     );

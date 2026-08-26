@@ -49,7 +49,7 @@ export function V2Shell({ children }: V2ShellProps) {
   const { width } = useWindowDimensions();
   const isMobile = width < 940;
   const isVeryNarrow = width < 410;
-  const { text } = useLanguage();
+  const { language, text } = useLanguage();
   const [contactOpen, setContactOpen] = useState(false);
   const { data: status } = trpc.v2.status.useQuery(undefined, {
     staleTime: 60_000,
@@ -128,9 +128,9 @@ export function V2Shell({ children }: V2ShellProps) {
           <Pressable
             accessibilityRole="link"
             accessibilityLabel={text(
-              "返回 EAXAU 首页",
-              "Return to EAXAU home",
-              "العودة إلى صفحة EAXAU الرئيسية",
+              "返回 AI量化联盟首页",
+              "Return to AI Quant Alliance home",
+              "العودة إلى الصفحة الرئيسية لتحالف EAXAU الكمي",
             )}
             onPress={() => router.push("/" as never)}
             style={({ pressed }) => [
@@ -139,9 +139,25 @@ export function V2Shell({ children }: V2ShellProps) {
               pressed && styles.pressed,
             ]}
           >
-            <Text style={[styles.brand, isVeryNarrow && styles.brandCompact]}>
-              EAXAU
-            </Text>
+            <View style={styles.brandCopy}>
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.brand,
+                  language !== "zh" && styles.brandInternational,
+                  isVeryNarrow && styles.brandCompact,
+                ]}
+              >
+                {isVeryNarrow
+                  ? "EAXAU"
+                  : text(
+                      "AI量化联盟",
+                      "AI QUANT ALLIANCE",
+                      "تحالف EAXAU الكمي",
+                    )}
+              </Text>
+              <Text style={styles.brandDomain}>eaxau.com</Text>
+            </View>
             <View
               style={[
                 styles.brandRule,
@@ -288,20 +304,23 @@ const styles = StyleSheet.create({
   },
   headerInnerMobile: { paddingHorizontal: 10, gap: 8 },
   brandButton: {
-    width: 124,
+    width: 164,
     height: 44,
     justifyContent: "center",
   },
-  brandButtonCompact: { width: 80 },
+  brandButtonCompact: { width: 86 },
+  brandCopy: { flexDirection: "row", alignItems: "baseline", gap: 6 },
   brand: {
     color: V2.text,
-    fontSize: 27,
-    lineHeight: 31,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: "900",
     letterSpacing: 0,
   },
-  brandCompact: { fontSize: 22, lineHeight: 26 },
-  brandRule: { width: 68, height: 2, marginTop: 2, backgroundColor: V2.gold },
+  brandInternational: { fontSize: 13 },
+  brandCompact: { fontSize: 21, lineHeight: 25 },
+  brandDomain: { color: V2.textDim, fontSize: 7, fontWeight: "800" },
+  brandRule: { width: 86, height: 2, marginTop: 2, backgroundColor: V2.gold },
   brandRuleCompact: { width: 52 },
   desktopNav: {
     flex: 1,

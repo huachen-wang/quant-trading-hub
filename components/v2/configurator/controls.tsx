@@ -1,16 +1,25 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useState, type ComponentProps, type ReactNode } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
-import { formatAnnualizedReturn, formatPct } from "@/components/v2/format";
+import { Linking, Pressable, Text, TextInput, View } from "react-native";
+import {
+  formatAnnualizedReturn,
+  formatPct,
+  formatUsdt,
+} from "@/components/v2/format";
 import { V2 } from "@/components/v2/tokens";
 import { useLanguage } from "@/lib/language";
-import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
+import type { CoreStrategy } from "@/shared/v2/contracts";
 import { styles } from "./styles";
 import {
   CAPITAL_PRESETS,
+  getAllianceBrokers,
+  getFundingPathOptions,
+  getOnboardingOptions,
   getRiskOptions,
+  type AllianceBrokerId,
+  type FundingPath,
+  type OnboardingMode,
   type RiskProfile,
-  type ServicePath,
 } from "./types";
 
 export function ConfiguratorControls({
@@ -21,13 +30,13 @@ export function ConfiguratorControls({
   riskProfile,
   onRiskProfileChange,
   strategies,
-  selectedStrategyIds,
-  onToggleStrategy,
-  platforms,
-  selectedPlatformIds,
-  onTogglePlatform,
-  servicePath,
-  onServicePathChange,
+  brokerIds,
+  onToggleBroker,
+  onboardingMode,
+  onOnboardingModeChange,
+  fundingPath,
+  onFundingPathChange,
+  collectionApprovals,
 }: {
   isMobile: boolean;
   capital: string;
@@ -36,28 +45,34 @@ export function ConfiguratorControls({
   riskProfile: RiskProfile;
   onRiskProfileChange: (value: RiskProfile) => void;
   strategies: CoreStrategy[];
-  selectedStrategyIds: string[];
-  onToggleStrategy: (strategyId: string) => void;
-  platforms: PlatformProfile[];
-  selectedPlatformIds: string[];
-  onTogglePlatform: (platformId: string) => void;
-  servicePath: ServicePath;
-  onServicePathChange: (value: ServicePath) => void;
+  brokerIds: AllianceBrokerId[];
+  onToggleBroker: (value: AllianceBrokerId) => void;
+  onboardingMode: OnboardingMode;
+  onOnboardingModeChange: (value: OnboardingMode) => void;
+  fundingPath: FundingPath;
+  onFundingPathChange: (value: FundingPath) => void;
+  collectionApprovals: Record<
+    AllianceBrokerId,
+    "NOT_APPROVED" | "PENDING" | "APPROVED" | "SUSPENDED"
+  >;
 }) {
   const [capitalFocused, setCapitalFocused] = useState(false);
-  const { language, text } = useLanguage();
+  const { language, locale, text } = useLanguage();
   const riskOptions = getRiskOptions(language);
+  const allianceBrokers = getAllianceBrokers(language);
+  const onboardingOptions = getOnboardingOptions(language);
+  const fundingPathOptions = getFundingPathOptions(language);
 
   return (
     <View style={styles.controls}>
       <ConfiguratorStep
         index="01"
         icon="account-balance-wallet"
-        title={text("资金规模", "Capital", "رأس المال")}
+        title={text("计划投入资金", "Planned capital", "رأس المال المخطط")}
         detail={text(
-          "用于检查策略门槛、平台门槛和组合集中度。",
-          "Used to check strategy minimums, platform minimums and portfolio concentration.",
-          "يُستخدم للتحقق من حدود الاستراتيجيات والمنصات وتركيز المحفظة.",
+          "用于测算组合门槛与风险预算；此处不收款，也不会生成平台收款地址。",
+          "Used to model portfolio minimums and risk budgets. No payment is collected and no platform address is generated here.",
+          "يُستخدم لحساب حدود المحفظة وميزانية المخاطر. لا يتم تحصيل أموال أو إنشاء عنوان للمنصة هنا.",
         )}
       >
         <View style={[styles.capitalRow, isMobile && styles.stackRow]}>
@@ -67,12 +82,11 @@ export function ConfiguratorControls({
               capitalFocused && styles.moneyInputFocused,
             ]}
           >
-            <Text style={styles.moneyPrefix}>$</Text>
             <TextInput
               accessibilityLabel={text(
-                "方案资金规模",
-                "Plan capital",
-                "رأس مال الخطة",
+                "计划投入 USDT",
+                "Planned USDT capital",
+                "رأس مال USDT المخطط",
               )}
               value={capital}
               onFocus={() => setCapitalFocused(true)}
@@ -87,7 +101,7 @@ export function ConfiguratorControls({
               placeholderTextColor={V2.textDim}
               style={styles.input}
             />
-            <Text style={styles.currency}>USD</Text>
+            <Text style={styles.currency}>USDT</Text>
           </View>
           <View style={styles.presetRow}>
             {CAPITAL_PRESETS.map((amount) => (
@@ -107,10 +121,10 @@ export function ConfiguratorControls({
                   ]}
                 >
                   {language === "zh"
-                    ? `${amount / 10_000} 万`
-                    : amount >= 1_000
-                      ? `${amount / 1_000}K`
-                      : amount}
+                    ? amount >= 10_000
+                      ? `${amount / 10_000} 万 U`
+                      : `${amount} U`
+                    : formatUsdt(amount, true, locale)}
                 </Text>
               </Pressable>
             ))}
@@ -123,9 +137,9 @@ export function ConfiguratorControls({
         icon="verified-user"
         title={text("账户风控", "Account risk", "مخاطر الحساب")}
         detail={text(
-          "先设最大回撤预算，再决定策略风险倍率。",
-          "Set the maximum drawdown budget before choosing strategy risk multipliers.",
-          "حدد ميزانية أقصى تراجع قبل اختيار مضاعفات مخاطر الاستراتيجيات.",
+          "先设最大回撤预算，再进入开户、授权与入金流程。",
+          "Set the maximum drawdown budget before onboarding, authorization and funding.",
+          "حدّد ميزانية أقصى تراجع قبل فتح الحساب والتفويض والإيداع.",
         )}
       >
         <View style={[styles.riskOptions, isMobile && styles.stackRow]}>
@@ -167,29 +181,33 @@ export function ConfiguratorControls({
       <ConfiguratorStep
         index="03"
         icon="hub"
-        title={text("策略组合", "Strategy mix", "مزيج الاستراتيجيات")}
+        title={text(
+          `已选策略组合（${strategies.length} / 6）`,
+          `Selected strategies (${strategies.length} / 6)`,
+          `الاستراتيجيات المختارة (${strategies.length} / 6)`,
+        )}
         detail={text(
-          `已同步 ${selectedStrategyIds.length} 款；离线策略不会进入方案。`,
-          `${selectedStrategyIds.length} selected; offline strategies are excluded.`,
-          `تم اختيار ${selectedStrategyIds.length}؛ الاستراتيجيات غير المتصلة مستبعدة.`,
+          "平台固定提供 6 款可选策略，单个方案可选 1–6 款；权重在下一步设置。离线或模拟数据保留准确标签。",
+          "Choose 1–6 from the six available strategies. Weights are set in the next step, and offline or demo data keeps its exact label.",
+          "اختر من 1 إلى 6 من الاستراتيجيات الست. تُحدد الأوزان في الخطوة التالية وتبقى بيانات العرض أو عدم الاتصال موسومة بدقة.",
         )}
       >
         <View style={styles.strategyOptions}>
+          {!strategies.length ? (
+            <Text style={styles.modeDetail}>
+              {text(
+                "请先在上方六款策略中至少选择 1 款。",
+                "Select at least one of the six strategies above.",
+                "اختر استراتيجية واحدة على الأقل من الست أعلاه.",
+              )}
+            </Text>
+          ) : null}
           {strategies.map((strategy) => {
-            const active = selectedStrategyIds.includes(strategy.id);
-            const disabled = strategy.source.freshness === "OFFLINE";
+            const offline = strategy.source.freshness === "OFFLINE";
             return (
-              <Pressable
+              <View
                 key={strategy.id}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: active, disabled }}
-                disabled={disabled}
-                onPress={() => onToggleStrategy(strategy.id)}
-                style={[
-                  styles.strategyOption,
-                  active && styles.optionActive,
-                  disabled && styles.disabled,
-                ]}
+                style={[styles.strategyOption, styles.optionActive]}
               >
                 <View
                   style={[
@@ -198,33 +216,22 @@ export function ConfiguratorControls({
                   ]}
                 />
                 <View style={styles.strategyOptionCopy}>
-                  <Text
-                    style={[
-                      styles.strategyName,
-                      active && styles.optionTitleActive,
-                    ]}
-                  >
+                  <Text style={[styles.strategyName, styles.optionTitleActive]}>
                     {strategy.shortName}
                   </Text>
                   <Text style={styles.strategyMeta} numberOfLines={1}>
-                    {text("年化", "Ann.", "سنوي")}{" "}
+                    {text("年化", "Annualized", "سنوي")}{" "}
                     {formatAnnualizedReturn(strategy.metrics.return90dPct)} ·{" "}
-                    {text("回撤", "DD", "تراجع")}{" "}
+                    {text("回撤", "Drawdown", "التراجع")}{" "}
                     {formatPct(strategy.metrics.maxDrawdownPct)}
                   </Text>
                 </View>
                 <MaterialIcons
-                  name={
-                    active
-                      ? "check-circle"
-                      : disabled
-                        ? "cloud-off"
-                        : "add-circle-outline"
-                  }
+                  name={offline ? "cloud-off" : "check-circle"}
                   size={19}
-                  color={active ? V2.gold : V2.textDim}
+                  color={offline ? V2.amber : V2.gold}
                 />
-              </Pressable>
+              </View>
             );
           })}
         </View>
@@ -233,27 +240,31 @@ export function ConfiguratorControls({
       <ConfiguratorStep
         index="04"
         icon="account-balance"
-        title={text("交易平台", "Trading platforms", "منصات التداول")}
+        title={text(
+          "选择券商接入通道",
+          "Choose broker channels",
+          "اختر قنوات الوسطاء",
+        )}
         detail={text(
-          "比较点差、佣金、执行和出金样本，再确定资金放在哪里。",
-          "Compare spreads, commissions, execution and withdrawal samples before allocating capital.",
-          "قارن الفروقات والعمولات والتنفيذ وعينات السحب قبل توزيع رأس المال.",
+          "当前可选 Exness、IC Markets 与 Blueberry Markets；不代表券商官方背书，具体实体、地区与入金能力须在开户时核验。",
+          "Available options are Exness, IC Markets and Blueberry Markets. This is not broker endorsement; verify the entity, region and funding capability during onboarding.",
+          "الخيارات الحالية هي Exness وIC Markets وBlueberry Markets. لا يمثل ذلك اعتمادا رسميا؛ تحقق من الكيان والمنطقة وإمكانية الإيداع عند فتح الحساب.",
         )}
       >
         <View style={styles.platformOptions}>
-          {platforms.map((platform) => {
-            const active = selectedPlatformIds.includes(platform.id);
+          {allianceBrokers.map((broker) => {
+            const active = brokerIds.includes(broker.id);
             return (
               <Pressable
-                key={platform.id}
+                key={broker.id}
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: active }}
-                onPress={() => onTogglePlatform(platform.id)}
+                onPress={() => onToggleBroker(broker.id)}
                 style={[styles.platformOption, active && styles.optionActive]}
               >
                 <View style={styles.platformTopline}>
                   <View style={styles.platformCode}>
-                    <Text style={styles.platformCodeText}>{platform.code}</Text>
+                    <Text style={styles.platformCodeText}>{broker.code}</Text>
                   </View>
                   <View style={styles.platformTitleCopy}>
                     <Text
@@ -262,29 +273,68 @@ export function ConfiguratorControls({
                         active && styles.optionTitleActive,
                       ]}
                     >
-                      {platform.name}
+                      {broker.name}
                     </Text>
                     <Text style={styles.platformAccount}>
-                      {platform.accountType}
+                      {text(
+                        "客户本人账户",
+                        "Client-owned account",
+                        "حساب مملوك للعميل",
+                      )}
                     </Text>
                   </View>
                   <MaterialIcons
-                    name={active ? "check-circle" : "add-circle-outline"}
+                    name={active ? "check-box" : "check-box-outline-blank"}
                     size={19}
                     color={active ? V2.gold : V2.textDim}
                   />
                 </View>
-                <View style={styles.platformFacts}>
-                  <Text style={styles.platformFact} numberOfLines={1}>
-                    {platform.commercialTerms.spreadLabel}
-                  </Text>
-                  <Text style={styles.platformFact} numberOfLines={1}>
-                    {platform.commercialTerms.commissionLabel}
-                  </Text>
-                  <Text style={styles.platformFact}>
-                    {text("出金样本 P50", "Withdrawal P50", "السحب P50")}{" "}
-                    {platform.commercialTerms.withdrawalP50Hours ?? "--"}h
-                  </Text>
+                <Text style={styles.modeDetail}>{broker.detail}</Text>
+                <View style={styles.brokerLinks}>
+                  <Pressable
+                    accessibilityRole="link"
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      void Linking.openURL(broker.signupUrl);
+                    }}
+                    style={styles.brokerLink}
+                  >
+                    <Text style={styles.brokerLinkText}>
+                      {text(
+                        "官方开户 · 官方站点",
+                        "Official onboarding · Broker site",
+                        "فتح رسمي · موقع الوسيط",
+                      )}
+                    </Text>
+                    <MaterialIcons
+                      name="open-in-new"
+                      size={13}
+                      color={V2.gold}
+                    />
+                  </Pressable>
+                  {onboardingMode === "PLATFORM_ASSISTED" ? (
+                    <Pressable
+                      accessibilityRole="link"
+                      onPress={(event) => {
+                        event.stopPropagation();
+                        void Linking.openURL(broker.managementUrl);
+                      }}
+                      style={styles.brokerLink}
+                    >
+                      <Text style={styles.brokerLinkText}>
+                        {text(
+                          "资管通道说明/申请 · 官方站点",
+                          "Managed channel guide/application · Official site",
+                          "دليل/طلب قناة الإدارة · الموقع الرسمي",
+                        )}
+                      </Text>
+                      <MaterialIcons
+                        name="open-in-new"
+                        size={13}
+                        color={V2.gold}
+                      />
+                    </Pressable>
+                  ) : null}
                 </View>
               </Pressable>
             );
@@ -294,48 +344,167 @@ export function ConfiguratorControls({
 
       <ConfiguratorStep
         index="05"
-        icon="tune"
-        title={text("管理模式", "Management mode", "نمط الإدارة")}
+        icon="link"
+        title={text(
+          "选择接入方式",
+          "Choose onboarding mode",
+          "اختر طريقة الربط",
+        )}
         detail={text(
-          "模式决定资金归属、交易执行和双方责任边界。",
-          "The mode defines custody, execution and each party's responsibilities.",
-          "يحدد النمط حفظ الأموال والتنفيذ ومسؤوليات كل طرف.",
+          "两种方式只改变开户与授权协助范围，不改变资金路径。",
+          "The two modes change the scope of onboarding and authorization support, not ownership of funds.",
+          "يغيّر النمطان نطاق المساعدة في فتح الحساب والتفويض، ولا يغيران ملكية الأموال.",
+        )}
+      >
+        <View style={[styles.modeOptions, isMobile && styles.stackRow]}>
+          {onboardingOptions.map((option) => {
+            const active = option.id === onboardingMode;
+            return (
+              <Pressable
+                key={option.id}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: active }}
+                onPress={() => onOnboardingModeChange(option.id)}
+                style={[styles.modeOption, active && styles.optionActive]}
+              >
+                <View style={styles.modeTopline}>
+                  <MaterialIcons
+                    name={
+                      active ? "radio-button-checked" : "radio-button-unchecked"
+                    }
+                    size={20}
+                    color={active ? V2.gold : V2.textMuted}
+                  />
+                  <Text
+                    style={[
+                      styles.modeTitle,
+                      active && styles.optionTitleActive,
+                    ]}
+                  >
+                    {option.title}
+                  </Text>
+                  <View style={styles.modeBadge}>
+                    <Text style={styles.modeBadgeText}>{option.badge}</Text>
+                  </View>
+                </View>
+                <Text style={styles.modeDetail}>{option.detail}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </ConfiguratorStep>
+
+      <ConfiguratorStep
+        index="06"
+        icon="currency-exchange"
+        title={text(
+          "选择 USDT 入金路线",
+          "Choose a USDT funding route",
+          "اختر مسار إيداع USDT",
+        )}
+        detail={text(
+          "入金路线不改变资管服务本身；平台专属地址代收仅用于平台协助接入的单笔代收单。",
+          "The funding route does not change the managed service. A platform collection address is used only for a single assisted collection order.",
+          "لا يغير مسار الإيداع خدمة الإدارة. يُستخدم عنوان تحصيل المنصة فقط لطلب تحصيل واحد ضمن الربط المساعد.",
         )}
         last
       >
         <View style={[styles.modeOptions, isMobile && styles.stackRow]}>
-          <ModeOption
-            active={servicePath === "BROKER"}
-            icon="account-balance"
-            title={text("券商模式", "Broker mode", "نمط الوسيط")}
-            badge={text(
-              "资金在本人账户",
-              "User-held funds",
-              "الأموال بحساب المستخدم",
-            )}
-            detail={text(
-              "资金直接留在用户本人券商账户，不经过技术方；用户掌握入出金，系统负责策略接入、组合配置与风险观察。",
-              "Funds stay in the user's own broker account and never pass through the technical provider. The user controls deposits and withdrawals while the system handles strategy access, portfolio setup and risk monitoring.",
-              "تبقى الأموال في حساب الوسيط الخاص بالمستخدم ولا تمر عبر المزود التقني. يتحكم المستخدم في الإيداع والسحب بينما يدير النظام ربط الاستراتيجيات وإعداد المحفظة ومراقبة المخاطر.",
-            )}
-            onPress={() => onServicePathChange("BROKER")}
-          />
-          <ModeOption
-            active={servicePath === "MANAGED"}
-            icon="supervisor-account"
-            title={text("资管模式", "Managed mode", "نمط الإدارة المفوضة")}
-            badge={text(
-              "技术方代操管理",
-              "Provider managed",
-              "إدارة بواسطة المزود",
-            )}
-            detail={text(
-              "用户与技术方按约定签订合同，由技术方负责策略部署、交易执行和风险管理；用户在平台查看净值、持仓与回撤。",
-              "The user signs an agreement with the technical provider, which manages deployment, execution and risk. The user views equity, positions and drawdown on the platform.",
-              "يوقع المستخدم اتفاقية مع المزود التقني الذي يدير النشر والتنفيذ والمخاطر، بينما يتابع المستخدم حقوق الحساب والمراكز والتراجع على المنصة.",
-            )}
-            onPress={() => onServicePathChange("MANAGED")}
-          />
+          {fundingPathOptions.map((option) => {
+            const assistedOnly = option.id === "PLATFORM_COLLECTION";
+            const allSelectedCollectionApproved = brokerIds.every(
+              (id) => collectionApprovals[id] === "APPROVED",
+            );
+            const disabled =
+              assistedOnly &&
+              (onboardingMode !== "PLATFORM_ASSISTED" ||
+                !allSelectedCollectionApproved);
+            const active = option.id === fundingPath;
+            return (
+              <Pressable
+                key={option.id}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: active, disabled }}
+                disabled={disabled}
+                onPress={() => onFundingPathChange(option.id)}
+                style={[
+                  styles.modeOption,
+                  active && styles.optionActive,
+                  disabled && styles.disabled,
+                ]}
+              >
+                <View style={styles.modeTopline}>
+                  <MaterialIcons
+                    name={
+                      active ? "radio-button-checked" : "radio-button-unchecked"
+                    }
+                    size={20}
+                    color={active ? V2.gold : V2.textMuted}
+                  />
+                  <Text
+                    style={[
+                      styles.modeTitle,
+                      active && styles.optionTitleActive,
+                    ]}
+                  >
+                    {option.title}
+                  </Text>
+                  <View style={styles.modeBadge}>
+                    <Text style={styles.modeBadgeText}>
+                      {disabled
+                        ? onboardingMode !== "PLATFORM_ASSISTED"
+                          ? text(
+                              "需平台协助",
+                              "Assisted setup required",
+                              "يتطلب ربطا مساعدا",
+                            )
+                          : text(
+                              "合规复核中",
+                              "Compliance review",
+                              "قيد مراجعة الامتثال",
+                            )
+                        : option.badge}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.modeDetail}>{option.detail}</Text>
+                {assistedOnly ? (
+                  <Text style={styles.preparingNote}>
+                    {allSelectedCollectionApproved
+                      ? text(
+                          "该券商代收通道已获书面放行；每笔仍需生成专属代收单并完成动态验证与独立对账。",
+                          "This broker collection route has written approval. Every transfer still requires a dedicated order, dynamic verification and separate reconciliation.",
+                          "حصل مسار التحصيل لهذا الوسيط على موافقة مكتوبة. ما زالت كل عملية تتطلب طلبا مخصصا وتحققا ديناميكيا ومطابقة مستقلة.",
+                        )
+                      : text(
+                          "平台企业钱包待配置 / 通道书面确认、动态验证或企业钱包服务尚未就绪，当前不可生成代收地址。",
+                          "The company wallet or route approval is not ready. A collection address cannot be generated yet.",
+                          "محفظة الشركة أو موافقة المسار غير جاهزة، لذلك لا يمكن إنشاء عنوان تحصيل حاليا.",
+                        )}
+                  </Text>
+                ) : null}
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={[styles.permissionBoundary, { marginTop: 10 }]}>
+          <MaterialIcons name="shield" size={19} color={V2.green} />
+          <View style={styles.permissionCopy}>
+            <Text style={styles.permissionTitle}>
+              {text(
+                "资金与权限边界",
+                "Funds and permission boundary",
+                "حدود الأموال والصلاحيات",
+              )}
+            </Text>
+            <Text style={styles.permissionDetail}>
+              {text(
+                "直充时，客户钱包 → 客户本人券商账户；代收时仅使用该笔订单的专属地址，核对后再转入客户本人券商账户。项目方只申请约定交易权限，无提款权；平台不展示全局共用地址，私钥不进入业务系统。",
+                "With direct funding: client wallet → client-owned broker account. Collection uses only the order's dedicated address before forwarding to that broker account. The provider requests agreed trading permission only, never withdrawal rights. No shared global address is shown and private keys never enter the business system.",
+                "في الإيداع المباشر: محفظة العميل ← حسابه الشخصي لدى الوسيط. يستخدم التحصيل عنوان الطلب المخصص فقط قبل التحويل إلى حساب الوسيط. يطلب المزود صلاحية التداول المتفق عليها فقط دون حق السحب، ولا يظهر عنوان مشترك أو تدخل المفاتيح الخاصة إلى النظام.",
+              )}
+            </Text>
+          </View>
         </View>
       </ConfiguratorStep>
     </View>
@@ -369,49 +538,5 @@ function ConfiguratorStep({
       </View>
       <View style={styles.stepBody}>{children}</View>
     </View>
-  );
-}
-
-function ModeOption({
-  active,
-  icon,
-  title,
-  badge,
-  detail,
-  onPress,
-}: {
-  active: boolean;
-  icon: ComponentProps<typeof MaterialIcons>["name"];
-  title: string;
-  badge: string;
-  detail: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="radio"
-      accessibilityState={{ checked: active }}
-      onPress={onPress}
-      style={[styles.modeOption, active && styles.optionActive]}
-    >
-      <View style={styles.modeTopline}>
-        <MaterialIcons
-          name={icon}
-          size={20}
-          color={active ? V2.gold : V2.textMuted}
-        />
-        <Text style={[styles.modeTitle, active && styles.optionTitleActive]}>
-          {title}
-        </Text>
-        <View style={[styles.modeBadge, active && styles.modeBadgeActive]}>
-          <Text
-            style={[styles.modeBadgeText, active && styles.modeBadgeTextActive]}
-          >
-            {badge}
-          </Text>
-        </View>
-      </View>
-      <Text style={styles.modeDetail}>{detail}</Text>
-    </Pressable>
   );
 }

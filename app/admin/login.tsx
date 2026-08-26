@@ -96,7 +96,7 @@ export default function AdminLogin() {
           <View style={styles.sidePanel}>
             <BrandWordmark size="lg" style={styles.brandMark} />
             <Text style={styles.sideKicker}>CONTROL ROOM</Text>
-            <Text style={styles.sideTitle}>EAXAU 后台管理</Text>
+            <Text style={styles.sideTitle}>AI量化联盟后台管理</Text>
             <Text style={styles.sideDesc}>策略、订单、合作资源与促销库存集中管理。</Text>
             <View style={styles.sideRows}>
               {["加密登录", "权限隔离", "运营数据集中"].map((item) => (

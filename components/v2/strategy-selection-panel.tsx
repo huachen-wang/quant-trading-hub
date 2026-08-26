@@ -11,6 +11,7 @@ type StrategySelectionPanelProps = {
   compact?: boolean;
   inline?: boolean;
   onRemove: (strategyId: string) => void;
+  onSelectAll: () => void;
   onContinue: () => void;
 };
 
@@ -21,6 +22,7 @@ export function StrategySelectionPanel({
   compact = false,
   inline = false,
   onRemove,
+  onSelectAll,
   onContinue,
 }: StrategySelectionPanelProps) {
   const { text } = useLanguage();
@@ -94,6 +96,10 @@ export function StrategySelectionPanel({
         </View>
 
         <View style={styles.chipsInline}>{selectionChips}</View>
+
+        {selectedStrategies.length < total ? (
+          <SelectAllButton onPress={onSelectAll} />
+        ) : null}
 
         <View accessibilityLiveRegion="polite" style={styles.feedbackInline}>
           <MaterialIcons
@@ -172,6 +178,10 @@ export function StrategySelectionPanel({
         {selectionChips}
       </View>
 
+      {selectedStrategies.length < total ? (
+        <SelectAllButton onPress={onSelectAll} />
+      ) : null}
+
       <View
         accessibilityLiveRegion="polite"
         style={[styles.feedback, feedback && styles.feedbackActive]}
@@ -201,9 +211,9 @@ export function StrategySelectionPanel({
           </Text>
           <Text style={styles.nextValue} numberOfLines={1}>
             {text(
-              "资金 · 风控 · 平台 · 模式",
-              "Capital · Risk · Platform · Mode",
-              "رأس المال · المخاطر · المنصة · الوضع",
+              "资金 · 风控 · 策略权重 · 券商槽 · U 路由",
+              "Capital · Risk · Weights · Broker slots · USDT route",
+              "رأس المال · المخاطر · الأوزان · حسابات الوسطاء · مسار USDT",
             )}
           </Text>
         </View>
@@ -229,6 +239,30 @@ export function StrategySelectionPanel({
         </Pressable>
       </View>
     </View>
+  );
+}
+
+function SelectAllButton({ onPress }: { onPress: () => void }) {
+  const { text } = useLanguage();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={text(
+        "选择全部六款可选策略",
+        "Select all six strategies",
+        "اختيار الاستراتيجيات الست",
+      )}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.selectAllButton,
+        pressed && styles.pressed,
+      ]}
+    >
+      <MaterialIcons name="done-all" size={15} color={V2.gold} />
+      <Text style={styles.selectAllText}>
+        {text("一键全选 6 款", "Select all 6", "اختيار الست")}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -347,6 +381,19 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "800",
   },
+  selectAllButton: {
+    minHeight: 30,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.38)",
+    borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    backgroundColor: "rgba(216,188,131,0.05)",
+  },
+  selectAllText: { color: V2.gold, fontSize: 8, fontWeight: "900" },
   emptyState: {
     minHeight: 50,
     flexDirection: "row",

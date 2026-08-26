@@ -162,9 +162,9 @@ export default function CoreStrategyDetailPage() {
           </Pressable>
           <Text style={styles.formula}>
             {text(
-              "资金 × 风控 × 策略 × 平台 × 模式",
-              "Capital × Risk × Strategy × Platform × Mode",
-              "رأس المال × المخاطر × الاستراتيجية × المنصة × النمط",
+              "USDT 计划资金 × 风控 × 六策略 × 可选券商 × 接入方式",
+              "USDT capital × Risk × Six strategies × Brokers × Onboarding",
+              "رأس مال USDT × المخاطر × ست استراتيجيات × الوسطاء × الربط",
             )}
           </Text>
         </View>
@@ -459,9 +459,9 @@ export default function CoreStrategyDetailPage() {
             </View>
             <Text style={styles.snapshotHint}>
               {text(
-                "该策略只是量化方案中的一个模块，仍需与资金门槛、风险预算、兼容平台及管理模式共同确定。",
-                "This strategy is one module in a quant plan and must be combined with capital minimums, risk budget, compatible platforms and a management mode.",
-                "هذه الاستراتيجية جزء واحد من الخطة الكمية ويجب دمجها مع الحد الأدنى لرأس المال وميزانية المخاطر والمنصات المتوافقة ونمط الإدارة.",
+                "该策略是 AI量化联盟六策略组合的一个模块，仍需与资金门槛、风险预算、1–3 家可选券商及账户授权共同核验。",
+                "This strategy is one module in the six-strategy alliance portfolio and must be reviewed with capital minimums, risk budget, 1–3 brokers and account authorization.",
+                "هذه الاستراتيجية وحدة ضمن محفظة التحالف المكونة من ست استراتيجيات، ويجب مراجعتها مع حد رأس المال وميزانية المخاطر و1 إلى 3 وسطاء وتفويض الحساب.",
               )}
             </Text>
           </View>

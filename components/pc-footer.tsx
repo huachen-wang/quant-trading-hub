@@ -51,10 +51,10 @@ export function PcFooter() {
       <View style={styles.inner}>
         {/* 项目矩阵 */}
         <View style={styles.sites}>
-          <Text style={styles.sitesLabel}>EAXAU 项目矩阵</Text>
+          <Text style={styles.sitesLabel}>AI量化联盟项目矩阵</Text>
           <View style={[styles.sitePill, styles.sitePillActive]}>
             <Text style={[styles.sitePillText, { color: "#D8BC83" }]}>
-              EAXAU · eaxau.com
+              AI量化联盟 · eaxau.com
             </Text>
           </View>
           <View style={styles.sitePill}>
@@ -83,15 +83,15 @@ export function PcFooter() {
         {/* 链接列 */}
         <View style={styles.grid}>
           <View style={styles.col}>
-            <Text style={styles.colHeading}>关于 EAXAU</Text>
+            <Text style={styles.colHeading}>关于 AI量化联盟</Text>
             <Text style={styles.aboutText}>
-              专业的 MT4/MT5 EA 策略展示与量化交易合作平台。源头直供 · 实盘可查 · 透明定价。
+              MT4/MT5 EA 策略展示、证据状态与量化交易合作平台。数据口径明示 · 授权待核验 · 历史不代表未来。
             </Text>
           </View>
 
           <View style={styles.col}>
             <Text style={styles.colHeading}>产品</Text>
-            <Pressable style={styles.linkItem} onPress={() => router.push("/(tabs)" as any)}>
+            <Pressable style={styles.linkItem} onPress={() => router.push("/market" as any)}>
               <Text style={styles.linkText}>策略广场</Text>
             </Pressable>
             <Pressable style={styles.linkItem} onPress={() => router.push("/cooperation" as any)}>
@@ -144,7 +144,7 @@ export function PcFooter() {
 
         {/* 版权 */}
         <View style={styles.bottom}>
-          <Text style={styles.copy}>© 2026 EAXAU · Quant Source Desk. All rights reserved.</Text>
+          <Text style={styles.copy}>© 2026 AI量化联盟 · eaxau.com. All rights reserved.</Text>
           <Text style={styles.copy}>沪 ICP 备 XXXXXXXX 号</Text>
         </View>
       </View>

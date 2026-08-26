@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback } from "react";
 import {
   Pressable,
   ScrollView,
@@ -10,61 +10,59 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { AccountCard } from "@/components/v2/account-card";
+import { formatUsdt } from "@/components/v2/format";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
+import {
+  fundingPathLabel,
+  onboardingModeLabel,
+} from "@/components/v2/configurator/types";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
-import { useLanguage } from "@/lib/language";
+import { useAuth } from "@/hooks/use-auth";
+import { useLanguage, type AppLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
 import { localizeAccount } from "@/lib/v2/localized-content";
-
-type Filter = "ALL" | "MANAGED_CONTRACT" | "SELF_ALLOCATED";
 
 export default function AccountsPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isMobile = width < 740;
-  const { language, text } = useLanguage();
-  const [filter, setFilter] = useState<Filter>("ALL");
+  const { language, locale, text } = useLanguage();
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const accountsQuery = trpc.v2.accounts.list.useQuery(undefined, {
+    staleTime: 15_000,
+  });
+  const plansQuery = trpc.v2.managedSessions.list.useQuery(undefined, {
+    enabled: isAuthenticated && !authLoading,
+    staleTime: 10_000,
+  });
   const openAccount = useCallback(
     (accountId: string) =>
       router.push(`/v2-preview/accounts/${accountId}` as never),
     [router],
   );
-  const query = trpc.v2.accounts.list.useQuery(undefined, {
-    staleTime: 15_000,
-  });
-  const accounts = useMemo(
-    () =>
-      query.data
-        ?.filter(
-          (account) => filter === "ALL" || account.serviceMode === filter,
-        )
-        .map((account) => localizeAccount(account, language)) ?? [],
-    [filter, language, query.data],
-  );
 
-  if (query.isLoading) {
+  if (accountsQuery.isLoading)
     return (
       <V2LoadingState
         label={text(
-          "正在同步账户投影",
-          "Syncing account projections",
-          "جارٍ مزامنة بيانات الحسابات",
+          "正在同步资管账户投影",
+          "Syncing managed account views",
+          "جارٍ مزامنة عروض الحسابات المُدارة",
         )}
       />
     );
-  }
-  if (!query.data) {
+  if (!accountsQuery.data) {
     return (
       <V2ErrorState
         detail={
-          query.error?.message ||
+          accountsQuery.error?.message ||
           text(
             "账户接口没有返回数据。",
             "The account service returned no data.",
             "لم تُرجع خدمة الحسابات أي بيانات.",
           )
         }
-        onRetry={() => query.refetch()}
+        onRetry={() => accountsQuery.refetch()}
       />
     );
   }
@@ -78,131 +76,218 @@ export default function AccountsPage() {
         <View style={[styles.header, isMobile && styles.headerMobile]}>
           <View style={styles.headerCopy}>
             <Text style={styles.eyebrow}>
-              {text("账户总览", "ACCOUNT OVERVIEW", "نظرة على الحسابات")}
+              {text(
+                "AI量化联盟 · 账户总览",
+                "AI QUANT ALLIANCE · ACCOUNTS",
+                "تحالف EAXAU الكمي · الحسابات",
+              )}
             </Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
-              {text("账户观察", "Account monitoring", "مراقبة الحسابات")}
+              {text(
+                "资管方案与账户投影",
+                "Managed plans and account views",
+                "الخطط المُدارة وعروض الحسابات",
+              )}
             </Text>
             <Text style={styles.subtitle}>
               {text(
-                "资管模式由技术方按合同管理；券商模式的资金保留在用户本人券商账户。两种模式都提供可追溯的净值、持仓与风险记录。",
-                "In managed mode, the provider operates under contract. In broker mode, funds stay in the user's own broker account. Both provide traceable equity, position and risk records.",
-                "في نمط الإدارة المفوضة يعمل المزود بموجب عقد، وفي نمط الوسيط تبقى الأموال في حساب المستخدم. يوفر النمطان سجلات قابلة للتتبع لحقوق الحساب والمراكز والمخاطر.",
+                "六策略可分配到 1–3 家可选券商。客户本人持有券商账户；项目方只在授权后执行约定交易与风控，不拥有提款权。",
+                "Allocate the six strategies across 1–3 brokers. The client owns each broker account; the provider executes agreed trading and risk controls only after authorization and has no withdrawal rights.",
+                "يمكن توزيع الاستراتيجيات الست على 1 إلى 3 وسطاء. يملك العميل حسابات الوسطاء، ولا ينفذ المزود التداول وضبط المخاطر المتفق عليهما إلا بعد التفويض ولا يملك حق السحب.",
               )}
             </Text>
           </View>
           <View style={styles.demoState}>
             <View style={styles.demoDot} />
             <Text style={styles.demoText}>
-              {text("模拟账户", "DEMO ACCOUNTS", "حسابات تجريبية")}
+              {text(
+                "账户数据以证据标签为准",
+                "Account data follows its evidence label",
+                "تتبع بيانات الحساب وسم الدليل",
+              )}
             </Text>
           </View>
         </View>
 
-        <View style={styles.modeExplanations}>
-          <ModeExplanation
-            icon="description"
-            color={V2.gold}
-            title={text("资管模式", "Managed mode", "الإدارة المفوضة")}
+        <View
+          style={[styles.boundaryGrid, isMobile && styles.boundaryGridMobile]}
+        >
+          <BoundaryCard
+            icon="account-balance"
+            title={text(
+              "U 直达本人券商",
+              "USDT direct to your broker",
+              "USDT مباشرة إلى حساب الوسيط",
+            )}
             detail={text(
-              "技术方按合同负责策略部署、交易执行和风险管理；客户查看合同状态、权益、持仓与风险事件。",
-              "The provider handles deployment, execution and risk under contract; the client views contract status, equity, positions and risk events.",
-              "يتولى المزود النشر والتنفيذ والمخاطر بموجب عقد، ويتابع العميل حالة العقد وحقوق الحساب والمراكز وأحداث المخاطر.",
+              "客户从券商客户门户取得当次网络、地址与标签，转账后提交 txHash，最终以券商实际入账为准。",
+              "The client retrieves the current network, address and tag from the broker portal, then submits the txHash. Completion requires actual broker credit.",
+              "يحصل العميل على الشبكة والعنوان والوسم الحالي من بوابة الوسيط ثم يرسل txHash. لا تكتمل العملية إلا بعد القيد الفعلي لدى الوسيط.",
             )}
           />
-          <ModeExplanation
-            icon="account-tree"
-            color={V2.blue}
-            title={text("券商模式", "Broker mode", "نمط الوسيط")}
+          <BoundaryCard
+            icon="receipt-long"
+            title={text(
+              "平台专属地址代收",
+              "Dedicated collection address",
+              "عنوان تحصيل مخصص",
+            )}
             detail={text(
-              "资金留在客户本人券商账户，客户掌握入出金；系统展示平台连接、策略贡献和风险预算。",
-              "Funds remain in the client's broker account and the client controls deposits and withdrawals. The system shows platform connections, strategy contribution and risk budget.",
-              "تبقى الأموال في حساب الوسيط الخاص بالعميل ويتحكم في الإيداع والسحب، بينما يعرض النظام اتصالات المنصات ومساهمة الاستراتيجيات وميزانية المخاطر.",
+              "仅在书面通道批准后使用单笔专属代收单；客户侧只显示确认中、转入券商中、已到账或异常。",
+              "A single-use collection order is available only on a route with written approval. Clients see pending, forwarding, credited or exception states.",
+              "يتاح طلب التحصيل أحادي الاستخدام فقط لمسار حاصل على موافقة مكتوبة. يرى العميل حالات التأكيد أو التحويل أو القيد أو الاستثناء.",
+            )}
+          />
+          <BoundaryCard
+            icon="lock-outline"
+            title={text("权限隔离", "Permission separation", "فصل الصلاحيات")}
+            detail={text(
+              "交易权不含提款、转账或修改入金地址权限；私钥、助记词与券商密码不进入平台。",
+              "Trading permission excludes withdrawals, transfers and deposit-address changes. Private keys, seed phrases and broker passwords never enter the platform.",
+              "لا تشمل صلاحية التداول السحب أو التحويل أو تغيير عنوان الإيداع. لا تدخل المفاتيح الخاصة أو العبارات السرية أو كلمات مرور الوسيط إلى المنصة.",
             )}
           />
         </View>
 
-        <View style={styles.toolbar}>
-          <View style={styles.filters}>
-            {(
-              [
-                ["ALL", text("全部", "All", "الكل")],
-                [
-                  "MANAGED_CONTRACT",
-                  text("资管模式", "Managed", "إدارة مفوضة"),
-                ],
-                ["SELF_ALLOCATED", text("券商模式", "Broker", "وسيط")],
-              ] as const
-            ).map(([value, label]) => (
-              <Pressable
-                key={value}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: filter === value }}
-                onPress={() => setFilter(value)}
-                style={[styles.filter, filter === value && styles.filterActive]}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    filter === value && styles.filterTextActive,
-                  ]}
-                >
-                  {label}
+        {plansQuery.data?.length ? (
+          <View style={styles.planSection}>
+            <View style={styles.sectionHeading}>
+              <View>
+                <Text style={styles.eyebrow}>MY ASSET MANAGEMENT PLANS</Text>
+                <Text style={styles.sectionTitle}>
+                  {text(
+                    "已保存资管方案",
+                    "Saved managed plans",
+                    "الخطط المُدارة المحفوظة",
+                  )}
                 </Text>
-              </Pressable>
-            ))}
+              </View>
+              <Text style={styles.count}>
+                {text(
+                  `${plansQuery.data.length} 个方案`,
+                  `${plansQuery.data.length} plans`,
+                  `${plansQuery.data.length} خطط`,
+                )}
+              </Text>
+            </View>
+            <View style={styles.planGrid}>
+              {plansQuery.data.map((plan) => (
+                <View key={plan.sessionNo} style={styles.planCard}>
+                  <View style={styles.planTopline}>
+                    <Text style={styles.planStatus}>
+                      {planStatusLabel(plan.status, language)}
+                    </Text>
+                    <Text style={styles.planBrokerCount}>
+                      {text(
+                        `${plan.executionSlots.length} 家券商`,
+                        `${plan.executionSlots.length} brokers`,
+                        `${plan.executionSlots.length} وسطاء`,
+                      )}
+                    </Text>
+                  </View>
+                  <Text style={styles.planNo}>{plan.sessionNo}</Text>
+                  <Text style={styles.planCapital}>
+                    {formatUsdt(Number(plan.targetCapital), false, locale)}
+                  </Text>
+                  <Text style={styles.planMeta}>
+                    {text(
+                      `已选 ${plan.strategies.length} / 6 款策略`,
+                      `${plan.strategies.length} / 6 strategies selected`,
+                      `تم اختيار ${plan.strategies.length} / 6 استراتيجيات`,
+                    )}{" "}
+                    · {onboardingModeLabel(plan.onboardingMode, language)} ·{" "}
+                    {fundingPathLabel(plan.fundsRoute, language)}
+                  </Text>
+                  <View style={styles.permissionLine}>
+                    <MaterialIcons name="shield" size={15} color={V2.green} />
+                    <Text style={styles.permissionText}>
+                      {text("交易授权", "Trading permission", "تفويض التداول")}{" "}
+                      {permissionLabel(plan.tradeAuthorizationStatus, language)}{" "}
+                      ·{" "}
+                      {text(
+                        "提款权 无",
+                        "Withdrawals: none",
+                        "السحب: غير مسموح",
+                      )}{" "}
+                      · {text("执行", "Execution", "التنفيذ")}{" "}
+                      {plan.executionEnabled ? "ON" : "OFF"}
+                    </Text>
+                  </View>
+                  {plan.readiness.unavailableStrategyIds.length ? (
+                    <Text style={styles.warningText}>
+                      {text(
+                        `${plan.readiness.unavailableStrategyIds.length} 款策略当前离线，不能启用交易。`,
+                        `${plan.readiness.unavailableStrategyIds.length} strategies are offline and cannot be activated.`,
+                        `${plan.readiness.unavailableStrategyIds.length} استراتيجيات غير متصلة ولا يمكن تفعيلها.`,
+                      )}
+                    </Text>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : isAuthenticated ? (
+          <View style={styles.emptyPlan}>
+            <MaterialIcons name="assignment" size={24} color={V2.textDim} />
+            <Text style={styles.emptyTitle}>
+              {text(
+                "尚未保存资管方案",
+                "No managed plan saved",
+                "لا توجد خطة مُدارة محفوظة",
+              )}
+            </Text>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.push("/?configure=1" as never)}
+              style={styles.configureLink}
+            >
+              <Text style={styles.configureLinkText}>
+                {text(
+                  "开始配置六策略方案",
+                  "Configure a six-strategy plan",
+                  "إعداد خطة الاستراتيجيات الست",
+                )}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <View style={styles.sectionHeading}>
+          <View>
+            <Text style={styles.eyebrow}>READ-ONLY ACCOUNT PROJECTION</Text>
+            <Text style={styles.sectionTitle}>
+              {text("账户数据视图", "Account data views", "عروض بيانات الحساب")}
+            </Text>
           </View>
           <Text style={styles.count}>
             {text(
-              `${accounts.length} 个账户`,
-              `${accounts.length} accounts`,
-              `${accounts.length} حسابات`,
+              `${accountsQuery.data.length} 个账户`,
+              `${accountsQuery.data.length} accounts`,
+              `${accountsQuery.data.length} حسابات`,
             )}
           </Text>
         </View>
-
-        <View style={styles.grid}>
-          {accounts.map((account) => (
+        <View style={styles.accountGrid}>
+          {accountsQuery.data.map((account) => (
             <View
               key={account.id}
               style={{ width: isMobile ? "100%" : "49.25%" }}
             >
-              <AccountCard account={account} onPress={openAccount} />
+              <AccountCard
+                account={localizeAccount(account, language)}
+                onPress={openAccount}
+              />
             </View>
           ))}
         </View>
 
-        {!accounts.length ? (
-          <View style={styles.empty}>
-            <MaterialIcons
-              name="account-balance-wallet"
-              size={28}
-              color={V2.textDim}
-            />
-            <Text style={styles.emptyTitle}>
-              {text(
-                "当前模式没有账户",
-                "No accounts in this mode",
-                "لا توجد حسابات في هذا النمط",
-              )}
-            </Text>
-            <Text style={styles.emptyDetail}>
-              {text(
-                "切换上方筛选查看其他账户类型。",
-                "Use the filters above to view other account types.",
-                "استخدم عوامل التصفية أعلاه لعرض أنواع حسابات أخرى.",
-              )}
-            </Text>
-          </View>
-        ) : null}
-
         <View style={styles.notice}>
-          <MaterialIcons name="lock-outline" size={20} color={V2.green} />
+          <MaterialIcons name="info-outline" size={20} color={V2.blue} />
           <Text style={styles.noticeText}>
             {text(
-              "EAXAU 只读取获授权的账户投影，不保存交易密码或提供方原始令牌。真实数据模式下，未完成身份验证或数据授权的请求会被服务端拒绝。",
-              "EAXAU reads authorized account projections only. It does not store trading passwords or raw provider tokens. In live mode, the server rejects requests without identity verification and data authorization.",
-              "تقرأ EAXAU بيانات الحساب المصرح بها فقط ولا تحفظ كلمات مرور التداول أو رموز المزود الأصلية. في الوضع الحي يرفض الخادم الطلبات التي لم تستكمل التحقق من الهوية وتفويض البيانات.",
+              "当前账户视图可能包含模拟或后台维护数据，请以各卡片的数据模式与同步时间为准。草案、txHash 申报、链上确认和券商到账是独立状态；页面不会据此声称真实券商 API 或自动交易已经接通。",
+              "Account views may contain demo or admin-maintained data; follow each card's data mode and sync time. Draft, txHash declaration, on-chain confirmation and broker credit are separate states and do not prove that a live broker API or automated trading is connected.",
+              "قد تتضمن عروض الحساب بيانات تجريبية أو بيانات تديرها لوحة التحكم؛ اتبع نمط البيانات ووقت المزامنة لكل بطاقة. المسودة وإقرار txHash والتأكيد على السلسلة والقيد لدى الوسيط حالات مستقلة ولا تثبت اتصال API حقيقي أو تداول آلي.",
             )}
           </Text>
         </View>
@@ -211,26 +296,68 @@ export default function AccountsPage() {
   );
 }
 
-function ModeExplanation({
+function BoundaryCard({
   icon,
-  color,
   title,
   detail,
 }: {
-  icon: "description" | "account-tree";
-  color: string;
+  icon: "account-balance" | "receipt-long" | "lock-outline";
   title: string;
   detail: string;
 }) {
   return (
-    <View style={styles.modeExplanation}>
-      <MaterialIcons name={icon} size={22} color={color} />
-      <View style={styles.modeCopy}>
-        <Text style={styles.modeTitle}>{title}</Text>
-        <Text style={styles.modeDetail}>{detail}</Text>
+    <View style={styles.boundaryCard}>
+      <MaterialIcons name={icon} size={21} color={V2.gold} />
+      <View style={styles.boundaryCopy}>
+        <Text style={styles.boundaryTitle}>{title}</Text>
+        <Text style={styles.boundaryDetail}>{detail}</Text>
       </View>
     </View>
   );
+}
+
+function permissionLabel(value: string, language: AppLanguage) {
+  return value === "GRANTED"
+    ? language === "ar"
+      ? "ممنوح"
+      : language === "en"
+        ? "Granted"
+        : "已授予"
+    : value === "PENDING"
+      ? language === "ar"
+        ? "قيد التأكيد"
+        : language === "en"
+          ? "Pending"
+          : "待确认"
+      : value === "REVOKED"
+        ? language === "ar"
+          ? "ملغى"
+          : language === "en"
+            ? "Revoked"
+            : "已撤销"
+        : language === "ar"
+          ? "غير مطلوب"
+          : language === "en"
+            ? "Not requested"
+            : "未申请";
+}
+
+function planStatusLabel(value: string, language: AppLanguage) {
+  const labels: Record<string, { zh: string; en: string; ar: string }> = {
+    DRAFT: { zh: "方案草案", en: "Draft", ar: "مسودة" },
+    PENDING_REVIEW: { zh: "审核中", en: "In review", ar: "قيد المراجعة" },
+    READY_FOR_AUTHORIZATION: {
+      zh: "待交易授权",
+      en: "Awaiting authorization",
+      ar: "بانتظار التفويض",
+    },
+    ACTIVE: { zh: "运行中", en: "Active", ar: "نشط" },
+    EXIT_REQUESTED: { zh: "退出处理中", en: "Exit requested", ar: "طلب خروج" },
+    COMPLETED: { zh: "已结束", en: "Completed", ar: "مكتمل" },
+    CANCELLED: { zh: "已取消", en: "Cancelled", ar: "ملغى" },
+    REJECTED: { zh: "未通过", en: "Rejected", ar: "مرفوض" },
+  };
+  return labels[value]?.[language] ?? value;
 }
 
 const styles = StyleSheet.create({
@@ -241,108 +368,113 @@ const styles = StyleSheet.create({
     maxWidth: V2_LAYOUT.maxWidth,
     alignSelf: "center",
     paddingHorizontal: V2_LAYOUT.pagePaddingDesktop,
-    paddingTop: 26,
-    gap: 28,
+    paddingTop: 24,
+    gap: 26,
   },
   pageMobile: {
     paddingHorizontal: V2_LAYOUT.pagePaddingMobile,
-    paddingTop: 18,
+    paddingTop: 14,
   },
   header: {
-    minHeight: 122,
-    paddingBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: V2.border,
     flexDirection: "row",
-    alignItems: "flex-end",
+    alignItems: "flex-start",
     justifyContent: "space-between",
-    gap: 20,
+    gap: 18,
   },
-  headerMobile: { alignItems: "flex-start", flexDirection: "column" },
-  headerCopy: { flex: 1, minWidth: 0, gap: 6 },
-  eyebrow: { color: V2.gold, fontSize: 10, fontWeight: "900" },
-  title: {
-    color: V2.text,
-    fontSize: 34,
-    lineHeight: 42,
-    fontWeight: "900",
-    letterSpacing: 0,
-  },
-  titleMobile: { fontSize: 29, lineHeight: 36 },
-  subtitle: {
-    color: V2.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-    maxWidth: 760,
-  },
+  headerMobile: { flexDirection: "column" },
+  headerCopy: { flex: 1, maxWidth: 780, gap: 5 },
+  eyebrow: { color: V2.gold, fontSize: 9, fontWeight: "900" },
+  title: { color: V2.text, fontSize: 29, lineHeight: 36, fontWeight: "900" },
+  titleMobile: { fontSize: 23, lineHeight: 29 },
+  subtitle: { color: V2.textMuted, fontSize: 11, lineHeight: 18 },
   demoState: {
-    minHeight: 34,
     paddingHorizontal: 10,
+    minHeight: 32,
     borderWidth: 1,
-    borderColor: "rgba(231,183,95,0.36)",
+    borderColor: V2.border,
     borderRadius: 4,
     flexDirection: "row",
     alignItems: "center",
     gap: 7,
   },
   demoDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: V2.amber },
-  demoText: { color: V2.amber, fontSize: 10, fontWeight: "900" },
-  modeExplanations: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  modeExplanation: {
+  demoText: { color: V2.textMuted, fontSize: 9, fontWeight: "800" },
+  boundaryGrid: { flexDirection: "row", gap: 10 },
+  boundaryGridMobile: { flexDirection: "column" },
+  boundaryCard: {
     flex: 1,
-    minWidth: 270,
-    minHeight: 94,
-    padding: 15,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
+    padding: 14,
+    borderWidth: 1,
     borderColor: V2.border,
+    borderRadius: 5,
+    backgroundColor: V2.backgroundRaised,
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
+    gap: 10,
   },
-  modeCopy: { flex: 1, gap: 5 },
-  modeTitle: { color: V2.text, fontSize: 13, fontWeight: "900" },
-  modeDetail: { color: V2.textMuted, fontSize: 11, lineHeight: 17 },
-  toolbar: {
-    minHeight: 44,
+  boundaryCopy: { flex: 1, gap: 4 },
+  boundaryTitle: { color: V2.text, fontSize: 12, fontWeight: "900" },
+  boundaryDetail: { color: V2.textMuted, fontSize: 9, lineHeight: 15 },
+  planSection: { gap: 11 },
+  sectionHeading: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     justifyContent: "space-between",
     gap: 12,
   },
-  filters: {
-    minHeight: 40,
-    padding: 3,
+  sectionTitle: {
+    marginTop: 4,
+    color: V2.text,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  count: { color: V2.textDim, fontSize: 9 },
+  planGrid: { flexDirection: "row", flexWrap: "wrap", gap: 11 },
+  planCard: {
+    flex: 1,
+    minWidth: 285,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.34)",
+    borderRadius: 6,
+    backgroundColor: "rgba(216,188,131,0.04)",
+    gap: 6,
+  },
+  planTopline: {
     flexDirection: "row",
-    gap: 2,
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 9,
+  },
+  planStatus: { color: V2.green, fontSize: 9, fontWeight: "900" },
+  planBrokerCount: { color: V2.gold, fontSize: 9, fontWeight: "900" },
+  planNo: { color: V2.text, fontSize: 13, fontWeight: "900" },
+  planCapital: { color: V2.text, fontSize: 20, fontWeight: "900" },
+  planMeta: { color: V2.textMuted, fontSize: 9, lineHeight: 14 },
+  permissionLine: {
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: V2.border,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  permissionText: { flex: 1, color: V2.textMuted, fontSize: 8, lineHeight: 13 },
+  warningText: { color: V2.amber, fontSize: 8, lineHeight: 13 },
+  emptyPlan: {
+    minHeight: 130,
     borderWidth: 1,
     borderColor: V2.border,
-    borderRadius: 4,
-    backgroundColor: V2.surfaceMuted,
-  },
-  filter: {
-    minHeight: 32,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 2,
-  },
-  filterActive: { backgroundColor: V2.surface },
-  filterText: { color: V2.textMuted, fontSize: 11, fontWeight: "700" },
-  filterTextActive: { color: V2.gold, fontWeight: "900" },
-  count: { color: V2.textDim, fontSize: 10 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
-  empty: {
-    minHeight: 260,
+    borderRadius: 5,
     alignItems: "center",
     justifyContent: "center",
     gap: 7,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: V2.border,
   },
-  emptyTitle: { color: V2.text, fontSize: 14, fontWeight: "900" },
-  emptyDetail: { color: V2.textMuted, fontSize: 11 },
+  emptyTitle: { color: V2.text, fontSize: 12, fontWeight: "900" },
+  configureLink: { paddingVertical: 5 },
+  configureLinkText: { color: V2.gold, fontSize: 9, fontWeight: "900" },
+  accountGrid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
   notice: {
     paddingTop: 18,
     borderTopWidth: 1,
@@ -351,5 +483,5 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 10,
   },
-  noticeText: { flex: 1, color: V2.textMuted, fontSize: 11, lineHeight: 18 },
+  noticeText: { flex: 1, color: V2.textMuted, fontSize: 10, lineHeight: 17 },
 });

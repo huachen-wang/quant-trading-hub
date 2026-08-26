@@ -1,66 +1,56 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { formatMoney } from "@/components/v2/format";
+import { Pressable, Text, View } from "react-native";
+import { formatUsdt } from "@/components/v2/format";
 import { V2 } from "@/components/v2/tokens";
 import { useLanguage } from "@/lib/language";
-import type {
-  AllocationDraft,
-  AllocationValidation,
-  CoreStrategy,
-  PlatformProfile,
-} from "@/shared/v2/contracts";
+import type { CoreStrategy } from "@/shared/v2/contracts";
 import { styles } from "./styles";
-import type { RiskOption, ServicePath } from "./types";
+import type {
+  AllianceBroker,
+  FundingPath,
+  OnboardingMode,
+  RiskOption,
+} from "./types";
+import { fundingPathLabel, onboardingModeLabel } from "./types";
 
 export function SolutionSummary({
   isNarrow,
   numericCapital,
   riskOption,
-  selectedStrategies,
-  selectedPlatforms,
-  allPlatforms,
-  servicePath,
-  missingCompatibility,
-  unusedSelectedPlatforms,
-  generatedIsCurrent,
-  generatedDraft,
-  validationData,
-  isValidating,
-  generatedErrorCount,
-  generatedWarningCount,
+  strategies,
+  brokers,
+  onboardingMode,
+  fundingPath,
+  generated,
   canGenerate,
-  isGenerating,
   onGenerate,
-  onAdvanced,
+  onContinue,
 }: {
   isNarrow: boolean;
   numericCapital: number;
   riskOption: RiskOption;
-  selectedStrategies: CoreStrategy[];
-  selectedPlatforms: PlatformProfile[];
-  allPlatforms: PlatformProfile[];
-  servicePath: ServicePath;
-  missingCompatibility: CoreStrategy[];
-  unusedSelectedPlatforms: PlatformProfile[];
-  generatedIsCurrent: boolean;
-  generatedDraft?: AllocationDraft;
-  validationData?: AllocationValidation;
-  isValidating: boolean;
-  generatedErrorCount: number;
-  generatedWarningCount: number;
+  strategies: CoreStrategy[];
+  brokers: AllianceBroker[];
+  onboardingMode: OnboardingMode;
+  fundingPath: FundingPath;
+  generated: boolean;
   canGenerate: boolean;
-  isGenerating: boolean;
   onGenerate: () => void;
-  onAdvanced: () => void;
+  onContinue: () => void;
 }) {
-  const { locale, text } = useLanguage();
-  const compatibilityReady =
-    missingCompatibility.length === 0 && unusedSelectedPlatforms.length === 0;
+  const { language, locale, text } = useLanguage();
+  const offlineStrategies = strategies.filter(
+    (strategy) => strategy.source.freshness === "OFFLINE",
+  );
+  const offlineNames = offlineStrategies
+    .map((item) => item.shortName)
+    .join(language === "zh" ? "、" : language === "ar" ? "، " : ", ");
   const completionCount = [
     numericCapital > 0,
-    selectedStrategies.length > 0,
-    selectedPlatforms.length > 0,
-    compatibilityReady,
+    strategies.length > 0,
+    brokers.length > 0,
+    Boolean(onboardingMode),
+    Boolean(fundingPath),
   ].filter(Boolean).length;
 
   return (
@@ -68,58 +58,41 @@ export function SolutionSummary({
       <View style={styles.summaryHeader}>
         <View>
           <Text style={styles.summaryEyebrow}>
-            {text("实时方案", "LIVE PLAN", "الخطة المباشرة")}
+            {text("方案预览", "PLAN PREVIEW", "معاينة الخطة")}
           </Text>
           <Text style={styles.summaryTitle}>
-            {text("当前方案", "Current plan", "الخطة الحالية")}
+            {text(
+              "AI量化联盟资管",
+              "AI Quant Alliance plan",
+              "خطة تحالف EAXAU الكمي",
+            )}
           </Text>
         </View>
         <View style={styles.completion}>
-          <Text style={styles.completionValue}>{completionCount}/4</Text>
+          <Text style={styles.completionValue}>{completionCount}/5</Text>
           <Text style={styles.completionLabel}>
-            {text("配置完整", "COMPLETE", "مكتمل")}
+            {text("资料完整", "COMPLETE", "مكتمل")}
           </Text>
         </View>
       </View>
 
-      <View
-        style={[
-          styles.fundPath,
-          servicePath === "MANAGED" && styles.fundPathManaged,
-        ]}
-      >
-        <MaterialIcons
-          name={
-            servicePath === "BROKER" ? "account-balance" : "supervisor-account"
-          }
-          size={22}
-          color={servicePath === "BROKER" ? V2.green : V2.gold}
-        />
+      <View style={[styles.fundPath, styles.fundPathManaged]}>
+        <MaterialIcons name="account-balance" size={22} color={V2.gold} />
         <View style={styles.fundPathCopy}>
           <Text style={styles.fundPathTitle}>
-            {servicePath === "BROKER"
-              ? text(
-                  "资金不经过技术方",
-                  "Funds never pass through the provider",
-                  "الأموال لا تمر عبر المزود",
-                )
-              : text(
-                  "技术方按合同代操管理",
-                  "Provider manages under contract",
-                  "المزود يدير الحساب بموجب عقد",
-                )}
+            {fundingPathLabel(fundingPath, language)}
           </Text>
           <Text style={styles.fundPathDetail}>
-            {servicePath === "BROKER"
+            {fundingPath === "BROKER_DIRECT"
               ? text(
-                  "资金保留在本人券商账户，用户掌握入出金权限。",
-                  "Funds remain in the user's broker account, with deposits and withdrawals controlled by the user.",
-                  "تبقى الأموال في حساب الوسيط الخاص بالمستخدم مع تحكمه في الإيداع والسحب.",
+                  "USDT 从客户钱包直接进入客户本人券商账户。项目方只获得约定交易权限，无提款权。",
+                  "USDT moves directly from the client wallet to the client's own broker account. The provider receives agreed trading permission only, never withdrawal rights.",
+                  "تنتقل USDT مباشرة من محفظة العميل إلى حسابه الشخصي لدى الوسيط. يحصل المزود على صلاحية التداول المتفق عليها فقط دون حق السحب.",
                 )
               : text(
-                  "资金与交易执行按双方合同约定，由技术方负责日常管理。",
-                  "Custody and execution follow the agreement, with daily management handled by the provider.",
-                  "تخضع إدارة الأموال والتنفيذ للاتفاقية ويتولى المزود الإدارة اليومية.",
+                  "USDT 进入该笔代收单的专属企业地址，核对后再转入客户本人券商账户。项目方只获得约定交易权限，无提款权。",
+                  "USDT enters the collection order's dedicated company address, then moves to the client's own broker account after reconciliation. The provider receives agreed trading permission only, never withdrawal rights.",
+                  "تدخل USDT إلى عنوان الشركة المخصص لطلب التحصيل، ثم تُحوّل إلى حساب العميل الشخصي لدى الوسيط بعد المطابقة. يحصل المزود على صلاحية التداول فقط دون حق السحب.",
                 )}
           </Text>
         </View>
@@ -127,8 +100,8 @@ export function SolutionSummary({
 
       <View style={styles.summaryRows}>
         <SummaryRow
-          label={text("资金规模", "Capital", "رأس المال")}
-          value={formatMoney(numericCapital, "USD", false, locale)}
+          label={text("计划资金", "Planned capital", "رأس المال المخطط")}
+          value={formatUsdt(numericCapital, false, locale)}
         />
         <SummaryRow
           label={text("风险预算", "Risk budget", "ميزانية المخاطر")}
@@ -136,121 +109,72 @@ export function SolutionSummary({
         />
         <SummaryRow
           label={text("策略组合", "Strategy mix", "مزيج الاستراتيجيات")}
-          value={
-            selectedStrategies.length
-              ? selectedStrategies.map((item) => item.shortName).join(" / ")
-              : text("尚未选择", "Not selected", "لم يتم الاختيار")
-          }
+          value={text(
+            `已选 ${strategies.length} / 6 款`,
+            `${strategies.length} / 6 selected`,
+            `تم اختيار ${strategies.length} / 6`,
+          )}
         />
         <SummaryRow
-          label={text("交易平台", "Platforms", "المنصات")}
-          value={
-            selectedPlatforms.length
-              ? selectedPlatforms.map((item) => item.name).join(" / ")
-              : text("尚未选择", "Not selected", "لم يتم الاختيار")
-          }
+          label={text("可选券商", "Brokers", "الوسطاء")}
+          value={brokers.map((broker) => broker.name).join(" / ")}
         />
         <SummaryRow
-          label={text("管理模式", "Management mode", "نمط الإدارة")}
-          value={
-            servicePath === "BROKER"
-              ? text("券商模式", "Broker mode", "نمط الوسيط")
-              : text("资管模式", "Managed mode", "الإدارة المفوضة")
-          }
+          label={text("接入方式", "Onboarding", "طريقة الربط")}
+          value={onboardingModeLabel(onboardingMode, language)}
+        />
+        <SummaryRow
+          label={text("入金路线", "Funding route", "مسار الإيداع")}
+          value={fundingPathLabel(fundingPath, language)}
         />
       </View>
 
-      {missingCompatibility.length || unusedSelectedPlatforms.length ? (
-        <View style={styles.issue}>
-          <MaterialIcons name="warning-amber" size={18} color={V2.amber} />
-          <Text style={styles.issueText}>
-            {missingCompatibility.length
-              ? text(
-                  `当前平台无法覆盖：${missingCompatibility.map((item) => item.shortName).join("、")}`,
-                  `No selected platform supports: ${missingCompatibility.map((item) => item.shortName).join(", ")}`,
-                  `لا تدعم المنصات المحددة: ${missingCompatibility.map((item) => item.shortName).join("، ")}`,
-                )
-              : text(
-                  `没有所选策略适配：${unusedSelectedPlatforms.map((item) => item.name).join("、")}`,
-                  `No selected strategy fits: ${unusedSelectedPlatforms.map((item) => item.name).join(", ")}`,
-                  `لا توجد استراتيجية مناسبة لـ: ${unusedSelectedPlatforms.map((item) => item.name).join("، ")}`,
-                )}
+      <View style={styles.generated}>
+        <View style={styles.generatedTopline}>
+          <Text style={styles.generatedTitle}>
+            {text(
+              "两类 USDT 结算严格分账",
+              "USDT settlement routes stay separated",
+              "فصل مسارات تسوية USDT",
+            )}
+          </Text>
+          <Text style={styles.generatedStatus}>
+            {fundingPath === "BROKER_DIRECT" ? "BROKER DIRECT" : "COLLECTION"}
           </Text>
         </View>
-      ) : selectedStrategies.length && selectedPlatforms.length ? (
+        <Text style={styles.generatedMeta}>
+          {text(
+            "EA 销售款、券商直充与资管代收使用独立订单、地址与 txHash 对账，三账隔离，不共用收款或核对记录。",
+            "EA sales, direct broker funding and managed collection use separate orders, addresses and txHash reconciliation. Payment and verification records are never shared.",
+            "تستخدم مبيعات EA والإيداع المباشر والتحصيل المُدار طلبات وعناوين وسجلات txHash منفصلة، ولا تتشارك سجلات الدفع أو المطابقة.",
+          )}
+        </Text>
+      </View>
+
+      {offlineStrategies.length ? (
+        <View style={styles.issue}>
+          <MaterialIcons name="cloud-off" size={18} color={V2.amber} />
+          <Text style={styles.issueText}>
+            {offlineNames}
+            {text(
+              "当前离线。可保留在方案中，但在数据与执行连接恢复前不可启用交易。",
+              " are offline. They may remain in the plan but cannot be activated until data and execution links recover.",
+              " غير متصلة. يمكن إبقاؤها في الخطة ولا يمكن تفعيلها حتى عودة اتصال البيانات والتنفيذ.",
+            )}
+          </Text>
+        </View>
+      ) : (
         <View style={styles.ready}>
           <MaterialIcons name="check-circle" size={18} color={V2.green} />
           <Text style={styles.readyText}>
             {text(
-              "策略与平台兼容性检查通过",
-              "Strategy and platform compatibility passed",
-              "تم اجتياز فحص توافق الاستراتيجيات والمنصات",
+              `已选 ${strategies.length} 款策略，下一步可设置权重`,
+              `${strategies.length} strategies selected. Set weights next.`,
+              `تم اختيار ${strategies.length} استراتيجيات. حدّد الأوزان في الخطوة التالية.`,
             )}
           </Text>
         </View>
-      ) : null}
-
-      {generatedIsCurrent ? (
-        <View style={styles.generated}>
-          <View style={styles.generatedTopline}>
-            <Text style={styles.generatedTitle}>
-              {text("方案已生成", "Plan generated", "تم إنشاء الخطة")}
-            </Text>
-            <Text style={styles.generatedStatus}>
-              {isValidating
-                ? text("规则校验中", "Validating", "جارٍ التحقق")
-                : generatedErrorCount
-                  ? text(
-                      `${generatedErrorCount} 项需调整`,
-                      `${generatedErrorCount} items need attention`,
-                      `${generatedErrorCount} عناصر تحتاج إلى تعديل`,
-                    )
-                  : text(
-                      "基础规则通过",
-                      "Core rules passed",
-                      "تم اجتياز القواعد الأساسية",
-                    )}
-            </Text>
-          </View>
-          <SummaryRow
-            label={text("模型组合回撤", "Modeled drawdown", "التراجع النموذجي")}
-            value={
-              isValidating ||
-              validationData?.estimated.modeledDrawdownPct == null
-                ? text("校验中", "Validating", "جارٍ التحقق")
-                : `${validationData.estimated.modeledDrawdownPct}%`
-            }
-          />
-          <SummaryRow
-            label={text("平台分仓", "Platform allocation", "توزيع المنصات")}
-            value={
-              generatedDraft?.platformBuckets
-                .map((bucket) => {
-                  const platform = allPlatforms.find(
-                    (item) => item.id === bucket.platformId,
-                  );
-                  return `${platform?.code ?? bucket.platformId} ${bucket.capitalWeightPct}%`;
-                })
-                .join(" / ") ?? "--"
-            }
-          />
-          <Text style={styles.generatedMeta}>
-            {text(
-              `${generatedWarningCount} 项提醒 · 规则会继续检查资金门槛、集中度与风险预算`,
-              `${generatedWarningCount} notices · Rules continue checking minimum capital, concentration and risk budget`,
-              `${generatedWarningCount} تنبيهات · تستمر القواعد في فحص الحد الأدنى لرأس المال والتركيز وميزانية المخاطر`,
-            )}
-          </Text>
-        </View>
-      ) : generatedDraft ? (
-        <Text style={styles.staleText}>
-          {text(
-            "配置已经变化，请重新生成方案。",
-            "The configuration changed. Generate the plan again.",
-            "تغيرت الإعدادات. أنشئ الخطة من جديد.",
-          )}
-        </Text>
-      ) : null}
+      )}
 
       <Pressable
         accessibilityRole="button"
@@ -263,30 +187,26 @@ export function SolutionSummary({
           pressed && styles.pressed,
         ]}
       >
-        {isGenerating ? (
-          <ActivityIndicator size="small" color={V2.background} />
-        ) : (
-          <MaterialIcons name="auto-awesome" size={18} color={V2.background} />
-        )}
+        <MaterialIcons name="auto-awesome" size={18} color={V2.background} />
         <Text style={styles.generateText}>
-          {servicePath === "BROKER"
+          {generated
             ? text(
-                "生成券商配置方案",
-                "Generate broker plan",
-                "إنشاء خطة الوسيط",
+                "方案预览已更新",
+                "Plan preview updated",
+                "تم تحديث معاينة الخطة",
               )
             : text(
-                "生成资管需求方案",
-                "Generate managed mandate",
-                "إنشاء تفويض الإدارة",
+                "生成资管方案预览",
+                "Generate plan preview",
+                "إنشاء معاينة الخطة",
               )}
         </Text>
       </Pressable>
 
-      {generatedIsCurrent && servicePath === "BROKER" ? (
+      {generated ? (
         <Pressable
           accessibilityRole="link"
-          onPress={onAdvanced}
+          onPress={onContinue}
           style={({ pressed }) => [
             styles.advancedButton,
             pressed && styles.pressed,
@@ -294,9 +214,9 @@ export function SolutionSummary({
         >
           <Text style={styles.advancedText}>
             {text(
-              "精细调整平台与策略权重",
-              "Fine-tune platform and strategy weights",
-              "ضبط أوزان المنصات والاستراتيجيات",
+              "继续开户、授权与券商入金",
+              "Continue to onboarding, authorization and funding",
+              "متابعة فتح الحساب والتفويض والإيداع",
             )}
           </Text>
           <MaterialIcons name="arrow-forward" size={16} color={V2.text} />
@@ -305,9 +225,9 @@ export function SolutionSummary({
 
       <Text style={styles.disclaimer}>
         {text(
-          "当前仅生成配置与风险说明，不执行开户、入金或交易。历史数据不代表未来结果。",
-          "This creates configuration and risk notes only. It does not open accounts, deposit funds or execute trades. Historical data does not predict future results.",
-          "تنشئ هذه الأداة إعدادات وملاحظات للمخاطر فقط ولا تفتح حسابات أو تودع أموالا أو تنفذ صفقات. البيانات التاريخية لا تتنبأ بالنتائج المستقبلية.",
+          "当前仅生成可审阅方案，不代表开户完成、交易权限已授予、USDT 已入账或自动交易已接通。历史数据不代表未来结果。",
+          "This creates a reviewable plan only. It does not mean onboarding is complete, trading permission is granted, USDT is credited or automated trading is connected. Historical data does not predict future results.",
+          "تنشئ هذه الخطوة خطة قابلة للمراجعة فقط، ولا تعني اكتمال فتح الحساب أو منح صلاحية التداول أو قيد USDT أو اتصال التداول الآلي. الأداء التاريخي لا يتنبأ بالنتائج المستقبلية.",
         )}
       </Text>
     </View>

@@ -103,7 +103,7 @@ export default function AdminLayout() {
           <PcTopNav />
           <View style={styles.adminStrip}>
             <View style={styles.adminStripInner}>
-              <Text style={styles.adminStripKicker}>{isCompactWeb ? "CONTROL ROOM" : "EAXAU CONTROL ROOM"}</Text>
+              <Text style={styles.adminStripKicker}>{isCompactWeb ? "CONTROL ROOM" : "AI量化联盟 CONTROL ROOM"}</Text>
               {!isCompactWeb && (
                 <Text style={styles.adminStripText}>ADMIN OPS / CONTENT / ORDERS / SOURCE LIBRARY</Text>
               )}
@@ -137,6 +137,9 @@ export default function AdminLayout() {
         <Stack.Screen name="site-entries" options={{ title: "侧边栏入口管理" }} />
         <Stack.Screen name="orders" options={{ title: "订单管理" }} />
         <Stack.Screen name="order-detail" options={{ title: "订单详情" }} />
+        <Stack.Screen name="alliance-sessions" options={{ title: "资管委托接入与启用" }} />
+        <Stack.Screen name="broker-funding" options={{ title: "券商入金与代收队列" }} />
+        <Stack.Screen name="broker-funding-detail" options={{ title: "券商入金详情" }} />
         <Stack.Screen name="login" options={{ title: "管理员登录" }} />
       </Stack>
     </View>

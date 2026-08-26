@@ -15,7 +15,7 @@ const QUICK_NAV_ITEMS = [
     id: "cooperation",
     code: "B2B",
     title: "工作室扶持合作",
-    subtitle: "深度扶持 · 源头直供",
+    subtitle: "技术适配 · 授权核验",
     gradient: ["#0A1628", "#1E3A8A"] as readonly [string, string, ...string[]],
     type: "route" as const,
     target: "/cooperation",

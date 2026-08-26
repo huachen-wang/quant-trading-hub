@@ -1,6 +1,10 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TextInput, Platform, StyleSheet } from "react-native";
 import { useColors } from "@/hooks/use-colors";
+import {
+  isSafeRichTextUrl,
+  sanitizeRichHtml,
+} from "@/components/sanitize-rich-html";
 
 const TIPTAP_REACT_MODULE = "@tiptap/react";
 const TIPTAP_STARTER_KIT_MODULE = "@tiptap/starter-kit";
@@ -122,9 +126,9 @@ function WebTiptapEditor({
             Link.configure({ openOnClick: false }),
             Image,
           ],
-          content: value || "<p></p>",
+          content: sanitizeRichHtml(value) || "<p></p>",
           onUpdate: ({ editor }: { editor: any }) => {
-            onChange(editor.getHTML());
+            onChange(sanitizeRichHtml(editor.getHTML()));
           },
         });
 
@@ -151,8 +155,9 @@ function WebTiptapEditor({
   // 同步外部 value 变化（仅当 editor 创建后）
   useEffect(() => {
     if (!editor) return;
-    if (value !== editor.getHTML()) {
-      editor.commands.setContent(value || "<p></p>", false);
+    const safeValue = sanitizeRichHtml(value) || "<p></p>";
+    if (safeValue !== editor.getHTML()) {
+      editor.commands.setContent(safeValue, false);
     }
   }, [value, editor]);
 
@@ -209,7 +214,11 @@ function WebTiptapEditor({
         tooltip="链接"
         onClick={() => {
           const url = window.prompt("输入链接地址");
-          if (url) editor.chain().focus().setLink({ href: url }).run();
+          if (url && isSafeRichTextUrl(url, "link")) {
+            editor.chain().focus().setLink({ href: url }).run();
+          } else if (url) {
+            window.alert("只允许 http(s)、站内路径、锚点、mailto 或 tel 链接");
+          }
           else editor.chain().focus().unsetLink().run();
         }}
       />
@@ -218,7 +227,11 @@ function WebTiptapEditor({
         tooltip="插入图片"
         onClick={() => {
           const url = window.prompt("输入图片 URL");
-          if (url) editor.chain().focus().setImage({ src: url }).run();
+          if (url && isSafeRichTextUrl(url, "image")) {
+            editor.chain().focus().setImage({ src: url }).run();
+          } else if (url) {
+            window.alert("图片只允许 http(s) 或站内绝对路径；禁止 data/blob URL");
+          }
         }}
       />
       <View style={{ flex: 1 }} />
@@ -240,10 +253,10 @@ function WebTiptapEditor({
       <Toolbar />
       <View style={[styles.tiptapBody, { minHeight }]}>
         <EditorContentComp editor={editor} />
-        <style
-          // @ts-ignore web only
-          dangerouslySetInnerHTML={{
-            __html: `
+        {React.createElement(
+          "style",
+          null,
+          `
               .ProseMirror {
                 outline: none;
                 color: #F1F5F9;
@@ -287,8 +300,7 @@ function WebTiptapEditor({
               .ProseMirror pre code { background: transparent; padding: 0; color: #F1F5F9; }
               .ProseMirror img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px 0; }
             `,
-          }}
-        />
+        )}
       </View>
     </View>
   );
