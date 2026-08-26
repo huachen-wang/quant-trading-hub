@@ -30,6 +30,7 @@ import { LOCAL_PREVIEW_STRATEGIES } from "@/components/home/preview-strategies";
 import type { HomeStrategy } from "@/components/home/types";
 import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
 
 const PAGE_SIZE = 12;
@@ -382,29 +383,41 @@ export function EaLibraryScreen({ variant = "legacy" }: EaLibraryScreenProps) {
 }
 
 function V2LibraryHeader({ onContactPress }: { onContactPress: () => void }) {
+  const { text } = useLanguage();
   return (
     <View style={styles.v2LibraryHeader}>
       <View style={styles.v2LibraryCopy}>
         <Text style={styles.v2LibraryEyebrow}>EA CATALOG</Text>
-        <Text style={styles.v2LibraryTitle}>EA 资料库</Text>
+        <Text style={styles.v2LibraryTitle}>
+          {text("EA 资料库", "EA Library", "مكتبة EA")}
+        </Text>
         <Text style={styles.v2LibraryDetail}>
-          大量 EA、指标与工具统一保留在这里；核心六策略与资料目录相互独立。
+          {text(
+            "大量 EA、指标与工具统一保留在这里；核心六策略与资料目录相互独立。",
+            "The broader catalog of EAs, indicators and tools lives here, separate from the six core strategies.",
+            "توجد هنا المجموعة الأوسع من أنظمة EA والمؤشرات والأدوات، بشكل مستقل عن الاستراتيجيات الأساسية الست.",
+          )}
         </Text>
       </View>
       <Text style={styles.v2LibraryContact} onPress={onContactPress}>
-        联系咨询
+        {text("联系咨询", "Contact advisor", "تواصل مع مستشار")}
       </Text>
     </View>
   );
 }
 
 function LocalPreviewStrip() {
+  const { text } = useLanguage();
   return (
     <View style={styles.previewStrip}>
       <View style={styles.previewStripRail} />
       <Text style={styles.previewStripKicker}>LOCAL PREVIEW</Text>
       <Text style={styles.previewStripText}>
-        本地样板策略 · 正式域名自动读取真实数据库
+        {text(
+          "本地样板策略 · 正式域名自动读取真实数据库",
+          "Local sample strategies · Production reads the live database",
+          "استراتيجيات محلية تجريبية · يقرأ الإنتاج قاعدة البيانات الحية",
+        )}
       </Text>
     </View>
   );

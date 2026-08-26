@@ -1,6 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Linking,
   ScrollView,
@@ -23,7 +23,12 @@ import { SolutionConfigurator } from "@/components/v2/solution-configurator";
 import { StrategyCard } from "@/components/v2/strategy-card";
 import { StrategySelectionPanel } from "@/components/v2/strategy-selection-panel";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
+import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
+import {
+  localizePlatforms,
+  localizeStrategies,
+} from "@/lib/v2/localized-content";
 
 const DEFAULT_SELECTION = ["jingge-v51", "quantum-queen"];
 const LIVE_PULSE_ACCENTS = [
@@ -47,6 +52,7 @@ export default function V2HomePage() {
   const useTwoColumnCards = width >= 700 && width < 820;
   const showSelectionSidebar = width >= 1120;
   const compactCards = width < 1320;
+  const { language, locale, text } = useLanguage();
   const scrollRef = useRef<ScrollView>(null);
   const preferredApplied = useRef(false);
   const builderScrolled = useRef(false);
@@ -64,6 +70,14 @@ export default function V2HomePage() {
     refetchInterval: 10_000,
     retry: 1,
   });
+  const localizedData = useMemo(() => {
+    if (!overview.data) return undefined;
+    return {
+      ...overview.data,
+      strategies: localizeStrategies(overview.data.strategies, language),
+      platforms: localizePlatforms(overview.data.platforms, language),
+    };
+  }, [language, overview.data]);
 
   const openStrategy = useCallback(
     (id: string) => router.push(`/v2-preview/strategies/${id}` as never),
@@ -119,17 +133,34 @@ export default function V2HomePage() {
     [],
   );
 
-  if (overview.isLoading) return <V2LoadingState label="正在汇总六策略" />;
-  if (!overview.data) {
+  if (overview.isLoading) {
+    return (
+      <V2LoadingState
+        label={text(
+          "正在汇总六策略",
+          "Loading six core strategies",
+          "جارٍ تجميع الاستراتيجيات الست",
+        )}
+      />
+    );
+  }
+  if (!localizedData) {
     return (
       <V2ErrorState
-        detail={overview.error?.message || "六策略聚合接口没有返回可用数据。"}
+        detail={
+          overview.error?.message ||
+          text(
+            "六策略聚合接口没有返回可用数据。",
+            "The strategy service returned no usable data.",
+            "لم تُرجع خدمة الاستراتيجيات بيانات قابلة للاستخدام.",
+          )
+        }
         onRetry={() => overview.refetch()}
       />
     );
   }
 
-  const data = overview.data;
+  const data = localizedData;
   const hasPublicPulse = Boolean(livePulse.data?.items.length);
   const feedItems: LiveFeedItem[] = hasPublicPulse
     ? livePulse.data!.items.map((item, index) => ({
@@ -137,9 +168,9 @@ export default function V2HomePage() {
         name: item.name,
         accent: LIVE_PULSE_ACCENTS[index % LIVE_PULSE_ACCENTS.length],
         changePct: item.monthlyReturnPct,
-        changeLabel: "月度",
+        changeLabel: text("月度", "Monthly", "شهري"),
         equity: item.equity,
-        equityLabel: "账户权益",
+        equityLabel: text("账户权益", "Account equity", "حقوق الحساب"),
         href: item.url,
       }))
     : data.strategies.map((strategy) => ({
@@ -147,21 +178,39 @@ export default function V2HomePage() {
         name: strategy.shortName,
         accent: strategy.accent,
         changePct: strategy.metrics.todayPnlPct,
-        changeLabel: "今日",
+        changeLabel: text("今日", "Today", "اليوم"),
         equity: strategy.metrics.equity,
-        equityLabel: "权益",
+        equityLabel: text("权益", "Equity", "حقوق الملكية"),
       }));
   const feedSource = hasPublicPulse ? livePulse.data!.source : data.source;
   const cardWidth = isMobile ? "100%" : useTwoColumnCards ? "48.7%" : "31.9%";
   const selectedStrategies = data.strategies.filter((strategy) =>
     selectedStrategyIds.includes(strategy.id),
   );
-  const dataNoticeCopy = {
-    DEMO: "当前使用模拟账户数据验证展示与选配流程，不代表真实收益。",
-    CUSTOM: "当前使用后台维护数据，可继续补充时间口径与证据。",
-    LIVE: "当前指标来自已连接数据源，请同时查看同步时间和风险边界。",
-    HYBRID: "历史段由后台维护，接管线后由实盘数据源持续更新。",
-  }[data.source.dataMode];
+  const dataNoticeCopy =
+    data.source.dataMode === "DEMO"
+      ? text(
+          "当前使用模拟账户数据验证展示与选配流程，不代表真实收益。",
+          "Demo account data is being used to validate the experience and does not represent real returns.",
+          "تُستخدم بيانات حساب تجريبي لاختبار التجربة ولا تمثل عوائد حقيقية.",
+        )
+      : data.source.dataMode === "CUSTOM"
+        ? text(
+            "当前使用后台维护数据，可继续补充时间口径与证据。",
+            "Current figures are maintained in the admin console; evidence and time periods can be added.",
+            "تتم إدارة الأرقام الحالية من لوحة التحكم ويمكن إضافة الأدلة والفترات الزمنية.",
+          )
+        : data.source.dataMode === "LIVE"
+          ? text(
+              "当前指标来自已连接数据源，请同时查看同步时间和风险边界。",
+              "Metrics come from a connected source. Review sync time and risk limits as well.",
+              "تأتي المؤشرات من مصدر متصل. راجع وقت المزامنة وحدود المخاطر أيضا.",
+            )
+          : text(
+              "历史段由后台维护，接管线后由实盘数据源持续更新。",
+              "Historical data is maintained in the admin console and live data continues after the handover point.",
+              "تتم إدارة البيانات التاريخية من لوحة التحكم وتستمر البيانات الحية بعد نقطة الربط.",
+            );
 
   const toggleStrategy = (id: string) => {
     const strategy = data.strategies.find((item) => item.id === id);
@@ -173,7 +222,17 @@ export default function V2HomePage() {
         : [...current, id],
     );
     setSelectionFeedback(
-      `${strategy.shortName}${wasSelected ? "已移出" : "已加入"}组合`,
+      wasSelected
+        ? text(
+            `${strategy.shortName}已移出组合`,
+            `${strategy.shortName} removed from portfolio`,
+            `تمت إزالة ${strategy.shortName} من المحفظة`,
+          )
+        : text(
+            `${strategy.shortName}已加入组合`,
+            `${strategy.shortName} added to portfolio`,
+            `تمت إضافة ${strategy.shortName} إلى المحفظة`,
+          ),
     );
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
     feedbackTimer.current = setTimeout(() => setSelectionFeedback(""), 1800);
@@ -219,12 +278,22 @@ export default function V2HomePage() {
               <View style={styles.eyebrowRow}>
                 <Text style={styles.stageIndex}>01</Text>
                 <View style={styles.eyebrowRule} />
-                <Text style={styles.eyebrow}>核心量化组合</Text>
+                <Text style={styles.eyebrow}>
+                  {text(
+                    "核心量化组合",
+                    "CORE QUANT PORTFOLIO",
+                    "محفظة الكوانت الأساسية",
+                  )}
+                </Text>
               </View>
               <Text
                 style={[styles.stageTitle, isMobile && styles.stageTitleMobile]}
               >
-                六策略收益与组合
+                {text(
+                  "六策略收益与组合",
+                  "Six strategies. One portfolio.",
+                  "ست استراتيجيات. محفظة واحدة.",
+                )}
               </Text>
               <Text style={styles.stageSubtitle}>{dataNoticeCopy}</Text>
             </View>
@@ -241,29 +310,46 @@ export default function V2HomePage() {
                   isMobile && styles.annualizedMetricMobile,
                 ]}
               >
-                <Text style={styles.annualizedLabel}>年化估算</Text>
+                <Text style={styles.annualizedLabel}>
+                  {text(
+                    "年化估算",
+                    "Annualized estimate",
+                    "العائد السنوي التقديري",
+                  )}
+                </Text>
                 <Text style={styles.annualizedValue} numberOfLines={1}>
                   {formatAnnualizedReturn(data.portfolio.return90dPct)}
                 </Text>
-                <Text style={styles.annualizedBasis}>按近 90 日复合折算</Text>
+                <Text style={styles.annualizedBasis}>
+                  {text(
+                    "按近 90 日复合折算",
+                    "Compounded from the last 90 days",
+                    "مركب من آخر 90 يوما",
+                  )}
+                </Text>
               </View>
               <View style={styles.secondaryMetrics}>
                 <OverviewMetric
-                  label="近 90 日"
+                  label={text("近 90 日", "Last 90 days", "آخر 90 يوما")}
                   value={formatPct(data.portfolio.return90dPct, true)}
                   color={V2.green}
                 />
                 <OverviewMetric
-                  label="最大回撤"
+                  label={text("最大回撤", "Max drawdown", "أقصى تراجع")}
                   value={formatPct(data.portfolio.maxDrawdownPct)}
                   color={V2.amber}
                 />
                 <OverviewMetric
-                  label="组合权益"
-                  value={formatMoney(data.portfolio.equity, "USD", true)}
+                  label={text("组合权益", "Portfolio equity", "حقوق المحفظة")}
+                  value={formatMoney(
+                    data.portfolio.equity,
+                    "USD",
+                    true,
+                    locale,
+                  )}
                 />
                 <OverviewMetric
-                  label="运行中"
+                  label={text("运行中", "Active", "نشط")}
                   value={`${data.portfolio.activeStrategies} / 6`}
                   color={V2.blue}
                 />
@@ -318,7 +404,11 @@ export default function V2HomePage() {
         <View style={styles.riskNotice}>
           <MaterialIcons name="verified-user" size={20} color={V2.amber} />
           <Text style={styles.riskText}>
-            历史收益、胜率和模型回撤不代表未来结果。正式启用前仍需核验数据源、券商实体、账户权限、合同责任和当前平台条款。
+            {text(
+              "历史收益、胜率和模型回撤不代表未来结果。正式启用前仍需核验数据源、券商实体、账户权限、合同责任和当前平台条款。",
+              "Historical returns, win rates and modeled drawdowns do not predict future results. Verify the data source, broker entity, account permissions, contractual duties and current platform terms before activation.",
+              "العوائد التاريخية ونسب الفوز والتراجعات النموذجية لا تتنبأ بالنتائج المستقبلية. تحقق من مصدر البيانات وكيان الوسيط وصلاحيات الحساب والالتزامات التعاقدية وشروط المنصة قبل التفعيل.",
+            )}
           </Text>
         </View>
       </View>

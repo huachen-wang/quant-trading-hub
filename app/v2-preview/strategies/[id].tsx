@@ -29,7 +29,9 @@ import {
 } from "@/components/v2/strategy-detail/detail-parts";
 import { detailStyles as styles } from "@/components/v2/strategy-detail/styles";
 import { V2 } from "@/components/v2/tokens";
+import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
+import { localizePlatform, localizeStrategy } from "@/lib/v2/localized-content";
 
 type Range = 7 | 30 | 60;
 type DetailTab = "overview" | "materials" | "positions" | "trades";
@@ -40,6 +42,7 @@ export default function CoreStrategyDetailPage() {
   const { width } = useWindowDimensions();
   const isMobile = width < 720;
   const isNarrow = width < 1040;
+  const { language, locale, text } = useLanguage();
   const [range, setRange] = useState<Range>(30);
   const [tab, setTab] = useState<DetailTab>("overview");
   const query = trpc.v2.strategies.byId.useQuery(
@@ -55,36 +58,76 @@ export default function CoreStrategyDetailPage() {
     [query.data?.equity, range],
   );
 
-  if (query.isLoading) return <V2LoadingState label="正在读取策略档案" />;
+  if (query.isLoading) {
+    return (
+      <V2LoadingState
+        label={text(
+          "正在读取策略档案",
+          "Loading strategy profile",
+          "جارٍ تحميل ملف الاستراتيجية",
+        )}
+      />
+    );
+  }
   if (!query.data) {
     return (
       <V2ErrorState
-        title="没有找到这个核心策略"
-        detail={query.error?.message || "策略可能已从六个核心席位中移除。"}
+        title={text(
+          "没有找到这个核心策略",
+          "Core strategy not found",
+          "لم يتم العثور على الاستراتيجية الأساسية",
+        )}
+        detail={
+          query.error?.message ||
+          text(
+            "策略可能已从六个核心席位中移除。",
+            "The strategy may have been removed from the six core slots.",
+            "ربما تمت إزالة الاستراتيجية من المواقع الأساسية الستة.",
+          )
+        }
         onRetry={() => query.refetch()}
       />
     );
   }
 
-  const strategy = query.data;
+  const strategy = localizeStrategy(query.data, language);
   const compatiblePlatforms =
     platforms.data
       ?.filter((platform) =>
         strategy.compatiblePlatformIds.includes(platform.id),
       )
-      .map((platform) => platform.name) ?? strategy.compatiblePlatformIds;
+      .map((platform) => localizePlatform(platform, language).name) ??
+    strategy.compatiblePlatformIds;
   const overviewBlocks = strategy.contentBlocks.filter((block) =>
     ["rich_text", "evidence", "risk_notice"].includes(block.type),
   );
   const materialBlocks = strategy.contentBlocks.filter((block) =>
     ["media_gallery", "timeline", "faq"].includes(block.type),
   );
-  const sourceNotice = {
-    DEMO: "当前详情使用模拟数据验证展示链路，不构成收益承诺或投资建议。",
-    CUSTOM: "当前详情使用后台自定义历史，请结合说明与证据核对数据口径。",
-    LIVE: "当前详情读取已连接实盘数据，同步延迟和账户授权仍可能影响展示。",
-    HYBRID: "接管线之前为自定义历史，之后为实盘同步，两段来源分别保留。",
-  }[strategy.source.dataMode];
+  const sourceNotice =
+    strategy.source.dataMode === "DEMO"
+      ? text(
+          "当前详情使用模拟数据验证展示链路，不构成收益承诺或投资建议。",
+          "This profile uses demo data to validate the display flow and is not a return promise or investment advice.",
+          "يستخدم هذا الملف بيانات تجريبية للتحقق من العرض ولا يمثل وعدا بالعائد أو نصيحة استثمارية.",
+        )
+      : strategy.source.dataMode === "CUSTOM"
+        ? text(
+            "当前详情使用后台自定义历史，请结合说明与证据核对数据口径。",
+            "This profile uses admin-maintained history. Review the methodology and evidence.",
+            "يستخدم هذا الملف سجلا تديره لوحة التحكم. راجع المنهجية والأدلة.",
+          )
+        : strategy.source.dataMode === "LIVE"
+          ? text(
+              "当前详情读取已连接实盘数据，同步延迟和账户授权仍可能影响展示。",
+              "This profile reads a connected live source. Sync delays and account permissions may affect the display.",
+              "يقرأ هذا الملف مصدرا حيا متصلا وقد يؤثر تأخر المزامنة وصلاحيات الحساب على العرض.",
+            )
+          : text(
+              "接管线之前为自定义历史，之后为实盘同步，两段来源分别保留。",
+              "Admin history is retained before the handover point and live sync continues after it.",
+              "يتم الاحتفاظ بالسجل الإداري قبل نقطة الربط وتستمر المزامنة الحية بعدها.",
+            );
 
   const chooseStrategy = () => {
     router.push({
@@ -109,15 +152,31 @@ export default function CoreStrategyDetailPage() {
             ]}
           >
             <MaterialIcons name="arrow-back" size={18} color={V2.textMuted} />
-            <Text style={styles.backText}>六款核心策略</Text>
+            <Text style={styles.backText}>
+              {text(
+                "六款核心策略",
+                "Six core strategies",
+                "الاستراتيجيات الست",
+              )}
+            </Text>
           </Pressable>
-          <Text style={styles.formula}>资金 × 风控 × 策略 × 平台 × 模式</Text>
+          <Text style={styles.formula}>
+            {text(
+              "资金 × 风控 × 策略 × 平台 × 模式",
+              "Capital × Risk × Strategy × Platform × Mode",
+              "رأس المال × المخاطر × الاستراتيجية × المنصة × النمط",
+            )}
+          </Text>
         </View>
 
         <View style={[styles.hero, isNarrow && styles.heroNarrow]}>
           <View style={styles.artworkWrap}>
             <Image
-              accessibilityLabel={`${strategy.shortName} 策略视觉图`}
+              accessibilityLabel={text(
+                `${strategy.shortName} 策略视觉图`,
+                `${strategy.shortName} strategy artwork`,
+                `صورة استراتيجية ${strategy.shortName}`,
+              )}
               source={{ uri: strategy.artwork }}
               style={styles.artwork}
               contentFit="cover"
@@ -139,7 +198,8 @@ export default function CoreStrategyDetailPage() {
             <View style={styles.identity}>
               <View style={styles.identityCopy}>
                 <Text style={styles.slotLabel}>
-                  核心策略 {String(strategy.homeSlot).padStart(2, "0")}
+                  {text("核心策略", "CORE STRATEGY", "استراتيجية أساسية")}{" "}
+                  {String(strategy.homeSlot).padStart(2, "0")}
                 </Text>
                 <Text style={[styles.title, isMobile && styles.titleMobile]}>
                   {strategy.name}
@@ -147,7 +207,8 @@ export default function CoreStrategyDetailPage() {
                 <Text style={styles.version}>{strategy.version}</Text>
               </View>
               <Text style={styles.updatedAt}>
-                同步 {formatDateTime(strategy.source.observedAt)}
+                {text("同步", "Synced", "تمت المزامنة")}{" "}
+                {formatDateTime(strategy.source.observedAt, locale)}
               </Text>
             </View>
 
@@ -156,31 +217,40 @@ export default function CoreStrategyDetailPage() {
 
             <View style={styles.metrics}>
               <DetailMetric
-                label="年化估算"
+                label={text("年化估算", "Annualized", "العائد السنوي")}
                 value={formatAnnualizedReturn(strategy.metrics.return90dPct)}
                 color={strategy.accent}
               />
               <DetailMetric
-                label="近 90 日"
+                label={text("近 90 日", "Last 90 days", "آخر 90 يوما")}
                 value={formatPct(strategy.metrics.return90dPct, true)}
                 color={strategy.accent}
               />
               <DetailMetric
-                label="最大回撤"
+                label={text("最大回撤", "Max drawdown", "أقصى تراجع")}
                 value={formatPct(strategy.metrics.maxDrawdownPct)}
                 color={V2.amber}
               />
               <DetailMetric
-                label="胜率"
+                label={text("胜率", "Win rate", "نسبة الفوز")}
                 value={formatPct(strategy.metrics.winRatePct)}
               />
               <DetailMetric
-                label="交易次数"
+                label={text("交易次数", "Trades", "الصفقات")}
                 value={String(strategy.metrics.tradeCount)}
               />
               <DetailMetric
-                label="建议资金"
-                value={formatMoney(strategy.minimumCapital, "USD", true)}
+                label={text(
+                  "建议资金",
+                  "Suggested capital",
+                  "رأس المال المقترح",
+                )}
+                value={formatMoney(
+                  strategy.minimumCapital,
+                  "USD",
+                  true,
+                  locale,
+                )}
               />
             </View>
 
@@ -199,7 +269,11 @@ export default function CoreStrategyDetailPage() {
                   color={V2.background}
                 />
                 <Text style={styles.primaryButtonText}>
-                  选择此策略并开始选配
+                  {text(
+                    "选择此策略并开始选配",
+                    "Select and configure",
+                    "اختر وابدأ الإعداد",
+                  )}
                 </Text>
               </Pressable>
               <Pressable
@@ -211,29 +285,45 @@ export default function CoreStrategyDetailPage() {
                 ]}
               >
                 <MaterialIcons name="monitor-heart" size={17} color={V2.text} />
-                <Text style={styles.secondaryButtonText}>查看实盘账户</Text>
+                <Text style={styles.secondaryButtonText}>
+                  {text(
+                    "查看实盘账户",
+                    "View live accounts",
+                    "عرض الحسابات الحية",
+                  )}
+                </Text>
               </Pressable>
             </View>
           </View>
         </View>
 
         <View style={styles.fitBar}>
-          <StrategyFitItem label="策略逻辑" value={strategy.style} />
           <StrategyFitItem
-            label="交易品种"
+            label={text("策略逻辑", "Strategy logic", "منطق الاستراتيجية")}
+            value={strategy.style}
+          />
+          <StrategyFitItem
+            label={text("交易品种", "Instruments", "الأصول")}
             value={strategy.instruments.join(" / ")}
           />
           <StrategyFitItem
-            label="兼容终端"
+            label={text("兼容终端", "Terminals", "المنصات التقنية")}
             value={strategy.terminals.join(" / ")}
           />
           <StrategyFitItem
-            label="风险级别"
-            value={riskLabel(strategy.riskLevel)}
+            label={text("风险级别", "Risk level", "مستوى المخاطر")}
+            value={riskLabel(strategy.riskLevel, language)}
           />
           <StrategyFitItem
-            label="适配平台"
-            value={compatiblePlatforms.join(" / ") || "待核验"}
+            label={text(
+              "适配平台",
+              "Compatible platforms",
+              "المنصات المتوافقة",
+            )}
+            value={
+              compatiblePlatforms.join(" / ") ||
+              text("待核验", "Pending verification", "قيد التحقق")
+            }
             wide
           />
         </View>
@@ -249,8 +339,12 @@ export default function CoreStrategyDetailPage() {
               ]}
             >
               <View>
-                <Text style={styles.sectionEyebrow}>收益曲线</Text>
-                <Text style={styles.sectionTitle}>净值运行</Text>
+                <Text style={styles.sectionEyebrow}>
+                  {text("收益曲线", "PERFORMANCE CURVE", "منحنى الأداء")}
+                </Text>
+                <Text style={styles.sectionTitle}>
+                  {text("净值运行", "Equity performance", "أداء حقوق الحساب")}
+                </Text>
               </View>
               <View style={styles.rangeControl}>
                 {([7, 30, 60] as Range[]).map((value) => (
@@ -278,13 +372,16 @@ export default function CoreStrategyDetailPage() {
             </View>
             <View style={styles.chartTopline}>
               <View>
-                <Text style={styles.chartMeta}>当前权益</Text>
+                <Text style={styles.chartMeta}>
+                  {text("当前权益", "Current equity", "حقوق الحساب الحالية")}
+                </Text>
                 <Text style={styles.chartEquity}>
-                  {formatMoney(strategy.metrics.equity, "USD")}
+                  {formatMoney(strategy.metrics.equity, "USD", false, locale)}
                 </Text>
               </View>
               <Text style={styles.chartMeta}>
-                今日 {formatPct(strategy.metrics.todayPnlPct, true)}
+                {text("今日", "Today", "اليوم")}{" "}
+                {formatPct(strategy.metrics.todayPnlPct, true)}
               </Text>
             </View>
             <EquityChart
@@ -294,52 +391,78 @@ export default function CoreStrategyDetailPage() {
               color={strategy.accent}
               height={isMobile ? 190 : 240}
               showAxis
-              emptyLabel="数据连接中断，保留最后一次指标快照"
+              emptyLabel={text(
+                "数据连接中断，保留最后一次指标快照",
+                "Data feed disconnected; the last metric snapshot is retained",
+                "انقطع مصدر البيانات وتم الاحتفاظ بآخر لقطة للمؤشرات",
+              )}
             />
           </View>
 
           <View style={styles.snapshot}>
             <View>
-              <Text style={styles.sectionEyebrow}>账户快照</Text>
-              <Text style={styles.snapshotTitle}>运行快照</Text>
+              <Text style={styles.sectionEyebrow}>
+                {text("账户快照", "ACCOUNT SNAPSHOT", "لقطة الحساب")}
+              </Text>
+              <Text style={styles.snapshotTitle}>
+                {text("运行快照", "Runtime snapshot", "لقطة التشغيل")}
+              </Text>
             </View>
             <View style={styles.snapshotRows}>
               <AccountSnapshotRow
-                label="余额"
-                value={formatMoney(strategy.metrics.balance, "USD")}
+                label={text("余额", "Balance", "الرصيد")}
+                value={formatMoney(
+                  strategy.metrics.balance,
+                  "USD",
+                  false,
+                  locale,
+                )}
               />
               <AccountSnapshotRow
-                label="浮动盈亏"
-                value={formatMoney(strategy.metrics.floatingPnl, "USD")}
+                label={text(
+                  "浮动盈亏",
+                  "Floating P&L",
+                  "الربح والخسارة العائمة",
+                )}
+                value={formatMoney(
+                  strategy.metrics.floatingPnl,
+                  "USD",
+                  false,
+                  locale,
+                )}
                 color={
                   (strategy.metrics.floatingPnl ?? 0) >= 0 ? V2.green : V2.red
                 }
               />
               <AccountSnapshotRow
-                label="平均持仓"
+                label={text("平均持仓", "Average hold", "متوسط الاحتفاظ")}
                 value={
                   strategy.metrics.avgHoldingMinutes == null
                     ? "--"
-                    : `${strategy.metrics.avgHoldingMinutes} 分钟`
+                    : `${strategy.metrics.avgHoldingMinutes} ${text("分钟", "min", "دقيقة")}`
                 }
               />
               <AccountSnapshotRow
-                label="当前持仓"
-                value={`${strategy.positions.length} 笔`}
+                label={text("当前持仓", "Open positions", "المراكز المفتوحة")}
+                value={`${strategy.positions.length} ${text("笔", "positions", "مراكز")}`}
               />
               <AccountSnapshotRow
-                label="数据状态"
+                label={text("数据状态", "Data status", "حالة البيانات")}
                 value={
                   strategy.source.freshness === "FRESH"
-                    ? "同步正常"
+                    ? text("同步正常", "Synced", "متزامن")
                     : strategy.source.freshness === "STALE"
-                      ? "存在延迟"
-                      : "连接中断"
+                      ? text("存在延迟", "Delayed", "متأخر")
+                      : text("连接中断", "Disconnected", "غير متصل")
                 }
               />
             </View>
             <Text style={styles.snapshotHint}>
-              该策略只是量化方案中的一个模块，仍需与资金门槛、风险预算、兼容平台及管理模式共同确定。
+              {text(
+                "该策略只是量化方案中的一个模块，仍需与资金门槛、风险预算、兼容平台及管理模式共同确定。",
+                "This strategy is one module in a quant plan and must be combined with capital minimums, risk budget, compatible platforms and a management mode.",
+                "هذه الاستراتيجية جزء واحد من الخطة الكمية ويجب دمجها مع الحد الأدنى لرأس المال وميزانية المخاطر والمنصات المتوافقة ونمط الإدارة.",
+              )}
             </Text>
           </View>
         </View>
@@ -351,22 +474,30 @@ export default function CoreStrategyDetailPage() {
             contentContainerStyle={styles.tabs}
           >
             <DetailTabButton
-              label="策略摘要"
+              label={text("策略摘要", "Overview", "نظرة عامة")}
               active={tab === "overview"}
               onPress={() => setTab("overview")}
             />
             <DetailTabButton
-              label="图文资料"
+              label={text("图文资料", "Materials", "المواد")}
               active={tab === "materials"}
               onPress={() => setTab("materials")}
             />
             <DetailTabButton
-              label={`当前持仓 ${strategy.positions.length}`}
+              label={text(
+                `当前持仓 ${strategy.positions.length}`,
+                `Positions ${strategy.positions.length}`,
+                `المراكز ${strategy.positions.length}`,
+              )}
               active={tab === "positions"}
               onPress={() => setTab("positions")}
             />
             <DetailTabButton
-              label={`最近交易 ${strategy.recentTrades.length}`}
+              label={text(
+                `最近交易 ${strategy.recentTrades.length}`,
+                `Recent trades ${strategy.recentTrades.length}`,
+                `الصفقات الأخيرة ${strategy.recentTrades.length}`,
+              )}
               active={tab === "trades"}
               onPress={() => setTab("trades")}
             />
@@ -389,7 +520,11 @@ export default function CoreStrategyDetailPage() {
                 pnl: position.floatingPnl,
                 time: position.openedAt,
               }))}
-              empty="当前没有公开持仓"
+              empty={text(
+                "当前没有公开持仓",
+                "No public positions",
+                "لا توجد مراكز عامة",
+              )}
               isMobile={isMobile}
             />
           ) : null}
@@ -404,7 +539,11 @@ export default function CoreStrategyDetailPage() {
                 pnl: trade.pnl,
                 time: trade.closedAt,
               }))}
-              empty="暂无可展示交易"
+              empty={text(
+                "暂无可展示交易",
+                "No trades to display",
+                "لا توجد صفقات للعرض",
+              )}
               isMobile={isMobile}
             />
           ) : null}
@@ -413,7 +552,12 @@ export default function CoreStrategyDetailPage() {
         <View style={styles.bottomNotice}>
           <MaterialIcons name="info-outline" size={18} color={V2.blue} />
           <Text style={styles.bottomNoticeText}>
-            {sourceNotice} 年化按近 90 日收益复合折算，历史表现不代表未来结果。
+            {sourceNotice}{" "}
+            {text(
+              "年化按近 90 日收益复合折算，历史表现不代表未来结果。",
+              "Annualized return is compounded from the last 90 days. Historical performance does not predict future results.",
+              "يتم احتساب العائد السنوي مركبا من آخر 90 يوما. الأداء التاريخي لا يتنبأ بالنتائج المستقبلية.",
+            )}
           </Text>
         </View>
       </View>

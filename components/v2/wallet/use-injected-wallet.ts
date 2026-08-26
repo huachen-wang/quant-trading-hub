@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
+import { useLanguage } from "@/lib/language";
 import {
   normalizeWalletAddress,
   requestWalletConnection,
@@ -32,6 +33,7 @@ function storeAddress(address: string | null) {
 }
 
 export function useInjectedWallet() {
+  const { text } = useLanguage();
   const [address, setAddress] = useState<string | null>(null);
   const [chainId, setChainId] = useState<string | null>(null);
   const [available, setAvailable] = useState(false);
@@ -70,7 +72,15 @@ export function useInjectedWallet() {
         if (restored) commitAddress(restored);
         setChainId(currentChain);
       } catch {
-        if (active) setError("暂时无法读取钱包状态");
+        if (active) {
+          setError(
+            text(
+              "暂时无法读取钱包状态",
+              "Unable to read wallet status",
+              "تعذر قراءة حالة المحفظة",
+            ),
+          );
+        }
       }
     };
 
@@ -95,13 +105,19 @@ export function useInjectedWallet() {
       provider.removeListener?.("accountsChanged", handleAccounts);
       provider.removeListener?.("chainChanged", handleChain);
     };
-  }, [commitAddress, refreshProvider]);
+  }, [commitAddress, refreshProvider, text]);
 
   const connect = useCallback(async () => {
     const provider = refreshProvider();
     setError(null);
     if (!provider) {
-      setError("未检测到浏览器钱包，请使用钱包内置浏览器或安装钱包扩展");
+      setError(
+        text(
+          "未检测到浏览器钱包，请使用钱包内置浏览器或安装钱包扩展",
+          "No browser wallet detected. Use a wallet browser or install a wallet extension.",
+          "لم يتم اكتشاف محفظة متصفح. استخدم متصفح المحفظة أو ثبت إضافة للمحفظة.",
+        ),
+      );
       return false;
     }
 
@@ -114,16 +130,30 @@ export function useInjectedWallet() {
     } catch (cause) {
       const message =
         cause instanceof Error && /reject|denied|cancel/i.test(cause.message)
-          ? "你已取消钱包连接"
-          : cause instanceof Error
-            ? cause.message
-            : "钱包连接失败";
+          ? text(
+              "你已取消钱包连接",
+              "Wallet connection was cancelled",
+              "تم إلغاء اتصال المحفظة",
+            )
+          : cause instanceof Error && cause.message === "钱包没有返回可用地址"
+            ? text(
+                "钱包没有返回可用地址",
+                "The wallet returned no usable address",
+                "لم تُرجع المحفظة عنوانا صالحا",
+              )
+            : cause instanceof Error
+              ? cause.message
+              : text(
+                  "钱包连接失败",
+                  "Wallet connection failed",
+                  "فشل اتصال المحفظة",
+                );
       setError(message);
       return false;
     } finally {
       setConnecting(false);
     }
-  }, [commitAddress, refreshProvider]);
+  }, [commitAddress, refreshProvider, text]);
 
   const disconnect = useCallback(() => {
     commitAddress(null);

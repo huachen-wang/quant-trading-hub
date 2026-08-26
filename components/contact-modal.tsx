@@ -1,9 +1,20 @@
 import { useRef, useEffect } from "react";
-import { View, Text, Modal, TouchableOpacity, Linking, ActivityIndicator, StyleSheet, Animated, Platform } from "react-native";
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  Linking,
+  ActivityIndicator,
+  StyleSheet,
+  Animated,
+  Platform,
+} from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "./ui/icon-symbol";
 import { trpc } from "@/lib/trpc";
 import { glassStyle } from "@/lib/glass-styles";
+import { useLanguage } from "@/lib/language";
 
 interface ContactModalProps {
   visible: boolean;
@@ -20,6 +31,7 @@ const CONTACT_FALLBACKS = {
 
 export function ContactModal({ visible, onClose }: ContactModalProps) {
   const colors = useColors();
+  const { language, text } = useLanguage();
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -28,42 +40,84 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
       scaleAnim.setValue(0.9);
       opacityAnim.setValue(0);
       Animated.parallel([
-        Animated.timing(scaleAnim, { toValue: 1, duration: 250, useNativeDriver: Platform.OS !== "web" }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: Platform.OS !== "web",
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: Platform.OS !== "web",
+        }),
       ]).start();
     }
   }, [visible]);
-  const { data: contactData, isLoading } = trpc.siteSettings.getContact.useQuery(undefined, {
-    enabled: visible,
-  });
+  const { data: contactData, isLoading } =
+    trpc.siteSettings.getContact.useQuery(undefined, {
+      enabled: visible,
+    });
 
-  const telegram = contactData?.contact_telegram?.trim() || CONTACT_FALLBACKS.telegram;
-  const telegramLink = contactData?.contact_telegram_link?.trim() || CONTACT_FALLBACKS.telegramLink;
+  const telegram =
+    contactData?.contact_telegram?.trim() || CONTACT_FALLBACKS.telegram;
+  const telegramLink =
+    contactData?.contact_telegram_link?.trim() ||
+    CONTACT_FALLBACKS.telegramLink;
   const qq = contactData?.contact_qq?.trim() || CONTACT_FALLBACKS.qq;
-  const wechat = contactData?.contact_wechat?.trim() || CONTACT_FALLBACKS.wechat;
-  const description = contactData?.contact_description?.trim() || CONTACT_FALLBACKS.description;
-  const title = contactData?.contact_title?.trim() || "联系 EAXAU";
-  const subtitle = contactData?.contact_subtitle?.trim() || "获取 EA 文件 · 部署支持 · 商务授权";
+  const wechat =
+    contactData?.contact_wechat?.trim() || CONTACT_FALLBACKS.wechat;
+  const description =
+    language === "zh" && contactData?.contact_description?.trim()
+      ? contactData.contact_description.trim()
+      : text(
+          CONTACT_FALLBACKS.description,
+          "Mention the strategy name when contacting us. Our advisor will confirm the version, deployment requirements and delivery method.",
+          "اذكر اسم الاستراتيجية عند التواصل. سيؤكد المستشار الإصدار ومتطلبات النشر وطريقة التسليم.",
+        );
+  const title =
+    language === "zh" && contactData?.contact_title?.trim()
+      ? contactData.contact_title.trim()
+      : text("联系 EAXAU", "Contact EAXAU", "تواصل مع EAXAU");
+  const subtitle =
+    language === "zh" && contactData?.contact_subtitle?.trim()
+      ? contactData.contact_subtitle.trim()
+      : text(
+          "获取 EA 文件 · 部署支持 · 商务授权",
+          "EA delivery · Deployment support · Commercial licensing",
+          "تسليم EA · دعم النشر · الترخيص التجاري",
+        );
 
   const contactMethods = [
-    ...(telegram ? [{
-      icon: "paperplane.fill" as const,
-      label: "Telegram",
-      value: telegram,
-      link: telegramLink || null,
-    }] : []),
-    ...(qq ? [{
-      icon: "bubble.left.fill" as const,
-      label: "QQ群",
-      value: qq,
-      link: null,
-    }] : []),
-    ...(wechat ? [{
-      icon: "message.fill" as const,
-      label: "微信",
-      value: wechat,
-      link: null,
-    }] : []),
+    ...(telegram
+      ? [
+          {
+            icon: "paperplane.fill" as const,
+            label: "Telegram",
+            value: telegram,
+            link: telegramLink || null,
+          },
+        ]
+      : []),
+    ...(qq
+      ? [
+          {
+            icon: "bubble.left.fill" as const,
+            label: text("QQ群", "QQ Group", "مجموعة QQ"),
+            value: qq,
+            link: null,
+          },
+        ]
+      : []),
+    ...(wechat
+      ? [
+          {
+            icon: "message.fill" as const,
+            label: text("微信", "WeChat", "WeChat"),
+            value: wechat,
+            link: null,
+          },
+        ]
+      : []),
   ];
 
   const handlePress = (link: string | null) => {
@@ -90,68 +144,123 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
         <Animated.View
           style={[
             styles.modalContent,
-            { backgroundColor: Platform.OS === "web" ? "rgba(15,23,42,0.85)" : colors.background, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+            {
+              backgroundColor:
+                Platform.OS === "web"
+                  ? "rgba(15,23,42,0.85)"
+                  : colors.background,
+              transform: [{ scale: scaleAnim }],
+              opacity: opacityAnim,
+            },
             glassStyle("strong") as any,
           ]}
         >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
-          style={{ width: "100%" }}
-        >
-          {/* 标题 */}
-          <View style={styles.headerSection}>
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>{title}</Text>
-            <Text style={[styles.modalSubtitle, { color: colors.muted }]}>{subtitle}</Text>
-          </View>
-
-          {isLoading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
-          ) : (
-            <>
-              {/* 联系方式列表 */}
-              <View style={styles.contactList}>
-                {contactMethods.map((method) => (
-                  <TouchableOpacity
-                    key={method.label}
-                    onPress={() => handlePress(method.link)}
-                    style={[styles.contactItem, { backgroundColor: Platform.OS === "web" ? "rgba(30,41,59,0.5)" : colors.surface }, glassStyle("subtle") as any]}
-                    activeOpacity={method.link ? 0.7 : 1}
-                  >
-                    <View style={[styles.contactIcon, { backgroundColor: colors.primary + "15" }]}>
-                      <IconSymbol name={method.icon} size={24} color={colors.primary} />
-                    </View>
-                    <View style={styles.contactInfo}>
-                      <Text style={[styles.contactLabel, { color: colors.muted }]}>{method.label}</Text>
-                      <Text style={[styles.contactValue, { color: colors.foreground }]}>{method.value}</Text>
-                    </View>
-                    {method.link && (
-                      <IconSymbol name="chevron.right" size={20} color={colors.muted} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* 说明 */}
-              {description ? (
-                <View style={[styles.descBox, { backgroundColor: colors.primary + "08" }]}>
-                  <Text style={[styles.descText, { color: colors.foreground }]}>{description}</Text>
-                </View>
-              ) : null}
-            </>
-          )}
-
-          {/* 关闭按钮 */}
           <TouchableOpacity
-            onPress={onClose}
-            style={[styles.closeBtn, { backgroundColor: colors.primary }]}
-            activeOpacity={0.8}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={{ width: "100%" }}
           >
-            <Text style={styles.closeBtnText}>关闭</Text>
+            {/* 标题 */}
+            <View style={styles.headerSection}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                {title}
+              </Text>
+              <Text style={[styles.modalSubtitle, { color: colors.muted }]}>
+                {subtitle}
+              </Text>
+            </View>
+
+            {isLoading ? (
+              <View style={styles.loadingBox}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            ) : (
+              <>
+                {/* 联系方式列表 */}
+                <View style={styles.contactList}>
+                  {contactMethods.map((method) => (
+                    <TouchableOpacity
+                      key={method.label}
+                      onPress={() => handlePress(method.link)}
+                      style={[
+                        styles.contactItem,
+                        {
+                          backgroundColor:
+                            Platform.OS === "web"
+                              ? "rgba(30,41,59,0.5)"
+                              : colors.surface,
+                        },
+                        glassStyle("subtle") as any,
+                      ]}
+                      activeOpacity={method.link ? 0.7 : 1}
+                    >
+                      <View
+                        style={[
+                          styles.contactIcon,
+                          { backgroundColor: colors.primary + "15" },
+                        ]}
+                      >
+                        <IconSymbol
+                          name={method.icon}
+                          size={24}
+                          color={colors.primary}
+                        />
+                      </View>
+                      <View style={styles.contactInfo}>
+                        <Text
+                          style={[styles.contactLabel, { color: colors.muted }]}
+                        >
+                          {method.label}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.contactValue,
+                            { color: colors.foreground },
+                          ]}
+                        >
+                          {method.value}
+                        </Text>
+                      </View>
+                      {method.link && (
+                        <IconSymbol
+                          name="chevron.right"
+                          size={20}
+                          color={colors.muted}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* 说明 */}
+                {description ? (
+                  <View
+                    style={[
+                      styles.descBox,
+                      { backgroundColor: colors.primary + "08" },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.descText, { color: colors.foreground }]}
+                    >
+                      {description}
+                    </Text>
+                  </View>
+                ) : null}
+              </>
+            )}
+
+            {/* 关闭按钮 */}
+            <TouchableOpacity
+              onPress={onClose}
+              style={[styles.closeBtn, { backgroundColor: colors.primary }]}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.closeBtnText}>
+                {text("关闭", "Close", "إغلاق")}
+              </Text>
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
         </Animated.View>
       </TouchableOpacity>
     </Modal>

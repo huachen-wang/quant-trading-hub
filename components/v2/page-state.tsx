@@ -1,31 +1,62 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useLanguage } from "@/lib/language";
 import { V2 } from "./tokens";
 
-export function V2LoadingState({ label = "正在同步数据" }: { label?: string }) {
+export function V2LoadingState({ label }: { label?: string }) {
+  const { text } = useLanguage();
   return (
     <View accessibilityLiveRegion="polite" style={styles.state}>
       <ActivityIndicator color={V2.gold} size="large" />
-      <Text style={styles.title}>{label}</Text>
-      <Text style={styles.detail}>页面结构保持稳定，数据返回后会自动更新。</Text>
+      <Text style={styles.title}>
+        {label ?? text("正在同步数据", "Syncing data", "جارٍ مزامنة البيانات")}
+      </Text>
+      <Text style={styles.detail}>
+        {text(
+          "页面结构保持稳定，数据返回后会自动更新。",
+          "The layout remains stable and updates when data arrives.",
+          "يبقى التخطيط ثابتا ويتم تحديثه عند وصول البيانات.",
+        )}
+      </Text>
     </View>
   );
 }
 
 export function V2ErrorState({
-  title = "数据暂时不可用",
-  detail = "请检查服务连接后重试。",
+  title,
+  detail,
   onRetry,
 }: {
   title?: string;
   detail?: string;
   onRetry?: () => void;
 }) {
+  const { text } = useLanguage();
   return (
     <View accessibilityRole="alert" style={styles.state}>
       <MaterialIcons name="sync-problem" size={32} color={V2.amber} />
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.detail}>{detail}</Text>
+      <Text style={styles.title}>
+        {title ??
+          text(
+            "数据暂时不可用",
+            "Data is temporarily unavailable",
+            "البيانات غير متاحة مؤقتا",
+          )}
+      </Text>
+      <Text style={styles.detail}>
+        {detail ??
+          text(
+            "请检查服务连接后重试。",
+            "Check the service connection and try again.",
+            "تحقق من اتصال الخدمة ثم حاول مرة أخرى.",
+          )}
+      </Text>
       {onRetry ? (
         <Pressable
           accessibilityRole="button"
@@ -33,7 +64,9 @@ export function V2ErrorState({
           style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         >
           <MaterialIcons name="refresh" size={18} color={V2.background} />
-          <Text style={styles.buttonText}>重新加载</Text>
+          <Text style={styles.buttonText}>
+            {text("重新加载", "Reload", "إعادة التحميل")}
+          </Text>
         </Pressable>
       ) : null}
     </View>
@@ -51,7 +84,12 @@ const styles = StyleSheet.create({
     backgroundColor: V2.background,
   },
   title: { color: V2.text, fontSize: 17, fontWeight: "800", letterSpacing: 0 },
-  detail: { color: V2.textMuted, fontSize: 13, textAlign: "center", lineHeight: 20 },
+  detail: {
+    color: V2.textMuted,
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 20,
+  },
   button: {
     marginTop: 8,
     minHeight: 40,

@@ -2,6 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { ServiceAccount } from "@/shared/v2/contracts";
+import { useLanguage } from "@/lib/language";
 import { EquityChart } from "./equity-chart";
 import { formatMoney, formatPct } from "./format";
 import { StatusBadge } from "./status-badge";
@@ -14,12 +15,17 @@ function AccountCardBase({
   account: ServiceAccount;
   onPress: (accountId: string) => void;
 }) {
+  const { locale, text } = useLanguage();
   const managed = account.serviceMode === "MANAGED_CONTRACT";
   const modeColor = managed ? V2.gold : V2.blue;
   return (
     <Pressable
       accessibilityRole="link"
-      accessibilityLabel={`查看 ${account.name}`}
+      accessibilityLabel={text(
+        `查看 ${account.name}`,
+        `View ${account.name}`,
+        `عرض ${account.name}`,
+      )}
       onPress={() => onPress(account.id)}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
@@ -44,7 +50,9 @@ function AccountCardBase({
             {account.name}
           </Text>
           <Text style={[styles.mode, { color: modeColor }]}>
-            {managed ? "资管模式" : "券商模式"}
+            {managed
+              ? text("资管模式", "Managed mode", "إدارة مفوضة")
+              : text("券商模式", "Broker mode", "نمط الوسيط")}
           </Text>
         </View>
         <StatusBadge
@@ -55,9 +63,11 @@ function AccountCardBase({
       </View>
       <View style={styles.equityLine}>
         <View>
-          <Text style={styles.equityLabel}>当前权益</Text>
+          <Text style={styles.equityLabel}>
+            {text("当前权益", "Current equity", "حقوق الحساب الحالية")}
+          </Text>
           <Text style={styles.equityValue}>
-            {formatMoney(account.equity, account.currency)}
+            {formatMoney(account.equity, account.currency, false, locale)}
           </Text>
         </View>
         <Text
@@ -76,19 +86,25 @@ function AccountCardBase({
       />
       <View style={styles.metrics}>
         <View style={styles.metric}>
-          <Text style={styles.metricLabel}>今日盈亏</Text>
+          <Text style={styles.metricLabel}>
+            {text("今日盈亏", "Today P&L", "ربح وخسارة اليوم")}
+          </Text>
           <Text style={styles.metricValue}>
-            {formatMoney(account.todayPnl, account.currency, true)}
+            {formatMoney(account.todayPnl, account.currency, true, locale)}
           </Text>
         </View>
         <View style={styles.metric}>
-          <Text style={styles.metricLabel}>最大回撤</Text>
+          <Text style={styles.metricLabel}>
+            {text("最大回撤", "Max drawdown", "أقصى تراجع")}
+          </Text>
           <Text style={styles.metricValue}>
             {formatPct(account.maxDrawdownPct)}
           </Text>
         </View>
         <View style={styles.metric}>
-          <Text style={styles.metricLabel}>平台</Text>
+          <Text style={styles.metricLabel}>
+            {text("平台", "Platforms", "المنصات")}
+          </Text>
           <Text style={styles.metricValue}>{account.platformIds.length}</Text>
         </View>
       </View>
@@ -109,16 +125,18 @@ function AccountCardBase({
           />
           <Text style={styles.connectionText}>
             {account.connectionStatus === "CONNECTED"
-              ? "连接正常"
+              ? text("连接正常", "Connected", "متصل")
               : account.connectionStatus === "DEGRADED"
-                ? "部分延迟"
+                ? text("部分延迟", "Partially delayed", "تأخير جزئي")
                 : account.connectionStatus === "DISCONNECTED"
-                  ? "连接中断"
-                  : "等待连接"}
+                  ? text("连接中断", "Disconnected", "غير متصل")
+                  : text("等待连接", "Pending", "قيد الاتصال")}
           </Text>
         </View>
         <View style={styles.open}>
-          <Text style={styles.openText}>查看账户</Text>
+          <Text style={styles.openText}>
+            {text("查看账户", "View account", "عرض الحساب")}
+          </Text>
           <MaterialIcons name="arrow-forward" size={15} color={V2.text} />
         </View>
       </View>

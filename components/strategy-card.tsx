@@ -11,6 +11,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { StrategyCover } from "@/components/strategy-cover";
 import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useLanguage } from "@/lib/language";
 import * as Haptics from "expo-haptics";
 
 export interface StrategyCardProps {
@@ -56,6 +57,7 @@ export function StrategyCard({
 }: StrategyCardProps) {
   const colors = useColors();
   const { numColumns, isDesktop } = useResponsive();
+  const { text } = useLanguage();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
@@ -163,7 +165,11 @@ export function StrategyCard({
                   },
                 ]}
                 activeOpacity={0.7}
-                accessibilityLabel="订阅策略更新"
+                accessibilityLabel={text(
+                  "订阅策略更新",
+                  "Subscribe to strategy updates",
+                  "الاشتراك في تحديثات الاستراتيجية",
+                )}
               >
                 <IconSymbol name="bell.fill" size={13} color="#D8BC83" />
               </TouchableOpacity>
@@ -243,7 +249,7 @@ export function StrategyCard({
                   ]}
                   numberOfLines={1}
                 >
-                  联系咨询
+                  {text("联系咨询", "Contact", "تواصل معنا")}
                 </Text>
               </View>
               <View style={styles.bottomRight}>
@@ -253,7 +259,7 @@ export function StrategyCard({
                     { color: colors.muted, fontSize: metaSize },
                   ]}
                 >
-                  版本确认
+                  {text("版本确认", "Verify version", "تأكيد الإصدار")}
                 </Text>
               </View>
             </View>
@@ -265,7 +271,7 @@ export function StrategyCard({
                 ]}
                 numberOfLines={1}
               >
-                胜率
+                {text("胜率", "Win rate", "نسبة الفوز")}
               </Text>
               <Text
                 style={[

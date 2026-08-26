@@ -1,7 +1,14 @@
-import { View, Text, TouchableOpacity, StyleSheet, Linking } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Linking,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useLanguage } from "@/lib/language";
 
 const QUICK_NAV_ITEMS = [
   {
@@ -39,8 +46,50 @@ const QUICK_NAV_ITEMS = [
 export function QuickNav() {
   const router = useRouter();
   const { isDesktop } = useResponsive();
+  const { text } = useLanguage();
+  const items = QUICK_NAV_ITEMS.map((item) => {
+    if (item.id === "cooperation") {
+      return {
+        ...item,
+        title: text(
+          "工作室扶持合作",
+          "Studio partnerships",
+          "شراكات الاستوديو",
+        ),
+        subtitle: text(
+          "深度扶持 · 源头直供",
+          "Direct support · Source access",
+          "دعم مباشر · وصول للمصدر",
+        ),
+      };
+    }
+    if (item.id === "promo") {
+      return {
+        ...item,
+        title: text("EA限时促销", "EA promotions", "عروض EA"),
+        subtitle: text(
+          "源头价 · 限时特惠",
+          "Source pricing · Limited time",
+          "سعر المصدر · لفترة محدودة",
+        ),
+      };
+    }
+    return {
+      ...item,
+      title: text(
+        "订单流独家策略",
+        "Order-flow strategy",
+        "استراتيجية تدفق الأوامر",
+      ),
+      subtitle: text(
+        "四维共振 · 独家研发",
+        "Four-factor model · Proprietary",
+        "نموذج رباعي · تطوير خاص",
+      ),
+    };
+  });
 
-  const handlePress = (item: typeof QUICK_NAV_ITEMS[0]) => {
+  const handlePress = (item: (typeof QUICK_NAV_ITEMS)[0]) => {
     if (item.type === "link") {
       Linking.openURL(item.target);
     } else {
@@ -52,11 +101,13 @@ export function QuickNav() {
     <View style={[styles.container, isDesktop && styles.containerDesktop]}>
       <View style={styles.divider} />
       <View style={styles.headerRow}>
-        <Text style={styles.sectionTitle}>快捷导航</Text>
+        <Text style={styles.sectionTitle}>
+          {text("快捷导航", "Resources", "الموارد")}
+        </Text>
         {isDesktop && <Text style={styles.sectionMeta}>RESOURCE MATRIX</Text>}
       </View>
       <View style={[styles.column, isDesktop && styles.grid]}>
-        {QUICK_NAV_ITEMS.map((item) => (
+        {items.map((item) => (
           <TouchableOpacity
             key={item.id}
             onPress={() => handlePress(item)}
@@ -70,17 +121,37 @@ export function QuickNav() {
               style={[
                 styles.card,
                 isDesktop && styles.cardDesktop,
-                { borderColor: item.accent + "38", borderLeftColor: item.accent + "A6" },
+                {
+                  borderColor: item.accent + "38",
+                  borderLeftColor: item.accent + "A6",
+                },
               ]}
               // @ts-ignore - web-only className
-
             >
-              <View style={[styles.iconWrap, isDesktop && styles.iconWrapDesktop, { backgroundColor: item.accent + "18" }]}>
-                <Text style={[styles.icon, isDesktop && styles.iconDesktop]}>{item.code}</Text>
+              <View
+                style={[
+                  styles.iconWrap,
+                  isDesktop && styles.iconWrapDesktop,
+                  { backgroundColor: item.accent + "18" },
+                ]}
+              >
+                <Text style={[styles.icon, isDesktop && styles.iconDesktop]}>
+                  {item.code}
+                </Text>
               </View>
               <View style={styles.textArea}>
-                <Text style={[styles.title, isDesktop && styles.titleDesktop]} numberOfLines={1}>{item.title}</Text>
-                <Text style={[styles.subtitle, { color: item.accent + "99" }]} numberOfLines={1}>{item.subtitle}</Text>
+                <Text
+                  style={[styles.title, isDesktop && styles.titleDesktop]}
+                  numberOfLines={1}
+                >
+                  {item.title}
+                </Text>
+                <Text
+                  style={[styles.subtitle, { color: item.accent + "99" }]}
+                  numberOfLines={1}
+                >
+                  {item.subtitle}
+                </Text>
               </View>
               <Text style={[styles.arrow, { color: item.accent }]}>›</Text>
             </LinearGradient>

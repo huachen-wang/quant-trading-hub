@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import type { SourceMeta } from "@/shared/v2/contracts";
+import { useLanguage, type AppLocale } from "@/lib/language";
 import { formatMoney, formatPct } from "./format";
 import { V2 } from "./tokens";
 
@@ -32,10 +33,10 @@ type LiveFeedStripProps = {
   onOpen: (item: LiveFeedItem) => void;
 };
 
-function timeOnly(value: string) {
+function timeOnly(value: string, locale: AppLocale) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "--:--:--";
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(locale, {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -43,11 +44,16 @@ function timeOnly(value: string) {
   }).format(date);
 }
 
-function sourceName(source: SourceMeta) {
+function sourceName(
+  source: SourceMeta,
+  text: (chinese: string, english: string, arabic?: string) => string,
+) {
   if (/niubang/i.test(`${source.provider} ${source.label}`)) {
     if (source.freshness === "FRESH") return "NIUBANG LIVE";
-    if (source.freshness === "STALE") return "NIUBANG 延迟";
-    return "NIUBANG 离线";
+    if (source.freshness === "STALE") {
+      return text("NIUBANG 延迟", "NIUBANG DELAYED", "NIUBANG متأخر");
+    }
+    return text("NIUBANG 离线", "NIUBANG OFFLINE", "NIUBANG غير متصل");
   }
   return source.dataMode;
 }
@@ -61,6 +67,7 @@ export function LiveFeedStrip({
   onOpen,
 }: LiveFeedStripProps) {
   const pulse = useRef(new Animated.Value(0)).current;
+  const { locale, text } = useLanguage();
 
   useEffect(() => {
     pulse.setValue(0);
@@ -78,19 +85,19 @@ export function LiveFeedStrip({
     ]).start();
   }, [pulse, refreshKey]);
 
-  const label = sourceName(source);
+  const label = sourceName(source, text);
   const statusText =
     source.dataMode === "DEMO"
       ? isFetching
-        ? "刷新演示"
-        : "模拟演示"
+        ? text("刷新演示", "Refreshing demo", "تحديث العرض")
+        : text("模拟演示", "Demo feed", "بيانات تجريبية")
       : source.freshness === "OFFLINE"
-        ? "链路离线"
+        ? text("链路离线", "Feed offline", "المصدر غير متصل")
         : isFetching
-          ? "正在同步"
+          ? text("正在同步", "Syncing", "جارٍ التزامن")
           : source.freshness === "STALE"
-            ? "数据延迟"
-            : "链路已同步";
+            ? text("数据延迟", "Data delayed", "البيانات متأخرة")
+            : text("链路已同步", "Feed synced", "تمت المزامنة");
   const tickerNodes = useMemo(
     () =>
       items.map((item) => {
@@ -99,7 +106,11 @@ export function LiveFeedStrip({
           <Pressable
             key={item.id}
             accessibilityRole="link"
-            accessibilityLabel={`查看 ${item.name} ${item.changeLabel}数据`}
+            accessibilityLabel={text(
+              `查看 ${item.name} ${item.changeLabel}数据`,
+              `View ${item.name} ${item.changeLabel} data`,
+              `عرض بيانات ${item.changeLabel} لـ ${item.name}`,
+            )}
             onPress={() => onOpen(item)}
             style={({ pressed }) => [
               styles.ticker,
@@ -127,13 +138,13 @@ export function LiveFeedStrip({
             <View style={styles.tickerBottom}>
               <Text style={styles.tickerMeta}>{item.equityLabel}</Text>
               <Text style={styles.equityValue} numberOfLines={1}>
-                {formatMoney(item.equity, "USD", true)}
+                {formatMoney(item.equity, "USD", true, locale)}
               </Text>
             </View>
           </Pressable>
         );
       }),
-    [isMobile, items, onOpen],
+    [isMobile, items, locale, onOpen, text],
   );
 
   return (
@@ -172,7 +183,9 @@ export function LiveFeedStrip({
         </View>
         <View style={styles.feedMetaRow}>
           <Text style={styles.feedStatus}>{statusText}</Text>
-          <Text style={styles.feedTime}>RX {timeOnly(source.receivedAt)}</Text>
+          <Text style={styles.feedTime}>
+            RX {timeOnly(source.receivedAt, locale)}
+          </Text>
         </View>
       </View>
 

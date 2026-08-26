@@ -12,7 +12,9 @@ import {
 import { AccountCard } from "@/components/v2/account-card";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
+import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
+import { localizeAccount } from "@/lib/v2/localized-content";
 
 type Filter = "ALL" | "MANAGED_CONTRACT" | "SELF_ALLOCATED";
 
@@ -20,6 +22,7 @@ export default function AccountsPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isMobile = width < 740;
+  const { language, text } = useLanguage();
   const [filter, setFilter] = useState<Filter>("ALL");
   const openAccount = useCallback(
     (accountId: string) =>
@@ -31,17 +34,36 @@ export default function AccountsPage() {
   });
   const accounts = useMemo(
     () =>
-      query.data?.filter(
-        (account) => filter === "ALL" || account.serviceMode === filter,
-      ) ?? [],
-    [filter, query.data],
+      query.data
+        ?.filter(
+          (account) => filter === "ALL" || account.serviceMode === filter,
+        )
+        .map((account) => localizeAccount(account, language)) ?? [],
+    [filter, language, query.data],
   );
 
-  if (query.isLoading) return <V2LoadingState label="正在同步账户投影" />;
+  if (query.isLoading) {
+    return (
+      <V2LoadingState
+        label={text(
+          "正在同步账户投影",
+          "Syncing account projections",
+          "جارٍ مزامنة بيانات الحسابات",
+        )}
+      />
+    );
+  }
   if (!query.data) {
     return (
       <V2ErrorState
-        detail={query.error?.message || "账户接口没有返回数据。"}
+        detail={
+          query.error?.message ||
+          text(
+            "账户接口没有返回数据。",
+            "The account service returned no data.",
+            "لم تُرجع خدمة الحسابات أي بيانات.",
+          )
+        }
         onRetry={() => query.refetch()}
       />
     );
@@ -55,17 +77,25 @@ export default function AccountsPage() {
       <View style={[styles.page, isMobile && styles.pageMobile]}>
         <View style={[styles.header, isMobile && styles.headerMobile]}>
           <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>账户总览</Text>
+            <Text style={styles.eyebrow}>
+              {text("账户总览", "ACCOUNT OVERVIEW", "نظرة على الحسابات")}
+            </Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
-              账户观察
+              {text("账户观察", "Account monitoring", "مراقبة الحسابات")}
             </Text>
             <Text style={styles.subtitle}>
-              资管模式由技术方按合同管理；券商模式的资金保留在用户本人券商账户。两种模式都提供可追溯的净值、持仓与风险记录。
+              {text(
+                "资管模式由技术方按合同管理；券商模式的资金保留在用户本人券商账户。两种模式都提供可追溯的净值、持仓与风险记录。",
+                "In managed mode, the provider operates under contract. In broker mode, funds stay in the user's own broker account. Both provide traceable equity, position and risk records.",
+                "في نمط الإدارة المفوضة يعمل المزود بموجب عقد، وفي نمط الوسيط تبقى الأموال في حساب المستخدم. يوفر النمطان سجلات قابلة للتتبع لحقوق الحساب والمراكز والمخاطر.",
+              )}
             </Text>
           </View>
           <View style={styles.demoState}>
             <View style={styles.demoDot} />
-            <Text style={styles.demoText}>模拟账户</Text>
+            <Text style={styles.demoText}>
+              {text("模拟账户", "DEMO ACCOUNTS", "حسابات تجريبية")}
+            </Text>
           </View>
         </View>
 
@@ -73,14 +103,22 @@ export default function AccountsPage() {
           <ModeExplanation
             icon="description"
             color={V2.gold}
-            title="资管模式"
-            detail="技术方按合同负责策略部署、交易执行和风险管理；客户查看合同状态、权益、持仓与风险事件。"
+            title={text("资管模式", "Managed mode", "الإدارة المفوضة")}
+            detail={text(
+              "技术方按合同负责策略部署、交易执行和风险管理；客户查看合同状态、权益、持仓与风险事件。",
+              "The provider handles deployment, execution and risk under contract; the client views contract status, equity, positions and risk events.",
+              "يتولى المزود النشر والتنفيذ والمخاطر بموجب عقد، ويتابع العميل حالة العقد وحقوق الحساب والمراكز وأحداث المخاطر.",
+            )}
           />
           <ModeExplanation
             icon="account-tree"
             color={V2.blue}
-            title="券商模式"
-            detail="资金留在客户本人券商账户，客户掌握入出金；系统展示平台连接、策略贡献和风险预算。"
+            title={text("券商模式", "Broker mode", "نمط الوسيط")}
+            detail={text(
+              "资金留在客户本人券商账户，客户掌握入出金；系统展示平台连接、策略贡献和风险预算。",
+              "Funds remain in the client's broker account and the client controls deposits and withdrawals. The system shows platform connections, strategy contribution and risk budget.",
+              "تبقى الأموال في حساب الوسيط الخاص بالعميل ويتحكم في الإيداع والسحب، بينما يعرض النظام اتصالات المنصات ومساهمة الاستراتيجيات وميزانية المخاطر.",
+            )}
           />
         </View>
 
@@ -88,9 +126,12 @@ export default function AccountsPage() {
           <View style={styles.filters}>
             {(
               [
-                ["ALL", "全部"],
-                ["MANAGED_CONTRACT", "资管模式"],
-                ["SELF_ALLOCATED", "券商模式"],
+                ["ALL", text("全部", "All", "الكل")],
+                [
+                  "MANAGED_CONTRACT",
+                  text("资管模式", "Managed", "إدارة مفوضة"),
+                ],
+                ["SELF_ALLOCATED", text("券商模式", "Broker", "وسيط")],
               ] as const
             ).map(([value, label]) => (
               <Pressable
@@ -111,7 +152,13 @@ export default function AccountsPage() {
               </Pressable>
             ))}
           </View>
-          <Text style={styles.count}>{accounts.length} 个账户</Text>
+          <Text style={styles.count}>
+            {text(
+              `${accounts.length} 个账户`,
+              `${accounts.length} accounts`,
+              `${accounts.length} حسابات`,
+            )}
+          </Text>
         </View>
 
         <View style={styles.grid}>
@@ -132,9 +179,19 @@ export default function AccountsPage() {
               size={28}
               color={V2.textDim}
             />
-            <Text style={styles.emptyTitle}>当前模式没有账户</Text>
+            <Text style={styles.emptyTitle}>
+              {text(
+                "当前模式没有账户",
+                "No accounts in this mode",
+                "لا توجد حسابات في هذا النمط",
+              )}
+            </Text>
             <Text style={styles.emptyDetail}>
-              切换上方筛选查看其他账户类型。
+              {text(
+                "切换上方筛选查看其他账户类型。",
+                "Use the filters above to view other account types.",
+                "استخدم عوامل التصفية أعلاه لعرض أنواع حسابات أخرى.",
+              )}
             </Text>
           </View>
         ) : null}
@@ -142,8 +199,11 @@ export default function AccountsPage() {
         <View style={styles.notice}>
           <MaterialIcons name="lock-outline" size={20} color={V2.green} />
           <Text style={styles.noticeText}>
-            EAXAU
-            只读取获授权的账户投影，不保存交易密码或提供方原始令牌。真实数据模式下，未完成身份验证或数据授权的请求会被服务端拒绝。
+            {text(
+              "EAXAU 只读取获授权的账户投影，不保存交易密码或提供方原始令牌。真实数据模式下，未完成身份验证或数据授权的请求会被服务端拒绝。",
+              "EAXAU reads authorized account projections only. It does not store trading passwords or raw provider tokens. In live mode, the server rejects requests without identity verification and data authorization.",
+              "تقرأ EAXAU بيانات الحساب المصرح بها فقط ولا تحفظ كلمات مرور التداول أو رموز المزود الأصلية. في الوضع الحي يرفض الخادم الطلبات التي لم تستكمل التحقق من الهوية وتفويض البيانات.",
+            )}
           </Text>
         </View>
       </View>

@@ -27,6 +27,7 @@ import {
   type SelectionInspectorItem,
 } from "@/components/v2/selection-inspector";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
+import { useLanguage } from "@/lib/language";
 import {
   STRATEGY_DROP_REASON_LABEL,
   appendStrategyToBucket,
@@ -39,6 +40,11 @@ import type {
   AllocationDraft,
 } from "@/lib/v2/allocation-types";
 import { trpc } from "@/lib/trpc";
+import {
+  localizePlatforms,
+  localizeStrategies,
+  localizeStrategy,
+} from "@/lib/v2/localized-content";
 import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
 
 type RiskProfile = AllocationDraft["riskBudget"]["profile"];
@@ -61,6 +67,7 @@ export default function AllocationPage() {
   const { width } = useWindowDimensions();
   const isMobile = width < 900;
   const dragEnabled = Platform.OS === "web" && !isMobile;
+  const { language, locale, text } = useLanguage();
   const [draft, setDraft] = useState<AllocationDraft>();
   const [capitalFocused, setCapitalFocused] = useState(false);
   const [summaryVisible, setSummaryVisible] = useState(false);
@@ -181,17 +188,33 @@ export default function AllocationPage() {
   );
 
   if (strategies.isLoading || platforms.isLoading || recommend.isPending) {
-    return <V2LoadingState label="正在生成分仓草稿" />;
+    return (
+      <V2LoadingState
+        label={text(
+          "正在生成分仓草稿",
+          "Generating allocation draft",
+          "جارٍ إنشاء مسودة التوزيع",
+        )}
+      />
+    );
   }
   if (!strategies.data || !platforms.data || !draft) {
     return (
       <V2ErrorState
-        title="分仓配置暂时不可用"
+        title={text(
+          "分仓配置暂时不可用",
+          "Allocation is temporarily unavailable",
+          "التوزيع غير متاح مؤقتا",
+        )}
         detail={
           strategies.error?.message ||
           platforms.error?.message ||
           recommend.error?.message ||
-          "没有取得配置数据。"
+          text(
+            "没有取得配置数据。",
+            "No configuration data was returned.",
+            "لم يتم استلام بيانات الإعداد.",
+          )
         }
         onRetry={() => {
           requestedInitial.current = false;
@@ -203,6 +226,26 @@ export default function AllocationPage() {
   }
 
   const capital = Number(draft.capital.amount) || 0;
+  const visibleStrategies = localizeStrategies(strategies.data, language);
+  const visiblePlatforms = localizePlatforms(platforms.data, language);
+  const dropReasonLabel = (reason: keyof typeof STRATEGY_DROP_REASON_LABEL) =>
+    reason === "INCOMPATIBLE"
+      ? text(
+          STRATEGY_DROP_REASON_LABEL[reason],
+          "This platform does not support the strategy",
+          "هذه المنصة لا تدعم الاستراتيجية",
+        )
+      : reason === "OFFLINE"
+        ? text(
+            STRATEGY_DROP_REASON_LABEL[reason],
+            "The strategy feed is offline and cannot be added",
+            "مصدر الاستراتيجية غير متصل ولا يمكن إضافتها",
+          )
+        : text(
+            STRATEGY_DROP_REASON_LABEL[reason],
+            "The strategy is already in this platform bucket",
+            "الاستراتيجية موجودة بالفعل في حاوية المنصة",
+          );
 
   const changeRisk = (profile: RiskProfile) => {
     const maxDrawdownPct = profile === "LOW" ? 8 : profile === "HIGH" ? 18 : 12;
@@ -319,7 +362,7 @@ export default function AllocationPage() {
       setDropFlash({
         platformId: platform.id,
         kind: "reject",
-        message: STRATEGY_DROP_REASON_LABEL[verdict.reason],
+        message: dropReasonLabel(verdict.reason),
       });
       return;
     }
@@ -328,7 +371,11 @@ export default function AllocationPage() {
     setDropFlash({
       platformId: platform.id,
       kind: "success",
-      message: `已加入「${strategy?.shortName ?? strategyId}」`,
+      message: text(
+        `已加入「${strategy?.shortName ?? strategyId}」`,
+        `${strategy ? localizeStrategy(strategy, language).shortName : strategyId} added`,
+        `تمت إضافة ${strategy ? localizeStrategy(strategy, language).shortName : strategyId}`,
+      ),
     });
   };
 
@@ -344,12 +391,15 @@ export default function AllocationPage() {
       setDropFlash({
         platformId: platform.id,
         kind: "reject",
-        message: STRATEGY_DROP_REASON_LABEL[verdict.reason],
+        message: dropReasonLabel(verdict.reason),
       });
       return;
     }
     setInspector({
-      item: { kind: "strategy", strategy },
+      item: {
+        kind: "strategy",
+        strategy: localizeStrategy(strategy, language),
+      },
       targetBucketIndex: index,
     });
   };
@@ -371,12 +421,22 @@ export default function AllocationPage() {
       return {
         tone: "valid",
         message:
-          dropHover === platform.id ? "松开鼠标查看详情" : "可放入此平台桶",
+          dropHover === platform.id
+            ? text(
+                "松开鼠标查看详情",
+                "Release to review details",
+                "أفلت لعرض التفاصيل",
+              )
+            : text(
+                "可放入此平台桶",
+                "Compatible with this platform",
+                "متوافقة مع هذه المنصة",
+              ),
       };
     }
     return {
       tone: "invalid",
-      message: STRATEGY_DROP_REASON_LABEL[verdict.reason],
+      message: dropReasonLabel(verdict.reason),
     };
   };
 
@@ -418,13 +478,22 @@ export default function AllocationPage() {
       <View style={[styles.page, isMobile && styles.pageMobile]}>
         <View style={[styles.header, isMobile && styles.headerMobile]}>
           <View style={styles.headerCopy}>
-            <Text style={styles.eyebrow}>分仓配置</Text>
+            <Text style={styles.eyebrow}>
+              {text("分仓配置", "ALLOCATION BUILDER", "منشئ التوزيع")}
+            </Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
-              券商模式精细选配
+              {text(
+                "券商模式精细选配",
+                "Fine-tune the broker plan",
+                "ضبط خطة الوسيط",
+              )}
             </Text>
             <Text style={styles.subtitle}>
-              选择 1 至 3
-              个平台，把核心策略分配到资金桶，再由规则引擎检查兼容性、集中度和风险预算。
+              {text(
+                "选择 1 至 3 个平台，把核心策略分配到资金桶，再由规则引擎检查兼容性、集中度和风险预算。",
+                "Choose one to three platforms, allocate core strategies to capital buckets, then validate compatibility, concentration and risk budget.",
+                "اختر من منصة إلى ثلاث منصات ووزع الاستراتيجيات الأساسية على حاويات رأس المال، ثم تحقق من التوافق والتركيز وميزانية المخاطر.",
+              )}
             </Text>
           </View>
           <Pressable
@@ -437,13 +506,17 @@ export default function AllocationPage() {
             ]}
           >
             <MaterialIcons name="auto-awesome" size={18} color={V2.gold} />
-            <Text style={styles.recommendText}>生成推荐方案</Text>
+            <Text style={styles.recommendText}>
+              {text("生成推荐方案", "Generate recommendation", "إنشاء توصية")}
+            </Text>
           </Pressable>
         </View>
 
         <View style={[styles.settings, isMobile && styles.settingsMobile]}>
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>资金基数</Text>
+            <Text style={styles.fieldLabel}>
+              {text("资金基数", "Capital base", "رأس المال الأساسي")}
+            </Text>
             <View
               style={[
                 styles.moneyInput,
@@ -451,7 +524,11 @@ export default function AllocationPage() {
               ]}
             >
               <TextInput
-                accessibilityLabel="资金基数"
+                accessibilityLabel={text(
+                  "资金基数",
+                  "Capital base",
+                  "رأس المال الأساسي",
+                )}
                 onFocus={() => setCapitalFocused(true)}
                 onBlur={() => setCapitalFocused(false)}
                 value={draft.capital.amount}
@@ -473,7 +550,9 @@ export default function AllocationPage() {
             </View>
           </View>
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>风险预算</Text>
+            <Text style={styles.fieldLabel}>
+              {text("风险预算", "Risk budget", "ميزانية المخاطر")}
+            </Text>
             <View style={styles.riskControl}>
               {(["LOW", "MEDIUM", "HIGH"] as RiskProfile[]).map((profile) => (
                 <Pressable
@@ -497,17 +576,23 @@ export default function AllocationPage() {
                     ]}
                   >
                     {profile === "LOW"
-                      ? "稳健"
+                      ? text("稳健", "Conservative", "محافظ")
                       : profile === "MEDIUM"
-                        ? "均衡"
-                        : "进取"}
+                        ? text("均衡", "Balanced", "متوازن")
+                        : text("进取", "Growth", "نمو")}
                   </Text>
                 </Pressable>
               ))}
             </View>
           </View>
           <View style={styles.budgetReadout}>
-            <Text style={styles.budgetLabel}>模型回撤上限</Text>
+            <Text style={styles.budgetLabel}>
+              {text(
+                "模型回撤上限",
+                "Modeled drawdown cap",
+                "حد التراجع النموذجي",
+              )}
+            </Text>
             <Text style={styles.budgetValue}>
               {draft.riskBudget.maxDrawdownPct}%
             </Text>
@@ -517,9 +602,15 @@ export default function AllocationPage() {
         <View style={styles.platformPicker}>
           <View style={styles.pickerHeading}>
             <View>
-              <Text style={styles.pickerTitle}>平台资金桶</Text>
+              <Text style={styles.pickerTitle}>
+                {text("平台资金桶", "Platform buckets", "حاويات المنصات")}
+              </Text>
               <Text style={styles.pickerDetail}>
-                已选择 {draft.platformBuckets.length} / 3
+                {text(
+                  `已选择 ${draft.platformBuckets.length} / 3`,
+                  `Selected ${draft.platformBuckets.length} / 3`,
+                  `تم اختيار ${draft.platformBuckets.length} / 3`,
+                )}
               </Text>
             </View>
             <Pressable
@@ -531,11 +622,13 @@ export default function AllocationPage() {
               ]}
             >
               <MaterialIcons name="balance" size={17} color={V2.text} />
-              <Text style={styles.rebalanceText}>自动均衡权重</Text>
+              <Text style={styles.rebalanceText}>
+                {text("自动均衡权重", "Balance weights", "موازنة الأوزان")}
+              </Text>
             </Pressable>
           </View>
           <View style={styles.platformOptions}>
-            {platforms.data.map((platform) => {
+            {visiblePlatforms.map((platform) => {
               const selected = selectedPlatformIds.has(platform.id);
               const disabled = !selected && draft.platformBuckets.length >= 3;
               const hovered = hoveredPlatformId === platform.id;
@@ -543,7 +636,11 @@ export default function AllocationPage() {
                 <Pressable
                   key={platform.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`查看 ${platform.name} 平台详情`}
+                  accessibilityLabel={text(
+                    `查看 ${platform.name} 平台详情`,
+                    `View ${platform.name} details`,
+                    `عرض تفاصيل ${platform.name}`,
+                  )}
                   accessibilityState={{ checked: selected, disabled }}
                   onHoverIn={() =>
                     Platform.OS === "web" && setHoveredPlatformId(platform.id)
@@ -577,8 +674,8 @@ export default function AllocationPage() {
                     </Text>
                     <Text style={styles.platformOptionMeta} numberOfLines={2}>
                       {hovered
-                        ? `${platform.commercialTerms.spreadLabel} · P50 出金 ${platform.commercialTerms.withdrawalP50Hours ?? "--"}h`
-                        : `${platform.accountType} · 最低 ${platform.minimumCapital.toLocaleString("zh-CN")} USD`}
+                        ? `${platform.commercialTerms.spreadLabel} · ${text("P50 出金", "Withdrawal P50", "السحب P50")} ${platform.commercialTerms.withdrawalP50Hours ?? "--"}h`
+                        : `${platform.accountType} · ${text("最低", "Minimum", "الحد الأدنى")} ${platform.minimumCapital.toLocaleString(locale)} USD`}
                     </Text>
                   </View>
                   <MaterialIcons
@@ -595,13 +692,19 @@ export default function AllocationPage() {
         {dragEnabled ? (
           <View style={styles.palette}>
             <View style={styles.paletteHeading}>
-              <Text style={styles.paletteTitle}>策略面板</Text>
+              <Text style={styles.paletteTitle}>
+                {text("策略面板", "Strategy palette", "لوحة الاستراتيجيات")}
+              </Text>
               <Text style={styles.paletteDetail}>
-                悬停查看摘要；点击或拖入平台桶会先打开详情，确认后再加入方案。
+                {text(
+                  "悬停查看摘要；点击或拖入平台桶会先打开详情，确认后再加入方案。",
+                  "Hover for a summary. Click or drag to a platform bucket to review details before adding.",
+                  "مرر المؤشر لعرض الملخص. انقر أو اسحب إلى حاوية منصة لمراجعة التفاصيل قبل الإضافة.",
+                )}
               </Text>
             </View>
             <View style={styles.paletteChips}>
-              {strategies.data.map((strategy) => {
+              {visibleStrategies.map((strategy) => {
                 const offline = strategy.source.freshness === "OFFLINE";
                 return (
                   <DraggableStrategy
@@ -615,7 +718,11 @@ export default function AllocationPage() {
                   >
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`查看 ${strategy.shortName} 选配详情`}
+                      accessibilityLabel={text(
+                        `查看 ${strategy.shortName} 选配详情`,
+                        `Review ${strategy.shortName} allocation details`,
+                        `عرض تفاصيل توزيع ${strategy.shortName}`,
+                      )}
                       onPress={() => inspectStrategy(strategy)}
                       onHoverIn={() =>
                         Platform.OS === "web" &&
@@ -641,9 +748,13 @@ export default function AllocationPage() {
                         </Text>
                         <Text style={styles.paletteMeta}>
                           {offline
-                            ? "连接中断 · 暂不可拖入"
+                            ? text(
+                                "连接中断 · 暂不可拖入",
+                                "Feed offline · Cannot add",
+                                "المصدر غير متصل · لا يمكن الإضافة",
+                              )
                             : hoveredStrategyId === strategy.id
-                              ? `90D ${strategy.metrics.return90dPct ?? "--"}% · 回撤 ${strategy.metrics.maxDrawdownPct ?? "--"}%`
+                              ? `90D ${strategy.metrics.return90dPct ?? "--"}% · ${text("回撤", "DD", "تراجع")} ${strategy.metrics.maxDrawdownPct ?? "--"}%`
                               : strategy.style}
                         </Text>
                       </View>
@@ -667,7 +778,7 @@ export default function AllocationPage() {
         <View style={[styles.workspace, isMobile && styles.workspaceMobile]}>
           <View style={styles.bucketColumn}>
             {draft.platformBuckets.map((bucket, index) => {
-              const platform = platforms.data.find(
+              const platform = visiblePlatforms.find(
                 (item) => item.id === bucket.platformId,
               );
               if (!platform) return null;
@@ -693,7 +804,7 @@ export default function AllocationPage() {
                   <PlatformBucketEditor
                     bucket={bucket}
                     platform={platform}
-                    strategies={strategies.data}
+                    strategies={visibleStrategies}
                     totalCapital={capital}
                     currency={draft.capital.currency}
                     dropStatus={bucketDropStatus(bucket, platform)}
@@ -725,10 +836,18 @@ export default function AllocationPage() {
       </View>
       <ActionDialog
         visible={summaryVisible}
-        title="确认摘要已生成"
-        message="当前是演示方案，不会开户、入金或执行交易。正式流程将增加客户确认、规则版本和审计凭证。"
+        title={text(
+          "确认摘要已生成",
+          "Confirmation summary generated",
+          "تم إنشاء ملخص التأكيد",
+        )}
+        message={text(
+          "当前是演示方案，不会开户、入金或执行交易。正式流程将增加客户确认、规则版本和审计凭证。",
+          "This is a demo plan and will not open an account, deposit funds or execute trades. The live workflow adds client confirmation, rule versions and audit records.",
+          "هذه خطة تجريبية ولن تفتح حسابا أو تودع أموالا أو تنفذ صفقات. تضيف العملية الحية تأكيد العميل وإصدارات القواعد وسجلات التدقيق.",
+        )}
         tone="success"
-        confirmLabel="知道了"
+        confirmLabel={text("知道了", "Done", "تم")}
         confirmOnly
         onConfirm={() => setSummaryVisible(false)}
         onCancel={() => setSummaryVisible(false)}
@@ -764,12 +883,20 @@ export default function AllocationPage() {
         selectLabel={
           inspectedPlatform
             ? inspectedPlatformSelected
-              ? "已选择此平台"
+              ? text("已选择此平台", "Platform selected", "تم اختيار المنصة")
               : inspectedPlatformDisabled
-                ? "最多选择三个平台"
-                : "选择此平台"
+                ? text(
+                    "最多选择三个平台",
+                    "Maximum of three platforms",
+                    "الحد الأقصى ثلاث منصات",
+                  )
+                : text("选择此平台", "Select platform", "اختيار المنصة")
             : inspectedStrategy && inspectorTargetIndex >= 0
-              ? `加入 ${platforms.data?.find((item) => item.id === draft.platformBuckets[inspectorTargetIndex]?.platformId)?.name ?? "兼容资金桶"}`
+              ? text(
+                  `加入 ${platforms.data?.find((item) => item.id === draft.platformBuckets[inspectorTargetIndex]?.platformId)?.name ?? "兼容资金桶"}`,
+                  `Add to ${platforms.data?.find((item) => item.id === draft.platformBuckets[inspectorTargetIndex]?.platformId)?.name ?? "compatible bucket"}`,
+                  `إضافة إلى ${platforms.data?.find((item) => item.id === draft.platformBuckets[inspectorTargetIndex]?.platformId)?.name ?? "حاوية متوافقة"}`,
+                )
               : undefined
         }
       />

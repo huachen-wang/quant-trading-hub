@@ -9,6 +9,7 @@ import {
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import type { ThemeColorPalette } from "@/constants/theme";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useLanguage } from "@/lib/language";
 
 export type PlatformFilter = "MT4" | "MT5" | undefined;
 export type OrderBy = "latest" | "return" | "hot";
@@ -44,18 +45,6 @@ type StrategyFiltersProps = {
   onSearchPress: () => void;
 };
 
-const PLATFORM_OPTIONS: { label: string; value: PlatformFilter }[] = [
-  { label: "全部", value: undefined },
-  { label: "MT4", value: "MT4" },
-  { label: "MT5", value: "MT5" },
-];
-
-const ORDER_OPTIONS: { label: string; value: OrderBy }[] = [
-  { label: "热度", value: "hot" },
-  { label: "最新", value: "latest" },
-  { label: "收益率", value: "return" },
-];
-
 export const StrategyFilters = memo(function StrategyFilters({
   colors,
   platformFilter,
@@ -75,6 +64,17 @@ export const StrategyFilters = memo(function StrategyFilters({
   onSearchPress,
 }: StrategyFiltersProps) {
   const { isDesktop } = useResponsive();
+  const { text } = useLanguage();
+  const platformOptions: { label: string; value: PlatformFilter }[] = [
+    { label: text("全部", "All", "الكل"), value: undefined },
+    { label: "MT4", value: "MT4" },
+    { label: "MT5", value: "MT5" },
+  ];
+  const orderOptions: { label: string; value: OrderBy }[] = [
+    { label: text("热度", "Popular", "الأكثر شعبية"), value: "hot" },
+    { label: text("最新", "Latest", "الأحدث"), value: "latest" },
+    { label: text("收益率", "Return", "العائد"), value: "return" },
+  ];
   const hasAnyFilter =
     !!platformFilter || !!categoryFilter || !!tagFilter || orderBy !== "hot";
   const rootCategories = useMemo(
@@ -108,7 +108,10 @@ export const StrategyFilters = memo(function StrategyFilters({
     }
     if (orderBy !== "hot") {
       chips.push({
-        label: orderBy === "latest" ? "最新" : "收益率",
+        label:
+          orderBy === "latest"
+            ? text("最新", "Latest", "الأحدث")
+            : text("收益率", "Return", "العائد"),
         clear: () => onOrderByChange("hot"),
       });
     }
@@ -125,9 +128,10 @@ export const StrategyFilters = memo(function StrategyFilters({
     orderBy,
     platformFilter,
     tagFilter,
+    text,
   ]);
 
-  const platformControls = PLATFORM_OPTIONS.map((item) => {
+  const platformControls = platformOptions.map((item) => {
     const isActive = platformFilter === item.value;
     return (
       <TouchableOpacity
@@ -153,7 +157,7 @@ export const StrategyFilters = memo(function StrategyFilters({
     );
   });
 
-  const orderControls = ORDER_OPTIONS.map((item) => {
+  const orderControls = orderOptions.map((item) => {
     const isActive = orderBy === item.value;
     return (
       <TouchableOpacity
@@ -194,7 +198,9 @@ export const StrategyFilters = memo(function StrategyFilters({
           { color: showAdvancedFilters ? "#C9A96E" : colors.muted },
         ]}
       >
-        {showAdvancedFilters ? "收起筛选" : "高级筛选"}
+        {showAdvancedFilters
+          ? text("收起筛选", "Hide filters", "إخفاء التصفية")
+          : text("高级筛选", "More filters", "المزيد من التصفية")}
       </Text>
       {!!(categoryFilter || tagFilter) && !showAdvancedFilters && (
         <View style={styles.advancedDot} />
@@ -214,7 +220,7 @@ export const StrategyFilters = memo(function StrategyFilters({
               { color: colors.foreground },
             ]}
           >
-            策略广场
+            {text("策略广场", "EA marketplace", "سوق EA")}
           </Text>
         </View>
 
@@ -235,11 +241,17 @@ export const StrategyFilters = memo(function StrategyFilters({
             style={styles.uploadBtn}
             activeOpacity={0.8}
           >
-            <Text style={styles.uploadBtnText}>上架 EA</Text>
+            <Text style={styles.uploadBtnText}>
+              {text("上架 EA", "List an EA", "إدراج EA")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="搜索策略"
+            accessibilityLabel={text(
+              "搜索策略",
+              "Search strategies",
+              "البحث في الاستراتيجيات",
+            )}
             onPress={onSearchPress}
             style={[styles.searchBtn, { backgroundColor: colors.surface }]}
             activeOpacity={0.7}
@@ -272,7 +284,7 @@ export const StrategyFilters = memo(function StrategyFilters({
           ]}
         >
           <Text style={[styles.activeLabel, { color: colors.muted }]}>
-            已选：
+            {text("已选：", "Selected:", "المحدد:")}
           </Text>
           {activeFilterChips.map((chip, i) => (
             <TouchableOpacity
@@ -290,7 +302,9 @@ export const StrategyFilters = memo(function StrategyFilters({
             style={styles.clearAllBtn}
             activeOpacity={0.7}
           >
-            <Text style={styles.clearAllText}>清空全部</Text>
+            <Text style={styles.clearAllText}>
+              {text("清空全部", "Clear all", "مسح الكل")}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -307,7 +321,7 @@ export const StrategyFilters = memo(function StrategyFilters({
               <Text
                 style={[styles.advancedSectionTitle, { color: colors.muted }]}
               >
-                分类
+                {text("分类", "Category", "الفئة")}
               </Text>
               <ScrollView
                 horizontal
@@ -333,7 +347,7 @@ export const StrategyFilters = memo(function StrategyFilters({
                       { color: !categoryFilter ? "#0A1628" : colors.muted },
                     ]}
                   >
-                    全部分类
+                    {text("全部分类", "All categories", "كل الفئات")}
                   </Text>
                 </TouchableOpacity>
                 {rootCategories.map((category) => {
@@ -380,7 +394,7 @@ export const StrategyFilters = memo(function StrategyFilters({
                   { color: colors.muted, marginTop: 14 },
                 ]}
               >
-                标签
+                {text("标签", "Tags", "الوسوم")}
               </Text>
               <ScrollView
                 horizontal
@@ -407,7 +421,7 @@ export const StrategyFilters = memo(function StrategyFilters({
                       { color: tagFilter === "" ? "#C9A96E" : colors.muted },
                     ]}
                   >
-                    全部
+                    {text("全部", "All", "الكل")}
                   </Text>
                 </TouchableOpacity>
                 {dynamicTags.map((tag) => {

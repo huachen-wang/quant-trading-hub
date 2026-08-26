@@ -1,3 +1,5 @@
+import type { AppLanguage, AppLocale } from "@/lib/language";
+
 export function formatPct(value: number | null, signed = false) {
   if (value === null || !Number.isFinite(value)) return "--";
   const prefix = signed && value > 0 ? "+" : "";
@@ -31,9 +33,10 @@ export function formatMoney(
   value: number | null,
   currency = "USD",
   compact = false,
+  locale: AppLocale = "zh-CN",
 ) {
   if (value === null || !Number.isFinite(value)) return "--";
-  return new Intl.NumberFormat("zh-CN", {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     notation: compact ? "compact" : "standard",
@@ -41,10 +44,10 @@ export function formatMoney(
   }).format(value);
 }
 
-export function formatDateTime(value: string) {
+export function formatDateTime(value: string, locale: AppLocale = "zh-CN") {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "--";
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(locale, {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
@@ -53,6 +56,23 @@ export function formatDateTime(value: string) {
   }).format(date);
 }
 
-export function riskLabel(value: "LOW" | "MEDIUM" | "HIGH") {
+export function riskLabel(
+  value: "LOW" | "MEDIUM" | "HIGH",
+  language: AppLanguage = "zh",
+) {
+  if (language === "en") {
+    return value === "LOW"
+      ? "Low risk"
+      : value === "MEDIUM"
+        ? "Medium risk"
+        : "High risk";
+  }
+  if (language === "ar") {
+    return value === "LOW"
+      ? "مخاطر منخفضة"
+      : value === "MEDIUM"
+        ? "مخاطر متوسطة"
+        : "مخاطر مرتفعة";
+  }
   return value === "LOW" ? "低风险" : value === "MEDIUM" ? "中风险" : "高风险";
 }

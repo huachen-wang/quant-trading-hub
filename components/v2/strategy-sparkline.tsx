@@ -2,6 +2,7 @@ import { memo, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Line, Path } from "react-native-svg";
 import type { EquityPoint } from "@/shared/v2/contracts";
+import { useLanguage } from "@/lib/language";
 import { V2 } from "./tokens";
 
 type StrategySparklineProps = {
@@ -39,12 +40,19 @@ function StrategySparklineBase({
   color,
   height = HEIGHT,
 }: StrategySparklineProps) {
+  const { text } = useLanguage();
   const line = useMemo(() => makeLine(points), [points]);
 
   if (!line) {
     return (
       <View style={[styles.empty, { height }]}>
-        <Text style={styles.emptyText}>等待时间序列</Text>
+        <Text style={styles.emptyText}>
+          {text(
+            "等待时间序列",
+            "Waiting for time series",
+            "بانتظار السلسلة الزمنية",
+          )}
+        </Text>
       </View>
     );
   }
@@ -52,7 +60,11 @@ function StrategySparklineBase({
   return (
     <View
       accessible
-      accessibilityLabel={`近期净值轨迹，最低 ${line.min.toFixed(2)}，最高 ${line.max.toFixed(2)}`}
+      accessibilityLabel={text(
+        `近期净值轨迹，最低 ${line.min.toFixed(2)}，最高 ${line.max.toFixed(2)}`,
+        `Recent equity path, low ${line.min.toFixed(2)}, high ${line.max.toFixed(2)}`,
+        `مسار حقوق الحساب الأخير، الأدنى ${line.min.toFixed(2)}، الأعلى ${line.max.toFixed(2)}`,
+      )}
       style={[styles.chart, { height }]}
     >
       <Svg

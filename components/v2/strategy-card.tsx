@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { CoreStrategy } from "@/shared/v2/contracts";
+import { useLanguage } from "@/lib/language";
 import {
   formatAnnualizedReturn,
   formatMoney,
@@ -21,14 +22,6 @@ type StrategyCardProps = {
   onToggle?: (strategyId: string) => void;
 };
 
-function sourceState(strategy: CoreStrategy) {
-  if (strategy.source.freshness === "OFFLINE") return "离线";
-  if (strategy.source.freshness === "STALE") return "延迟";
-  if (strategy.source.dataMode === "DEMO") return "模拟";
-  if (strategy.source.dataMode === "CUSTOM") return "自定义";
-  return "实盘";
-}
-
 function sourceColor(strategy: CoreStrategy) {
   if (strategy.source.freshness === "OFFLINE") return V2.red;
   if (strategy.source.freshness === "STALE") return V2.amber;
@@ -44,9 +37,22 @@ function StrategyCardBase({
   onPress,
   onToggle,
 }: StrategyCardProps) {
+  const { language, locale, text } = useLanguage();
   const unavailable = strategy.source.freshness === "OFFLINE";
   const selectable = Boolean(onToggle);
-  const toggleLabel = selected ? "移出组合" : "加入组合";
+  const toggleLabel = selected
+    ? text("移出组合", "Remove from portfolio", "إزالة من المحفظة")
+    : text("加入组合", "Add to portfolio", "إضافة إلى المحفظة");
+  const runtimeState =
+    strategy.source.freshness === "OFFLINE"
+      ? text("离线", "Offline", "غير متصل")
+      : strategy.source.freshness === "STALE"
+        ? text("延迟", "Delayed", "متأخر")
+        : strategy.source.dataMode === "DEMO"
+          ? text("模拟", "Demo", "تجريبي")
+          : strategy.source.dataMode === "CUSTOM"
+            ? text("自定义", "Custom", "مخصص")
+            : text("实盘", "Live", "مباشر");
 
   return (
     <View
@@ -72,7 +78,11 @@ function StrategyCardBase({
         accessibilityLabel={
           selectable
             ? `${toggleLabel} ${strategy.shortName}`
-            : `查看 ${strategy.name} 详情`
+            : text(
+                `查看 ${strategy.name} 详情`,
+                `View ${strategy.name} details`,
+                `عرض تفاصيل ${strategy.name}`,
+              )
         }
         disabled={selectable && unavailable}
         onPress={() =>
@@ -94,7 +104,11 @@ function StrategyCardBase({
             ]}
           >
             <Image
-              accessibilityLabel={`${strategy.shortName} 策略视觉图`}
+              accessibilityLabel={text(
+                `${strategy.shortName} 策略视觉图`,
+                `${strategy.shortName} strategy artwork`,
+                `صورة استراتيجية ${strategy.shortName}`,
+              )}
               source={{ uri: strategy.artwork }}
               style={styles.image}
               contentFit="cover"
@@ -149,14 +163,16 @@ function StrategyCardBase({
                 <>
                   <Text style={styles.identityDivider}>·</Text>
                   <Text style={styles.equity} numberOfLines={1}>
-                    起配 {formatMoney(strategy.minimumCapital, "USD", true)}
+                    {text("起配", "Minimum", "الحد الأدنى")}{" "}
+                    {formatMoney(strategy.minimumCapital, "USD", true, locale)}
                   </Text>
                 </>
               ) : !compact ? (
                 <>
                   <Text style={styles.identityDivider}>·</Text>
                   <Text style={styles.equity} numberOfLines={1}>
-                    权益 {formatMoney(strategy.metrics.equity, "USD", true)}
+                    {text("权益", "Equity", "حقوق الملكية")}{" "}
+                    {formatMoney(strategy.metrics.equity, "USD", true, locale)}
                   </Text>
                 </>
               ) : null}
@@ -164,7 +180,9 @@ function StrategyCardBase({
             {mobile ? (
               <View style={styles.mobilePerformance}>
                 <View style={styles.mobilePerformanceMain}>
-                  <Text style={styles.mobilePerformanceLabel}>年化估算</Text>
+                  <Text style={styles.mobilePerformanceLabel}>
+                    {text("年化估算", "Annualized", "العائد السنوي")}
+                  </Text>
                   <Text
                     style={[
                       styles.mobilePerformanceValue,
@@ -175,11 +193,17 @@ function StrategyCardBase({
                     {formatAnnualizedReturn(strategy.metrics.return90dPct)}
                   </Text>
                   <Text style={styles.mobilePerformanceBasis}>
-                    按近 90 日复合
+                    {text(
+                      "按近 90 日复合",
+                      "90-day compound basis",
+                      "مركب على أساس 90 يوما",
+                    )}
                   </Text>
                 </View>
                 <View style={styles.mobileRiskMetric}>
-                  <Text style={styles.mobileRiskLabel}>最大回撤</Text>
+                  <Text style={styles.mobileRiskLabel}>
+                    {text("最大回撤", "Max drawdown", "أقصى تراجع")}
+                  </Text>
                   <Text style={styles.mobileRiskValue} numberOfLines={1}>
                     {formatPct(strategy.metrics.maxDrawdownPct)}
                   </Text>
@@ -192,22 +216,22 @@ function StrategyCardBase({
         {mobile ? null : compact ? (
           <View style={styles.compactMetrics}>
             <Metric
-              label="年化估算"
+              label={text("年化估算", "Annualized", "العائد السنوي")}
               value={formatAnnualizedReturn(strategy.metrics.return90dPct)}
               color={strategy.accent}
             />
             <Metric
-              label="近 90 日"
+              label={text("近 90 日", "90 days", "90 يوما")}
               value={formatPct(strategy.metrics.return90dPct, true)}
               color={V2.green}
             />
             <Metric
-              label="回撤"
+              label={text("回撤", "Drawdown", "التراجع")}
               value={formatPct(strategy.metrics.maxDrawdownPct)}
             />
             <Metric
-              label="起配"
-              value={formatMoney(strategy.minimumCapital, "USD", true)}
+              label={text("起配", "Minimum", "الحد الأدنى")}
+              value={formatMoney(strategy.minimumCapital, "USD", true, locale)}
             />
           </View>
         ) : (
@@ -215,7 +239,8 @@ function StrategyCardBase({
             <View style={styles.chartColumn}>
               <View style={styles.chartHeading}>
                 <Text style={styles.chartLabel}>
-                  近 90 日 {formatPct(strategy.metrics.return90dPct, true)}
+                  {text("近 90 日", "90 days", "90 يوما")}{" "}
+                  {formatPct(strategy.metrics.return90dPct, true)}
                 </Text>
                 <Text
                   style={[
@@ -229,7 +254,8 @@ function StrategyCardBase({
                     },
                   ]}
                 >
-                  今日 {formatPct(strategy.metrics.todayPnlPct, true)}
+                  {text("今日", "Today", "اليوم")}{" "}
+                  {formatPct(strategy.metrics.todayPnlPct, true)}
                 </Text>
               </View>
               <StrategySparkline
@@ -240,18 +266,26 @@ function StrategyCardBase({
             </View>
             <View style={styles.metricRail}>
               <Metric
-                label="年化估算"
+                label={text("年化估算", "Annualized", "العائد السنوي")}
                 value={formatAnnualizedReturn(strategy.metrics.return90dPct)}
                 color={strategy.accent}
               />
               <Metric
-                label="回撤"
+                label={text("回撤", "Drawdown", "التراجع")}
                 value={formatPct(strategy.metrics.maxDrawdownPct)}
               />
-              <Metric label="风险" value={riskLabel(strategy.riskLevel)} />
               <Metric
-                label="起配"
-                value={formatMoney(strategy.minimumCapital, "USD", true)}
+                label={text("风险", "Risk", "المخاطر")}
+                value={riskLabel(strategy.riskLevel, language)}
+              />
+              <Metric
+                label={text("起配", "Minimum", "الحد الأدنى")}
+                value={formatMoney(
+                  strategy.minimumCapital,
+                  "USD",
+                  true,
+                  locale,
+                )}
               />
             </View>
           </View>
@@ -266,7 +300,7 @@ function StrategyCardBase({
               { backgroundColor: sourceColor(strategy) },
             ]}
           />
-          <Text style={styles.runtimeText}>{sourceState(strategy)}</Text>
+          <Text style={styles.runtimeText}>{runtimeState}</Text>
         </View>
         <Text
           accessibilityLiveRegion="polite"
@@ -276,18 +310,30 @@ function StrategyCardBase({
           ]}
           numberOfLines={1}
         >
-          {unavailable ? "暂不可选" : selected ? "组合中" : "点选加入"}
+          {unavailable
+            ? text("暂不可选", "Unavailable", "غير متاح")
+            : selected
+              ? text("组合中", "In portfolio", "ضمن المحفظة")
+              : text("点选加入", "Select to add", "اختر للإضافة")}
         </Text>
         <Pressable
           accessibilityRole="link"
-          accessibilityLabel={`查看 ${strategy.name} 的运行详情`}
+          accessibilityLabel={text(
+            `查看 ${strategy.name} 的运行详情`,
+            `View ${strategy.name} performance details`,
+            `عرض تفاصيل أداء ${strategy.name}`,
+          )}
           onPress={() => onPress(strategy.id)}
           style={({ pressed }) => [
             styles.detailButton,
             pressed && styles.pressed,
           ]}
         >
-          {!compact ? <Text style={styles.detailText}>详情</Text> : null}
+          {!compact ? (
+            <Text style={styles.detailText}>
+              {text("详情", "Details", "التفاصيل")}
+            </Text>
+          ) : null}
           <MaterialIcons name="arrow-forward" size={14} color={V2.textMuted} />
         </Pressable>
       </View>

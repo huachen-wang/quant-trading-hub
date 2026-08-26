@@ -1,13 +1,8 @@
 import { memo, useId, useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Svg, {
-  Defs,
-  Line,
-  LinearGradient,
-  Path,
-  Stop,
-} from "react-native-svg";
+import Svg, { Defs, Line, LinearGradient, Path, Stop } from "react-native-svg";
 import type { EquityPoint } from "@/shared/v2/contracts";
+import { useLanguage } from "@/lib/language";
 import { V2 } from "./tokens";
 
 type EquityChartProps = {
@@ -45,15 +40,18 @@ function EquityChartBase({
   color = V2.green,
   height = 180,
   showAxis = false,
-  emptyLabel = "暂无曲线数据",
+  emptyLabel,
 }: EquityChartProps) {
+  const { text } = useLanguage();
   const gradientId = `equityFill-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const paths = useMemo(() => makePaths(points, height), [height, points]);
+  const resolvedEmptyLabel =
+    emptyLabel ?? text("暂无曲线数据", "No chart data", "لا توجد بيانات للرسم");
 
   if (!paths) {
     return (
       <View style={[styles.empty, { height }]}>
-        <Text style={styles.emptyText}>{emptyLabel}</Text>
+        <Text style={styles.emptyText}>{resolvedEmptyLabel}</Text>
       </View>
     );
   }
@@ -61,7 +59,11 @@ function EquityChartBase({
   return (
     <View
       accessible
-      accessibilityLabel={`净值曲线，最低 ${paths.min.toFixed(2)}，最高 ${paths.max.toFixed(2)}`}
+      accessibilityLabel={text(
+        `净值曲线，最低 ${paths.min.toFixed(2)}，最高 ${paths.max.toFixed(2)}`,
+        `Equity curve, low ${paths.min.toFixed(2)}, high ${paths.max.toFixed(2)}`,
+        `منحنى حقوق الحساب، الأدنى ${paths.min.toFixed(2)}، الأعلى ${paths.max.toFixed(2)}`,
+      )}
       style={[styles.wrap, { height }]}
     >
       <Svg

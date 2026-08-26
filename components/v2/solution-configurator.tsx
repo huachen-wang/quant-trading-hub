@@ -9,10 +9,11 @@ import {
 import { styles } from "@/components/v2/configurator/styles";
 import { SolutionSummary } from "@/components/v2/configurator/summary";
 import {
-  RISK_OPTIONS,
+  getRiskOptions,
   type RiskProfile,
   type ServicePath,
 } from "@/components/v2/configurator/types";
+import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
 import type {
   AllocationDraft,
@@ -37,6 +38,7 @@ export function SolutionConfigurator({
   const { width } = useWindowDimensions();
   const isNarrow = width < 1020;
   const isMobile = width < 680;
+  const { language } = useLanguage();
   const [capital, setCapital] = useState("50000");
   const [riskProfile, setRiskProfile] = useState<RiskProfile>("MEDIUM");
   const [servicePath, setServicePath] = useState<ServicePath>("BROKER");
@@ -67,7 +69,9 @@ export function SolutionConfigurator({
     [...selectedStrategyIds].sort().join(","),
     [...selectedPlatformIds].sort().join(","),
   ].join("|");
-  const riskOption = RISK_OPTIONS.find((item) => item.id === riskProfile)!;
+  const riskOption = getRiskOptions(language).find(
+    (item) => item.id === riskProfile,
+  )!;
   const numericCapital = Number(capital) || 0;
   const missingCompatibility = selectedStrategies.filter(
     (strategy) =>

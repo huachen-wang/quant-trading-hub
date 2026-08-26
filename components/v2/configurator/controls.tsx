@@ -3,11 +3,12 @@ import { useState, type ComponentProps, type ReactNode } from "react";
 import { Pressable, Text, TextInput, View } from "react-native";
 import { formatAnnualizedReturn, formatPct } from "@/components/v2/format";
 import { V2 } from "@/components/v2/tokens";
+import { useLanguage } from "@/lib/language";
 import type { CoreStrategy, PlatformProfile } from "@/shared/v2/contracts";
 import { styles } from "./styles";
 import {
   CAPITAL_PRESETS,
-  RISK_OPTIONS,
+  getRiskOptions,
   type RiskProfile,
   type ServicePath,
 } from "./types";
@@ -44,14 +45,20 @@ export function ConfiguratorControls({
   onServicePathChange: (value: ServicePath) => void;
 }) {
   const [capitalFocused, setCapitalFocused] = useState(false);
+  const { language, text } = useLanguage();
+  const riskOptions = getRiskOptions(language);
 
   return (
     <View style={styles.controls}>
       <ConfiguratorStep
         index="01"
         icon="account-balance-wallet"
-        title="资金规模"
-        detail="用于检查策略门槛、平台门槛和组合集中度。"
+        title={text("资金规模", "Capital", "رأس المال")}
+        detail={text(
+          "用于检查策略门槛、平台门槛和组合集中度。",
+          "Used to check strategy minimums, platform minimums and portfolio concentration.",
+          "يُستخدم للتحقق من حدود الاستراتيجيات والمنصات وتركيز المحفظة.",
+        )}
       >
         <View style={[styles.capitalRow, isMobile && styles.stackRow]}>
           <View
@@ -62,7 +69,11 @@ export function ConfiguratorControls({
           >
             <Text style={styles.moneyPrefix}>$</Text>
             <TextInput
-              accessibilityLabel="方案资金规模"
+              accessibilityLabel={text(
+                "方案资金规模",
+                "Plan capital",
+                "رأس مال الخطة",
+              )}
               value={capital}
               onFocus={() => setCapitalFocused(true)}
               onBlur={() => setCapitalFocused(false)}
@@ -95,7 +106,11 @@ export function ConfiguratorControls({
                     numericCapital === amount && styles.presetTextActive,
                   ]}
                 >
-                  {amount >= 10_000 ? `${amount / 10_000} 万` : amount}
+                  {language === "zh"
+                    ? `${amount / 10_000} 万`
+                    : amount >= 1_000
+                      ? `${amount / 1_000}K`
+                      : amount}
                 </Text>
               </Pressable>
             ))}
@@ -106,11 +121,15 @@ export function ConfiguratorControls({
       <ConfiguratorStep
         index="02"
         icon="verified-user"
-        title="账户风控"
-        detail="先设最大回撤预算，再决定策略风险倍率。"
+        title={text("账户风控", "Account risk", "مخاطر الحساب")}
+        detail={text(
+          "先设最大回撤预算，再决定策略风险倍率。",
+          "Set the maximum drawdown budget before choosing strategy risk multipliers.",
+          "حدد ميزانية أقصى تراجع قبل اختيار مضاعفات مخاطر الاستراتيجيات.",
+        )}
       >
         <View style={[styles.riskOptions, isMobile && styles.stackRow]}>
-          {RISK_OPTIONS.map((option) => {
+          {riskOptions.map((option) => {
             const active = option.id === riskProfile;
             return (
               <Pressable
@@ -148,8 +167,12 @@ export function ConfiguratorControls({
       <ConfiguratorStep
         index="03"
         icon="hub"
-        title="策略组合"
-        detail={`已同步 ${selectedStrategyIds.length} 款；离线策略不会进入方案。`}
+        title={text("策略组合", "Strategy mix", "مزيج الاستراتيجيات")}
+        detail={text(
+          `已同步 ${selectedStrategyIds.length} 款；离线策略不会进入方案。`,
+          `${selectedStrategyIds.length} selected; offline strategies are excluded.`,
+          `تم اختيار ${selectedStrategyIds.length}؛ الاستراتيجيات غير المتصلة مستبعدة.`,
+        )}
       >
         <View style={styles.strategyOptions}>
           {strategies.map((strategy) => {
@@ -184,8 +207,10 @@ export function ConfiguratorControls({
                     {strategy.shortName}
                   </Text>
                   <Text style={styles.strategyMeta} numberOfLines={1}>
-                    年化 {formatAnnualizedReturn(strategy.metrics.return90dPct)}{" "}
-                    · 回撤 {formatPct(strategy.metrics.maxDrawdownPct)}
+                    {text("年化", "Ann.", "سنوي")}{" "}
+                    {formatAnnualizedReturn(strategy.metrics.return90dPct)} ·{" "}
+                    {text("回撤", "DD", "تراجع")}{" "}
+                    {formatPct(strategy.metrics.maxDrawdownPct)}
                   </Text>
                 </View>
                 <MaterialIcons
@@ -208,8 +233,12 @@ export function ConfiguratorControls({
       <ConfiguratorStep
         index="04"
         icon="account-balance"
-        title="交易平台"
-        detail="比较点差、佣金、执行和出金样本，再确定资金放在哪里。"
+        title={text("交易平台", "Trading platforms", "منصات التداول")}
+        detail={text(
+          "比较点差、佣金、执行和出金样本，再确定资金放在哪里。",
+          "Compare spreads, commissions, execution and withdrawal samples before allocating capital.",
+          "قارن الفروقات والعمولات والتنفيذ وعينات السحب قبل توزيع رأس المال.",
+        )}
       >
         <View style={styles.platformOptions}>
           {platforms.map((platform) => {
@@ -253,7 +282,7 @@ export function ConfiguratorControls({
                     {platform.commercialTerms.commissionLabel}
                   </Text>
                   <Text style={styles.platformFact}>
-                    出金样本 P50{" "}
+                    {text("出金样本 P50", "Withdrawal P50", "السحب P50")}{" "}
                     {platform.commercialTerms.withdrawalP50Hours ?? "--"}h
                   </Text>
                 </View>
@@ -266,25 +295,45 @@ export function ConfiguratorControls({
       <ConfiguratorStep
         index="05"
         icon="tune"
-        title="管理模式"
-        detail="模式决定资金归属、交易执行和双方责任边界。"
+        title={text("管理模式", "Management mode", "نمط الإدارة")}
+        detail={text(
+          "模式决定资金归属、交易执行和双方责任边界。",
+          "The mode defines custody, execution and each party's responsibilities.",
+          "يحدد النمط حفظ الأموال والتنفيذ ومسؤوليات كل طرف.",
+        )}
         last
       >
         <View style={[styles.modeOptions, isMobile && styles.stackRow]}>
           <ModeOption
             active={servicePath === "BROKER"}
             icon="account-balance"
-            title="券商模式"
-            badge="资金在本人账户"
-            detail="资金直接留在用户本人券商账户，不经过技术方；用户掌握入出金，系统负责策略接入、组合配置与风险观察。"
+            title={text("券商模式", "Broker mode", "نمط الوسيط")}
+            badge={text(
+              "资金在本人账户",
+              "User-held funds",
+              "الأموال بحساب المستخدم",
+            )}
+            detail={text(
+              "资金直接留在用户本人券商账户，不经过技术方；用户掌握入出金，系统负责策略接入、组合配置与风险观察。",
+              "Funds stay in the user's own broker account and never pass through the technical provider. The user controls deposits and withdrawals while the system handles strategy access, portfolio setup and risk monitoring.",
+              "تبقى الأموال في حساب الوسيط الخاص بالمستخدم ولا تمر عبر المزود التقني. يتحكم المستخدم في الإيداع والسحب بينما يدير النظام ربط الاستراتيجيات وإعداد المحفظة ومراقبة المخاطر.",
+            )}
             onPress={() => onServicePathChange("BROKER")}
           />
           <ModeOption
             active={servicePath === "MANAGED"}
             icon="supervisor-account"
-            title="资管模式"
-            badge="技术方代操管理"
-            detail="用户与技术方按约定签订合同，由技术方负责策略部署、交易执行和风险管理；用户在平台查看净值、持仓与回撤。"
+            title={text("资管模式", "Managed mode", "نمط الإدارة المفوضة")}
+            badge={text(
+              "技术方代操管理",
+              "Provider managed",
+              "إدارة بواسطة المزود",
+            )}
+            detail={text(
+              "用户与技术方按约定签订合同，由技术方负责策略部署、交易执行和风险管理；用户在平台查看净值、持仓与回撤。",
+              "The user signs an agreement with the technical provider, which manages deployment, execution and risk. The user views equity, positions and drawdown on the platform.",
+              "يوقع المستخدم اتفاقية مع المزود التقني الذي يدير النشر والتنفيذ والمخاطر، بينما يتابع المستخدم حقوق الحساب والمراكز والتراجع على المنصة.",
+            )}
             onPress={() => onServicePathChange("MANAGED")}
           />
         </View>

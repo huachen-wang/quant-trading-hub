@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { useLanguage } from "@/lib/language";
 import type { DataMode, Freshness } from "@/shared/v2/contracts";
 import { V2 } from "./tokens";
 
@@ -8,24 +9,24 @@ type StatusBadgeProps = {
   compact?: boolean;
 };
 
-const FRESHNESS_LABEL: Record<Freshness, string> = {
-  FRESH: "同步正常",
-  STALE: "数据延迟",
-  OFFLINE: "连接中断",
-};
-
 export function StatusBadge({
   dataMode,
   freshness,
   compact = false,
 }: StatusBadgeProps) {
+  const { text } = useLanguage();
   const state = freshness ?? "FRESH";
   const mode = dataMode ?? "LIVE";
+  const freshnessLabel: Record<Freshness, string> = {
+    FRESH: text("同步正常", "Synced", "متزامن"),
+    STALE: text("数据延迟", "Delayed", "متأخر"),
+    OFFLINE: text("连接中断", "Disconnected", "غير متصل"),
+  };
   const modeLabel = {
-    DEMO: "模拟数据",
-    CUSTOM: "自定义历史",
-    LIVE: "实盘同步",
-    HYBRID: "历史 + 实盘",
+    DEMO: text("模拟数据", "Demo data", "بيانات تجريبية"),
+    CUSTOM: text("自定义历史", "Custom history", "سجل مخصص"),
+    LIVE: text("实盘同步", "Live sync", "مزامنة حية"),
+    HYBRID: text("历史 + 实盘", "History + live", "سجل + مباشر"),
   }[mode];
   const modeColor = {
     DEMO: V2.amber,
@@ -33,12 +34,14 @@ export function StatusBadge({
     LIVE: V2.green,
     HYBRID: V2.gold,
   }[mode];
-  const color = state === "OFFLINE" ? V2.red : state === "STALE" ? V2.amber : modeColor;
-  const label = state === "FRESH" ? modeLabel : `${modeLabel} · ${FRESHNESS_LABEL[state]}`;
+  const color =
+    state === "OFFLINE" ? V2.red : state === "STALE" ? V2.amber : modeColor;
+  const label =
+    state === "FRESH" ? modeLabel : `${modeLabel} · ${freshnessLabel[state]}`;
 
   return (
     <View
-      accessibilityLabel={`${label}，${FRESHNESS_LABEL[state]}`}
+      accessibilityLabel={`${label}, ${freshnessLabel[state]}`}
       style={[
         styles.badge,
         compact && styles.badgeCompact,

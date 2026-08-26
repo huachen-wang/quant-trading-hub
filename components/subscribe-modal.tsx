@@ -1,8 +1,20 @@
 import { useState, useRef, useEffect } from "react";
-import { View, Text, Modal, TouchableOpacity, TextInput, ActivityIndicator, StyleSheet, Alert, Animated, Platform } from "react-native";
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  StyleSheet,
+  Alert,
+  Animated,
+  Platform,
+} from "react-native";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { glassStyle } from "@/lib/glass-styles";
+import { useLanguage } from "@/lib/language";
 
 interface SubscribeModalProps {
   visible: boolean;
@@ -10,8 +22,13 @@ interface SubscribeModalProps {
   strategyTitle?: string;
 }
 
-export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeModalProps) {
+export function SubscribeModal({
+  visible,
+  onClose,
+  strategyTitle,
+}: SubscribeModalProps) {
   const colors = useColors();
+  const { text } = useLanguage();
   const [email, setEmail] = useState("");
   const [contact, setContact] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,8 +41,16 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
       scaleAnim.setValue(0.9);
       opacityAnim.setValue(0);
       Animated.parallel([
-        Animated.timing(scaleAnim, { toValue: 1, duration: 250, useNativeDriver: Platform.OS !== "web" }),
-        Animated.timing(opacityAnim, { toValue: 1, duration: 250, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: Platform.OS !== "web",
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: Platform.OS !== "web",
+        }),
       ]).start();
     }
   }, [visible]);
@@ -37,7 +62,14 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
     const trimmedContact = contact.trim();
 
     if (!trimmedEmail && !trimmedContact) {
-      Alert.alert("提示", "请至少填写邮箱或联系方式");
+      Alert.alert(
+        text("提示", "Notice", "تنبيه"),
+        text(
+          "请至少填写邮箱或联系方式",
+          "Enter an email address or contact method.",
+          "أدخل بريدا إلكترونيا أو وسيلة تواصل.",
+        ),
+      );
       return;
     }
 
@@ -45,7 +77,14 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
     if (trimmedEmail) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(trimmedEmail)) {
-        Alert.alert("提示", "请输入有效的邮箱地址");
+        Alert.alert(
+          text("提示", "Notice", "تنبيه"),
+          text(
+            "请输入有效的邮箱地址",
+            "Enter a valid email address.",
+            "أدخل عنوان بريد إلكتروني صالحا.",
+          ),
+        );
         return;
       }
     }
@@ -56,14 +95,14 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
       const payload: { email?: string; contactInfo?: string } = {};
       if (trimmedEmail) payload.email = trimmedEmail;
       if (trimmedContact) payload.contactInfo = trimmedContact;
-      
+
       // 如果只填了联系方式没填邮箱，也作为 contactInfo 提交
       if (!trimmedEmail && trimmedContact) {
         payload.contactInfo = trimmedContact;
       }
 
       await subscribeMutation.mutateAsync(payload);
-      
+
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -72,7 +111,15 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
         onClose();
       }, 2000);
     } catch (error: any) {
-      Alert.alert("提交失败", error?.message || "网络错误，请稍后重试");
+      Alert.alert(
+        text("提交失败", "Submission failed", "فشل الإرسال"),
+        error?.message ||
+          text(
+            "网络错误，请稍后重试",
+            "Network error. Try again later.",
+            "خطأ في الشبكة. حاول مرة أخرى لاحقا.",
+          ),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -87,9 +134,7 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
 
   // ─── Web 端修复：visible=false 时不渲染 Modal ───
 
-
   if (!visible) return null;
-
 
   return (
     <Modal
@@ -106,84 +151,160 @@ export function SubscribeModal({ visible, onClose, strategyTitle }: SubscribeMod
         <Animated.View
           style={[
             styles.modalContent,
-            { backgroundColor: Platform.OS === "web" ? "rgba(15,23,42,0.85)" : colors.background, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+            {
+              backgroundColor:
+                Platform.OS === "web"
+                  ? "rgba(15,23,42,0.85)"
+                  : colors.background,
+              transform: [{ scale: scaleAnim }],
+              opacity: opacityAnim,
+            },
             glassStyle("strong") as any,
           ]}
         >
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
-          style={{ width: "100%" }}
-        >
-          {success ? (
-            <View style={styles.successBox}>
-              <Text style={styles.successCode}>OK</Text>
-              <Text style={[styles.successTitle, { color: colors.foreground }]}>提交成功</Text>
-              <Text style={[styles.successDesc, { color: colors.muted }]}>
-                我们会尽快与您联系，感谢您的关注！
-              </Text>
-            </View>
-          ) : (
-            <>
-              {/* 标题 */}
-              <View style={styles.headerSection}>
-                <Text style={styles.headerCode}>ACC</Text>
-                <Text style={[styles.modalTitle, { color: colors.foreground }]}>获取技术支持</Text>
-                <Text style={[styles.modalSubtitle, { color: colors.muted }]}>
-                  {strategyTitle
-                    ? `关于「${strategyTitle}」的技术咨询`
-                    : "留下联系方式，获取专业EA技术支持"}
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+            style={{ width: "100%" }}
+          >
+            {success ? (
+              <View style={styles.successBox}>
+                <Text style={styles.successCode}>OK</Text>
+                <Text
+                  style={[styles.successTitle, { color: colors.foreground }]}
+                >
+                  {text("提交成功", "Submitted", "تم الإرسال")}
+                </Text>
+                <Text style={[styles.successDesc, { color: colors.muted }]}>
+                  {text(
+                    "我们会尽快与您联系，感谢您的关注！",
+                    "We will contact you shortly. Thank you.",
+                    "سنتواصل معك قريبا. شكرا لك.",
+                  )}
                 </Text>
               </View>
+            ) : (
+              <>
+                {/* 标题 */}
+                <View style={styles.headerSection}>
+                  <Text style={styles.headerCode}>ACC</Text>
+                  <Text
+                    style={[styles.modalTitle, { color: colors.foreground }]}
+                  >
+                    {text(
+                      "获取技术支持",
+                      "Get technical support",
+                      "احصل على الدعم التقني",
+                    )}
+                  </Text>
+                  <Text style={[styles.modalSubtitle, { color: colors.muted }]}>
+                    {strategyTitle
+                      ? text(
+                          `关于「${strategyTitle}」的技术咨询`,
+                          `Technical consultation for ${strategyTitle}`,
+                          `استشارة تقنية حول ${strategyTitle}`,
+                        )
+                      : text(
+                          "留下联系方式，获取专业EA技术支持",
+                          "Leave your contact details for professional EA support.",
+                          "اترك بيانات التواصل للحصول على دعم احترافي لنظام EA.",
+                        )}
+                  </Text>
+                </View>
 
-              {/* 输入区 */}
-              <View style={styles.inputSection}>
-                <TextInput
-                  value={contact}
-                  onChangeText={setContact}
-                  placeholder="微信号 / QQ / Telegram（推荐）"
-                  placeholderTextColor={colors.muted}
-                  style={[styles.input, { backgroundColor: "rgba(15,23,42,0.6)", borderColor: "rgba(148,163,184,0.12)", color: colors.foreground }]}
-                />
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="邮箱地址（可选）"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  style={[styles.input, { backgroundColor: "rgba(15,23,42,0.6)", borderColor: "rgba(148,163,184,0.12)", color: colors.foreground }]}
-                />
-              </View>
+                {/* 输入区 */}
+                <View style={styles.inputSection}>
+                  <TextInput
+                    value={contact}
+                    onChangeText={setContact}
+                    placeholder={text(
+                      "微信号 / QQ / Telegram（推荐）",
+                      "Telegram / WeChat / QQ (recommended)",
+                      "Telegram / WeChat / QQ (موصى به)",
+                    )}
+                    placeholderTextColor={colors.muted}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: "rgba(15,23,42,0.6)",
+                        borderColor: "rgba(148,163,184,0.12)",
+                        color: colors.foreground,
+                      },
+                    ]}
+                  />
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder={text(
+                      "邮箱地址（可选）",
+                      "Email address (optional)",
+                      "البريد الإلكتروني (اختياري)",
+                    )}
+                    placeholderTextColor={colors.muted}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: "rgba(15,23,42,0.6)",
+                        borderColor: "rgba(148,163,184,0.12)",
+                        color: colors.foreground,
+                      },
+                    ]}
+                  />
+                </View>
 
-              {/* 提示 */}
-              <View style={[styles.tipBox, { backgroundColor: "rgba(59,130,246,0.06)" }]}>
-                <Text style={[styles.tipText, { color: colors.muted }]}>
-                  推荐留下微信号，我们的策略顾问将为您提供一对一技术支持和EA部署指导
-                </Text>
-              </View>
+                {/* 提示 */}
+                <View
+                  style={[
+                    styles.tipBox,
+                    { backgroundColor: "rgba(59,130,246,0.06)" },
+                  ]}
+                >
+                  <Text style={[styles.tipText, { color: colors.muted }]}>
+                    {text(
+                      "推荐留下微信号，我们的策略顾问将为您提供一对一技术支持和EA部署指导",
+                      "Telegram or WeChat is recommended. A strategy advisor will provide one-to-one support and deployment guidance.",
+                      "نوصي بترك Telegram أو WeChat. سيقدم مستشار الاستراتيجية دعما فرديا وإرشادات للنشر.",
+                    )}
+                  </Text>
+                </View>
 
-              {/* 按钮 */}
-              <TouchableOpacity
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-                activeOpacity={0.8}
-                style={[styles.submitBtn, { backgroundColor: colors.primary, opacity: isSubmitting ? 0.7 : 1 }]}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.submitBtnText}>提交</Text>
-                )}
-              </TouchableOpacity>
+                {/* 按钮 */}
+                <TouchableOpacity
+                  onPress={handleSubmit}
+                  disabled={isSubmitting}
+                  activeOpacity={0.8}
+                  style={[
+                    styles.submitBtn,
+                    {
+                      backgroundColor: colors.primary,
+                      opacity: isSubmitting ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.submitBtnText}>
+                      {text("提交", "Submit", "إرسال")}
+                    </Text>
+                  )}
+                </TouchableOpacity>
 
-              <TouchableOpacity onPress={handleClose} style={styles.cancelBtn} activeOpacity={0.7}>
-                <Text style={[styles.cancelBtnText, { color: colors.muted }]}>取消</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleClose}
+                  style={styles.cancelBtn}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.cancelBtnText, { color: colors.muted }]}>
+                    {text("取消", "Cancel", "إلغاء")}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </TouchableOpacity>
         </Animated.View>
       </TouchableOpacity>
     </Modal>
@@ -207,7 +328,12 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.25)",
   },
   headerSection: { alignItems: "center", marginBottom: 20 },
-  modalTitle: { fontSize: 22, fontWeight: "800", marginTop: 8, marginBottom: 6 },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    marginTop: 8,
+    marginBottom: 6,
+  },
   modalSubtitle: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   inputSection: { marginBottom: 12 },
   headerCode: {
@@ -227,7 +353,12 @@ const styles = StyleSheet.create({
   },
   tipBox: { borderRadius: 8, padding: 12, marginBottom: 16 },
   tipText: { fontSize: 13, lineHeight: 20 },
-  submitBtn: { borderRadius: 7, paddingVertical: 14, alignItems: "center", marginBottom: 10 },
+  submitBtn: {
+    borderRadius: 7,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 10,
+  },
   submitBtnText: { color: "#fff", fontWeight: "700", fontSize: 16 },
   cancelBtn: { alignItems: "center", paddingVertical: 8 },
   cancelBtnText: { fontSize: 14 },

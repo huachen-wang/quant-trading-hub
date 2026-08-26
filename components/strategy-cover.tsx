@@ -2,6 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { resolveStrategyArtwork } from "@/lib/strategy-artwork";
+import { useLanguage } from "@/lib/language";
 
 type StrategyCoverProps = {
   title: string;
@@ -22,15 +23,16 @@ export function StrategyCover({
   imagePriority = "normal",
   height,
 }: StrategyCoverProps) {
+  const { text } = useLanguage();
   const artwork = resolveStrategyArtwork({ title, tags, pairs, productType });
   const shortNameLength = Array.from(artwork.shortName).length;
   const shortNameSize =
     shortNameLength > 14 ? 11 : shortNameLength > 10 ? 12 : 15;
   const productLabel =
     productType === "indicator"
-      ? "指标"
+      ? text("指标", "Indicator", "مؤشر")
       : productType === "tool"
-        ? "工具"
+        ? text("工具", "Tool", "أداة")
         : "EA";
 
   return (

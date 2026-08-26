@@ -1,16 +1,27 @@
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { QuickNav } from "@/components/quick-nav";
 import type { ThemeColorPalette } from "@/constants/theme";
 import { useResponsive } from "@/hooks/use-responsive";
+import { useLanguage } from "@/lib/language";
 
 type StrategyListEmptyProps = {
   colors: ThemeColorPalette;
   onUploadPress: () => void;
 };
 
-export function StrategyListEmpty({ colors, onUploadPress }: StrategyListEmptyProps) {
+export function StrategyListEmpty({
+  colors,
+  onUploadPress,
+}: StrategyListEmptyProps) {
   const { isDesktop } = useResponsive();
+  const { text } = useLanguage();
 
   if (isDesktop) {
     return (
@@ -20,22 +31,45 @@ export function StrategyListEmpty({ colors, onUploadPress }: StrategyListEmptyPr
             <Text style={styles.emptyDeskIconText}>EA</Text>
           </View>
           <View style={styles.emptyDeskCopy}>
-            <Text style={[styles.emptyDeskTitle, { color: colors.foreground }]}>策略库正在整理入场</Text>
-            <Text style={[styles.emptyDeskDescription, { color: colors.muted }]}>
-              当前筛选条件下暂无公开策略，可提交 EA 或切换筛选条件查看其他源头资源。
+            <Text style={[styles.emptyDeskTitle, { color: colors.foreground }]}>
+              {text(
+                "策略库正在整理入场",
+                "The catalog is being curated",
+                "يجري إعداد المكتبة",
+              )}
+            </Text>
+            <Text
+              style={[styles.emptyDeskDescription, { color: colors.muted }]}
+            >
+              {text(
+                "当前筛选条件下暂无公开策略，可提交 EA 或切换筛选条件查看其他源头资源。",
+                "No public strategies match these filters. Submit an EA or change the filters to explore other resources.",
+                "لا توجد استراتيجيات عامة تطابق هذه التصفية. أرسل EA أو غيّر عوامل التصفية لاستكشاف موارد أخرى.",
+              )}
             </Text>
           </View>
           <TouchableOpacity onPress={onUploadPress} activeOpacity={0.8}>
-            <LinearGradient colors={["#A8895A", "#C9A96E"]} style={styles.emptyDeskButton}>
-              <Text style={styles.emptyButtonText}>上架我的EA</Text>
+            <LinearGradient
+              colors={["#A8895A", "#C9A96E"]}
+              style={styles.emptyDeskButton}
+            >
+              <Text style={styles.emptyButtonText}>
+                {text("上架我的EA", "List my EA", "إدراج EA الخاص بي")}
+              </Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
         <View style={styles.emptyDeskSide}>
           {[
-            ["源码入库审核", "进行中"],
-            ["实盘报告整理", "待发布"],
-            ["授权条款确认", "1:1"],
+            [
+              text("源码入库审核", "Source review", "مراجعة المصدر"),
+              text("进行中", "In progress", "قيد التنفيذ"),
+            ],
+            [
+              text("实盘报告整理", "Live report", "تقرير مباشر"),
+              text("待发布", "Pending", "قيد النشر"),
+            ],
+            [text("授权条款确认", "License terms", "شروط الترخيص"), "1:1"],
           ].map(([label, value]) => (
             <View key={label} style={styles.pipelineRow}>
               <Text style={styles.pipelineLabel}>{label}</Text>
@@ -52,11 +86,28 @@ export function StrategyListEmpty({ colors, onUploadPress }: StrategyListEmptyPr
       <View style={styles.emptyMobileIcon}>
         <Text style={styles.emptyMobileIconText}>EA</Text>
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>暂无策略</Text>
-      <Text style={[styles.emptyDescription, { color: colors.muted }]}>策略广场正在上架中，敬请期待</Text>
-      <TouchableOpacity onPress={onUploadPress} activeOpacity={0.8} style={{ marginTop: 24 }}>
-        <LinearGradient colors={["#A8895A", "#C9A96E"]} style={styles.emptyButton}>
-          <Text style={styles.emptyButtonText}>上架我的EA</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+        {text("暂无策略", "No strategies", "لا توجد استراتيجيات")}
+      </Text>
+      <Text style={[styles.emptyDescription, { color: colors.muted }]}>
+        {text(
+          "策略广场正在上架中，敬请期待",
+          "The marketplace is being updated.",
+          "يجري تحديث السوق.",
+        )}
+      </Text>
+      <TouchableOpacity
+        onPress={onUploadPress}
+        activeOpacity={0.8}
+        style={{ marginTop: 24 }}
+      >
+        <LinearGradient
+          colors={["#A8895A", "#C9A96E"]}
+          style={styles.emptyButton}
+        >
+          <Text style={styles.emptyButtonText}>
+            {text("上架我的EA", "List my EA", "إدراج EA الخاص بي")}
+          </Text>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -76,6 +127,7 @@ export function StrategyListFooter({
   hasMore,
   itemCount,
 }: StrategyListFooterProps) {
+  const { text } = useLanguage();
   return (
     <View>
       {isLoadingMore && (
@@ -85,7 +137,13 @@ export function StrategyListFooter({
       )}
       {!hasMore && itemCount > 0 && (
         <View style={styles.footerDone}>
-          <Text style={{ color: colors.muted, fontSize: 12 }}>已展示全部策略</Text>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>
+            {text(
+              "已展示全部策略",
+              "All strategies shown",
+              "تم عرض كل الاستراتيجيات",
+            )}
+          </Text>
         </View>
       )}
       <QuickNav />

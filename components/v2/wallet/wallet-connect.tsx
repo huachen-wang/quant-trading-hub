@@ -2,6 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { V2 } from "@/components/v2/tokens";
+import { useLanguage } from "@/lib/language";
 import { shortWalletAddress, walletNetworkLabel } from "./wallet-client";
 import { useInjectedWallet } from "./use-injected-wallet";
 
@@ -9,11 +10,15 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
   const [visible, setVisible] = useState(false);
   const [copied, setCopied] = useState(false);
   const wallet = useInjectedWallet();
+  const { text } = useLanguage();
   const shortAddress = wallet.address
     ? shortWalletAddress(wallet.address)
     : compact
-      ? "钱包"
-      : "连接钱包";
+      ? ""
+      : text("连接钱包", "Connect wallet", "ربط المحفظة");
+  const triggerLabel = wallet.address
+    ? shortWalletAddress(wallet.address)
+    : text("连接 Web3 钱包", "Connect Web3 wallet", "ربط محفظة Web3");
 
   const copyAddress = async () => {
     if (!wallet.address) return;
@@ -31,7 +36,13 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={
-          wallet.address ? `已连接钱包 ${shortAddress}` : "连接 Web3 钱包"
+          wallet.address
+            ? text(
+                `已连接钱包 ${triggerLabel}`,
+                `Connected wallet ${triggerLabel}`,
+                `المحفظة المتصلة ${triggerLabel}`,
+              )
+            : text("连接 Web3 钱包", "Connect Web3 wallet", "ربط محفظة Web3")
         }
         onPress={() => {
           wallet.refreshProvider();
@@ -39,6 +50,7 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
         }}
         style={({ pressed }) => [
           styles.trigger,
+          compact && styles.triggerCompact,
           wallet.connected && styles.triggerConnected,
           pressed && styles.pressed,
         ]}
@@ -48,14 +60,16 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
           size={17}
           color={wallet.connected ? V2.green : V2.background}
         />
-        <Text
-          style={[
-            styles.triggerText,
-            wallet.connected && styles.triggerTextConnected,
-          ]}
-        >
-          {shortAddress}
-        </Text>
+        {shortAddress ? (
+          <Text
+            style={[
+              styles.triggerText,
+              wallet.connected && styles.triggerTextConnected,
+            ]}
+          >
+            {shortAddress}
+          </Text>
+        ) : null}
       </Pressable>
 
       <Modal
@@ -66,19 +80,27 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
       >
         <View style={styles.overlay}>
           <Pressable
-            accessibilityLabel="关闭钱包窗口"
+            accessibilityLabel={text(
+              "关闭钱包窗口",
+              "Close wallet window",
+              "إغلاق نافذة المحفظة",
+            )}
             onPress={() => setVisible(false)}
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.panel}>
             <View style={styles.heading}>
               <View>
-                <Text style={styles.eyebrow}>链上身份</Text>
-                <Text style={styles.title}>连接钱包</Text>
+                <Text style={styles.eyebrow}>
+                  {text("链上身份", "ONCHAIN IDENTITY", "الهوية على السلسلة")}
+                </Text>
+                <Text style={styles.title}>
+                  {text("连接钱包", "Connect wallet", "ربط المحفظة")}
+                </Text>
               </View>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="关闭"
+                accessibilityLabel={text("关闭", "Close", "إغلاق")}
                 onPress={() => setVisible(false)}
                 style={styles.iconButton}
               >
@@ -91,23 +113,38 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
                 <View style={styles.connectionState}>
                   <View style={styles.connectedDot} />
                   <View style={styles.connectionCopy}>
-                    <Text style={styles.connectionLabel}>钱包已连接</Text>
+                    <Text style={styles.connectionLabel}>
+                      {text("钱包已连接", "Wallet connected", "المحفظة متصلة")}
+                    </Text>
                     <Text style={styles.networkLabel}>
-                      {walletNetworkLabel(wallet.chainId)}
+                      {walletNetworkLabel(
+                        wallet.chainId,
+                        text(
+                          "网络待确认",
+                          "Network pending",
+                          "الشبكة قيد التأكيد",
+                        ),
+                      )}
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.addressRow}>
                   <View style={styles.addressCopy}>
-                    <Text style={styles.addressLabel}>公开地址</Text>
+                    <Text style={styles.addressLabel}>
+                      {text("公开地址", "Public address", "العنوان العام")}
+                    </Text>
                     <Text style={styles.address} numberOfLines={1}>
                       {wallet.address}
                     </Text>
                   </View>
                   <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel="复制钱包地址"
+                    accessibilityLabel={text(
+                      "复制钱包地址",
+                      "Copy wallet address",
+                      "نسخ عنوان المحفظة",
+                    )}
                     onPress={copyAddress}
                     style={styles.copyButton}
                   >
@@ -127,7 +164,13 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
                   }}
                   style={styles.disconnectButton}
                 >
-                  <Text style={styles.disconnectText}>断开本次连接</Text>
+                  <Text style={styles.disconnectText}>
+                    {text(
+                      "断开本次连接",
+                      "Disconnect this session",
+                      "قطع اتصال هذه الجلسة",
+                    )}
+                  </Text>
                 </Pressable>
               </>
             ) : (
@@ -141,11 +184,21 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
                     />
                   </View>
                   <View style={styles.walletOptionCopy}>
-                    <Text style={styles.walletName}>浏览器钱包</Text>
+                    <Text style={styles.walletName}>
+                      {text("浏览器钱包", "Browser wallet", "محفظة المتصفح")}
+                    </Text>
                     <Text style={styles.walletStatus}>
                       {wallet.available
-                        ? "已检测到钱包，可直接授权连接"
-                        : "支持 MetaMask、OKX Wallet、TokenPocket 等注入式钱包"}
+                        ? text(
+                            "已检测到钱包，可直接授权连接",
+                            "Wallet detected and ready to authorize",
+                            "تم اكتشاف المحفظة وهي جاهزة للتفويض",
+                          )
+                        : text(
+                            "支持 MetaMask、OKX Wallet、TokenPocket 等注入式钱包",
+                            "Supports injected wallets such as MetaMask, OKX Wallet and TokenPocket",
+                            "يدعم محافظ المتصفح مثل MetaMask وOKX Wallet وTokenPocket",
+                          )}
                     </Text>
                   </View>
                 </View>
@@ -177,7 +230,17 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
                 >
                   <MaterialIcons name="link" size={18} color={V2.background} />
                   <Text style={styles.connectText}>
-                    {wallet.connecting ? "等待钱包确认" : "连接浏览器钱包"}
+                    {wallet.connecting
+                      ? text(
+                          "等待钱包确认",
+                          "Waiting for wallet approval",
+                          "بانتظار موافقة المحفظة",
+                        )
+                      : text(
+                          "连接浏览器钱包",
+                          "Connect browser wallet",
+                          "ربط محفظة المتصفح",
+                        )}
                   </Text>
                 </Pressable>
               </>
@@ -186,7 +249,11 @@ export function WalletConnect({ compact = false }: { compact?: boolean }) {
             <View style={styles.securityNote}>
               <MaterialIcons name="shield" size={17} color={V2.blue} />
               <Text style={styles.securityText}>
-                无需注册、邮箱或密码。网站只读取公开地址，不会请求助记词或私钥。
+                {text(
+                  "无需注册、邮箱或密码。网站只读取公开地址，不会请求助记词或私钥。",
+                  "No registration, email or password is required. The site reads the public address only and never requests a seed phrase or private key.",
+                  "لا يلزم تسجيل أو بريد إلكتروني أو كلمة مرور. يقرأ الموقع العنوان العام فقط ولا يطلب العبارة السرية أو المفتاح الخاص.",
+                )}
               </Text>
             </View>
           </View>
@@ -207,6 +274,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 7,
   },
+  triggerCompact: { width: 38, paddingHorizontal: 0 },
   triggerConnected: {
     borderWidth: 1,
     borderColor: "rgba(66,211,161,0.45)",

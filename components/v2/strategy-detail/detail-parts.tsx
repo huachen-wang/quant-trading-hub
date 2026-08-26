@@ -2,6 +2,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Pressable, Text, View } from "react-native";
 import { formatDateTime } from "@/components/v2/format";
 import { V2 } from "@/components/v2/tokens";
+import { useLanguage } from "@/lib/language";
 import { detailStyles as styles } from "./styles";
 
 export function DetailMetric({
@@ -99,6 +100,7 @@ export function StrategyTradeTable({
   empty: string;
   isMobile: boolean;
 }) {
+  const { locale, text } = useLanguage();
   if (!rows.length) {
     return (
       <View style={styles.empty}>
@@ -112,11 +114,23 @@ export function StrategyTradeTable({
     <View style={styles.table}>
       {!isMobile ? (
         <View style={[styles.tableRow, styles.tableHeader]}>
-          <TableCell value="品种 / 方向" flex={1.1} muted />
-          <TableCell value="手数" muted />
-          <TableCell value="开仓 → 当前/平仓" flex={1.6} muted />
-          <TableCell value="盈亏" muted />
-          <TableCell value="时间" flex={1.2} muted />
+          <TableCell
+            value={text("品种 / 方向", "Instrument / Side", "الأصل / الاتجاه")}
+            flex={1.1}
+            muted
+          />
+          <TableCell value={text("手数", "Volume", "الحجم")} muted />
+          <TableCell
+            value={text(
+              "开仓 → 当前/平仓",
+              "Open → Current/Close",
+              "الفتح ← الحالي/الإغلاق",
+            )}
+            flex={1.6}
+            muted
+          />
+          <TableCell value={text("盈亏", "P&L", "الربح والخسارة")} muted />
+          <TableCell value={text("时间", "Time", "الوقت")} flex={1.2} muted />
         </View>
       ) : null}
       {rows.map((row) => (
@@ -125,16 +139,24 @@ export function StrategyTradeTable({
           style={[styles.tableRow, isMobile && styles.tableRowMobile]}
         >
           <TableCell
-            value={`${row.symbol} · ${row.side === "BUY" ? "买入" : "卖出"}`}
+            value={`${row.symbol} · ${
+              row.side === "BUY"
+                ? text("买入", "Buy", "شراء")
+                : text("卖出", "Sell", "بيع")
+            }`}
             flex={1.1}
           />
-          <TableCell value={`${row.volume} 手`} />
+          <TableCell value={`${row.volume} ${text("手", "lots", "لوت")}`} />
           <TableCell value={row.price} flex={1.6} />
           <TableCell
             value={`${row.pnl >= 0 ? "+" : ""}${row.pnl.toFixed(2)} USD`}
             color={row.pnl >= 0 ? V2.green : V2.red}
           />
-          <TableCell value={formatDateTime(row.time)} flex={1.2} muted />
+          <TableCell
+            value={formatDateTime(row.time, locale)}
+            flex={1.2}
+            muted
+          />
         </View>
       ))}
     </View>

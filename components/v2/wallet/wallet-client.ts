@@ -29,7 +29,10 @@ export function shortWalletAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
-export function walletNetworkLabel(chainId: string | null) {
+export function walletNetworkLabel(
+  chainId: string | null,
+  pendingLabel = "网络待确认",
+) {
   const labels: Record<string, string> = {
     "0x1": "Ethereum",
     "0x38": "BNB Chain",
@@ -39,5 +42,5 @@ export function walletNetworkLabel(chainId: string | null) {
   };
   return chainId
     ? (labels[chainId.toLowerCase()] ?? `Chain ${chainId}`)
-    : "网络待确认";
+    : pendingLabel;
 }

@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useLanguage } from "@/lib/language";
 import type { CoreStrategy } from "@/shared/v2/contracts";
 import { V2 } from "./tokens";
 
@@ -22,6 +23,7 @@ export function StrategySelectionPanel({
   onRemove,
   onContinue,
 }: StrategySelectionPanelProps) {
+  const { text } = useLanguage();
   const hasSelection = selectedStrategies.length > 0;
   const selectionChips = hasSelection ? (
     selectedStrategies.map((strategy) => (
@@ -29,7 +31,11 @@ export function StrategySelectionPanel({
         key={strategy.id}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: true }}
-        accessibilityLabel={`移出 ${strategy.shortName}`}
+        accessibilityLabel={text(
+          `移出 ${strategy.shortName}`,
+          `Remove ${strategy.shortName}`,
+          `إزالة ${strategy.shortName}`,
+        )}
         onPress={() => onRemove(strategy.id)}
         style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
       >
@@ -49,7 +55,13 @@ export function StrategySelectionPanel({
         size={17}
         color={V2.textDim}
       />
-      <Text style={styles.emptyText}>尚未加入策略</Text>
+      <Text style={styles.emptyText}>
+        {text(
+          "尚未加入策略",
+          "No strategy selected",
+          "لم يتم اختيار استراتيجية",
+        )}
+      </Text>
     </View>
   );
 
@@ -58,7 +70,9 @@ export function StrategySelectionPanel({
       <View style={styles.panelInline}>
         <View style={styles.inlineHeader}>
           <View style={styles.inlineTitleRow}>
-            <Text style={styles.eyebrow}>组合草案</Text>
+            <Text style={styles.eyebrow}>
+              {text("组合草案", "PORTFOLIO DRAFT", "مسودة المحفظة")}
+            </Text>
             <View style={styles.countInline}>
               <Text style={styles.countInlineValue}>
                 {selectedStrategies.length}
@@ -91,13 +105,22 @@ export function StrategySelectionPanel({
             style={[styles.feedbackText, feedback && styles.feedbackTextActive]}
             numberOfLines={1}
           >
-            {feedback || "与方案参数实时同步"}
+            {feedback ||
+              text(
+                "与方案参数实时同步",
+                "Synced with plan parameters",
+                "متزامنة مع معايير الخطة",
+              )}
           </Text>
         </View>
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="继续配置量化方案"
+          accessibilityLabel={text(
+            "继续配置量化方案",
+            "Continue configuring the quant plan",
+            "متابعة إعداد الخطة الكمية",
+          )}
           disabled={!hasSelection}
           onPress={onContinue}
           style={({ pressed }) => [
@@ -107,7 +130,9 @@ export function StrategySelectionPanel({
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.continueText}>继续配置</Text>
+          <Text style={styles.continueText}>
+            {text("继续配置", "Continue", "متابعة")}
+          </Text>
           <MaterialIcons name="south" size={16} color={V2.background} />
         </Pressable>
       </View>
@@ -118,8 +143,12 @@ export function StrategySelectionPanel({
     <View style={[styles.panel, compact && styles.panelCompact]}>
       <View style={styles.header}>
         <View style={styles.headerCopy}>
-          <Text style={styles.eyebrow}>策略选配</Text>
-          <Text style={styles.title}>组合草案</Text>
+          <Text style={styles.eyebrow}>
+            {text("策略选配", "STRATEGY MIX", "مزيج الاستراتيجيات")}
+          </Text>
+          <Text style={styles.title}>
+            {text("组合草案", "Portfolio draft", "مسودة المحفظة")}
+          </Text>
         </View>
         <View style={styles.count}>
           <Text style={styles.countValue}>{selectedStrategies.length}</Text>
@@ -156,20 +185,35 @@ export function StrategySelectionPanel({
           style={[styles.feedbackText, feedback && styles.feedbackTextActive]}
           numberOfLines={1}
         >
-          {feedback || "组合与下方方案实时同步"}
+          {feedback ||
+            text(
+              "组合与下方方案实时同步",
+              "Portfolio synced with the plan below",
+              "المحفظة متزامنة مع الخطة أدناه",
+            )}
         </Text>
       </View>
 
       <View style={[styles.nextRow, compact && styles.nextRowCompact]}>
         <View style={styles.nextCopy}>
-          <Text style={styles.nextLabel}>下一步</Text>
+          <Text style={styles.nextLabel}>
+            {text("下一步", "NEXT", "التالي")}
+          </Text>
           <Text style={styles.nextValue} numberOfLines={1}>
-            资金 · 风控 · 平台 · 模式
+            {text(
+              "资金 · 风控 · 平台 · 模式",
+              "Capital · Risk · Platform · Mode",
+              "رأس المال · المخاطر · المنصة · الوضع",
+            )}
           </Text>
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="继续配置量化方案"
+          accessibilityLabel={text(
+            "继续配置量化方案",
+            "Continue configuring the quant plan",
+            "متابعة إعداد الخطة الكمية",
+          )}
           disabled={!hasSelection}
           onPress={onContinue}
           style={({ pressed }) => [
@@ -178,7 +222,9 @@ export function StrategySelectionPanel({
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.continueText}>继续配置</Text>
+          <Text style={styles.continueText}>
+            {text("继续配置", "Continue", "متابعة")}
+          </Text>
           <MaterialIcons name="south" size={16} color={V2.background} />
         </Pressable>
       </View>

@@ -12,30 +12,32 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ContactModal } from "@/components/contact-modal";
+import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
+import { LanguageMenu } from "./language-menu";
 import { V2, V2_LAYOUT } from "./tokens";
 import { WalletConnect } from "./wallet/wallet-connect";
 
 type V2ShellProps = { children: ReactNode };
 
 const NAV_ITEMS = [
-  { label: "核心策略", path: "/", activeOn: "/", icon: "insights" },
+  { id: "STRATEGIES", path: "/", activeOn: "/", icon: "insights" },
   {
-    label: "方案选配",
+    id: "CONFIGURE",
     path: "/?configure=1",
     activeOn: "CONFIGURE",
     icon: "tune",
   },
   {
-    label: "实盘账户",
+    id: "ACCOUNTS",
     path: "/v2-preview/accounts",
     activeOn: "/v2-preview/accounts",
     icon: "monitor-heart",
   },
   {
-    label: "EA 商城",
-    path: "/market",
-    activeOn: "/market",
+    id: "LIBRARY",
+    path: "/v2-preview/ea-library",
+    activeOn: "/v2-preview/ea-library",
     icon: "storefront",
   },
 ] as const;
@@ -46,6 +48,8 @@ export function V2Shell({ children }: V2ShellProps) {
   const { configure } = useLocalSearchParams<{ configure?: string }>();
   const { width } = useWindowDimensions();
   const isMobile = width < 940;
+  const isVeryNarrow = width < 410;
+  const { text } = useLanguage();
   const [contactOpen, setContactOpen] = useState(false);
   const { data: status } = trpc.v2.status.useQuery(undefined, {
     staleTime: 60_000,
@@ -58,6 +62,13 @@ export function V2Shell({ children }: V2ShellProps) {
         : "DEMO";
   const connectedProvider =
     status?.provider === "HTTP" || status?.provider === "NIUBANG";
+
+  const navLabels = {
+    STRATEGIES: text("核心策略", "Strategies", "الاستراتيجيات"),
+    CONFIGURE: text("方案选配", "Configure", "بناء الخطة"),
+    ACCOUNTS: text("实盘账户", "Accounts", "الحسابات"),
+    LIBRARY: text("EA 商城", "EA Library", "مكتبة EA"),
+  } as const;
 
   const nav = NAV_ITEMS.map((item) => {
     const active =
@@ -101,7 +112,7 @@ export function V2Shell({ children }: V2ShellProps) {
             active && styles.navTextActive,
           ]}
         >
-          {item.label}
+          {navLabels[item.id]}
         </Text>
       </Pressable>
     );
@@ -111,30 +122,57 @@ export function V2Shell({ children }: V2ShellProps) {
     <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
       <View style={styles.topRule} />
       <View style={styles.header}>
-        <View style={styles.headerInner}>
+        <View
+          style={[styles.headerInner, isMobile && styles.headerInnerMobile]}
+        >
           <Pressable
             accessibilityRole="link"
-            accessibilityLabel="返回 EAXAU 首页"
+            accessibilityLabel={text(
+              "返回 EAXAU 首页",
+              "Return to EAXAU home",
+              "العودة إلى صفحة EAXAU الرئيسية",
+            )}
             onPress={() => router.push("/" as never)}
             style={({ pressed }) => [
               styles.brandButton,
+              isVeryNarrow && styles.brandButtonCompact,
               pressed && styles.pressed,
             ]}
           >
-            <Text style={styles.brand}>EAXAU</Text>
-            <View style={styles.brandRule} />
+            <Text style={[styles.brand, isVeryNarrow && styles.brandCompact]}>
+              EAXAU
+            </Text>
+            <View
+              style={[
+                styles.brandRule,
+                isVeryNarrow && styles.brandRuleCompact,
+              ]}
+            />
           </Pressable>
 
           {!isMobile ? <View style={styles.desktopNav}>{nav}</View> : null}
 
-          <View style={styles.headerActions}>
+          <View
+            style={[
+              styles.headerActions,
+              isMobile && styles.headerActionsMobile,
+            ]}
+          >
             {!isMobile ? (
               <View
                 accessible
                 accessibilityLabel={
                   connectedProvider
-                    ? `数据来源：${providerLabel} 接口`
-                    : "数据来源：确定性模拟数据"
+                    ? text(
+                        `数据来源：${providerLabel} 接口`,
+                        `Data source: ${providerLabel}`,
+                        `مصدر البيانات: ${providerLabel}`,
+                      )
+                    : text(
+                        "数据来源：确定性模拟数据",
+                        "Data source: deterministic demo",
+                        "مصدر البيانات: بيانات تجريبية ثابتة",
+                      )
                 }
                 style={styles.providerState}
               >
@@ -149,13 +187,23 @@ export function V2Shell({ children }: V2ShellProps) {
                 <Text style={styles.providerText}>{providerLabel}</Text>
               </View>
             ) : null}
+            <LanguageMenu compact={isMobile} />
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="联系量化顾问"
-              accessibilityHint="打开联系方式"
+              accessibilityLabel={text(
+                "联系量化顾问",
+                "Contact a quant advisor",
+                "تواصل مع مستشار كمي",
+              )}
+              accessibilityHint={text(
+                "打开联系方式",
+                "Open contact details",
+                "فتح بيانات التواصل",
+              )}
               onPress={() => setContactOpen(true)}
               style={({ pressed }) => [
                 styles.contactButton,
+                isVeryNarrow && styles.contactButtonCompact,
                 pressed && styles.pressed,
               ]}
             >
@@ -164,7 +212,11 @@ export function V2Shell({ children }: V2ShellProps) {
                 size={18}
                 color={V2.textMuted}
               />
-              <Text style={styles.contactText}>顾问</Text>
+              {!isVeryNarrow ? (
+                <Text style={styles.contactText}>
+                  {text("顾问", "Advisor", "مستشار")}
+                </Text>
+              ) : null}
             </Pressable>
             <WalletConnect compact={isMobile} />
           </View>
@@ -187,9 +239,19 @@ export function V2Shell({ children }: V2ShellProps) {
         {status?.enabled === false ? (
           <View style={styles.disabledState}>
             <MaterialIcons name="construction" size={30} color={V2.amber} />
-            <Text style={styles.disabledTitle}>V2 预览暂未开放</Text>
+            <Text style={styles.disabledTitle}>
+              {text(
+                "V2 预览暂未开放",
+                "V2 preview is not available",
+                "معاينة V2 غير متاحة حاليا",
+              )}
+            </Text>
             <Text style={styles.disabledText}>
-              该版本当前处于内部验收阶段，请联系管理员开放。
+              {text(
+                "该版本当前处于内部验收阶段，请联系管理员开放。",
+                "This version is in internal review. Contact an administrator for access.",
+                "هذا الإصدار قيد المراجعة الداخلية. تواصل مع المسؤول لطلب الوصول.",
+              )}
             </Text>
           </View>
         ) : (
@@ -224,11 +286,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 18,
   },
+  headerInnerMobile: { paddingHorizontal: 10, gap: 8 },
   brandButton: {
     width: 124,
     height: 44,
     justifyContent: "center",
   },
+  brandButtonCompact: { width: 80 },
   brand: {
     color: V2.text,
     fontSize: 27,
@@ -236,7 +300,9 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0,
   },
+  brandCompact: { fontSize: 22, lineHeight: 26 },
   brandRule: { width: 68, height: 2, marginTop: 2, backgroundColor: V2.gold },
+  brandRuleCompact: { width: 52 },
   desktopNav: {
     flex: 1,
     height: 60,
@@ -281,6 +347,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
   },
+  headerActionsMobile: { gap: 6 },
   providerState: {
     minHeight: 34,
     paddingHorizontal: 10,
@@ -311,6 +378,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 5,
   },
+  contactButtonCompact: { minWidth: 38, paddingHorizontal: 7 },
   contactText: { color: V2.textMuted, fontSize: 10, fontWeight: "800" },
   mobileNavWrap: {
     minHeight: 45,

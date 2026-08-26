@@ -14,15 +14,17 @@ import { formatDateTime, formatMoney, formatPct } from "@/components/v2/format";
 import { V2ErrorState, V2LoadingState } from "@/components/v2/page-state";
 import { StatusBadge } from "@/components/v2/status-badge";
 import { V2, V2_LAYOUT } from "@/components/v2/tokens";
+import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
+import { localizeAccount, localizeStrategy } from "@/lib/v2/localized-content";
 
 type Tab = "positions" | "trades";
 
 const CONNECTION_STATE = {
-  CONNECTED: { label: "连接正常", color: V2.green, icon: "check-circle" },
-  DEGRADED: { label: "部分数据延迟", color: V2.amber, icon: "schedule" },
-  DISCONNECTED: { label: "连接中断", color: V2.red, icon: "link-off" },
-  PENDING: { label: "等待连接", color: V2.amber, icon: "schedule" },
+  CONNECTED: { color: V2.green, icon: "check-circle" },
+  DEGRADED: { color: V2.amber, icon: "schedule" },
+  DISCONNECTED: { color: V2.red, icon: "link-off" },
+  PENDING: { color: V2.amber, icon: "schedule" },
 } as const;
 
 export default function AccountDetailPage() {
@@ -30,6 +32,7 @@ export default function AccountDetailPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isMobile = width < 820;
+  const { language, locale, text } = useLanguage();
   const [tab, setTab] = useState<Tab>("positions");
   const accountQuery = trpc.v2.accounts.byId.useQuery(
     { id: String(id || "") },
@@ -42,27 +45,54 @@ export default function AccountDetailPage() {
     staleTime: 30_000,
   });
 
-  if (accountQuery.isLoading)
-    return <V2LoadingState label="正在同步账户详情" />;
+  if (accountQuery.isLoading) {
+    return (
+      <V2LoadingState
+        label={text(
+          "正在同步账户详情",
+          "Syncing account details",
+          "جارٍ مزامنة تفاصيل الحساب",
+        )}
+      />
+    );
+  }
   if (!accountQuery.data) {
     return (
       <V2ErrorState
-        title="账户不可用"
-        detail={accountQuery.error?.message || "账户不存在或尚未授权。"}
+        title={text("账户不可用", "Account unavailable", "الحساب غير متاح")}
+        detail={
+          accountQuery.error?.message ||
+          text(
+            "账户不存在或尚未授权。",
+            "The account does not exist or has not been authorized.",
+            "الحساب غير موجود أو لم يتم تفويضه.",
+          )
+        }
         onRetry={() => accountQuery.refetch()}
       />
     );
   }
 
-  const account = accountQuery.data;
+  const account = localizeAccount(accountQuery.data, language);
   const managed = account.serviceMode === "MANAGED_CONTRACT";
   const accent = managed ? V2.gold : V2.blue;
   const platformName = (platformId: string) =>
     platformQuery.data?.find((item) => item.id === platformId)?.name ??
     platformId;
-  const strategyName = (strategyId: string) =>
-    strategyQuery.data?.find((item) => item.id === strategyId)?.shortName ??
-    strategyId;
+  const strategyName = (strategyId: string) => {
+    const strategy = strategyQuery.data?.find((item) => item.id === strategyId);
+    return strategy
+      ? localizeStrategy(strategy, language).shortName
+      : strategyId;
+  };
+  const connectionLabel =
+    account.connectionStatus === "CONNECTED"
+      ? text("连接正常", "Connected", "متصل")
+      : account.connectionStatus === "DEGRADED"
+        ? text("部分数据延迟", "Partially delayed", "تأخير جزئي")
+        : account.connectionStatus === "DISCONNECTED"
+          ? text("连接中断", "Disconnected", "غير متصل")
+          : text("等待连接", "Pending", "قيد الاتصال");
 
   return (
     <ScrollView
@@ -76,7 +106,9 @@ export default function AccountDetailPage() {
           style={({ pressed }) => [styles.back, pressed && styles.pressed]}
         >
           <MaterialIcons name="arrow-back" size={18} color={V2.textMuted} />
-          <Text style={styles.backText}>返回账户列表</Text>
+          <Text style={styles.backText}>
+            {text("返回账户列表", "Back to accounts", "العودة إلى الحسابات")}
+          </Text>
         </Pressable>
 
         <View style={[styles.header, isMobile && styles.headerMobile]}>
@@ -94,15 +126,25 @@ export default function AccountDetailPage() {
           </View>
           <View style={styles.headerCopy}>
             <Text style={[styles.mode, { color: accent }]}>
-              {managed ? "资管模式" : "券商模式"}
+              {managed
+                ? text("资管模式", "Managed mode", "إدارة مفوضة")
+                : text("券商模式", "Broker mode", "نمط الوسيط")}
             </Text>
             <Text style={[styles.title, isMobile && styles.titleMobile]}>
               {account.name}
             </Text>
             <Text style={styles.subtitle}>
               {managed
-                ? "技术方按合同代操管理 · 客户查看账户运行"
-                : "资金在本人券商账户 · 平台与策略组合运行"}
+                ? text(
+                    "技术方按合同代操管理 · 客户查看账户运行",
+                    "Provider managed under contract · Client view only",
+                    "إدارة بواسطة المزود بموجب عقد · عرض للعميل",
+                  )
+                : text(
+                    "资金在本人券商账户 · 平台与策略组合运行",
+                    "Funds in the user's broker account · Platform and strategy mix",
+                    "الأموال في حساب الوسيط الخاص بالمستخدم · مزيج منصات واستراتيجيات",
+                  )}
             </Text>
           </View>
           <View style={styles.headerStatus}>
@@ -111,38 +153,54 @@ export default function AccountDetailPage() {
               freshness={account.source.freshness}
             />
             <Text style={styles.updated}>
-              更新 {formatDateTime(account.source.observedAt)}
+              {text("更新", "Updated", "آخر تحديث")}{" "}
+              {formatDateTime(account.source.observedAt, locale)}
             </Text>
           </View>
         </View>
 
         <View style={styles.metrics}>
           <Metric
-            label="当前权益"
-            value={formatMoney(account.equity, account.currency)}
+            label={text("当前权益", "Current equity", "حقوق الحساب الحالية")}
+            value={formatMoney(account.equity, account.currency, false, locale)}
             color={V2.text}
           />
           <Metric
-            label="账户余额"
-            value={formatMoney(account.balance, account.currency)}
+            label={text("账户余额", "Balance", "الرصيد")}
+            value={formatMoney(
+              account.balance,
+              account.currency,
+              false,
+              locale,
+            )}
           />
           <Metric
-            label="浮动盈亏"
-            value={formatMoney(account.floatingPnl, account.currency)}
+            label={text("浮动盈亏", "Floating P&L", "الربح والخسارة العائمة")}
+            value={formatMoney(
+              account.floatingPnl,
+              account.currency,
+              false,
+              locale,
+            )}
             color={(account.floatingPnl ?? 0) >= 0 ? V2.green : V2.red}
           />
           <Metric
-            label="今日盈亏"
-            value={formatMoney(account.todayPnl, account.currency)}
+            label={text("今日盈亏", "Today P&L", "ربح وخسارة اليوم")}
+            value={formatMoney(
+              account.todayPnl,
+              account.currency,
+              false,
+              locale,
+            )}
             color={(account.todayPnl ?? 0) >= 0 ? V2.green : V2.red}
           />
           <Metric
-            label="累计收益"
+            label={text("累计收益", "Total return", "العائد الإجمالي")}
             value={formatPct(account.totalPnlPct, true)}
             color={(account.totalPnlPct ?? 0) >= 0 ? V2.green : V2.red}
           />
           <Metric
-            label="最大回撤"
+            label={text("最大回撤", "Max drawdown", "أقصى تراجع")}
             value={formatPct(account.maxDrawdownPct)}
             color={V2.amber}
           />
@@ -151,8 +209,12 @@ export default function AccountDetailPage() {
         <View style={styles.chartPanel}>
           <View style={styles.chartHeading}>
             <View>
-              <Text style={styles.eyebrow}>权益历史</Text>
-              <Text style={styles.sectionTitle}>账户净值</Text>
+              <Text style={styles.eyebrow}>
+                {text("权益历史", "EQUITY HISTORY", "سجل حقوق الحساب")}
+              </Text>
+              <Text style={styles.sectionTitle}>
+                {text("账户净值", "Account equity", "حقوق الحساب")}
+              </Text>
             </View>
             <View style={styles.connection}>
               <View
@@ -164,9 +226,7 @@ export default function AccountDetailPage() {
                   },
                 ]}
               />
-              <Text style={styles.connectionText}>
-                {CONNECTION_STATE[account.connectionStatus].label}
-              </Text>
+              <Text style={styles.connectionText}>{connectionLabel}</Text>
             </View>
           </View>
           <EquityChart
@@ -180,28 +240,69 @@ export default function AccountDetailPage() {
         <View style={[styles.detailGrid, isMobile && styles.detailGridMobile]}>
           <View style={styles.modePanel}>
             <Text style={styles.panelEyebrow}>
-              {managed ? "合同视图" : "当前方案"}
+              {managed
+                ? text("合同视图", "CONTRACT VIEW", "عرض العقد")
+                : text("当前方案", "CURRENT PLAN", "الخطة الحالية")}
             </Text>
             <Text style={styles.panelTitle}>
-              {managed ? "资管合同与权限边界" : "当前券商配置方案"}
+              {managed
+                ? text(
+                    "资管合同与权限边界",
+                    "Managed contract and permissions",
+                    "عقد الإدارة وحدود الصلاحيات",
+                  )
+                : text(
+                    "当前券商配置方案",
+                    "Current broker configuration",
+                    "إعداد الوسيط الحالي",
+                  )}
             </Text>
             {managed ? (
               <View style={styles.detailRows}>
                 <DetailRow
-                  label="合同状态"
+                  label={text("合同状态", "Contract status", "حالة العقد")}
                   value={
                     account.contractStatus === "ACTIVE"
-                      ? "服务中（模拟）"
-                      : "等待确认"
+                      ? text("服务中（模拟）", "Active (demo)", "نشط (تجريبي)")
+                      : text(
+                          "等待确认",
+                          "Pending confirmation",
+                          "بانتظار التأكيد",
+                        )
                   }
                 />
-                <DetailRow label="配置责任" value="指定技术方" />
-                <DetailRow label="客户权限" value="权益、持仓与交易只读" />
-                <DetailRow label="资金管理" value="按合同由技术方管理" />
+                <DetailRow
+                  label={text("配置责任", "Configuration", "مسؤولية الإعداد")}
+                  value={text(
+                    "指定技术方",
+                    "Assigned provider",
+                    "المزود المحدد",
+                  )}
+                />
+                <DetailRow
+                  label={text("客户权限", "Client access", "صلاحيات العميل")}
+                  value={text(
+                    "权益、持仓与交易只读",
+                    "Read-only equity, positions and trades",
+                    "عرض فقط لحقوق الحساب والمراكز والصفقات",
+                  )}
+                />
+                <DetailRow
+                  label={text("资金管理", "Fund management", "إدارة الأموال")}
+                  value={text(
+                    "按合同由技术方管理",
+                    "Provider managed under contract",
+                    "إدارة بواسطة المزود بموجب العقد",
+                  )}
+                />
                 <View style={styles.readOnlyNotice}>
                   <MaterialIcons name="visibility" size={18} color={V2.gold} />
                   <Text style={styles.readOnlyText}>
-                    该模式不提供直接修改参数、平仓或调仓操作。
+                    {text(
+                      "该模式不提供直接修改参数、平仓或调仓操作。",
+                      "This mode does not allow direct parameter changes, closing positions or rebalancing.",
+                      "لا يسمح هذا النمط بتعديل المعايير أو إغلاق المراكز أو إعادة التوازن مباشرة.",
+                    )}
                   </Text>
                 </View>
               </View>
@@ -231,10 +332,12 @@ export default function AccountDetailPage() {
                 ))}
                 <View style={styles.recipeMeta}>
                   <Text style={styles.recipeMetaText}>
-                    版本 {account.allocation.version}
+                    {text("版本", "Version", "الإصدار")}{" "}
+                    {account.allocation.version}
                   </Text>
                   <Text style={styles.recipeMetaText}>
-                    风险预算 {account.allocation.riskBudget.maxDrawdownPct}%
+                    {text("风险预算", "Risk budget", "ميزانية المخاطر")}{" "}
+                    {account.allocation.riskBudget.maxDrawdownPct}%
                   </Text>
                 </View>
               </View>
@@ -242,8 +345,12 @@ export default function AccountDetailPage() {
           </View>
 
           <View style={styles.platformPanel}>
-            <Text style={styles.panelEyebrow}>数据连接</Text>
-            <Text style={styles.panelTitle}>平台连接</Text>
+            <Text style={styles.panelEyebrow}>
+              {text("数据连接", "DATA CONNECTION", "اتصال البيانات")}
+            </Text>
+            <Text style={styles.panelTitle}>
+              {text("平台连接", "Platform connections", "اتصالات المنصات")}
+            </Text>
             <View style={styles.connectionRows}>
               {account.platformIds.map((platformId, index) => (
                 <View key={platformId} style={styles.connectionRow}>
@@ -257,8 +364,12 @@ export default function AccountDetailPage() {
                       {platformName(platformId)}
                     </Text>
                     <Text style={styles.connectionMeta}>
-                      账户映射已脱敏 · {account.currency} ·{" "}
-                      {CONNECTION_STATE[account.connectionStatus].label}
+                      {text(
+                        "账户映射已脱敏",
+                        "Account mapping masked",
+                        "تم إخفاء معرف الحساب",
+                      )}{" "}
+                      · {account.currency} · {connectionLabel}
                     </Text>
                   </View>
                   <MaterialIcons
@@ -275,12 +386,20 @@ export default function AccountDetailPage() {
         <View style={styles.activity}>
           <View style={styles.tabs}>
             <TabButton
-              label={`当前持仓 ${account.positions.length}`}
+              label={text(
+                `当前持仓 ${account.positions.length}`,
+                `Positions ${account.positions.length}`,
+                `المراكز ${account.positions.length}`,
+              )}
               active={tab === "positions"}
               onPress={() => setTab("positions")}
             />
             <TabButton
-              label={`最近交易 ${account.recentTrades.length}`}
+              label={text(
+                `最近交易 ${account.recentTrades.length}`,
+                `Recent trades ${account.recentTrades.length}`,
+                `الصفقات الأخيرة ${account.recentTrades.length}`,
+              )}
               active={tab === "trades"}
               onPress={() => setTab("trades")}
             />
@@ -313,7 +432,7 @@ export default function AccountDetailPage() {
                     </Text>
                   </View>
                   <Text style={styles.activityCell}>
-                    {item.volume.toFixed(2)} 手
+                    {item.volume.toFixed(2)} {text("手", "lots", "لوت")}
                   </Text>
                   <Text style={styles.activityCell}>
                     {item.openPrice} →{" "}
@@ -330,14 +449,20 @@ export default function AccountDetailPage() {
                     {pnl.toFixed(2)} USD
                   </Text>
                   <Text style={styles.activityTime}>
-                    {formatDateTime(time)}
+                    {formatDateTime(time, locale)}
                   </Text>
                 </View>
               );
             })}
             {(tab === "positions" ? account.positions : account.recentTrades)
               .length === 0 ? (
-              <Text style={styles.empty}>暂无可展示数据</Text>
+              <Text style={styles.empty}>
+                {text(
+                  "暂无可展示数据",
+                  "No data to display",
+                  "لا توجد بيانات للعرض",
+                )}
+              </Text>
             ) : null}
           </View>
         </View>
@@ -345,7 +470,11 @@ export default function AccountDetailPage() {
         <View style={styles.notice}>
           <MaterialIcons name="shield" size={20} color={V2.blue} />
           <Text style={styles.noticeText}>
-            账户页是经过脱敏的只读投影。模拟金额不代表真实资产，真实模式必须通过身份验证、用户授权和数据新鲜度校验。
+            {text(
+              "账户页是经过脱敏的只读投影。模拟金额不代表真实资产，真实模式必须通过身份验证、用户授权和数据新鲜度校验。",
+              "This page is a masked, read-only account projection. Demo values do not represent real assets. Live mode requires identity verification, user authorization and data-freshness checks.",
+              "هذه الصفحة عرض مقنع للقراءة فقط. القيم التجريبية لا تمثل أصولا حقيقية، ويتطلب الوضع الحي التحقق من الهوية وتفويض المستخدم وفحص حداثة البيانات.",
+            )}
           </Text>
         </View>
       </View>

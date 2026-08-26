@@ -1,5 +1,6 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useLanguage } from "@/lib/language";
 import { V2 } from "./tokens";
 
 type DialogTone = "info" | "warning" | "danger" | "success";
@@ -16,8 +17,8 @@ export function ActionDialog({
   title,
   message,
   tone = "info",
-  confirmLabel = "确认",
-  cancelLabel = "取消",
+  confirmLabel,
+  cancelLabel,
   confirmOnly = false,
   onConfirm,
   onCancel,
@@ -32,7 +33,10 @@ export function ActionDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { text } = useLanguage();
   const toneStyle = TONE[tone];
+  const resolvedConfirmLabel = confirmLabel ?? text("确认", "Confirm", "تأكيد");
+  const resolvedCancelLabel = cancelLabel ?? text("取消", "Cancel", "إلغاء");
   return (
     <Modal
       visible={visible}
@@ -73,7 +77,7 @@ export function ActionDialog({
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={styles.cancelText}>{cancelLabel}</Text>
+                <Text style={styles.cancelText}>{resolvedCancelLabel}</Text>
               </Pressable>
             ) : null}
             <Pressable
@@ -85,7 +89,7 @@ export function ActionDialog({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.confirmText}>{confirmLabel}</Text>
+              <Text style={styles.confirmText}>{resolvedConfirmLabel}</Text>
             </Pressable>
           </View>
         </Pressable>
