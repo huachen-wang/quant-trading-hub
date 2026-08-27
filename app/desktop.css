@@ -96,9 +96,14 @@
 
 /* 平板端适配 */
 @media (min-width: 768px) and (max-width: 1023px) {
+  body {
+    background-color: #070b12;
+  }
+
   #root > div {
-    max-width: 768px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
   }
 }
 

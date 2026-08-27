@@ -3,11 +3,13 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import type { ListRenderItem } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { useIsFocused } from "@react-navigation/native";
@@ -247,7 +249,11 @@ export function EaLibraryScreen({ variant = "legacy" }: EaLibraryScreenProps) {
             <CustomEABanner onPress={openContactModal} />
           </>
         ) : (
-          <V2LibraryHeader onContactPress={openContactModal} />
+          <V2LibraryHeader
+            isDesktop={isDesktop}
+            onContactPress={openContactModal}
+            onSearchPress={openSearch}
+          />
         )}
         <StrategyFilters
           colors={colors}
@@ -276,6 +282,7 @@ export function EaLibraryScreen({ variant = "legacy" }: EaLibraryScreenProps) {
       clearAllFilters,
       colors,
       dynamicTags,
+      isDesktop,
       isShowingPreviewCatalog,
       openContactModal,
       openSearch,
@@ -382,26 +389,80 @@ export function EaLibraryScreen({ variant = "legacy" }: EaLibraryScreenProps) {
   );
 }
 
-function V2LibraryHeader({ onContactPress }: { onContactPress: () => void }) {
+function V2LibraryHeader({
+  isDesktop,
+  onContactPress,
+  onSearchPress,
+}: {
+  isDesktop: boolean;
+  onContactPress: () => void;
+  onSearchPress: () => void;
+}) {
   const { text } = useLanguage();
   return (
-    <View style={styles.v2LibraryHeader}>
+    <View
+      style={[
+        styles.v2LibraryHeader,
+        !isDesktop && styles.v2LibraryHeaderMobile,
+      ]}
+    >
       <View style={styles.v2LibraryCopy}>
-        <Text style={styles.v2LibraryEyebrow}>EA CATALOG</Text>
+        <Text style={styles.v2LibraryEyebrow}>EA MARKETPLACE</Text>
         <Text style={styles.v2LibraryTitle}>
-          {text("EA 资料库", "EA Library", "مكتبة EA")}
+          {text("EA 商城", "EA Marketplace", "سوق EA")}
         </Text>
         <Text style={styles.v2LibraryDetail}>
           {text(
-            "大量 EA、指标与工具统一保留在这里；核心六策略与资料目录相互独立。",
-            "The broader catalog of EAs, indicators and tools lives here, separate from the six core strategies.",
-            "توجد هنا المجموعة الأوسع من أنظمة EA والمؤشرات والأدوات، بشكل مستقل عن الاستراتيجيات الأساسية الست.",
+            "浏览 MT4 / MT5 的 EA、指标与交易工具；具体版本、授权范围和部署环境可直接联系确认。",
+            "Browse MT4 / MT5 EAs, indicators and trading tools. Confirm versions, licensing and deployment directly with an advisor.",
+            "تصفح أنظمة EA والمؤشرات وأدوات التداول لمنصتي MT4 وMT5، وتحقق من الإصدار والترخيص والنشر مع المستشار.",
           )}
         </Text>
+        <View style={styles.v2LibraryTypes}>
+          {[
+            "EA",
+            text("指标", "Indicators", "مؤشرات"),
+            text("工具", "Tools", "أدوات"),
+          ].map((label) => (
+            <View key={label} style={styles.v2LibraryType}>
+              <Text style={styles.v2LibraryTypeText}>{label}</Text>
+            </View>
+          ))}
+        </View>
       </View>
-      <Text style={styles.v2LibraryContact} onPress={onContactPress}>
-        {text("联系咨询", "Contact advisor", "تواصل مع مستشار")}
-      </Text>
+      <View
+        style={[
+          styles.v2LibraryActions,
+          !isDesktop && styles.v2LibraryActionsMobile,
+        ]}
+      >
+        <Pressable
+          accessibilityRole="button"
+          onPress={onSearchPress}
+          style={({ pressed }) => [
+            styles.v2LibrarySearch,
+            pressed && styles.pressed,
+          ]}
+        >
+          <MaterialIcons name="search" size={18} color="#D8BC83" />
+          <Text style={styles.v2LibrarySearchText}>
+            {text("搜索 EA", "Search EAs", "بحث EA")}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onContactPress}
+          style={({ pressed }) => [
+            styles.v2LibraryContact,
+            pressed && styles.pressed,
+          ]}
+        >
+          <MaterialIcons name="support-agent" size={18} color="#07101A" />
+          <Text style={styles.v2LibraryContactText}>
+            {text("联系购买与授权", "Purchase & licensing", "الشراء والترخيص")}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -440,7 +501,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   v2LibraryHeader: {
-    minHeight: 154,
+    minHeight: 174,
     paddingHorizontal: 12,
     paddingVertical: 28,
     borderBottomWidth: 1,
@@ -449,6 +510,12 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     justifyContent: "space-between",
     gap: 18,
+  },
+  v2LibraryHeaderMobile: {
+    minHeight: 0,
+    paddingVertical: 20,
+    flexDirection: "column",
+    alignItems: "stretch",
   },
   v2LibraryCopy: { flex: 1, minWidth: 0, gap: 5 },
   v2LibraryEyebrow: {
@@ -470,13 +537,66 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     maxWidth: 660,
   },
-  v2LibraryContact: {
-    color: "#D8BC83",
-    fontSize: 12,
-    lineHeight: 20,
-    fontWeight: "900",
-    paddingVertical: 8,
+  v2LibraryTypes: {
+    marginTop: 5,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
   },
+  v2LibraryType: {
+    minHeight: 22,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.26)",
+    borderRadius: 3,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(216,188,131,0.04)",
+  },
+  v2LibraryTypeText: {
+    color: "#9BA9BC",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  v2LibraryActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  v2LibraryActionsMobile: { width: "100%" },
+  v2LibrarySearch: {
+    minHeight: 40,
+    paddingHorizontal: 13,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.48)",
+    borderRadius: 4,
+    backgroundColor: "rgba(216,188,131,0.05)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  v2LibrarySearchText: {
+    color: "#D8BC83",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  v2LibraryContact: {
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: 4,
+    backgroundColor: "#D8BC83",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+  },
+  v2LibraryContactText: {
+    color: "#07101A",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  pressed: { opacity: 0.72 },
   previewStrip: {
     marginTop: 10,
     marginBottom: 10,

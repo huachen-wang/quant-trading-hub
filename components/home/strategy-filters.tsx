@@ -220,7 +220,7 @@ export const StrategyFilters = memo(function StrategyFilters({
               { color: colors.foreground },
             ]}
           >
-            {text("策略广场", "EA marketplace", "سوق EA")}
+            {text("商城目录", "Marketplace catalog", "دليل السوق")}
           </Text>
         </View>
 
@@ -235,14 +235,16 @@ export const StrategyFilters = memo(function StrategyFilters({
           </View>
         )}
 
-        <View style={styles.titleRight}>
+        <View
+          style={[styles.titleRight, !isDesktop && styles.titleRightMobile]}
+        >
           <TouchableOpacity
             onPress={onUploadPress}
             style={styles.uploadBtn}
             activeOpacity={0.8}
           >
             <Text style={styles.uploadBtnText}>
-              {text("上架 EA", "List an EA", "إدراج EA")}
+              {text("提交上架", "List an EA", "إدراج EA")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -257,6 +259,9 @@ export const StrategyFilters = memo(function StrategyFilters({
             activeOpacity={0.7}
           >
             <IconSymbol name="magnifyingglass" size={18} color={colors.muted} />
+            <Text style={[styles.searchBtnText, { color: colors.muted }]}>
+              {text("搜索", "Search", "بحث")}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -479,11 +484,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    flexWrap: "wrap",
+    rowGap: 8,
     marginBottom: 6,
   },
   titleRowDesktop: {
     marginBottom: 0,
     gap: 16,
+    flexWrap: "nowrap",
   },
   titleLeft: {
     flexDirection: "row",
@@ -520,6 +528,10 @@ const styles = StyleSheet.create({
     gap: 8,
     flexShrink: 0,
   },
+  titleRightMobile: {
+    width: "100%",
+    justifyContent: "flex-end",
+  },
   uploadBtn: {
     borderRadius: 4,
     paddingHorizontal: 12,
@@ -534,12 +546,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   searchBtn: {
-    width: 30,
+    minWidth: 64,
     height: 30,
+    paddingHorizontal: 9,
     borderRadius: 4,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 5,
   },
+  searchBtnText: { fontSize: 11, fontWeight: "800" },
   filterRow: {
     flexDirection: "row",
     alignItems: "center",

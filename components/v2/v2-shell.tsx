@@ -47,7 +47,7 @@ export function V2Shell({ children }: V2ShellProps) {
   const pathname = usePathname();
   const { configure } = useLocalSearchParams<{ configure?: string }>();
   const { width } = useWindowDimensions();
-  const isMobile = width < 940;
+  const isMobile = width < 1120;
   const isVeryNarrow = width < 410;
   const { language, text } = useLanguage();
   const [contactOpen, setContactOpen] = useState(false);
@@ -71,6 +71,7 @@ export function V2Shell({ children }: V2ShellProps) {
   } as const;
 
   const nav = NAV_ITEMS.map((item) => {
+    const isLibrary = item.id === "LIBRARY";
     const active =
       item.activeOn === "/"
         ? (pathname === "/" ||
@@ -92,9 +93,7 @@ export function V2Shell({ children }: V2ShellProps) {
         style={({ pressed }) => [
           styles.navItem,
           isMobile && styles.navItemMobile,
-          isMobile && {
-            width: Math.max(76, (width - 16) / NAV_ITEMS.length),
-          },
+          isLibrary && styles.navItemCommerce,
           active && styles.navItemActive,
           pressed && styles.pressed,
         ]}
@@ -102,13 +101,14 @@ export function V2Shell({ children }: V2ShellProps) {
         <MaterialIcons
           name={item.icon}
           size={isMobile ? 15 : 16}
-          color={active ? V2.gold : V2.textMuted}
+          color={active || isLibrary ? V2.gold : V2.textMuted}
         />
         <Text
           numberOfLines={1}
           style={[
             styles.navText,
             isMobile && styles.navTextMobile,
+            isLibrary && styles.navTextCommerce,
             active && styles.navTextActive,
           ]}
         >
@@ -204,51 +204,80 @@ export function V2Shell({ children }: V2ShellProps) {
               </View>
             ) : null}
             <LanguageMenu compact={isMobile} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={text(
-                "联系量化顾问",
-                "Contact a quant advisor",
-                "تواصل مع مستشار كمي",
-              )}
-              accessibilityHint={text(
-                "打开联系方式",
-                "Open contact details",
-                "فتح بيانات التواصل",
-              )}
-              onPress={() => setContactOpen(true)}
-              style={({ pressed }) => [
-                styles.contactButton,
-                isVeryNarrow && styles.contactButtonCompact,
-                pressed && styles.pressed,
-              ]}
-            >
-              <MaterialIcons
-                name="support-agent"
-                size={18}
-                color={V2.textMuted}
-              />
-              {!isVeryNarrow ? (
+            {!isMobile ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={text(
+                  "联系量化顾问",
+                  "Contact a quant advisor",
+                  "تواصل مع مستشار كمي",
+                )}
+                accessibilityHint={text(
+                  "打开联系方式",
+                  "Open contact details",
+                  "فتح بيانات التواصل",
+                )}
+                onPress={() => setContactOpen(true)}
+                style={({ pressed }) => [
+                  styles.contactButton,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <MaterialIcons name="support-agent" size={18} color={V2.gold} />
                 <Text style={styles.contactText}>
-                  {text("顾问", "Advisor", "مستشار")}
+                  {text("联系顾问", "Talk to advisor", "تواصل مع مستشار")}
                 </Text>
-              ) : null}
-            </Pressable>
+              </Pressable>
+            ) : null}
             <WalletConnect compact={isMobile} />
           </View>
         </View>
       </View>
 
       {isMobile ? (
-        <View style={styles.mobileNavWrap}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.mobileNav}
-          >
-            {nav}
-          </ScrollView>
-        </View>
+        <>
+          <View style={styles.mobileNavWrap}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.mobileNav}
+            >
+              {nav.slice(0, NAV_ITEMS.length - 1)}
+            </ScrollView>
+          </View>
+          <View style={styles.mobileConversionBar}>
+            <Pressable
+              accessibilityRole="link"
+              onPress={() => router.push("/v2-preview/ea-library" as never)}
+              style={({ pressed }) => [
+                styles.mobileMarketButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <MaterialIcons
+                name="storefront"
+                size={17}
+                color={V2.background}
+              />
+              <Text style={styles.mobileMarketText}>
+                {text("进入 EA 商城", "Open EA Market", "فتح سوق EA")}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setContactOpen(true)}
+              style={({ pressed }) => [
+                styles.mobileContactButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <MaterialIcons name="support-agent" size={17} color={V2.gold} />
+              <Text style={styles.mobileContactText}>
+                {text("联系量化顾问", "Talk to advisor", "تواصل مع مستشار")}
+              </Text>
+            </Pressable>
+          </View>
+        </>
       ) : null}
 
       <View style={styles.content}>
@@ -340,8 +369,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   navItemMobile: {
-    minWidth: 0,
-    flexShrink: 0,
+    minWidth: 92,
+    flexGrow: 1,
+    flexShrink: 1,
     height: 44,
     paddingHorizontal: 2,
     gap: 4,
@@ -352,6 +382,9 @@ const styles = StyleSheet.create({
     borderBottomColor: V2.gold,
     backgroundColor: "rgba(216,188,131,0.06)",
   },
+  navItemCommerce: {
+    backgroundColor: "rgba(216,188,131,0.045)",
+  },
   navText: {
     color: V2.textMuted,
     fontSize: 13,
@@ -359,6 +392,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   navTextMobile: { fontSize: 11 },
+  navTextCommerce: { color: V2.gold },
   navTextActive: { color: V2.text },
   headerActions: {
     marginLeft: "auto",
@@ -385,27 +419,74 @@ const styles = StyleSheet.create({
     letterSpacing: 0,
   },
   contactButton: {
-    minWidth: 58,
+    minWidth: 106,
     height: 38,
-    paddingHorizontal: 9,
+    paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: V2.borderStrong,
+    borderColor: "rgba(216,188,131,0.66)",
     borderRadius: 4,
-    backgroundColor: V2.surfaceMuted,
+    backgroundColor: "rgba(216,188,131,0.08)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 7,
   },
-  contactButtonCompact: { minWidth: 38, paddingHorizontal: 7 },
-  contactText: { color: V2.textMuted, fontSize: 10, fontWeight: "800" },
+  contactText: { color: V2.gold, fontSize: 11, fontWeight: "900" },
   mobileNavWrap: {
     minHeight: 45,
     borderBottomWidth: 1,
     borderBottomColor: V2.border,
     backgroundColor: V2.backgroundRaised,
   },
-  mobileNav: { paddingHorizontal: 8, alignItems: "center", gap: 2 },
+  mobileNav: {
+    flexGrow: 1,
+    paddingHorizontal: 8,
+    alignItems: "center",
+    gap: 2,
+  },
+  mobileConversionBar: {
+    minHeight: 48,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: V2.border,
+    backgroundColor: "rgba(9,14,23,0.98)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  mobileMarketButton: {
+    flex: 1,
+    minWidth: 0,
+    height: 36,
+    paddingHorizontal: 9,
+    borderRadius: 4,
+    backgroundColor: V2.gold,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  mobileMarketText: {
+    color: V2.background,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  mobileContactButton: {
+    flex: 1,
+    minWidth: 0,
+    height: 36,
+    paddingHorizontal: 9,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.66)",
+    borderRadius: 4,
+    backgroundColor: "rgba(216,188,131,0.06)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  mobileContactText: { color: V2.gold, fontSize: 11, fontWeight: "900" },
   content: { flex: 1, minHeight: 0 },
   disabledState: {
     flex: 1,
