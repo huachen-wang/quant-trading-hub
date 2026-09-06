@@ -9,8 +9,6 @@ type Subscriber = {
   email: string | null;
   contactInfo?: string | null;
   contactType?: string | null;
-  interestContext?: string | null;
-  sourcePath?: string | null;
   isActive: boolean;
   createdAt: Date | string;
 };
@@ -67,11 +65,6 @@ export default function SubscribersAdmin() {
         <Text style={[st.contactText, { color: colors.foreground }]} numberOfLines={1}>
           {getDisplayContact(item)}
         </Text>
-        {item.interestContext ? (
-          <Text style={[st.contextText, { color: colors.muted }]} numberOfLines={1}>
-            {item.interestContext}{item.sourcePath ? ` · ${item.sourcePath}` : ""}
-          </Text>
-        ) : null}
       </View>
       <View style={[st.statusBadge, { backgroundColor: item.isActive ? colors.success + "20" : colors.error + "20" }]}>
         <Text style={{ color: item.isActive ? colors.success : colors.error, fontSize: 12, fontWeight: "600" }}>{item.isActive ? "活跃" : "已取消"}</Text>
@@ -122,7 +115,6 @@ const st = StyleSheet.create({
   indexCell: { width: 30, fontSize: 13, textAlign: "center" },
   contactCell: { flex: 1 },
   contactText: { fontSize: 14 },
-  contextText: { fontSize: 11, marginTop: 4 },
   statusHead: { width: 70, textAlign: "center" },
   statusBadge: { width: 70, alignItems: "center", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   dateCell: { width: 120, fontSize: 12, textAlign: "right" },

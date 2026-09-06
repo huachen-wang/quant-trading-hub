@@ -416,10 +416,6 @@ async function runMigrations(options: { strict?: boolean } = {}) {
           "ALTER TABLE `email_subscriptions` ADD COLUMN `contact_info` varchar(255) DEFAULT NULL AFTER `email`",
         contact_type:
           "ALTER TABLE `email_subscriptions` ADD COLUMN `contact_type` varchar(50) DEFAULT 'unknown' AFTER `contact_info`",
-        interest_context:
-          "ALTER TABLE `email_subscriptions` ADD COLUMN `interest_context` varchar(255) DEFAULT NULL AFTER `contact_type`",
-        source_path:
-          "ALTER TABLE `email_subscriptions` ADD COLUMN `source_path` varchar(255) DEFAULT NULL AFTER `interest_context`",
       };
 
       for (const [colName, alterSql] of Object.entries(emailSubNewColumns)) {
