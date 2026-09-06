@@ -21,10 +21,16 @@ import { WalletConnect } from "./wallet/wallet-connect";
 type V2ShellProps = { children: ReactNode };
 
 const NAV_ITEMS = [
-  { id: "STRATEGIES", path: "/", activeOn: "/", icon: "insights" },
+  { id: "MARKET", path: "/", activeOn: "/", icon: "storefront" },
+  {
+    id: "STRATEGIES",
+    path: "/v2-preview",
+    activeOn: "STRATEGIES",
+    icon: "insights",
+  },
   {
     id: "CONFIGURE",
-    path: "/?configure=1",
+    path: "/v2-preview?configure=1",
     activeOn: "CONFIGURE",
     icon: "tune",
   },
@@ -33,12 +39,6 @@ const NAV_ITEMS = [
     path: "/v2-preview/accounts",
     activeOn: "/v2-preview/accounts",
     icon: "monitor-heart",
-  },
-  {
-    id: "LIBRARY",
-    path: "/v2-preview/ea-library",
-    activeOn: "/v2-preview/ea-library",
-    icon: "storefront",
   },
 ] as const;
 
@@ -64,23 +64,23 @@ export function V2Shell({ children }: V2ShellProps) {
     status?.provider === "HTTP" || status?.provider === "NIUBANG";
 
   const navLabels = {
+    MARKET: text("EA 商城", "EA Market", "سوق EA"),
     STRATEGIES: text("核心策略", "Strategies", "الاستراتيجيات"),
     CONFIGURE: text("方案选配", "Configure", "بناء الخطة"),
     ACCOUNTS: text("实盘账户", "Accounts", "الحسابات"),
-    LIBRARY: text("EA 商城", "EA Library", "مكتبة EA"),
   } as const;
 
   const nav = NAV_ITEMS.map((item) => {
-    const isLibrary = item.id === "LIBRARY";
+    const isMarket = item.id === "MARKET";
     const active =
       item.activeOn === "/"
-        ? (pathname === "/" ||
-            pathname === "/v2-preview" ||
-            pathname.startsWith("/v2-preview/strategies/")) &&
-          configure !== "1"
+        ? pathname === "/" || pathname === "/market" || pathname === "/v2-preview/ea-library"
+        : item.activeOn === "STRATEGIES"
+          ? (pathname === "/v2-preview" ||
+              pathname.startsWith("/v2-preview/strategies/")) &&
+            configure !== "1"
         : item.activeOn === "CONFIGURE"
-          ? (pathname === "/" || pathname === "/v2-preview") &&
-            configure === "1"
+          ? pathname === "/v2-preview" && configure === "1"
           : item.activeOn
             ? pathname.startsWith(item.activeOn)
             : false;
@@ -93,7 +93,7 @@ export function V2Shell({ children }: V2ShellProps) {
         style={({ pressed }) => [
           styles.navItem,
           isMobile && styles.navItemMobile,
-          isLibrary && styles.navItemCommerce,
+          isMarket && styles.navItemCommerce,
           active && styles.navItemActive,
           pressed && styles.pressed,
         ]}
@@ -101,14 +101,14 @@ export function V2Shell({ children }: V2ShellProps) {
         <MaterialIcons
           name={item.icon}
           size={isMobile ? 15 : 16}
-          color={active || isLibrary ? V2.gold : V2.textMuted}
+          color={active || isMarket ? V2.gold : V2.textMuted}
         />
         <Text
           numberOfLines={1}
           style={[
             styles.navText,
             isMobile && styles.navTextMobile,
-            isLibrary && styles.navTextCommerce,
+            isMarket && styles.navTextCommerce,
             active && styles.navTextActive,
           ]}
         >
@@ -156,7 +156,9 @@ export function V2Shell({ children }: V2ShellProps) {
                       "تحالف EAXAU الكمي",
                     )}
               </Text>
-              <Text style={styles.brandDomain}>eaxau.com</Text>
+              {!isVeryNarrow ? (
+                <Text style={styles.brandDomain}>eaxau.com</Text>
+              ) : null}
             </View>
             <View
               style={[
@@ -242,13 +244,13 @@ export function V2Shell({ children }: V2ShellProps) {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.mobileNav}
             >
-              {nav.slice(0, NAV_ITEMS.length - 1)}
+              {nav.slice(1)}
             </ScrollView>
           </View>
           <View style={styles.mobileConversionBar}>
             <Pressable
               accessibilityRole="link"
-              onPress={() => router.push("/v2-preview/ea-library" as never)}
+              onPress={() => router.push("/" as never)}
               style={({ pressed }) => [
                 styles.mobileMarketButton,
                 pressed && styles.pressed,
@@ -260,7 +262,7 @@ export function V2Shell({ children }: V2ShellProps) {
                 color={V2.background}
               />
               <Text style={styles.mobileMarketText}>
-                {text("进入 EA 商城", "Open EA Market", "فتح سوق EA")}
+                {text("EA 商城首页", "EA Market Home", "الصفحة الرئيسية لسوق EA")}
               </Text>
             </Pressable>
             <Pressable

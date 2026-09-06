@@ -23,9 +23,9 @@ export default function Root({ children }: PropsWithChildren) {
         />
 
         {/* ===== SEO Core Meta Tags ===== */}
-        <title>AI量化联盟 | 六策略资管与EA商城</title>
-        <meta name="description" content="AI量化联盟（eaxau.com）提供六款量化策略展示与资管接入选配，并为EA文件提供独立USDT订单结算。资管入金与EA销售款严格分账。" />
-        <meta name="keywords" content="AI量化联盟,量化交易,EA策略,MT4,MT5,六策略,资管接入,USDT结算,eaxau" />
+        <title>EA商城｜MT4/MT5量化交易软件与策略工具 - EAXAU</title>
+        <meta name="description" content="EAXAU EA商城集中展示MT4、MT5量化交易EA、指标与工具，商品页区分直接购买和咨询授权，并提供版本确认、部署支持及受控交付。" />
+        <meta name="keywords" content="EA商城,EA交易软件,EA策略,量化交易,自动化交易,MT4 EA,MT5 EA,交易指标,EA授权,EAXAU" />
         <meta name="author" content="AI量化联盟" />
         <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
         <link rel="canonical" href="https://www.eaxau.com/" />
@@ -33,15 +33,15 @@ export default function Root({ children }: PropsWithChildren) {
         {/* ===== Open Graph (社交媒体分享) ===== */}
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="AI量化联盟" />
-        <meta property="og:title" content="AI量化联盟 | 六策略资管与EA商城" />
-        <meta property="og:description" content="六策略资管接入选配、可选券商通道与独立EA商城USDT订单结算。" />
+        <meta property="og:title" content="EAXAU EA商城｜MT4/MT5量化交易软件与策略工具" />
+        <meta property="og:description" content="浏览EA、指标与交易工具，按商品规则直接购买或咨询授权，并确认版本、部署与交付方式。" />
         <meta property="og:url" content="https://www.eaxau.com/" />
         <meta property="og:locale" content="zh_CN" />
 
         {/* ===== Twitter Card ===== */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="AI量化联盟 | 六策略资管与EA商城" />
-        <meta name="twitter:description" content="六策略资管接入选配与EA商城USDT订单结算。" />
+        <meta name="twitter:title" content="EAXAU EA商城｜MT4/MT5量化交易软件与策略工具" />
+        <meta name="twitter:description" content="浏览EA、指标与交易工具，按商品规则直接购买或咨询授权。" />
 
         {/* ===== Mobile App Meta ===== */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -60,7 +60,8 @@ export default function Root({ children }: PropsWithChildren) {
               "name": "AI量化联盟",
               "alternateName": "eaxau.com",
               "url": "https://www.eaxau.com",
-              "description": "六策略资管接入选配与EA商城USDT独立订单结算平台。",
+              "description": "面向中文用户的MT4、MT5 EA、指标与量化交易工具商城，提供商品检索、授权咨询、订单结算和交付支持。",
+              "inLanguage": ["zh-CN", "en", "ar"],
               "potentialAction": {
                 "@type": "SearchAction",
                 "target": "https://www.eaxau.com/search?q={search_term_string}",
@@ -77,7 +78,7 @@ export default function Root({ children }: PropsWithChildren) {
               "@type": "Organization",
               "name": "AI量化联盟",
               "url": "https://www.eaxau.com",
-              "description": "六策略资管与EA商城平台",
+              "description": "EAXAU EA商城与AI量化联盟服务平台",
               "sameAs": []
             }),
           }}
