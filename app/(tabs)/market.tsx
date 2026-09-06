@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
   Platform,
   Pressable,
   RefreshControl,
@@ -413,9 +414,9 @@ function V2LibraryHeader({
         </Text>
         <Text style={styles.v2LibraryDetail}>
           {text(
-            "浏览 MT4 / MT5 的 EA、指标与交易工具；具体版本、授权范围和部署环境可直接联系确认。",
-            "Browse MT4 / MT5 EAs, indicators and trading tools. Confirm versions, licensing and deployment directly with an advisor.",
-            "تصفح أنظمة EA والمؤشرات وأدوات التداول لمنصتي MT4 وMT5، وتحقق من الإصدار والترخيص والنشر مع المستشار.",
+            "浏览 MT4 / MT5 的 EA、指标与交易工具。商品页明确区分直接购买与咨询授权，付款前可先确认版本、授权范围和部署环境。",
+            "Browse MT4 / MT5 EAs, indicators and trading tools. Product pages distinguish direct purchase from licensing enquiries, with version, licence and deployment confirmation before payment.",
+            "تصفح أنظمة EA والمؤشرات وأدوات التداول لمنصتي MT4 وMT5. تميّز صفحات المنتجات بين الشراء المباشر واستفسارات الترخيص، مع تأكيد الإصدار والترخيص والنشر قبل الدفع.",
           )}
         </Text>
         <View style={styles.v2LibraryTypes}>
@@ -428,6 +429,52 @@ function V2LibraryHeader({
               <Text style={styles.v2LibraryTypeText}>{label}</Text>
             </View>
           ))}
+        </View>
+        <View style={styles.v2CommerceFlow}>
+          <Text style={styles.v2CommerceFlowLabel}>
+            {text("选品到交付", "FROM SELECTION TO DELIVERY", "من الاختيار إلى التسليم")}
+          </Text>
+          <Text style={styles.v2CommerceFlowText}>
+            {text(
+              "看商品资料 → 购买或咨询授权 → 确认版本与部署 → 获取文件及后续服务",
+              "Review details → Buy or ask about licensing → Confirm version and deployment → Receive files and support",
+              "راجع التفاصيل ← اشتر أو استفسر عن الترخيص ← أكد الإصدار والنشر ← استلم الملفات والدعم",
+            )}
+          </Text>
+        </View>
+        <View style={styles.v2ServiceLinks}>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel={text(
+              "打开 niubang.ai 跟单与带单排行",
+              "Open niubang.ai copy trading and provider rankings",
+              "افتح niubang.ai لنسخ التداول وتصنيفات المزودين",
+            )}
+            onPress={() => Linking.openURL("https://niubang.ai")}
+            style={({ pressed }) => [styles.v2ServiceLink, pressed && styles.pressed]}
+          >
+            <Text style={styles.v2ServiceLinkBrand}>niubang.ai</Text>
+            <Text style={styles.v2ServiceLinkText}>
+              {text("跟单与带单排行", "Copy trading & rankings", "نسخ التداول والتصنيفات")}
+            </Text>
+            <MaterialIcons name="open-in-new" size={13} color="#D8BC83" />
+          </Pressable>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel={text(
+              "打开 fanyong.ai 多 broker 权益与社区",
+              "Open fanyong.ai broker benefits and community",
+              "افتح fanyong.ai لمزايا الوسطاء والمجتمع",
+            )}
+            onPress={() => Linking.openURL("https://fanyong.ai")}
+            style={({ pressed }) => [styles.v2ServiceLink, pressed && styles.pressed]}
+          >
+            <Text style={styles.v2ServiceLinkBrand}>fanyong.ai</Text>
+            <Text style={styles.v2ServiceLinkText}>
+              {text("多 broker 权益与社区", "Broker benefits & community", "مزايا الوسطاء والمجتمع")}
+            </Text>
+            <MaterialIcons name="open-in-new" size={13} color="#D8BC83" />
+          </Pressable>
         </View>
       </View>
       <View
@@ -501,7 +548,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   v2LibraryHeader: {
-    minHeight: 174,
+    minHeight: 246,
     paddingHorizontal: 12,
     paddingVertical: 28,
     borderBottomWidth: 1,
@@ -557,6 +604,51 @@ const styles = StyleSheet.create({
     color: "#9BA9BC",
     fontSize: 9,
     fontWeight: "800",
+  },
+  v2CommerceFlow: {
+    marginTop: 9,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(100,116,139,0.26)",
+    gap: 4,
+  },
+  v2CommerceFlowLabel: {
+    color: "#D8BC83",
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  v2CommerceFlowText: {
+    color: "#CBD5E1",
+    fontSize: 11,
+    lineHeight: 17,
+    fontWeight: "600",
+  },
+  v2ServiceLinks: {
+    marginTop: 4,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  v2ServiceLink: {
+    minHeight: 30,
+    paddingHorizontal: 9,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.2)",
+    borderRadius: 4,
+    backgroundColor: "rgba(216,188,131,0.035)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  v2ServiceLinkBrand: {
+    color: "#F4F7FB",
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  v2ServiceLinkText: {
+    color: "#9BA9BC",
+    fontSize: 9,
+    fontWeight: "700",
   },
   v2LibraryActions: {
     flexDirection: "row",

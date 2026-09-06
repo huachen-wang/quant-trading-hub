@@ -256,6 +256,8 @@ export const emailSubscriptions = mysqlTable("email_subscriptions", {
   email: varchar("email", { length: 320 }),  // 邮箱（可选）
   contactInfo: varchar("contact_info", { length: 255 }), // 微信/QQ/Telegram等联系方式（可选）
   contactType: varchar("contact_type", { length: 50 }).default("unknown"), // 联系方式类型: wechat/qq/telegram/email/unknown
+  interestContext: varchar("interest_context", { length: 255 }), // 咨询的策略/商品上下文
+  sourcePath: varchar("source_path", { length: 255 }), // 提交咨询时的站内路径
   isActive: boolean("isActive").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 }, (table) => ({

@@ -114,8 +114,8 @@ async function generateHomeMetaHtml(indexHtml: string): Promise<string> {
     const itemList = {
       "@context": "https://schema.org",
       "@type": "ItemList",
-      "name": "AI量化联盟 EA策略",
-      "description": "AI量化联盟 MT4/MT5 EA策略资料与风险边界展示",
+      "name": "EAXAU EA商城商品目录",
+      "description": "MT4、MT5 EA、指标与量化交易工具目录；商品页区分直接购买和咨询授权。",
       "numberOfItems": strategies.length,
       "itemListElement": strategies.map((s: any, i: number) => ({
         "@type": "ListItem",

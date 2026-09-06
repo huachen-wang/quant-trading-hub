@@ -98,6 +98,8 @@ export const subscriptionsRouter = router({
       z.object({
         email: z.string().optional(),
         contactInfo: z.string().optional(),
+        interestContext: z.string().max(255).optional(),
+        sourcePath: z.string().max(255).optional(),
       }).refine(data => (data.email && data.email.trim()) || (data.contactInfo && data.contactInfo.trim()), {
         message: "请至少填写一种联系方式",
       }),
@@ -105,6 +107,8 @@ export const subscriptionsRouter = router({
     .mutation(({ input }) => db.createEmailSubscription({
       email: input.email?.trim() || undefined,
       contactInfo: input.contactInfo?.trim() || undefined,
+      interestContext: input.interestContext?.trim() || undefined,
+      sourcePath: input.sourcePath?.trim() || undefined,
     })),
 
   list: adminProcedure

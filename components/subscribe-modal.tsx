@@ -92,9 +92,20 @@ export function SubscribeModal({
     setIsSubmitting(true);
     try {
       // 构建提交数据 - 确保所有联系方式都会被持久化
-      const payload: { email?: string; contactInfo?: string } = {};
+      const payload: {
+        email?: string;
+        contactInfo?: string;
+        interestContext?: string;
+        sourcePath?: string;
+      } = {};
       if (trimmedEmail) payload.email = trimmedEmail;
       if (trimmedContact) payload.contactInfo = trimmedContact;
+      payload.interestContext = strategyTitle
+        ? `策略咨询：${strategyTitle}`.slice(0, 255)
+        : "EA商城技术支持";
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        payload.sourcePath = `${window.location.pathname}${window.location.search}`.slice(0, 255);
+      }
 
       // 如果只填了联系方式没填邮箱，也作为 contactInfo 提交
       if (!trimmedEmail && trimmedContact) {

@@ -86,10 +86,10 @@ export default function RootLayout() {
   const content = (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Head>
-        <title>AI量化联盟 | 六款策略选配与 EA 商城</title>
+        <title>EA商城｜MT4/MT5量化交易软件与策略工具 - EAXAU</title>
         <meta
           name="description"
-          content="AI量化联盟提供六款策略 1–6 款自由选配、券商账户接入与独立 EA 商城 USDT 订单对账。"
+          content="EAXAU EA商城集中展示MT4、MT5量化交易EA、指标与工具，商品页区分直接购买和咨询授权，并提供版本确认、部署支持及受控交付。"
         />
         <meta
           httpEquiv="Content-Security-Policy"

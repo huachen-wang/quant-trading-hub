@@ -804,11 +804,18 @@ function detectContactType(value: string): string {
   return "wechat"; // 默认为微信
 }
 
-export async function createEmailSubscription(input: { email?: string; contactInfo?: string }) {
+export async function createEmailSubscription(input: {
+  email?: string;
+  contactInfo?: string;
+  interestContext?: string;
+  sourcePath?: string;
+}) {
   const db = await getDb();
   const { emailSubscriptions } = schema;
   const email = input.email?.trim() || null;
   const contactInfo = input.contactInfo?.trim() || null;
+  const interestContext = input.interestContext?.trim() || null;
+  const sourcePath = input.sourcePath?.trim() || null;
   
   if (!email && !contactInfo) {
     return { success: false, message: "请至少填写一种联系方式" };
@@ -826,16 +833,21 @@ export async function createEmailSubscription(input: { email?: string; contactIn
     .limit(1);
     
   if (existing.length > 0) {
-    if (!existing[0].isActive) {
-      // 重新激活并更新信息
+    if (!existing[0].isActive || interestContext || sourcePath) {
+      // 重新激活，并保留最近一次明确的商品/页面意向，方便后续人工接入 CRM。
       const updateData: any = { isActive: true };
       if (email) updateData.email = email;
       if (contactInfo) {
         updateData.contactInfo = contactInfo;
         updateData.contactType = detectContactType(contactInfo);
       }
+      if (interestContext) updateData.interestContext = interestContext;
+      if (sourcePath) updateData.sourcePath = sourcePath;
       await db.update(emailSubscriptions).set(updateData).where(eq(emailSubscriptions.id, existing[0].id));
-      return { success: true, message: "已重新订阅" };
+      return {
+        success: true,
+        message: existing[0].isActive ? "需求已更新" : "已重新订阅",
+      };
     }
     return { success: false, message: "该联系方式已订阅" };
   }
@@ -846,6 +858,8 @@ export async function createEmailSubscription(input: { email?: string; contactIn
     email, 
     contactInfo,
     contactType,
+    interestContext,
+    sourcePath,
   });
   return { success: true, message: "提交成功，我们将尽快与您联系！" };
 }
