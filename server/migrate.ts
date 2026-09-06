@@ -1346,6 +1346,140 @@ async function runMigrations(options: { strict?: boolean } = {}) {
       VALUES ('exness', 'NOT_APPROVED'), ('ic-markets', 'NOT_APPROVED'), ('blueberry-markets', 'NOT_APPROVED')
     `);
 
+    // ==================== EAXAU 双重确认邮件订阅 ====================
+    // 与旧 email_subscriptions（技术咨询/联系方式）完全分表，绝不从旧表回填许可。
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`email_marketing_subscriptions\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`application_id\` varchar(36) NOT NULL,
+        \`normalized_email\` varchar(320) NOT NULL,
+        \`brand_scope\` varchar(32) NOT NULL,
+        \`source_key\` varchar(64) NOT NULL,
+        \`source_path\` varchar(255) NOT NULL,
+        \`attribution_json\` text DEFAULT NULL,
+        \`locale\` varchar(8) NOT NULL,
+        \`status\` enum('PENDING_CONFIRMATION','ACTIVE','UNSUBSCRIBED','SUPPRESSED') NOT NULL DEFAULT 'PENDING_CONFIRMATION',
+        \`consent_basis\` enum('PENDING_VERIFICATION','EXPRESS_CONSENT','DECLINED') NOT NULL DEFAULT 'PENDING_VERIFICATION',
+        \`basis_detail\` varchar(255) NOT NULL,
+        \`evidence_source\` varchar(255) NOT NULL,
+        \`evidence_captured_at\` timestamp NOT NULL,
+        \`notice_version\` varchar(64) NOT NULL,
+        \`content_scope\` varchar(160) NOT NULL,
+        \`region_code\` varchar(16) NOT NULL DEFAULT 'UNKNOWN',
+        \`confirmation_token_hash\` varchar(64) DEFAULT NULL,
+        \`confirmation_expires_at\` timestamp NULL DEFAULT NULL,
+        \`confirmation_requested_at\` timestamp NULL DEFAULT NULL,
+        \`consent_version\` int NOT NULL DEFAULT 0,
+        \`confirmed_at\` timestamp NULL DEFAULT NULL,
+        \`unsubscribed_at\` timestamp NULL DEFAULT NULL,
+        \`suppression_reason\` varchar(32) DEFAULT NULL,
+        \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY \`email_marketing_application_uq\` (\`application_id\`),
+        UNIQUE KEY \`email_marketing_email_brand_uq\` (\`normalized_email\`, \`brand_scope\`),
+        UNIQUE KEY \`email_marketing_confirmation_token_uq\` (\`confirmation_token_hash\`),
+        KEY \`email_marketing_status_idx\` (\`brand_scope\`, \`status\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    migrationsRun++;
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`email_subscription_rate_limits\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`key_type\` enum('EMAIL','IP') NOT NULL,
+        \`key_hash\` varchar(64) NOT NULL,
+        \`window_started_at\` timestamp NOT NULL,
+        \`attempt_count\` int NOT NULL DEFAULT 1,
+        \`updated_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY \`email_subscription_rate_bucket_uq\` (\`key_type\`, \`key_hash\`, \`window_started_at\`),
+        KEY \`email_subscription_rate_updated_idx\` (\`updated_at\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    migrationsRun++;
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`email_subscription_deliveries\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`subscription_id\` int NOT NULL,
+        \`brand_scope\` varchar(32) NOT NULL,
+        \`message_kind\` enum('CONFIRMATION','WELCOME') NOT NULL,
+        \`consent_version\` int NOT NULL,
+        \`idempotency_key\` varchar(160) NOT NULL,
+        \`provider\` varchar(32) NOT NULL DEFAULT 'resend',
+        \`payload_ciphertext\` text DEFAULT NULL,
+        \`provider_message_id\` varchar(160) DEFAULT NULL,
+        \`delivery_status\` enum('PENDING','PROCESSING','ACCEPTED','SENT','DELIVERED','DELAYED','BOUNCED','COMPLAINED','SUPPRESSED','FAILED','DEAD') NOT NULL DEFAULT 'PENDING',
+        \`delivery_status_at\` timestamp NULL DEFAULT NULL,
+        \`error_code\` varchar(80) DEFAULT NULL,
+        \`attempt_count\` int NOT NULL DEFAULT 0,
+        \`next_attempt_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`lease_token\` varchar(64) DEFAULT NULL,
+        \`lease_expires_at\` timestamp NULL DEFAULT NULL,
+        \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY \`email_subscription_delivery_idempotency_uq\` (\`idempotency_key\`),
+        UNIQUE KEY \`email_subscription_delivery_provider_id_uq\` (\`provider_message_id\`),
+        KEY \`email_subscription_delivery_subscription_idx\` (\`subscription_id\`, \`created_at\`),
+        KEY \`email_subscription_delivery_due_idx\` (\`delivery_status\`, \`next_attempt_at\`),
+        CONSTRAINT \`email_subscription_delivery_subscription_fk\` FOREIGN KEY (\`subscription_id\`) REFERENCES \`email_marketing_subscriptions\` (\`id\`) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    migrationsRun++;
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`email_subscription_provider_events\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`provider_event_key\` varchar(160) NOT NULL,
+        \`provider_message_id\` varchar(160) NOT NULL,
+        \`event_type\` varchar(64) NOT NULL,
+        \`event_occurred_at\` timestamp NOT NULL,
+        \`received_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY \`email_subscription_provider_event_uq\` (\`provider_event_key\`),
+        KEY \`email_subscription_provider_message_idx\` (\`provider_message_id\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    migrationsRun++;
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`email_subscription_events\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`subscription_id\` int NOT NULL,
+        \`event_key\` varchar(160) NOT NULL,
+        \`event_type\` varchar(64) NOT NULL,
+        \`consent_version\` int NOT NULL,
+        \`detail_json\` text DEFAULT NULL,
+        \`occurred_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY \`email_subscription_event_key_uq\` (\`event_key\`),
+        KEY \`email_subscription_event_subscription_idx\` (\`subscription_id\`, \`occurred_at\`),
+        CONSTRAINT \`email_subscription_event_subscription_fk\` FOREIGN KEY (\`subscription_id\`) REFERENCES \`email_marketing_subscriptions\` (\`id\`) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    migrationsRun++;
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`email_subscription_crm_outbox\` (
+        \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        \`subscription_id\` int NOT NULL,
+        \`event_key\` varchar(160) NOT NULL,
+        \`event_kind\` enum('CONSENT_CONFIRMED','UNSUBSCRIBED','PROVIDER_EVENT') NOT NULL,
+        \`payload_json\` text NOT NULL,
+        \`status\` enum('PENDING','PROCESSING','APPLIED','FAILED','DEAD') NOT NULL DEFAULT 'PENDING',
+        \`attempt_count\` int NOT NULL DEFAULT 0,
+        \`next_attempt_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`lease_token\` varchar(64) DEFAULT NULL,
+        \`lease_expires_at\` timestamp NULL DEFAULT NULL,
+        \`last_http_status\` int DEFAULT NULL,
+        \`last_error_code\` varchar(120) DEFAULT NULL,
+        \`applied_at\` timestamp NULL DEFAULT NULL,
+        \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updated_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY \`email_subscription_crm_outbox_event_uq\` (\`event_key\`),
+        KEY \`email_subscription_crm_outbox_due_idx\` (\`status\`, \`next_attempt_at\`),
+        CONSTRAINT \`email_subscription_crm_outbox_subscription_fk\` FOREIGN KEY (\`subscription_id\`) REFERENCES \`email_marketing_subscriptions\` (\`id\`) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    migrationsRun++;
+
     try {
       const catalogChanges = await syncCuratedStrategyCatalog(connection);
       if (catalogChanges > 0) {

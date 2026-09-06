@@ -103,6 +103,10 @@ function getPool() {
   return pool;
 }
 
+export function getDatabasePool() {
+  return process.env.DATABASE_URL ? getPool() : null;
+}
+
 async function getDb() {
   try {
     if (!process.env.DATABASE_URL) {

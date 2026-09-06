@@ -13,9 +13,25 @@
 
 import { expireStaleOrders } from "../db";
 import { cleanupExpiredCodes } from "./verification";
+import {
+  drainNewsletterCrmOutbox,
+  drainNewsletterEmailOutbox,
+} from "../newsletter";
 
 let started = false;
 let intervals: ReturnType<typeof setInterval>[] = [];
+let newsletterDrainRunning = false;
+
+async function drainNewsletterOutboxes() {
+  if (newsletterDrainRunning) return;
+  newsletterDrainRunning = true;
+  try {
+    await drainNewsletterEmailOutbox(10);
+    await drainNewsletterCrmOutbox(20);
+  } finally {
+    newsletterDrainRunning = false;
+  }
+}
 
 /**
  * 启动 cron 调度
@@ -57,6 +73,16 @@ export function startCron() {
   }, 6 * 60 * 60 * 1000);
   intervals.push(codeCleanupInterval);
 
+  // 任务 3：可靠投递邮件确认/欢迎，并把已确认许可与退订回执到 XAU CRM。
+  const newsletterInterval = setInterval(async () => {
+    try {
+      await drainNewsletterOutboxes();
+    } catch (e) {
+      console.error("[cron] newsletter outbox drain failed:", e);
+    }
+  }, 60 * 1000);
+  intervals.push(newsletterInterval);
+
   // 启动后立即执行一次（不等 5 分钟）
   setTimeout(async () => {
     try {
@@ -69,6 +95,12 @@ export function startCron() {
     }
   }, 30 * 1000); // 启动 30 秒后
 
+  setTimeout(() => {
+    drainNewsletterOutboxes().catch((e) =>
+      console.error("[cron] startup newsletter drain failed:", e),
+    );
+  }, 15 * 1000);
+
   console.log("[cron] ✓ scheduled tasks started");
 }
 
@@ -79,5 +111,6 @@ export function stopCron() {
   intervals.forEach((i) => clearInterval(i));
   intervals = [];
   started = false;
+  newsletterDrainRunning = false;
   console.log("[cron] stopped");
 }
