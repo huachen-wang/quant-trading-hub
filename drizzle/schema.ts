@@ -266,6 +266,180 @@ export const emailSubscriptions = mysqlTable("email_subscriptions", {
 export type EmailSubscription = typeof emailSubscriptions.$inferSelect;
 export type InsertEmailSubscription = typeof emailSubscriptions.$inferInsert;
 
+// 独立的营销邮件订阅账本。旧 email_subscriptions 是技术咨询/联系方式，
+// 不会回填到本表，也不会据此推导营销许可。
+export const emailMarketingSubscriptions = mysqlTable("email_marketing_subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  applicationId: varchar("application_id", { length: 36 }).notNull(),
+  normalizedEmail: varchar("normalized_email", { length: 320 }).notNull(),
+  brandScope: varchar("brand_scope", { length: 32 }).notNull(),
+  sourceKey: varchar("source_key", { length: 64 }).notNull(),
+  sourcePath: varchar("source_path", { length: 255 }).notNull(),
+  attributionJson: text("attribution_json"),
+  locale: varchar("locale", { length: 8 }).notNull(),
+  status: mysqlEnum("status", [
+    "PENDING_CONFIRMATION",
+    "ACTIVE",
+    "UNSUBSCRIBED",
+    "SUPPRESSED",
+  ]).default("PENDING_CONFIRMATION").notNull(),
+  consentBasis: mysqlEnum("consent_basis", [
+    "PENDING_VERIFICATION",
+    "EXPRESS_CONSENT",
+    "DECLINED",
+  ]).default("PENDING_VERIFICATION").notNull(),
+  basisDetail: varchar("basis_detail", { length: 255 }).notNull(),
+  evidenceSource: varchar("evidence_source", { length: 255 }).notNull(),
+  evidenceCapturedAt: timestamp("evidence_captured_at").notNull(),
+  noticeVersion: varchar("notice_version", { length: 64 }).notNull(),
+  contentScope: varchar("content_scope", { length: 160 }).notNull(),
+  regionCode: varchar("region_code", { length: 16 }).default("UNKNOWN").notNull(),
+  confirmationTokenHash: varchar("confirmation_token_hash", { length: 64 }),
+  confirmationExpiresAt: timestamp("confirmation_expires_at"),
+  confirmationRequestedAt: timestamp("confirmation_requested_at"),
+  consentVersion: int("consent_version").default(0).notNull(),
+  confirmedAt: timestamp("confirmed_at"),
+  unsubscribedAt: timestamp("unsubscribed_at"),
+  suppressionReason: varchar("suppression_reason", { length: 32 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  applicationUnique: uniqueIndex("email_marketing_application_uq").on(
+    table.applicationId,
+  ),
+  emailBrandUnique: uniqueIndex("email_marketing_email_brand_uq").on(
+    table.normalizedEmail,
+    table.brandScope,
+  ),
+  tokenUnique: uniqueIndex("email_marketing_confirmation_token_uq").on(
+    table.confirmationTokenHash,
+  ),
+  statusIdx: index("email_marketing_status_idx").on(table.brandScope, table.status),
+}));
+
+export type EmailMarketingSubscription = typeof emailMarketingSubscriptions.$inferSelect;
+export type InsertEmailMarketingSubscription = typeof emailMarketingSubscriptions.$inferInsert;
+
+export const emailSubscriptionRateLimits = mysqlTable("email_subscription_rate_limits", {
+  id: int("id").autoincrement().primaryKey(),
+  keyType: mysqlEnum("key_type", ["EMAIL", "IP"]).notNull(),
+  keyHash: varchar("key_hash", { length: 64 }).notNull(),
+  windowStartedAt: timestamp("window_started_at").notNull(),
+  attemptCount: int("attempt_count").default(1).notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  bucketUnique: uniqueIndex("email_subscription_rate_bucket_uq").on(
+    table.keyType,
+    table.keyHash,
+    table.windowStartedAt,
+  ),
+  updatedIdx: index("email_subscription_rate_updated_idx").on(table.updatedAt),
+}));
+
+export const emailSubscriptionDeliveries = mysqlTable("email_subscription_deliveries", {
+  id: int("id").autoincrement().primaryKey(),
+  subscriptionId: int("subscription_id").notNull(),
+  brandScope: varchar("brand_scope", { length: 32 }).notNull(),
+  messageKind: mysqlEnum("message_kind", ["CONFIRMATION", "WELCOME"]).notNull(),
+  consentVersion: int("consent_version").notNull(),
+  idempotencyKey: varchar("idempotency_key", { length: 160 }).notNull(),
+  provider: varchar("provider", { length: 32 }).default("resend").notNull(),
+  payloadCiphertext: text("payload_ciphertext"),
+  providerMessageId: varchar("provider_message_id", { length: 160 }),
+  deliveryStatus: mysqlEnum("delivery_status", [
+    "PENDING",
+    "PROCESSING",
+    "ACCEPTED",
+    "SENT",
+    "DELIVERED",
+    "DELAYED",
+    "BOUNCED",
+    "COMPLAINED",
+    "SUPPRESSED",
+    "FAILED",
+    "DEAD",
+  ]).default("PENDING").notNull(),
+  deliveryStatusAt: timestamp("delivery_status_at"),
+  errorCode: varchar("error_code", { length: 80 }),
+  attemptCount: int("attempt_count").default(0).notNull(),
+  nextAttemptAt: timestamp("next_attempt_at").defaultNow().notNull(),
+  leaseToken: varchar("lease_token", { length: 64 }),
+  leaseExpiresAt: timestamp("lease_expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  idempotencyUnique: uniqueIndex("email_subscription_delivery_idempotency_uq").on(
+    table.idempotencyKey,
+  ),
+  providerMessageUnique: uniqueIndex("email_subscription_delivery_provider_id_uq").on(
+    table.providerMessageId,
+  ),
+  subscriptionIdx: index("email_subscription_delivery_subscription_idx").on(
+    table.subscriptionId,
+    table.createdAt,
+  ),
+  dueIdx: index("email_subscription_delivery_due_idx").on(
+    table.deliveryStatus,
+    table.nextAttemptAt,
+  ),
+}));
+
+export const emailSubscriptionProviderEvents = mysqlTable("email_subscription_provider_events", {
+  id: int("id").autoincrement().primaryKey(),
+  providerEventKey: varchar("provider_event_key", { length: 160 }).notNull(),
+  providerMessageId: varchar("provider_message_id", { length: 160 }).notNull(),
+  eventType: varchar("event_type", { length: 64 }).notNull(),
+  eventOccurredAt: timestamp("event_occurred_at").notNull(),
+  receivedAt: timestamp("received_at").defaultNow().notNull(),
+}, (table) => ({
+  eventUnique: uniqueIndex("email_subscription_provider_event_uq").on(
+    table.providerEventKey,
+  ),
+  providerMessageIdx: index("email_subscription_provider_message_idx").on(
+    table.providerMessageId,
+  ),
+}));
+
+export const emailSubscriptionEvents = mysqlTable("email_subscription_events", {
+  id: int("id").autoincrement().primaryKey(),
+  subscriptionId: int("subscription_id").notNull(),
+  eventKey: varchar("event_key", { length: 160 }).notNull(),
+  eventType: varchar("event_type", { length: 64 }).notNull(),
+  consentVersion: int("consent_version").notNull(),
+  detailJson: text("detail_json"),
+  occurredAt: timestamp("occurred_at").defaultNow().notNull(),
+}, (table) => ({
+  eventUnique: uniqueIndex("email_subscription_event_key_uq").on(table.eventKey),
+  subscriptionIdx: index("email_subscription_event_subscription_idx").on(
+    table.subscriptionId,
+    table.occurredAt,
+  ),
+}));
+
+export const emailSubscriptionCrmOutbox = mysqlTable("email_subscription_crm_outbox", {
+  id: int("id").autoincrement().primaryKey(),
+  subscriptionId: int("subscription_id").notNull(),
+  eventKey: varchar("event_key", { length: 160 }).notNull(),
+  eventKind: mysqlEnum("event_kind", ["CONSENT_CONFIRMED", "UNSUBSCRIBED", "PROVIDER_EVENT"]).notNull(),
+  payloadJson: text("payload_json").notNull(),
+  status: mysqlEnum("status", ["PENDING", "PROCESSING", "APPLIED", "FAILED", "DEAD"]).default("PENDING").notNull(),
+  attemptCount: int("attempt_count").default(0).notNull(),
+  nextAttemptAt: timestamp("next_attempt_at").defaultNow().notNull(),
+  leaseToken: varchar("lease_token", { length: 64 }),
+  leaseExpiresAt: timestamp("lease_expires_at"),
+  lastHttpStatus: int("last_http_status"),
+  lastErrorCode: varchar("last_error_code", { length: 120 }),
+  appliedAt: timestamp("applied_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  eventUnique: uniqueIndex("email_subscription_crm_outbox_event_uq").on(table.eventKey),
+  dueIdx: index("email_subscription_crm_outbox_due_idx").on(
+    table.status,
+    table.nextAttemptAt,
+  ),
+}));
+
 // 订阅页面自定义内容（后台管理）
 export const pageContents = mysqlTable("page_contents", {
   id: int("id").autoincrement().primaryKey(),

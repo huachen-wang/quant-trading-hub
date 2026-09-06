@@ -19,6 +19,7 @@ import { ContactModal } from "@/components/contact-modal";
 import { SubscribeModal } from "@/components/subscribe-modal";
 import { CustomEABanner } from "@/components/home/custom-ea-banner";
 import { HomeHero } from "@/components/home/home-hero";
+import { NewsletterSignup } from "@/components/newsletter-signup";
 import {
   StrategyFilters,
   type OrderBy,
@@ -305,12 +306,15 @@ export function EaLibraryScreen({ variant = "legacy" }: EaLibraryScreenProps) {
 
   const renderFooter = useCallback(
     () => (
-      <StrategyListFooter
-        colors={colors}
-        isLoadingMore={isLoadingMore}
-        hasMore={isShowingPreviewCatalog ? false : hasMore}
-        itemCount={displayStrategies.length}
-      />
+      <View>
+        <StrategyListFooter
+          colors={colors}
+          isLoadingMore={isLoadingMore}
+          hasMore={isShowingPreviewCatalog ? false : hasMore}
+          itemCount={displayStrategies.length}
+        />
+        {variant === "v2" ? <NewsletterSignup /> : null}
+      </View>
     ),
     [
       colors,
@@ -318,6 +322,7 @@ export function EaLibraryScreen({ variant = "legacy" }: EaLibraryScreenProps) {
       hasMore,
       isLoadingMore,
       isShowingPreviewCatalog,
+      variant,
     ],
   );
 

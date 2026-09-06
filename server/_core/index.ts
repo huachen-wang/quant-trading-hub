@@ -18,6 +18,11 @@ import { isAdminTotpConfigured } from "./admin-totp";
 import { safeJsonLd } from "./seo-json";
 import { buildContentSecurityPolicy } from "./http-security";
 import { legacyRouteRedirect } from "./legacy-route-redirect";
+import { registerNewsletterRoutes } from "./newsletter-routes";
+import {
+  crmNewsletterConfigurationStatus,
+} from "../newsletter";
+import { newsletterConfigurationStatus } from "./newsletter-security";
 
 // ES模块中获取__dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -263,6 +268,9 @@ async function startServer() {
     next();
   });
 
+  // Resend webhook signature verification requires the untouched raw body.
+  registerNewsletterRoutes(app);
+
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
@@ -271,7 +279,17 @@ async function startServer() {
   registerSecureDownloadRoute(app);
 
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, timestamp: Date.now() });
+    const email = newsletterConfigurationStatus();
+    const emailCrm = crmNewsletterConfigurationStatus();
+    res.json({
+      ok: true,
+      timestamp: Date.now(),
+      emailSubscriptions: {
+        configured: email.configured,
+        webhookConfigured: email.webhookConfigured,
+        crmConfigured: emailCrm.configured,
+      },
+    });
   });
 
   // SEO: 生成 sitemap.xml

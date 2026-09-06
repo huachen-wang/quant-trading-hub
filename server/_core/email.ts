@@ -16,17 +16,47 @@
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
-interface SendEmailParams {
+export interface SendEmailParams {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  headers?: Record<string, string>;
+  tags?: Array<{ name: string; value: string }>;
+  idempotencyKey?: string;
+  retryAttempts?: number;
 }
 
-interface SendEmailResult {
-  ok: boolean;
-  id?: string;
-  error?: string;
+export type SendEmailResult =
+  | { ok: true; id?: string; attempts: number }
+  | { ok: false; error: string; retryable: boolean; attempts: number };
+
+function parseAddressDomain(value: string) {
+  const match = value.trim().match(/(?:<)?[^<>\s@]+@([^<>\s@]+)>?$/u);
+  return match?.[1]?.toLowerCase() || null;
+}
+
+function verifiedDomains() {
+  return (process.env.EMAIL_VERIFIED_DOMAINS || "eaxau.com")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function safeProviderError(status: number, body: string) {
+  try {
+    const parsed = JSON.parse(body) as { name?: unknown };
+    if (typeof parsed.name === "string" && /^[a-z0-9_]+$/iu.test(parsed.name)) {
+      return `HTTP_${status}_${parsed.name}`;
+    }
+  } catch {
+    // Provider responses are not guaranteed to be JSON.
+  }
+  return `HTTP_${status}`;
+}
+
+function pause(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
@@ -36,41 +66,71 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
 
   if (!apiKey) {
     console.error("[email] RESEND_API_KEY not configured, email not sent");
-    return { ok: false, error: "Email service not configured" };
+    return { ok: false, error: "MISSING_RESEND_API_KEY", retryable: false, attempts: 0 };
+  }
+  const fromDomain = parseAddressDomain(from);
+  if (!fromDomain || !verifiedDomains().includes(fromDomain)) {
+    console.error("[email] EMAIL_FROM is not on an approved verified domain");
+    return { ok: false, error: "FROM_DOMAIN_NOT_VERIFIED", retryable: false, attempts: 0 };
   }
 
-  try {
-    const body: any = {
-      from,
-      to: [params.to],
-      subject: params.subject,
-      html: params.html,
-    };
-    if (params.text) body.text = params.text;
-    if (replyTo) body.reply_to = replyTo;
-
-    const res = await fetch(RESEND_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const errBody = await res.text();
-      console.error(`[email] Resend API error ${res.status}:`, errBody);
-      return { ok: false, error: `Resend ${res.status}: ${errBody}` };
+  const body = JSON.stringify({
+    from,
+    to: [params.to],
+    subject: params.subject,
+    html: params.html,
+    ...(params.text ? { text: params.text } : {}),
+    ...(replyTo ? { reply_to: replyTo } : {}),
+    ...(params.headers && Object.keys(params.headers).length
+      ? { headers: params.headers }
+      : {}),
+    ...(params.tags?.length ? { tags: params.tags } : {}),
+  });
+  const maxAttempts = Math.min(3, Math.max(1, params.retryAttempts || 1));
+  let last: SendEmailResult = {
+    ok: false,
+    error: "UNKNOWN",
+    retryable: true,
+    attempts: 0,
+  };
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const res = await fetch(RESEND_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          ...(params.idempotencyKey
+            ? { "Idempotency-Key": params.idempotencyKey }
+            : {}),
+        },
+        body,
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { id?: string };
+        console.log(`[email] Accepted by Resend, id=${data.id || "unknown"}`);
+        return { ok: true, id: data.id, attempts: attempt };
+      }
+      const error = safeProviderError(res.status, await res.text().catch(() => ""));
+      const retryable = res.status === 429 || res.status >= 500;
+      console.error(`[email] Resend request failed: ${error}`);
+      last = { ok: false, error, retryable, attempts: attempt };
+      if (!retryable || attempt === maxAttempts) return last;
+    } catch (error) {
+      const timeout = error instanceof DOMException && error.name === "TimeoutError";
+      last = {
+        ok: false,
+        error: timeout ? "TIMEOUT" : "NETWORK_ERROR",
+        retryable: true,
+        attempts: attempt,
+      };
+      console.error(`[email] Resend request failed: ${last.error}`);
+      if (attempt === maxAttempts) return last;
     }
-
-    const data = (await res.json()) as { id?: string };
-    console.log(`[email] Sent to ${params.to}, id=${data.id}`);
-    return { ok: true, id: data.id };
-  } catch (err: any) {
-    console.error("[email] Send failed:", err);
-    return { ok: false, error: err?.message || "Send failed" };
+    await pause(250 * attempt);
   }
+  return last;
 }
 
 /**
