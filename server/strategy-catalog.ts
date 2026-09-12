@@ -308,7 +308,7 @@ const EXISTING_CURATED_REFERENCES: ExistingCuratedReference[] = [
   },
 ];
 
-const CONTENT_MIGRATION_KEY = "2026-08-06-strategy-content-placeholders-v4";
+const CONTENT_MIGRATION_KEY = "2026-09-13-strategy-content-placeholders-v5";
 const EMPTY_FEATURED_PROMO_TITLE = "金戈铁马 正版云控 全网收益第一";
 const GENERIC_MQL0_URLS = [
   "https://www.mql0.com/strategies",
@@ -316,7 +316,17 @@ const GENERIC_MQL0_URLS = [
   "http://www.mql0.com/strategies",
   "http://www.mql0.com/strategies/",
 ] as const;
-export const JINGE_TIE_MA_TITLE = "金戈铁马 V5.1 永不爆仓版本";
+/**
+ * 置顶商品对外标题。保留商品名与版本号，不含任何我们无法用材料支持的绝对化说法
+ * （原值是"金戈铁马 V5.1 永不爆仓版本"，"永不爆仓"没有任何可核验依据）。
+ */
+export const JINGE_TIE_MA_TITLE = "金戈铁马 V5.1";
+
+/**
+ * 已经被历史迁移写进库里的绝对化说法。只做定向摘除，保留版本号与其余标题内容，
+ * 不批量重写标题、不动其它商品。
+ */
+const UNEVIDENCED_TITLE_CLAIMS = ["永不爆仓版本", "永不爆仓", "全网收益第一", "零回撤", "稳赚不赔"] as const;
 
 export async function syncCuratedStrategyCatalog(
   connection: Connection,
@@ -384,6 +394,20 @@ export async function syncCuratedStrategyCatalog(
     [EMPTY_FEATURED_PROMO_TITLE],
   )) as any[];
   changed += archivedPromoResult.affectedRows || 0;
+
+  // 放在归档之后：EMPTY_FEATURED_PROMO_TITLE 按完整标题精确匹配，先摘说法会让它匹配不到。
+  // 摘掉历史迁移写进标题的绝对化说法，逐条定向替换，版本号与其余内容原样保留。
+  // dataStatus = 'verified' 的条目是人工核实并维护过的，一律不碰。
+  for (const claim of UNEVIDENCED_TITLE_CLAIMS) {
+    const [strippedClaimResult] = (await connection.query(
+      `UPDATE \`strategies\`
+       SET \`title\` = TRIM(REGEXP_REPLACE(REPLACE(\`title\`, ?, ' '), '[[:space:]]+', ' '))
+       WHERE \`title\` LIKE CONCAT('%', ?, '%')
+         AND COALESCE(\`dataStatus\`, '') <> 'verified'`,
+      [claim, claim],
+    )) as any[];
+    changed += strippedClaimResult.affectedRows || 0;
+  }
 
   for (const reference of EXISTING_CURATED_REFERENCES) {
     const [result] = (await connection.query(

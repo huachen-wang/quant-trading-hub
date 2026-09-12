@@ -12,6 +12,8 @@ export interface FavoriteStrategy {
   price: string;
   isFree: boolean;
   coverImage?: string;
+  /** 收藏时一并记下核验状态，卡片才能在收藏页也显示"参考 / 已核验" */
+  dataStatus?: "estimated" | "referenced" | "verified" | null;
   addedAt: string;
 }
 
