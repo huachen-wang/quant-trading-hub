@@ -128,6 +128,7 @@ export default function AdminLayout() {
         <Stack.Screen name="page-contents" options={{ title: "订阅页面管理" }} />
         <Stack.Screen name="subscribers" options={{ title: "订阅用户" }} />
         <Stack.Screen name="notifications" options={{ title: "通知公告管理" }} />
+        <Stack.Screen name="support" options={{ title: "网页咨询" }} />
         <Stack.Screen name="contact-settings" options={{ title: "联系方式设置" }} />
         <Stack.Screen name="group-buys" options={{ title: "合购管理" }} />
         <Stack.Screen name="listings" options={{ title: "上架申请" }} />

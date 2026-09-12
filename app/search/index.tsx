@@ -188,8 +188,9 @@ export default function SearchScreen() {
                 id={item.id}
                 title={item.title}
                 platform={item.platform}
-                totalReturn={item.totalReturn || "0.00"}
-                winRate={item.winRate || "0.00"}
+                totalReturn={item.totalReturn}
+                winRate={item.winRate}
+                dataStatus={item.dataStatus}
                 price={item.price || "0.00"}
                 isFree={item.isFree}
                 downloadCount={item.downloadCount}

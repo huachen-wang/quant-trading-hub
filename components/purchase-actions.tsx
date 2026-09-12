@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
 import { getInternalStrategyRoute } from "@/lib/download-links";
+import { INQUIRY_CHECKLIST } from "@/lib/inquiry-message";
 
 interface PurchaseActionsProps {
   /** 商品 saleMode：direct=直购 | inquiry=私聊授权 */
@@ -163,8 +164,16 @@ export function PurchaseActions({
           <Text style={[styles.inquiryTitle, { color: "#D8BC83" }]}>商务授权合作</Text>
         </View>
         <Text style={[styles.inquiryDesc, { color: colors.muted }]}>
-          此商品采用工作室授权模式。请联系客服洽谈合作方案、试用账户、定价细节。
+          此商品采用工作室授权模式，价格与授权范围按版本单独确认。咨询时一起核对：
         </Text>
+        <View style={styles.inquiryChecklist}>
+          {INQUIRY_CHECKLIST.map((item, index) => (
+            <View key={item} style={styles.inquiryChecklistRow}>
+              <Text style={styles.inquiryChecklistIndex}>{index + 1}</Text>
+              <Text style={[styles.inquiryChecklistText, { color: colors.muted }]}>{item}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       <TouchableOpacity
@@ -181,6 +190,9 @@ export function PurchaseActions({
           <Text style={styles.ctaText}>联系客服咨询授权</Text>
         </LinearGradient>
       </TouchableOpacity>
+      <Text style={[styles.priceFootnote, { color: colors.muted }]}>
+        点开后会带上本商品的名称、编号与页面地址，不用自己再描述一遍
+      </Text>
     </View>
   );
 }
@@ -249,5 +261,26 @@ const styles = StyleSheet.create({
   inquiryDesc: {
     fontSize: 13,
     lineHeight: 20,
+  },
+  inquiryChecklist: {
+    marginTop: 10,
+    gap: 5,
+  },
+  inquiryChecklistRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+  },
+  inquiryChecklistIndex: {
+    minWidth: 14,
+    color: "#D8BC83",
+    fontSize: 11,
+    lineHeight: 18,
+    fontWeight: "900",
+  },
+  inquiryChecklistText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 18,
   },
 });

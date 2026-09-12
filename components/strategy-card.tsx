@@ -13,13 +13,15 @@ import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useLanguage } from "@/lib/language";
 import * as Haptics from "expo-haptics";
+import { resolveMetricDisplay, resolveVerifyStatus } from "@/lib/strategy-claims";
 
 export interface StrategyCardProps {
   id: number;
   title: string;
   platform: "MT4" | "MT5";
-  totalReturn: string;
-  winRate: string;
+  /** 允许为空：未知指标由 resolveMetricDisplay 显示为「—」，不用 0 顶替 */
+  totalReturn?: string | null;
+  winRate?: string | null;
   price: string;
   originalPrice?: string | null;
   isFree: boolean;
@@ -47,6 +49,7 @@ export function StrategyCard({
   platform,
   totalReturn,
   winRate,
+  dataStatus,
   price,
   isFree,
   saleMode,
@@ -86,10 +89,17 @@ export function StrategyCard({
     onPress();
   };
 
-  const returnValue = parseFloat(totalReturn) || 0;
+  const returnValue = parseFloat(String(totalReturn ?? "")) || 0;
+  const verifyStatus = resolveVerifyStatus(dataStatus);
+  const verifyColor =
+    verifyStatus.tone === "success" ? colors.success : verifyStatus.tone === "primary" ? colors.primary : colors.warning;
+  const winRateDisplay = resolveMetricDisplay(winRate, "winRate", dataStatus);
+  const returnDisplay = resolveMetricDisplay(totalReturn, "totalReturn", dataStatus);
   const isPositive = returnValue >= 0;
 
-  const returnText = `${isPositive ? "+" : ""}${totalReturn}%`;
+  const returnText = returnDisplay.suppressed
+    ? returnDisplay.display
+    : `${isPositive ? "+" : ""}${returnDisplay.display}`;
 
   // 解析标签
   const tagList = tags
@@ -287,8 +297,13 @@ export function StrategyCard({
                 ]}
                 numberOfLines={1}
               >
-                {`${winRate}%`}
+                {winRateDisplay.display}
               </Text>
+              <View style={[styles.verifyChip, { borderColor: verifyColor }]}>
+                <Text style={[styles.verifyChipText, { color: verifyColor }]} numberOfLines={1}>
+                  {verifyStatus.short}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
@@ -380,6 +395,14 @@ const styles = StyleSheet.create({
   price: {
     fontWeight: "700",
   },
+  verifyChip: {
+    minHeight: 15,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderRadius: 3,
+    justifyContent: "center",
+  },
+  verifyChipText: { fontSize: 8, fontWeight: "900" },
   winRateInline: {
     flexDirection: "row",
     alignItems: "center",

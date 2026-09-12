@@ -33,12 +33,25 @@ describe("strategy evidence resolver", () => {
     expect(verified.items[1].status).toBe("已核验");
   });
 
-  it("ignores non-HTTPS evidence values", () => {
+  it("blocks non-http(s) evidence values", () => {
     const evidence = resolveStrategyEvidence({
       sourceUrl: "javascript:alert(1)",
-      evidenceUrl: "http://example.com/evidence",
+      evidenceUrl: "data:text/html,<script>alert(1)</script>",
     });
 
     expect(evidence.items.every((item) => item.url === undefined)).toBe(true);
+  });
+
+  // 2026-09-13：来源页放开到 http。部分公开参考页（EAHub 等）只有 http，
+  // 一律挡掉等于把可核验的来源藏起来；安全边界仍然是"只允许 http(s) 跳转"。
+  it("allows a plain http source page through", () => {
+    const evidence = resolveStrategyEvidence({
+      sourceName: "EAHub 公开参考",
+      sourceUrl: "http://www.eahub.cn/thread-201119-1-1.html",
+      evidenceUrl: "http://www.eahub.cn/thread-201119-1-1.html",
+    });
+
+    expect(evidence.items[0].url).toBe("http://www.eahub.cn/thread-201119-1-1.html");
+    expect(evidence.items[1].url).toBe("http://www.eahub.cn/thread-201119-1-1.html");
   });
 });

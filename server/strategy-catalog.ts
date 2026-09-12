@@ -316,7 +316,76 @@ const GENERIC_MQL0_URLS = [
   "http://www.mql0.com/strategies",
   "http://www.mql0.com/strategies/",
 ] as const;
-export const JINGE_TIE_MA_TITLE = "金戈铁马 V5.1 永不爆仓版本";
+/**
+ * 置顶商品对外标题。保留商品名与版本号，不含任何我们无法用材料支持的绝对化说法
+ * （原值是"金戈铁马 V5.1 永不爆仓版本"，"永不爆仓"没有任何可核验依据）。
+ */
+export const JINGE_TIE_MA_TITLE = "金戈铁马 V5.1";
+
+/**
+ * 已经被历史迁移写进库里的绝对化说法。只做定向摘除，保留版本号与其余标题内容，
+ * 不批量重写标题、不动其它商品。
+ */
+const UNEVIDENCED_TITLE_CLAIMS = [
+  "永不爆仓版本",
+  "永不爆仓",
+  "全网收益第一",
+  "零回撤",
+  "稳赚不赔",
+] as const;
+
+const UNEVIDENCED_TITLE_MIGRATION_KEY = "2026-09-13-unevidenced-title-claims-v5";
+
+/**
+ * 只做一件事：把历史迁移写进商品标题的绝对化说法摘掉。
+ *
+ * 刻意独立于 syncCuratedStrategyCatalog，不共用它的迁移键：
+ * 那个函数在键已写入时会在最前面 return，且它内部还会重置 saleMode、覆盖
+ * coverImage、改名 V4.3，全部不带 verified 保护。为了摘一句文案去升它的键，
+ * 等于把后台已经人工调整过的售卖方式和封面一起打回去。所以这里单独一个键、
+ * 单独一次调用，由 migrate.ts 在 catalog sync 之后独立触发。
+ *
+ * SQL 只用 REPLACE / TRIM / LIKE，不用 REGEXP_REPLACE（MySQL 8.0 才有，
+ * 生产版本未经实测不能假设）。建表语句去掉 ENGINE / CHARSET 尾巴，MySQL 取默认值即可。
+ */
+export async function syncUnevidencedTitleClaims(
+  connection: Connection,
+): Promise<number> {
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS \`content_migrations\` (
+      \`migrationKey\` varchar(120) NOT NULL PRIMARY KEY,
+      \`appliedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  const [appliedRows] = (await connection.query(
+    "SELECT `migrationKey` FROM `content_migrations` WHERE `migrationKey` = ? LIMIT 1",
+    [UNEVIDENCED_TITLE_MIGRATION_KEY],
+  )) as any[];
+  if (appliedRows.length > 0) return 0;
+
+  let changed = 0;
+  for (const claim of UNEVIDENCED_TITLE_CLAIMS) {
+    // 双次 REPLACE('  ', ' ') 收掉摘除后留下的连续空格；不做正则，保证老版本 MySQL 也能跑。
+    const [result] = (await connection.query(
+      `UPDATE \`strategies\`
+       SET \`title\` = TRIM(REPLACE(REPLACE(REPLACE(\`title\`, ?, ' '), '  ', ' '), '  ', ' '))
+       WHERE \`title\` LIKE ?
+         AND COALESCE(\`dataStatus\`, '') <> 'verified'`,
+      [claim, `%${claim}%`],
+    )) as any[];
+    changed += result.affectedRows || 0;
+  }
+
+  await connection.query(
+    "INSERT INTO `content_migrations` (`migrationKey`) VALUES (?)",
+    [UNEVIDENCED_TITLE_MIGRATION_KEY],
+  );
+
+  return changed;
+}
+
+export { UNEVIDENCED_TITLE_CLAIMS, UNEVIDENCED_TITLE_MIGRATION_KEY };
 
 export async function syncCuratedStrategyCatalog(
   connection: Connection,
@@ -384,6 +453,7 @@ export async function syncCuratedStrategyCatalog(
     [EMPTY_FEATURED_PROMO_TITLE],
   )) as any[];
   changed += archivedPromoResult.affectedRows || 0;
+
 
   for (const reference of EXISTING_CURATED_REFERENCES) {
     const [result] = (await connection.query(

@@ -214,8 +214,17 @@ async function startServer() {
   isAdminTotpConfigured();
   // 自动执行数据库迁移（安全的，可重复执行）
   console.log("[startup] Running database migrations...");
-  await runMigrations();
-  console.log("[startup] Migrations complete, starting server...");
+  const migrationsClean = await runMigrations();
+  if (migrationsClean) {
+    console.log("[startup] Migrations complete, starting server...");
+  } else {
+    // 非生产环境下迁移失败不阻断启动（既有行为），但日志不能谎称跑完了：
+    // 「服务在跑」和「表都建好了」是两件事，上面已经打过具体错误。
+    console.warn(
+      "[startup] Migrations FAILED (non-production continues anyway) — 部分表可能不存在，" +
+        "相关接口会报错。请看上面的 [migrate] 错误。",
+    );
+  }
   startCron();
 
   const app = express();

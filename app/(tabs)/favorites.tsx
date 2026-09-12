@@ -96,6 +96,7 @@ export default function FavoritesScreen() {
             platform={item.platform as "MT4" | "MT5"}
             totalReturn={item.totalReturn}
             winRate={item.winRate}
+            dataStatus={item.dataStatus}
             price={item.price}
             isFree={item.isFree}
             downloadCount={0}

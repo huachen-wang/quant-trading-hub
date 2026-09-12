@@ -1,3 +1,5 @@
+import { safeExternalUrl } from "./strategy-claims";
+
 export type StrategyEvidenceInput = {
   dataStatus?: "estimated" | "referenced" | "verified" | null;
   sourceName?: string | null;
@@ -24,9 +26,9 @@ function clean(value?: string | null) {
   return (value || "").trim();
 }
 
+// 来源页允许 http 与 https 跳转；其余协议（javascript: / data: / file:）一律挡掉。
 function httpsUrl(value?: string | null) {
-  const url = clean(value);
-  return /^https:\/\//i.test(url) ? url : undefined;
+  return safeExternalUrl(value);
 }
 
 export function resolveStrategyEvidence(input: StrategyEvidenceInput) {

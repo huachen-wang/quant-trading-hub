@@ -9,6 +9,30 @@ const strategyPreloads = [
   "/strategy-art-v2/breakout-execution.jpg",
   "/strategy-art-v2/adaptive-signal.jpg",
 ];
+/**
+ * 与 components/contact-modal.tsx 的 CONTACT_FALLBACKS 保持一致的真实联系方式。
+ * 这里不能 import TS 模块，所以由 tests/noscript-fallback.test.ts 断言两边不漂移。
+ * 只使用站点现有联系方式，不新增渠道。
+ */
+const FALLBACK_CONTACTS = {
+  telegram: "@xau6000",
+  telegramLink: "https://t.me/xau6000",
+  wechat: "oooiniooo0624 / xau6000",
+  qq: "1226426670 / 3832001817",
+};
+
+const FALLBACK_HEADLINE = "EAXAU · MT4 / MT5 EA、指标与交易工具";
+const FALLBACK_BLURB =
+  "页面需要 JavaScript 才能加载商品列表。版本、授权范围与交付方式由顾问确认，可直接用下面任一方式联系。";
+
+function contactRows(idPrefix) {
+  return [
+    `<a class="eaxau-fallback__row" href="${FALLBACK_CONTACTS.telegramLink}" rel="noopener noreferrer" target="_blank" id="${idPrefix}-tg"><span class="eaxau-fallback__label">Telegram</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.telegram}</span></a>`,
+    `<div class="eaxau-fallback__row"><span class="eaxau-fallback__label">WeChat</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.wechat}</span></div>`,
+    `<div class="eaxau-fallback__row"><span class="eaxau-fallback__label">QQ</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.qq}</span></div>`,
+  ].join("\n      ");
+}
+
 const strategyPreloadLinks = strategyPreloads
   .map(
     (href) =>
@@ -52,6 +76,38 @@ ${strategyPreloadLinks}
       @media (prefers-reduced-motion: reduce) {
         .eaxau-boot__track::after { animation-duration: 2.4s; }
       }
+      .eaxau-fallback {
+        width: 100%;
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 18px;
+        box-sizing: border-box;
+        border: 1px solid rgba(216, 188, 131, 0.42);
+        background: rgba(216, 188, 131, 0.06);
+        color: #f8fafc;
+        font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+        text-align: left;
+      }
+      .eaxau-fallback[hidden] { display: none; }
+      .eaxau-fallback__title { margin: 0 0 8px; font-size: 15px; font-weight: 800; color: #d8bc83; }
+      .eaxau-fallback__blurb { margin: 0 0 14px; font-size: 12px; line-height: 19px; color: rgba(148, 163, 184, 0.94); }
+      .eaxau-fallback__row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 40px;
+        margin-bottom: 6px;
+        padding: 0 10px;
+        border: 1px solid rgba(148, 163, 184, 0.28);
+        background: rgba(13, 21, 33, 0.86);
+        color: #f4f7fb;
+        text-decoration: none;
+      }
+      .eaxau-fallback__label { font-size: 10px; font-weight: 800; color: rgba(148, 163, 184, 0.9); }
+      .eaxau-fallback__value { font-size: 13px; font-weight: 800; word-break: break-all; }
+      .eaxau-fallback__note { margin: 10px 0 0; font-size: 10px; line-height: 16px; color: rgba(148, 163, 184, 0.78); }
+      .eaxau-noscript { display: flex; min-height: 100vh; align-items: center; justify-content: center; padding: 24px; box-sizing: border-box; background: #050810; }
     </style>
     <script ${marker}>
       (function () {
@@ -124,6 +180,15 @@ ${strategyPreloadLinks}
             var status = document.querySelector(".eaxau-boot__status");
             if (status && !dismissWhenReady()) status.textContent = "正在重新连接";
           }, 8000);
+
+          // 重试后仍然没挂载：不要把人留在无限"正在连接"上，露出真实联系方式。
+          window.setTimeout(function () {
+            if (dismissWhenReady()) return;
+            var fallback = document.getElementById("eaxau-boot-fallback");
+            if (fallback) fallback.hidden = false;
+            var status = document.querySelector(".eaxau-boot__status");
+            if (status) status.textContent = "加载失败";
+          }, 14000);
         }, { once: true });
       })();
     </script>`;
@@ -133,7 +198,25 @@ const bodyInjection = `
       <div class="eaxau-boot__brand">EAXAU</div>
       <div class="eaxau-boot__track" aria-hidden="true"></div>
       <div class="eaxau-boot__status">正在连接</div>
+      <div class="eaxau-fallback" id="eaxau-boot-fallback" hidden>
+        <p class="eaxau-fallback__title">${FALLBACK_HEADLINE}</p>
+        <p class="eaxau-fallback__blurb">${FALLBACK_BLURB.replace("页面需要 JavaScript 才能加载商品列表。", "商品列表这次没能加载出来。")}</p>
+      ${contactRows("eaxau-boot-fallback")}
+        <p class="eaxau-fallback__note">咨询时请附上商品名称或商品页地址，顾问会确认版本、授权范围与交付方式。</p>
+      </div>
     </div>`;
+
+/** 替换 Expo 导出的出厂 noscript（"You need to enable JavaScript to run this app."）。 */
+const noscriptInjection = `<noscript ${marker}>
+    <div class="eaxau-noscript">
+      <div class="eaxau-fallback">
+        <p class="eaxau-fallback__title">${FALLBACK_HEADLINE}</p>
+        <p class="eaxau-fallback__blurb">${FALLBACK_BLURB}</p>
+      ${contactRows("eaxau-noscript")}
+        <p class="eaxau-fallback__note">咨询时请附上商品名称或商品页地址，顾问会确认版本、授权范围与交付方式。</p>
+      </div>
+    </div>
+  </noscript>`;
 
 function main() {
   if (!fs.existsSync(indexPath)) {
@@ -151,13 +234,27 @@ function main() {
     );
   }
 
+  const factoryNoscript = /<noscript>[\s\S]*?<\/noscript>/;
+  const hadFactoryNoscript = factoryNoscript.test(indexHtml);
+
   indexHtml = indexHtml
     .replace("</head>", `${headInjection}\n  </head>`)
     .replace(/<body(\s[^>]*)?>/, (bodyTag) => `${bodyTag}${bodyInjection}`);
 
+  indexHtml = hadFactoryNoscript
+    ? indexHtml.replace(factoryNoscript, noscriptInjection)
+    : indexHtml.replace(/<body(\s[^>]*)?>/, (bodyTag) => `${bodyTag}\n    ${noscriptInjection}`);
+
+  if (!indexHtml.includes("eaxau-noscript")) {
+    throw new Error("failed to install the no-JavaScript contact fallback");
+  }
+  if (/You need to enable JavaScript to run this app/.test(indexHtml)) {
+    throw new Error("factory noscript copy is still present in web-build/index.html");
+  }
+
   fs.writeFileSync(indexPath, indexHtml);
   console.log(
-    `[inject-web-bootstrap] added loading recovery and ${strategyPreloads.length} image preload(s)`,
+    `[inject-web-bootstrap] added loading recovery, no-JS contact fallback (${hadFactoryNoscript ? "replaced factory noscript" : "injected"}) and ${strategyPreloads.length} image preload(s)`,
   );
 }
 
