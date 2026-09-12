@@ -13,12 +13,23 @@ import {
   View,
 } from "react-native";
 import { V2 } from "@/components/v2/tokens";
+import {
+  INQUIRY_FLOW_STEPS,
+  buildInquiryMessage,
+  buildTelegramChatLink,
+  type InquiryContext,
+} from "@/lib/inquiry-message";
 import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
 
 interface ContactModalProps {
   visible: boolean;
   onClose: () => void;
+  /**
+   * 发起咨询的商品上下文。传入后弹窗会把商品名 / 编号 / 商品页写进一段可复制的咨询内容，
+   * 客户不用自己组织语言，顾问也不用重新问一遍版本和授权范围。
+   */
+  context?: InquiryContext;
 }
 
 const CONTACT_FALLBACKS = {
@@ -29,15 +40,17 @@ const CONTACT_FALLBACKS = {
   description: "咨询时请备注策略名称，客服会确认文件版本、部署要求与交付方式。",
 };
 
-export function ContactModal({ visible, onClose }: ContactModalProps) {
+export function ContactModal({ visible, onClose, context }: ContactModalProps) {
   const { language, text } = useLanguage();
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const [copiedMethod, setCopiedMethod] = useState("");
+  const [inquiryCopied, setInquiryCopied] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
     setCopiedMethod("");
+    setInquiryCopied(false);
     scaleAnim.setValue(0.96);
     opacityAnim.setValue(0);
     Animated.parallel([
@@ -67,6 +80,24 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
   const qq = contactData?.contact_qq?.trim() || CONTACT_FALLBACKS.qq;
   const wechat =
     contactData?.contact_wechat?.trim() || CONTACT_FALLBACKS.wechat;
+  const inquiryMessage = context ? buildInquiryMessage(context) : "";
+  const telegramChatLink = buildTelegramChatLink(telegramLink) || buildTelegramChatLink(telegram);
+
+  const handleCopyInquiry = async () => {
+    if (!inquiryMessage) return;
+    let copied = false;
+    try {
+      await globalThis.navigator?.clipboard?.writeText(inquiryMessage);
+      copied = true;
+    } catch {
+      copied = false;
+    }
+    setInquiryCopied(copied);
+    if (copied) setTimeout(() => setInquiryCopied(false), 2400);
+    // 复制失败也要放客户走：内容仍在上方可手动选中，链接照常打开。
+    if (telegramChatLink) await Linking.openURL(telegramChatLink);
+  };
+
   const localizedTitle = text(
     "联系量化顾问",
     "Talk to a quant advisor",
@@ -206,6 +237,71 @@ export function ContactModal({ visible, onClose }: ContactModalProps) {
                 </View>
               ))}
             </View>
+
+            {inquiryMessage ? (
+              <View style={styles.inquiryBox}>
+                <View style={styles.inquiryHead}>
+                  <MaterialIcons name="assignment" size={15} color={V2.gold} />
+                  <Text style={styles.inquiryEyebrow}>
+                    {text(
+                      "已为你写好咨询内容",
+                      "Inquiry drafted for you",
+                      "نص الاستفسار جاهز",
+                    )}
+                  </Text>
+                </View>
+                <Text style={styles.inquiryText} selectable>
+                  {inquiryMessage}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={text(
+                    "复制咨询内容并打开 Telegram",
+                    "Copy the inquiry and open Telegram",
+                    "انسخ الاستفسار وافتح تيليجرام",
+                  )}
+                  onPress={() => void handleCopyInquiry()}
+                  style={({ pressed }) => [
+                    styles.inquiryAction,
+                    pressed && styles.pressed,
+                  ]}
+                >
+                  <MaterialIcons
+                    name={inquiryCopied ? "check" : "content-copy"}
+                    size={16}
+                    color={V2.background}
+                  />
+                  <Text style={styles.inquiryActionText}>
+                    {inquiryCopied
+                      ? text("已复制", "Copied", "تم النسخ")
+                      : telegramChatLink
+                        ? text(
+                            "复制并打开 Telegram",
+                            "Copy & open Telegram",
+                            "انسخ وافتح تيليجرام",
+                          )
+                        : text("复制咨询内容", "Copy inquiry", "انسخ الاستفسار")}
+                  </Text>
+                </Pressable>
+                <View style={styles.flowRow}>
+                  {INQUIRY_FLOW_STEPS.map((step, index) => (
+                    <View key={step.key} style={styles.flowItem}>
+                      <Text style={styles.flowIndex}>{index + 1}</Text>
+                      <Text style={styles.flowText}>
+                        {text(step.zh, step.en, step.ar)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+                <Text style={styles.flowNote}>
+                  {text(
+                    "报价、授权范围与交付清单由顾问在会话内确认。安装问题与后续版本仍走这条会话，不必重新找入口。",
+                    "Pricing, licence scope and the delivery list are confirmed by the advisor in that thread. Installation issues and later versions stay in the same thread.",
+                    "يؤكد المستشار السعر ونطاق الترخيص وقائمة التسليم داخل المحادثة نفسها، وتبقى مشكلات التثبيت والإصدارات اللاحقة فيها.",
+                  )}
+                </Text>
+              </View>
+            ) : null}
 
             {isLoading ? (
               <View style={styles.loadingBox}>
@@ -357,6 +453,52 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   scopeText: { color: V2.textMuted, fontSize: 9, fontWeight: "800" },
+  inquiryBox: {
+    marginBottom: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.36)",
+    borderRadius: 5,
+    backgroundColor: "rgba(216,188,131,0.06)",
+    gap: 10,
+  },
+  inquiryHead: { flexDirection: "row", alignItems: "center", gap: 6 },
+  inquiryEyebrow: { color: V2.gold, fontSize: 10, fontWeight: "900" },
+  inquiryText: {
+    color: V2.text,
+    fontSize: 11,
+    lineHeight: 17,
+    fontVariant: ["tabular-nums"],
+  },
+  inquiryAction: {
+    minHeight: 42,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    borderRadius: 5,
+    backgroundColor: V2.gold,
+  },
+  inquiryActionText: {
+    color: V2.background,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  flowRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  flowItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    minHeight: 22,
+    paddingHorizontal: 7,
+    borderWidth: 1,
+    borderColor: V2.border,
+    borderRadius: 3,
+    backgroundColor: V2.surfaceMuted,
+  },
+  flowIndex: { color: V2.gold, fontSize: 9, fontWeight: "900" },
+  flowText: { color: V2.textMuted, fontSize: 9, fontWeight: "800" },
+  flowNote: { color: V2.textMuted, fontSize: 10, lineHeight: 16 },
   loadingBox: { paddingVertical: 48 },
   contactList: { gap: 8 },
   contactItem: {
