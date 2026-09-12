@@ -89,9 +89,21 @@ describe("no-JavaScript contact fallback", () => {
   it("does not drift from the contact values the app itself uses", () => {
     const modal = readFileSync(join(repoRoot, "components", "contact-modal.tsx"), "utf-8");
     const block = modal.match(/const CONTACT_FALLBACKS = \{[\s\S]*?\};/)![0];
+    // 有的兜底值已经提到共用常量里（在线咨询面板和弹窗要用同一个号码），
+    // 所以这里既认字面量，也认指向 lib/ 下导出常量的标识符——两种写法都得对得上 noscript。
+    const shared = readFileSync(join(repoRoot, "lib", "support-faq.ts"), "utf-8");
+    const resolve = (key: string) => {
+      const entry = block.match(new RegExp(`${key}:\\s*(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))`));
+      expect(entry, `${key} must exist in CONTACT_FALLBACKS`).not.toBeNull();
+      if (entry![1] !== undefined) return entry![1];
+      const constant = shared.match(
+        new RegExp(`export const ${entry![2]}\\s*=\\s*"([^"]+)"`),
+      );
+      expect(constant, `${entry![2]} must be a string constant in lib/support-faq.ts`).not.toBeNull();
+      return constant![1];
+    };
     for (const key of ["telegram", "telegramLink", "qq", "wechat"]) {
-      const value = block.match(new RegExp(`${key}:\\s*"([^"]+)"`))![1];
-      expect(html, `${key} must match components/contact-modal.tsx`).toContain(value);
+      expect(html, `${key} must match components/contact-modal.tsx`).toContain(resolve(key));
     }
   });
 });

@@ -117,6 +117,13 @@ export default function AdminDashboard() {
       description: "管理所有EA策略",
     },
     {
+      code: "CHAT",
+      title: "网页咨询",
+      route: "/admin/support",
+      count: 0,
+      description: "商品页在线咨询：看客户消息、以真人身份回复",
+    },
+    {
       code: "REV",
       title: "评论审核",
       route: "/admin/comments",

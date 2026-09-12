@@ -23,6 +23,7 @@ import {
   strategiesRouter,
   tradesRouter,
 } from "./routers/strategy-public";
+import { supportAdminRouter, supportRouter } from "./routers/support";
 import { v2Router } from "./routers/v2";
 
 export const appRouter = router({
@@ -52,6 +53,8 @@ export const appRouter = router({
   siteEntries: siteEntriesRouter,
   orders: ordersRouter,
   payments: paymentsRouter,
+  support: supportRouter,
+  supportAdmin: supportAdminRouter,
   v2: v2Router,
 });
 

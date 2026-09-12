@@ -12,6 +12,7 @@
  */
 
 import { expireStaleOrders } from "../db";
+import { processDueSupportNotifications } from "../support/notify";
 import { cleanupExpiredCodes } from "./verification";
 
 let started = false;
@@ -56,6 +57,24 @@ export function startCron() {
     }
   }, 6 * 60 * 60 * 1000);
   intervals.push(codeCleanupInterval);
+
+  // 任务 3：每分钟推一次站内咨询提醒外发箱。
+  // 这是「兜底」，不是唯一驱动：客户发完消息会立刻异步 drain 一次。
+  // 有这一路，投递失败（Telegram 429 / 网络抖动）或进程崩在 sending 上的租约才会被重投/回收，
+  // 而不是像内存重试那样一次失败就永远静默丢掉。复用既有调度器，不新起独立轮询进程。
+  const supportNotifyInterval = setInterval(async () => {
+    try {
+      const result = await processDueSupportNotifications();
+      if (result.claimed > 0) {
+        console.log(
+          `[cron] support notifications: mode=${result.mode} claimed=${result.claimed} sent=${result.sent} held=${result.held} retried=${result.retried} failed=${result.failed}`,
+        );
+      }
+    } catch (e) {
+      console.error("[cron] support notification drain failed:", e);
+    }
+  }, 60 * 1000);
+  intervals.push(supportNotifyInterval);
 
   // 启动后立即执行一次（不等 5 分钟）
   setTimeout(async () => {
