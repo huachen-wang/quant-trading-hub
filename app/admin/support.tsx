@@ -408,7 +408,7 @@ export default function AdminSupportScreen() {
             <TextInput
               value={draft}
               onChangeText={(value) => setDraft(value.slice(0, SUPPORT_MESSAGE_MAX_LENGTH))}
-              placeholder="以站点运营身份回复；客户会在网页会话里看到。不要自称某位具体的顾问本人。"
+              placeholder="回复客户，内容会显示在网页会话中。"
               placeholderTextColor={colors.muted}
               multiline
               style={[

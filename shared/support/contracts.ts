@@ -101,9 +101,9 @@ export function isOperatorTakeover(conversation: {
  * 后台的回复可能是经营者本人打的，也可能是他借工具起草后发出的，这里不替他认领身份。
  */
 export const SUPPORT_OPERATOR_TAKEOVER_NOTE = {
-  zh: "运营回复中：这条会话已由后台接手，自动接待已停，你发的消息会直接留给运营。",
-  en: "Operator replying: this thread is handled from the console, the automated assistant is paused, and your messages go straight to the operator.",
-  ar: "فريق التشغيل يرد: تُدار هذه المحادثة من لوحة التحكم، وتم إيقاف المساعد الآلي، وتصل رسائلك إلى المشغّل مباشرة.",
+  zh: "客服已接手，你可以继续在这里留言。",
+  en: "Support has taken over. You can continue leaving messages here.",
+  ar: "تولى فريق الدعم المحادثة. يمكنك متابعة إرسال رسائلك هنا.",
 } as const;
 
 export type SupportMessageView = {

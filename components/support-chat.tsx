@@ -67,9 +67,9 @@ const ROLE_LABEL: Record<SupportMessageView["role"], [string, string, string]> =
   customer: ["你", "You", "أنت"],
   auto: ["自动值守 · 机器人", "Automated · bot", "آلي · روبوت"],
   operator: [
-    "运营回复（后台发出）",
-    "Operator reply (from the console)",
-    "رد من فريق التشغيل (من لوحة التحكم)",
+    "客服回复",
+    "Support reply",
+    "رد فريق الدعم",
   ],
 };
 
