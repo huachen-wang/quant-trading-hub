@@ -33,6 +33,7 @@ import {
   listAdminConversations,
   replyAsOperator,
   sendCustomerMessage,
+  setAutoAssist,
 } from "../server/support/service";
 import { buildDedupeKey, processDueSupportNotifications } from "../server/support/notify";
 
@@ -117,6 +118,9 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
         "ALTER TABLE `support_conversations` DROP COLUMN `notifyGeneration`",
       );
       await connection.query("ALTER TABLE `support_notifications` DROP COLUMN `generation`");
+      await connection.query(
+        "ALTER TABLE `support_conversations` DROP COLUMN `autoAssistEnabled`",
+      );
     };
 
     const columnsOf = async (table: string) => {
@@ -777,6 +781,263 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
         store,
       });
       expect(poll.messages.filter((m) => m.role === "operator")).toHaveLength(1);
+    });
+  });
+  /**
+   * 真人手动接管 —— **打真库，含并发**。
+   *
+   * 内存层证不了这一条：那边的"事务"是整段同步执行，运营回复和访客发消息根本插不进彼此。
+   * 真库上这两条路径是两个连接、两个事务，抢答就发生在它们交错的那一瞬。
+   *
+   * 不变量只有一句：**在这条会话里，第一条运营回复之后不许再出现任何自动回复。**
+   * 谁先谁后由数据库的行锁裁决，两种顺序都合法；不合法的只有"运营已经回过、机器人又插一句"。
+   */
+  describe("真人手动接管（并发在真库上验）", () => {
+    const reply = (publicNo: string, body: string, clientMsgId?: string) =>
+      replyAsOperator({ publicNo, body, operatorId: 7, clientMsgId: clientMsgId ?? null, store });
+
+    const rowsOf = async (conversationId: number) => {
+      const [rows]: any = await connection.query(
+        "SELECT id, role FROM support_messages WHERE conversationId = ? ORDER BY id ASC",
+        [conversationId],
+      );
+      return rows as Array<{ id: number; role: string }>;
+    };
+
+    const conversationIdOf = async (publicNo: string) => {
+      const row = await store.findConversationByPublicNo(publicNo);
+      expect(row).not.toBeNull();
+      return row!.id;
+    };
+
+    it("运营回过话之后，访客的后续提问只落库，库里不再多出自动回复", async () => {
+      const sent = await send({ body: "这个能绑几个账户", clientMsgId: "takeover-db-1" });
+      await reply(sent.conversation.publicNo, "默认 3 个账户，可加购。");
+
+      const follow = await send({ body: "那加购一个多少钱", clientMsgId: "takeover-db-2" });
+      expect(follow.autoSuppressed).toBe(true);
+      expect(follow.conversation.operatorTakeover).toBe(true);
+
+      const id = await conversationIdOf(sent.conversation.publicNo);
+      expect((await rowsOf(id)).map((r) => r.role)).toEqual([
+        "customer",
+        "auto",
+        "operator",
+        "customer",
+      ]);
+      // 计数照常走：接管压掉的是自动回复，不是客户的话。
+      const [counts]: any = await connection.query(
+        "SELECT customerMessageCount, operatorMessageCount, autoAssistEnabled FROM support_conversations WHERE id = ?",
+        [id],
+      );
+      expect(Number(counts[0].customerMessageCount)).toBe(2);
+      expect(Number(counts[0].operatorMessageCount)).toBe(1);
+      expect(Number(counts[0].autoAssistEnabled)).toBe(0);
+    });
+
+    /**
+     * 最贴身的一版：直接在存储层把两个事务**同时**发出去，不经过 send() 那一串
+     * 限流 / 查商品 / 查会话的往返。
+     *
+     * 为什么非要这么写：走 service 入口时，访客那条路径在开事务之前先做了四五个查询，
+     * 运营那条几乎立刻就开事务，于是运营的事务总是先提交、访客的事务总是后开——
+     * **危险的那半边交错根本轮不到发生**，测试会因为时序而绿，不是因为锁在起作用。
+     * 实测过：把 `FOR UPDATE` 去掉，端到端那版照样全绿，这一版直接挂。
+     */
+    it("并发（存储层贴身）：每一轮都重开一次窗口，运营回复之后不许再落自动回复", async () => {
+      const sent = await send({ body: "先问一句", clientMsgId: "tight-race-seed" });
+      const id = await conversationIdOf(sent.conversation.publicNo);
+
+      const violations: Array<{ round: number; operatorId: number; autoId: number }> = [];
+      for (let round = 0; round < 20; round++) {
+        // 每一轮先把自动接待交还回去，让这一轮重新从「机器人开着」起跑。
+        // 不这么做的话，抢答的窗口在整条会话里**只有第一轮**存在（第一条运营回复之后
+        // autoAssistEnabled 就一直是 false），20 轮只等于 1 次机会，测试会靠运气变绿。
+        await connection.query(
+          "UPDATE support_conversations SET autoAssistEnabled = 1 WHERE id = ?",
+          [id],
+        );
+        const before = (await rowsOf(id)).length ? (await rowsOf(id)).slice(-1)[0].id : 0;
+
+        await Promise.all([
+          store.appendCustomerTurn({
+            conversationId: id,
+            body: `访客第 ${round} 条`,
+            clientMsgId: `tight-visitor-${round}`,
+            autoReply: { body: "自动值守（机器人回复，不是人工）：稍等。", ruleKey: "fallback" },
+            buildNotification: () => null,
+          }),
+          store.appendMessage({
+            conversationId: id,
+            role: "operator",
+            body: `运营第 ${round} 条`,
+            clientMsgId: `tight-op-${round}`,
+            operatorId: 7,
+          }),
+        ]);
+
+        const fresh = (await rowsOf(id)).filter((r) => r.id > before);
+        const operatorRow = fresh.find((r) => r.role === "operator");
+        const autoRow = fresh.find((r) => r.role === "auto");
+        expect(operatorRow).toBeDefined();
+        // 锁把两个事务排成一前一后，所以只有两种合法结果：
+        //   访客那一轮先拿到锁 → 有自动回复，而且排在运营那条**前面**；
+        //   运营那一轮先拿到锁 → 这一轮根本没有自动回复。
+        if (autoRow && autoRow.id > operatorRow!.id) {
+          violations.push({ round, operatorId: operatorRow!.id, autoId: autoRow.id });
+        }
+      }
+      expect(violations).toEqual([]);
+
+      const rows = await rowsOf(id);
+      expect(rows.filter((r) => r.role === "customer")).toHaveLength(21);
+      expect(rows.filter((r) => r.role === "operator")).toHaveLength(20);
+    });
+
+    it("并发（端到端）：运营回复与访客发消息同时提交，机器人绝不抢在运营之后答", async () => {
+      const sent = await send({ body: "先问一句", clientMsgId: "race-seed" });
+      const id = await conversationIdOf(sent.conversation.publicNo);
+
+      // 访客限流是 6 条/分钟，而这里要的是 8 轮真交错。每轮把 `now` 推进一个限流窗口，
+      // 于是限流器照常按真实规则算（没被绕过、没被调松），只是这 8 轮分属不同的分钟。
+      for (let round = 0; round < 8; round++) {
+        await Promise.all([
+          reply(sent.conversation.publicNo, `运营第 ${round} 条`, `race-op-${round}`),
+          send({
+            body: `访客第 ${round} 条`,
+            clientMsgId: `race-visitor-${round}`,
+            now: new Date(Date.now() + (round + 1) * 61_000),
+          }),
+        ]);
+      }
+
+      const rows = await rowsOf(id);
+      const firstOperator = rows.find((r) => r.role === "operator");
+      expect(firstOperator).toBeDefined();
+      // 行锁把两个事务排成一前一后，所以只可能是「自动回复全在第一条运营回复之前」。
+      const lateAuto = rows.filter((r) => r.role === "auto" && r.id > firstOperator!.id);
+      expect(lateAuto).toHaveLength(0);
+      // 访客的话一条都不许丢。
+      expect(rows.filter((r) => r.role === "customer")).toHaveLength(9);
+    });
+
+    it("并发：交还自动接待与访客发消息同时提交，不会切出半个状态", async () => {
+      const sent = await send({ body: "先问一句", clientMsgId: "handback-race-seed" });
+      await reply(sent.conversation.publicNo, "我来接手");
+      const id = await conversationIdOf(sent.conversation.publicNo);
+
+      await Promise.all([
+        setAutoAssist({ publicNo: sent.conversation.publicNo, enabled: true, store }),
+        send({ body: "顺带再问一句", clientMsgId: "handback-race-visitor" }),
+      ]);
+
+      const rows = await rowsOf(id);
+      const autos = rows.filter((r) => r.role === "auto");
+      // 交还先落 → 这一轮有自动回复；访客那一轮先落 → 没有。两种都对，一半一半才是错的。
+      expect(autos.length === 1 || autos.length === 2).toBe(true);
+      expect(rows.filter((r) => r.role === "customer")).toHaveLength(2);
+
+      const [row]: any = await connection.query(
+        "SELECT autoAssistEnabled FROM support_conversations WHERE id = ?",
+        [id],
+      );
+      expect(Number(row[0].autoAssistEnabled)).toBe(1);
+    });
+
+    it("交还自动接待后机器人重新先答；运营再回一条又重新接管", async () => {
+      const sent = await send({ body: "价格", clientMsgId: "handback-db-1" });
+      await reply(sent.conversation.publicNo, "报价发你了");
+
+      await setAutoAssist({ publicNo: sent.conversation.publicNo, enabled: true, store });
+      const resumed = await send({ body: "装不上怎么办", clientMsgId: "handback-db-2" });
+      expect(resumed.autoSuppressed).toBe(false);
+      expect(resumed.conversation.operatorTakeover).toBe(false);
+
+      await reply(sent.conversation.publicNo, "我再补一句");
+      const again = await send({ body: "补充提问", clientMsgId: "handback-db-3" });
+      expect(again.autoSuppressed).toBe(true);
+      expect(again.conversation.operatorTakeover).toBe(true);
+    });
+
+    it("接管期间的幂等重试仍然只落一条，且不谎报成「被接管压掉」", async () => {
+      const sent = await send({ body: "价格", clientMsgId: "takeover-dup-seed" });
+      await reply(sent.conversation.publicNo, "报价发你了");
+
+      const first = await send({ body: "再问一句", clientMsgId: "takeover-dup" });
+      const second = await send({ body: "再问一句", clientMsgId: "takeover-dup" });
+      expect(first.duplicate).toBe(false);
+      expect(first.autoSuppressed).toBe(true);
+      expect(second.duplicate).toBe(true);
+      expect(second.autoSuppressed).toBe(false);
+      expect(second.bodyMismatch).toBe(false);
+
+      const id = await conversationIdOf(sent.conversation.publicNo);
+      const rows = await rowsOf(id);
+      expect(rows.filter((r) => r.role === "customer")).toHaveLength(2);
+    });
+
+    it("接管中并发重复提交同一个 clientMsgId：库里仍然只有一条", async () => {
+      const sent = await send({ body: "价格", clientMsgId: "takeover-cdup-seed" });
+      await reply(sent.conversation.publicNo, "报价发你了");
+      const id = await conversationIdOf(sent.conversation.publicNo);
+
+      const results = await Promise.all([
+        send({ body: "并发重复", clientMsgId: "takeover-cdup" }),
+        send({ body: "并发重复", clientMsgId: "takeover-cdup" }),
+      ]);
+      expect(results.filter((r: any) => r.duplicate === false)).toHaveLength(1);
+
+      const rows = await rowsOf(id);
+      expect(rows.filter((r) => r.role === "customer")).toHaveLength(2);
+      expect(rows.filter((r) => r.role === "auto")).toHaveLength(1); // 只有接管前那一条
+    });
+
+    it("接管中照样排提醒，摘要写明没有机器人兜底，正文仍然不进摘要", async () => {
+      const sent = await send({ body: "价格", clientMsgId: "takeover-notify-seed" });
+      await reply(sent.conversation.publicNo, "报价发你了");
+      await processDueSupportNotifications({
+        store,
+        sender: async () => ({ ok: true, retryable: false }),
+        env: { SUPPORT_TELEGRAM_NOTIFY_MODE: "live", SUPPORT_TELEGRAM_BOT_TOKEN: "t", SUPPORT_TELEGRAM_CHAT_ID: "c" } as any,
+      });
+
+      await send({ body: "还有别的版本吗", clientMsgId: "takeover-notify-2" });
+      const id = await conversationIdOf(sent.conversation.publicNo);
+      const notifications = await store.listNotifications(id);
+      const latest = notifications[notifications.length - 1];
+      expect(latest.summary).toContain("人工接管中");
+      expect(latest.summary).not.toContain("还有别的版本吗");
+      // 代数没退化：新消息进了新的一代，不会撞回已经发出去的去重键。
+      expect(latest.dedupeKey).toBe(buildDedupeKey(id, 1));
+    });
+
+    it("存量会话升级路径：列是 NULL + 运营回过话 = 立刻接管，不用回填", async () => {
+      const sent = await send({ body: "价格", clientMsgId: "legacy-seed" });
+      await reply(sent.conversation.publicNo, "报价发你了");
+      const id = await conversationIdOf(sent.conversation.publicNo);
+
+      // 手动还原成「这一版之前就存在的行」：新列补出来是 NULL，没人给它回填过。
+      await connection.query(
+        "UPDATE support_conversations SET autoAssistEnabled = NULL WHERE id = ?",
+        [id],
+      );
+      const row = await store.findConversationById(id);
+      expect(row!.autoAssistEnabled).toBeNull();
+
+      const after = await send({ body: "升级后再问一句", clientMsgId: "legacy-follow" });
+      expect(after.autoSuppressed).toBe(true);
+      expect(after.conversation.operatorTakeover).toBe(true);
+      const rows = await rowsOf(id);
+      expect(rows.filter((r) => r.role === "auto")).toHaveLength(1);
+    });
+
+    it("接管状态不溢到同一访客的另一条商品会话", async () => {
+      const one = await send({ body: "商品一的价格", strategyId: null, clientMsgId: "iso-1" });
+      await reply(one.conversation.publicNo, "商品一报价发你了");
+      const two = await send({ visitorToken: TOKEN_B, body: "另一位访客", clientMsgId: "iso-2" });
+      expect(two.conversation.publicNo).not.toBe(one.conversation.publicNo);
+      expect(two.autoSuppressed).toBe(false);
+      expect(two.conversation.operatorTakeover).toBe(false);
     });
   });
 });

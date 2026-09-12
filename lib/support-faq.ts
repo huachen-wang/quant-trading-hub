@@ -77,9 +77,34 @@ function productLabel(context: SupportFaqContext): SupportText {
  */
 export const SUPPORT_QQ_FALLBACK = "1226426670 / 3832001817";
 
+/**
+ * 把站点设置里的 QQ 配置整成「只有号码」的展示形式。
+ *
+ * 线上那条设置填的是 `QQ1226426670 QQ3832001817`，而每个展示位自己还要拼一次 `QQ `，
+ * 客户看到的是 `QQ QQ1226426670 QQ3832001817` —— 号码没错，读起来像出了故障。
+ *
+ * 规则刻意保守，**绝不动运营真正填进去的内容**：
+ *   - 只有当每一段都是纯号码、或「QQ + 号码」时才规范化，输出 `号码 / 号码`；
+ *   - 出现任何别的写法（群名、说明文字、链接、非数字后缀）就原样返回，一个字不改；
+ *   - 号码本身从不改写，只去掉重复的 `QQ` 前缀并统一分隔符。
+ */
+export function normalizeQqContacts(value: string | null | undefined): string {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return "";
+  const parts = raw.split(/[\s/、，,]+/u).filter(Boolean);
+  const numbers: string[] = [];
+  for (const part of parts) {
+    const matched = /^(?:qq)?(\d{5,12})$/iu.exec(part);
+    // 看不懂的段落 = 不是「QQ 号列表」这种形状，原样交回去，展示层照原文显示。
+    if (!matched) return raw;
+    if (!numbers.includes(matched[1])) numbers.push(matched[1]);
+  }
+  return numbers.join(" / ");
+}
+
 /** QQ 是本站主推的客户沟通入口，几乎每条回复末尾都带上。 */
 export function buildQqLine(context: SupportFaqContext) {
-  const qq = typeof context.qq === "string" ? context.qq.trim() : "";
+  const qq = normalizeQqContacts(context.qq);
   if (!qq) return "";
   return pickSupportText(
     {
@@ -249,7 +274,7 @@ export const SUPPORT_FAQ_RULES: SupportFaqRule[] = [
       "contact", "wechat", "تواصل", "اتصال",
     ],
     build: (c) => {
-      const qq = typeof c.qq === "string" ? c.qq.trim() : "";
+      const qq = normalizeQqContacts(c.qq);
       if (!qq) {
         return {
           zh: "你直接在这里留言就行，内容会留档；需要其他联系方式的话，顾问会在会话里给你。",

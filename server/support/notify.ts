@@ -70,6 +70,13 @@ export type NotificationSummaryInput = {
   customerMessageCount: number;
   status: string;
   identity: "guest" | "member";
+  /**
+   * 这条会话已由真人手动接管，机器人不再自动答。
+   *
+   * 摘要里必须写出来：接管之后客户看到的**只有**这条提醒引来的人工回复，
+   * 没有任何机器人兜底。运营漏看一条，客户那边就是彻底没人理。
+   */
+  operatorTakeover?: boolean;
 };
 
 /**
@@ -92,6 +99,9 @@ export function buildNotificationSummary(
     `会话 ${sanitizeLabel(input.publicNo, 32)}`,
     `商品 ${product}`,
     `客户消息 ${Math.max(0, Math.trunc(input.customerMessageCount))} 条 · 状态 ${sanitizeLabel(input.status, 16)} · ${input.identity === "member" ? "已登录客户" : "访客"}`,
+    ...(input.operatorTakeover
+      ? ["人工接管中：自动接待已停，这条不回就没人回了"]
+      : []),
     "正文不进 Telegram，请到后台查看并回复：",
     buildAdminConversationUrl(input.publicNo, env),
   ];

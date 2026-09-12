@@ -38,6 +38,8 @@ type ConversationItem = {
   identity: "guest" | "member";
   customerMessageCount: number;
   operatorMessageCount: number;
+  /** 真人手动接管中：访客再发消息只落库 + 提醒，机器人不再自动答。 */
+  operatorTakeover: boolean;
   lastMessageAt: string;
   pageUrl: string | null;
   notifyStatus: string | null;
@@ -63,7 +65,9 @@ const STATUS_FILTERS = [
 const ROLE_LABEL: Record<MessageItem["role"], string> = {
   customer: "客户",
   auto: "自动值守（机器人）",
-  operator: "我方真人回复",
+  // 客户那一侧的标签同步改成了「运营回复（后台发出）」：后台这条回复到底是谁打的字，
+  // 系统证不出来，就不替它认领「某位真人顾问」的身份。这里跟着用同一个说法。
+  operator: "我方运营回复",
 };
 
 const NOTIFY_LABEL: Record<string, string> = {
@@ -88,6 +92,9 @@ export default function AdminSupportScreen() {
   const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageItem[]>([]);
+  /** 当前打开这条会话的接管状态，决定右下角那个按钮是「接管」还是「交还自动接待」。 */
+  const [threadTakeover, setThreadTakeover] = useState(false);
+  const [isTogglingAssist, setIsTogglingAssist] = useState(false);
   const [draft, setDraft] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isThreadLoading, setIsThreadLoading] = useState(false);
@@ -119,6 +126,7 @@ export default function AdminSupportScreen() {
     try {
       const data = await adminQuery("supportAdmin.thread", { publicNo });
       setMessages(Array.isArray(data?.messages) ? data.messages : []);
+      setThreadTakeover(Boolean(data?.conversation?.operatorTakeover));
       setSelected(publicNo);
       pendingReplyId.current = null;
       setError(null);
@@ -141,6 +149,7 @@ export default function AdminSupportScreen() {
       void adminQuery("supportAdmin.thread", { publicNo: selected })
         .then((data) => {
           if (Array.isArray(data?.messages)) setMessages(data.messages);
+          if (data?.conversation) setThreadTakeover(Boolean(data.conversation.operatorTakeover));
         })
         .catch(() => {
           // 轮询失败不打断运营正在写的回复，下一轮再说
@@ -175,6 +184,8 @@ export default function AdminSupportScreen() {
         clientMsgId: pendingReplyId.current,
       });
       setMessages(Array.isArray(data?.messages) ? data.messages : messages);
+      // 回复本身就是接管：服务端在同一个事务里把自动接待关掉了，这里只是把结果显示出来。
+      setThreadTakeover(Boolean(data?.conversation?.operatorTakeover ?? true));
       pendingReplyId.current = null;
       setDraft("");
       setError(null);
@@ -184,6 +195,30 @@ export default function AdminSupportScreen() {
       setError(err?.message || "回复失败，请重试");
     } finally {
       setIsSending(false);
+    }
+  };
+
+  /**
+   * 交还 / 收回自动接待。
+   *
+   * 「交还自动接待」是这套接管语义里唯一需要人点的动作：运营一旦在会话里回过话，
+   * 机器人就不再插话，直到这里明确把它交还回去。
+   */
+  const handleAutoAssist = async (enabled: boolean) => {
+    if (!selected || isTogglingAssist) return;
+    setIsTogglingAssist(true);
+    try {
+      const data = await adminMutation("supportAdmin.setAutoAssist", {
+        publicNo: selected,
+        enabled,
+      });
+      setThreadTakeover(Boolean(data?.conversation?.operatorTakeover ?? !enabled));
+      setError(null);
+      void loadList();
+    } catch (err: any) {
+      setError(err?.message || "切换自动接待失败");
+    } finally {
+      setIsTogglingAssist(false);
     }
   };
 
@@ -302,11 +337,13 @@ export default function AdminSupportScreen() {
                       {item.publicNo}
                     </Text>
                     <Text style={[styles.cardStatus, { color: colors.muted }]}>
-                      {item.status === "open"
-                        ? "待回复"
-                        : item.status === "answered"
-                          ? "已回复"
-                          : "已关闭"}
+                      {`${
+                        item.status === "open"
+                          ? "待回复"
+                          : item.status === "answered"
+                            ? "已回复"
+                            : "已关闭"
+                      } · ${item.operatorTakeover ? "人工接管中" : "自动接待中"}`}
                     </Text>
                   </View>
                   <Text style={[styles.cardTitle, { color: colors.foreground }]} numberOfLines={1}>
@@ -362,10 +399,16 @@ export default function AdminSupportScreen() {
               ))}
             </ScrollView>
 
+            <Text style={[styles.assistNote, { color: colors.muted, borderColor: colors.border }]}>
+              {threadTakeover
+                ? "人工接管中：自动接待已停。客户之后发的每一条都只会留在这里等你回，机器人不会再答。"
+                : "自动接待中：客户发消息时机器人会先答一句。你在这里发出第一条回复后自动转人工接管。"}
+            </Text>
+
             <TextInput
               value={draft}
               onChangeText={(value) => setDraft(value.slice(0, SUPPORT_MESSAGE_MAX_LENGTH))}
-              placeholder="以真人顾问身份回复；客户会在网页会话里看到。"
+              placeholder="以站点运营身份回复；客户会在网页会话里看到。不要自称某位具体的顾问本人。"
               placeholderTextColor={colors.muted}
               multiline
               style={[
@@ -385,6 +428,19 @@ export default function AdminSupportScreen() {
               >
                 <Text style={[styles.primaryText, { color: colors.background }]}>
                   {isSending ? "发送中…" : "发送回复"}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void handleAutoAssist(threadTakeover)}
+                disabled={isTogglingAssist}
+                style={[
+                  styles.ghostButton,
+                  { borderColor: colors.border },
+                  isTogglingAssist && styles.disabled,
+                ]}
+              >
+                <Text style={[styles.ghostText, { color: colors.muted }]}>
+                  {threadTakeover ? "交还自动接待" : "人工接管（停自动接待）"}
                 </Text>
               </Pressable>
               <Pressable
@@ -415,6 +471,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   bannerText: { fontSize: 12, lineHeight: 19 },
+  assistNote: {
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderRadius: 6,
+    fontSize: 12,
+    lineHeight: 19,
+  },
   filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 },
   filterChip: {
     paddingHorizontal: 12,

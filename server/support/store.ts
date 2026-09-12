@@ -32,6 +32,7 @@ import * as schema from "../../drizzle/schema";
 import {
   SUPPORT_HISTORY_LIMIT,
   SUPPORT_POLL_OVERLAP_SECONDS,
+  isAutoAssistEnabled,
 } from "../../shared/support/contracts";
 import type {
   SupportRole,
@@ -58,6 +59,8 @@ export type ConversationRow = {
   status: SupportStatus;
   customerMessageCount: number;
   operatorMessageCount: number;
+  /** 自动接待开关的显式覆盖；null 表示按 operatorMessageCount 推导。见 isAutoAssistEnabled。 */
+  autoAssistEnabled: boolean | null;
   notifyGeneration: number;
   lastMessageAt: Date;
   lastCustomerMessageAt: Date | null;
@@ -114,6 +117,13 @@ export type CustomerTurnInput = {
   conversationId: number;
   body: string;
   clientMsgId: string;
+  /**
+   * 机器人这一轮**备好的**回复。写不写由存储层在持会话行锁的同一个事务里决定：
+   * 会话处于真人手动接管态时整条丢弃，`autoMessage` 返回 null、`autoSuppressed` 为 true。
+   *
+   * 判定必须在事务里做，不能由调用方先查一次再传结论进来——「运营正在点发送」和
+   * 「访客正在点发送」是两个并发事务，先查后用的那个窗口正好是抢答发生的地方。
+   */
   autoReply: { body: string; ruleKey: string };
   /**
    * 事务内拿到刚更新完的会话行后调用，返回这一轮要排队的提醒。
@@ -129,6 +139,13 @@ export type CustomerTurnResult = {
   conversation: ConversationRow;
   customerMessage: MessageRow;
   autoMessage: MessageRow | null;
+  /**
+   * 这一轮的自动回复被**手动接管**压掉了（客户消息照样落库、提醒照样排队，只是机器不插话）。
+   *
+   * 和 `autoMessage === null` 不是一回事：幂等命中的重复提交同样没有新的自动回复，
+   * 但那是「这一轮压根没发生」，不是「接管中不许机器答」。调用方要分得清才能如实回话。
+   */
+  autoSuppressed: boolean;
   /**
    * 幂等命中了，但**这次提交的正文和当初落库的那条不一样**。
    *
@@ -171,6 +188,17 @@ export type SupportStore = {
   }): Promise<ConversationRow[]>;
   countConversations(status?: SupportStatus | "all"): Promise<number>;
   setStatus(conversationId: number, status: SupportStatus): Promise<void>;
+  /**
+   * 后台显式切换自动接待：`true` = 交还给机器人，`false` = 人工接管。
+   *
+   * 和 `appendCustomerTurn` 一样在事务里先锁会话行，所以「运营点交还」与「访客正在发消息」
+   * 撞在一起时只有一种结果：要么访客那一轮看到的是交还前的状态（不自动答），
+   * 要么看到交还后的状态（自动答），不会出现半边状态。返回落库后的会话行。
+   */
+  setAutoAssist(input: {
+    conversationId: number;
+    enabled: boolean;
+  }): Promise<ConversationRow>;
   /**
    * 客户**显式认领**一条尚未归属的匿名会话：把归属写成该账号，同时把会话迁到新的访客令牌上。
    * 已经有归属的会话一律拒绝（返回 false），不做「后来者自动继承前一位的记录」。
@@ -416,6 +444,8 @@ class MemorySupportStore implements SupportStore {
       status: "open",
       customerMessageCount: 0,
       operatorMessageCount: 0,
+      // 新会话没人表过态：走推导分支（运营 0 条 → 自动接待开着）。
+      autoAssistEnabled: null,
       notifyGeneration: 0,
       lastMessageAt: now,
       lastCustomerMessageAt: null,
@@ -490,6 +520,10 @@ class MemorySupportStore implements SupportStore {
         conversation.operatorMessageCount += 1;
         conversation.lastOperatorMessageAt = now;
         conversation.status = "answered";
+        // 运营开口 = 手动接管。显式写 false（而不是留 null 靠推导）是为了覆盖
+        // 「先交还了自动接待、运营又回了一条」：那时 autoAssistEnabled 是 true，
+        // 光靠 operatorMessageCount 推不出来，机器人会继续抢答。
+        conversation.autoAssistEnabled = false;
       }
     }
     return { message: { ...message }, created: true };
@@ -503,6 +537,12 @@ class MemorySupportStore implements SupportStore {
   async appendCustomerTurn(
     input: CustomerTurnInput,
   ): Promise<CustomerTurnResult> {
+    // 真库版在这里先 `SELECT ... FOR UPDATE` 锁会话行。内存版整段同步执行，
+    // 「读到的就是没人能改的」天然成立，取值的**位置**保持一致：写客户消息之前先定状态。
+    const before = this.conversations.get(input.conversationId);
+    if (!before) throw new Error("[support] conversation vanished mid-turn");
+    const autoAssist = isAutoAssistEnabled(before);
+
     const stored = this.appendMessageSync({
       conversationId: input.conversationId,
       role: "customer",
@@ -516,15 +556,19 @@ class MemorySupportStore implements SupportStore {
         conversation: cloneConversation(conversationAfter),
         customerMessage: stored.message,
         autoMessage: null,
+        autoSuppressed: false,
         bodyMismatch: stored.message.body !== input.body,
       };
     }
-    const auto = this.appendMessageSync({
-      conversationId: input.conversationId,
-      role: "auto",
-      body: input.autoReply.body,
-      autoRuleKey: input.autoReply.ruleKey,
-    });
+    // 接管中：机器不插进人与人的对话。客户消息已经落库，提醒照排（见下），只是不自动答。
+    const auto = autoAssist
+      ? this.appendMessageSync({
+          conversationId: input.conversationId,
+          role: "auto",
+          body: input.autoReply.body,
+          autoRuleKey: input.autoReply.ruleKey,
+        })
+      : null;
     const live = this.conversations.get(input.conversationId)!;
     // 与 MySQL 版同一套自愈规则：代数取「计数列」与「已终结提醒条数」的较大者。
     const terminalCount = [...this.notifications.values()].filter(
@@ -547,7 +591,8 @@ class MemorySupportStore implements SupportStore {
       created: true,
       conversation: fresh,
       customerMessage: stored.message,
-      autoMessage: auto.message,
+      autoMessage: auto?.message ?? null,
+      autoSuppressed: !autoAssist,
       bodyMismatch: false,
     };
   }
@@ -609,6 +654,13 @@ class MemorySupportStore implements SupportStore {
   async setStatus(conversationId: number, status: SupportStatus) {
     const row = this.conversations.get(conversationId);
     if (row) row.status = status;
+  }
+
+  async setAutoAssist(input: { conversationId: number; enabled: boolean }) {
+    const row = this.conversations.get(input.conversationId);
+    if (!row) throw new Error("[support] conversation not found");
+    row.autoAssistEnabled = input.enabled;
+    return cloneConversation(row);
   }
 
   async claimConversationForUser(input: {
@@ -786,6 +838,12 @@ function toConversationRow(row: any): ConversationRow {
     status: row.status,
     customerMessageCount: row.customerMessageCount ?? 0,
     operatorMessageCount: row.operatorMessageCount ?? 0,
+    // MySQL 存的是 tinyint：0/1 要压成 boolean，NULL / undefined 一律回 null
+    // （null 是有语义的「没人表过态」，不能被 Boolean() 压成 false）。
+    autoAssistEnabled:
+      row.autoAssistEnabled === null || row.autoAssistEnabled === undefined
+        ? null
+        : Boolean(row.autoAssistEnabled),
     notifyGeneration: row.notifyGeneration ?? 0,
     lastMessageAt: new Date(row.lastMessageAt),
     lastCustomerMessageAt: row.lastCustomerMessageAt
@@ -926,6 +984,29 @@ class MysqlSupportStore implements SupportStore {
   }
 
   /**
+   * 在事务里**排他锁住**会话行并读回来。
+   *
+   * 手动接管这件事全靠它：`appendCustomerTurn`（访客说话）和 `appendMessage`（运营回复）
+   * 都在自己的事务最开始锁同一行，于是两者只能一前一后，不会出现
+   * 「运营的回复已提交、访客那一轮读到的还是接管前的状态、机器人抢在中间答了一句」。
+   *
+   * 两条路径的加锁顺序一致（先会话行、后消息行），不引入新的死锁环；真撞上了
+   * `withDeadlockRetry` 会重试整个事务。
+   */
+  private async lockConversationOn(
+    executor: any,
+    conversationId: number,
+  ): Promise<ConversationRow> {
+    const rows = await executor
+      .select()
+      .from(supportConversations)
+      .where(eq(supportConversations.id, conversationId))
+      .for("update");
+    if (!rows.length) throw new Error("[support] conversation not found");
+    return toConversationRow(rows[0]);
+  }
+
+  /**
    * 在给定执行器（db 或事务）上写一条消息并更新会话计数。
    * 回读走**自增主键**，不是 `ORDER BY id DESC LIMIT 1` —— 并发下「会话里 id 最大的那行」
    * 根本不保证是自己刚写的那行（复核 H2 实测两个并发 append 拿回同一行）。
@@ -985,6 +1066,9 @@ class MysqlSupportStore implements SupportStore {
           lastMessageAt: sql`CURRENT_TIMESTAMP`,
           lastOperatorMessageAt: sql`CURRENT_TIMESTAMP`,
           status: "answered",
+          // 运营开口 = 手动接管，和计数写在同一条 UPDATE 里。显式落 false 而不是留 NULL：
+          // 「交还过自动接待之后运营又回了一条」这种情况列里是 true，光靠计数推不回来。
+          autoAssistEnabled: false,
         })
         .where(eq(supportConversations.id, input.conversationId));
     } else {
@@ -1020,7 +1104,12 @@ class MysqlSupportStore implements SupportStore {
 
   async appendMessage(input: AppendMessageInput) {
     return withDeadlockRetry<{ message: MessageRow; created: boolean }>(() =>
-      this.db.transaction((tx: any) => this.appendMessageOn(tx, input)),
+      this.db.transaction(async (tx: any) => {
+        // 先锁会话行再写消息，和 appendCustomerTurn 同一个顺序。运营回复走的就是这条路径，
+        // 锁拿到之后同一事务里把 autoAssistEnabled 写成 false，接管态和回复同生共死。
+        await this.lockConversationOn(tx, input.conversationId);
+        return this.appendMessageOn(tx, input);
+      }),
     );
   }
 
@@ -1036,6 +1125,11 @@ class MysqlSupportStore implements SupportStore {
   ): Promise<CustomerTurnResult> {
     return withDeadlockRetry<CustomerTurnResult>(() =>
       this.db.transaction(async (tx: any) => {
+        // 第一件事就是锁住会话行并读出接管状态。锁在手里，`replyAsOperator` 的事务
+        // 只能排在这一轮的前面或后面——不会有「运营刚回完、机器人又抢答一句」的中间态。
+        const locked = await this.lockConversationOn(tx, input.conversationId);
+        const autoAssist = isAutoAssistEnabled(locked);
+
         const stored = await this.appendMessageOn(tx, {
           conversationId: input.conversationId,
           role: "customer",
@@ -1060,16 +1154,21 @@ class MysqlSupportStore implements SupportStore {
             conversation: await readConversation(),
             customerMessage: stored.message,
             autoMessage: null,
+            autoSuppressed: false,
             bodyMismatch: stored.message.body !== input.body,
           };
         }
 
-        const auto = await this.appendMessageOn(tx, {
-          conversationId: input.conversationId,
-          role: "auto",
-          body: input.autoReply.body,
-          autoRuleKey: input.autoReply.ruleKey,
-        });
+        // 手动接管中就不写自动回复。客户消息已经在库里，提醒下面照排——
+        // 「只保存 + 通知，不自动答」这一句的实现就是这两行。
+        const auto = autoAssist
+          ? await this.appendMessageOn(tx, {
+              conversationId: input.conversationId,
+              role: "auto",
+              body: input.autoReply.body,
+              autoRuleKey: input.autoReply.ruleKey,
+            })
+          : null;
 
         const fresh = await readConversation();
         // 代数要**自愈**：不能只信 notifyGeneration 那一列。万一某条提醒是被别的路径
@@ -1107,7 +1206,8 @@ class MysqlSupportStore implements SupportStore {
           created: true,
           conversation: fresh,
           customerMessage: stored.message,
-          autoMessage: auto.message,
+          autoMessage: auto?.message ?? null,
+          autoSuppressed: !autoAssist,
           bodyMismatch: false,
         };
       }),
@@ -1185,6 +1285,26 @@ class MysqlSupportStore implements SupportStore {
       .update(supportConversations)
       .set({ status })
       .where(eq(supportConversations.id, conversationId));
+  }
+
+  async setAutoAssist(input: { conversationId: number; enabled: boolean }) {
+    return withDeadlockRetry<ConversationRow>(() =>
+      this.db.transaction(async (tx: any) => {
+        // 同样先锁行：和正在进行的那一轮访客对话排队，不会切一半。
+        await this.lockConversationOn(tx, input.conversationId);
+        await tx
+          .update(supportConversations)
+          .set({ autoAssistEnabled: input.enabled })
+          .where(eq(supportConversations.id, input.conversationId));
+        const rows = await tx
+          .select()
+          .from(supportConversations)
+          .where(eq(supportConversations.id, input.conversationId))
+          .limit(1);
+        if (!rows.length) throw new Error("[support] conversation not found");
+        return toConversationRow(rows[0]);
+      }),
+    );
   }
 
   async claimConversationForUser(input: {

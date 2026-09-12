@@ -21,7 +21,7 @@ import {
   buildTelegramChatLink,
   type InquiryContext,
 } from "@/lib/inquiry-message";
-import { SUPPORT_QQ_FALLBACK } from "@/lib/support-faq";
+import { SUPPORT_QQ_FALLBACK, normalizeQqContacts } from "@/lib/support-faq";
 import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
 
@@ -84,7 +84,9 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
   const telegramLink =
     contactData?.contact_telegram_link?.trim() ||
     CONTACT_FALLBACKS.telegramLink;
-  const qq = contactData?.contact_qq?.trim() || CONTACT_FALLBACKS.qq;
+  // 卡片本身已经有「QQ / QQ 群」这个标签，值里再带一遍 `QQ` 前缀就成了 QQ QQ123456。
+  // 只收前缀、统一分隔符，号码原样保留；看不懂的写法直接照原文显示（见 normalizeQqContacts）。
+  const qq = normalizeQqContacts(contactData?.contact_qq) || CONTACT_FALLBACKS.qq;
   const wechat =
     contactData?.contact_wechat?.trim() || CONTACT_FALLBACKS.wechat;
   const inquiryMessage = context ? buildInquiryMessage(context) : "";

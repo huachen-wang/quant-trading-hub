@@ -39,7 +39,9 @@ import {
 import {
   SUPPORT_AUTO_DISCLOSURE,
   SUPPORT_MESSAGE_MAX_LENGTH,
+  SUPPORT_OPERATOR_TAKEOVER_NOTE,
   SUPPORT_POLL_INTERVAL_MS,
+  pickSupportText,
   type SupportMessageView,
 } from "@/shared/support/contracts";
 
@@ -51,11 +53,24 @@ type SupportChatProps = {
   pageUrl?: string | null;
 };
 
-/** 角色标签三语。「机器人必须自报是机器人」对英语/阿语客户同样成立。 */
+/**
+ * 角色标签三语。
+ *
+ * 机器人那一条是硬要求：「机器人必须自报是机器人」对英语/阿语客户同样成立，一个字不能松。
+ *
+ * 运营那一条原来写的是「EAXAU 顾问（真人）」，已经去掉——站里没有「顾问」这个岗位，
+ * 后台那条回复可能是经营者本人打的字，也可能是他借工具起草后发出的。逐条盖一个
+ * 「这是某位真人顾问」的章，等于替对面认领了一个系统证不出来的身份。
+ * 现在只说**这条是从后台发出来的**，说得准，也不占机器人那条声明的位置。
+ */
 const ROLE_LABEL: Record<SupportMessageView["role"], [string, string, string]> = {
   customer: ["你", "You", "أنت"],
   auto: ["自动值守 · 机器人", "Automated · bot", "آلي · روبوت"],
-  operator: ["EAXAU 顾问（真人）", "EAXAU advisor (human)", "مستشار EAXAU (شخص)"],
+  operator: [
+    "运营回复（后台发出）",
+    "Operator reply (from the console)",
+    "رد من فريق التشغيل (من لوحة التحكم)",
+  ],
 };
 
 function mergeMessages(previous: SupportMessageView[], incoming: SupportMessageView[]) {
@@ -86,6 +101,13 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
   const draftIdentity = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [publicNo, setPublicNo] = useState<string | null>(null);
+  /**
+   * 运营已经在这条会话里手动接管，自动接待停了。
+   *
+   * 值只认服务端下发的 `conversation.operatorTakeover`，客户端不自己推：
+   * 判定的那一份在 shared/support/contracts.ts，两边各算一次早晚会对不上。
+   */
+  const [operatorTakeover, setOperatorTakeover] = useState(false);
   const scrollRef = useRef<ScrollView | null>(null);
   /**
    * 正在飞行 / 刚失败的那一次发送尝试：**幂等键和它当时的正文绑在一起**。
@@ -121,6 +143,7 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
   const wipeIdentityBoundState = useCallback(() => {
     setMessages([]);
     setPublicNo(null);
+    setOperatorTakeover(false);
     setDraft("");
     draftIdentity.current = null;
     setError(null);
@@ -170,6 +193,7 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
     setVisitorToken(next.token);
     setMessages([]);
     setPublicNo(null);
+    setOperatorTakeover(false);
     // 换了会话线之后，旧那条「待确认」再也没法在这个线程里核对了
     // （落库判定是拿 messages 比对的，而 messages 刚被清空）——不要让提示条永远停在
     // 「还没确认它有没有送到」。草稿和幂等键保留：这次轮换是同一个人换条线，重试还要用。
@@ -188,9 +212,13 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
     if (thread.data.identity === "claimable") {
       setMessages([]);
       setPublicNo(null);
+      setOperatorTakeover(false);
       return;
     }
-    if (thread.data.conversation) setPublicNo(thread.data.conversation.publicNo);
+    if (thread.data.conversation) {
+      setPublicNo(thread.data.conversation.publicNo);
+      setOperatorTakeover(Boolean(thread.data.conversation.operatorTakeover));
+    }
     if (thread.data.messages.length) {
       setMessages((previous) => mergeMessages(previous, thread.data!.messages));
     }
@@ -274,6 +302,7 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
       }
       setMessages((previous) => mergeMessages(previous, data.messages));
       setPublicNo(data.conversation.publicNo);
+      setOperatorTakeover(Boolean(data.conversation.operatorTakeover));
       setError(null);
       pendingAttempt.current = null;
 
@@ -340,6 +369,7 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
         if (result.claimed) {
           setMessages(result.messages);
           setPublicNo(result.conversation.publicNo);
+          setOperatorTakeover(Boolean(result.conversation.operatorTakeover));
           setError(null);
         }
         void utils.support.thread.invalidate();
@@ -381,6 +411,16 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
 
   return (
     <View style={styles.wrap}>
+      {operatorTakeover ? (
+        /* 接管中就别再讲「先由机器人接待」那一套——那已经不是现在发生的事。
+           这条只说状态，不说对面是谁，措辞见 SUPPORT_OPERATOR_TAKEOVER_NOTE。 */
+        <View style={styles.takeoverBox}>
+          <MaterialIcons name="support-agent" size={15} color={V2.gold} />
+          <Text style={styles.takeoverText}>
+            {pickSupportText(SUPPORT_OPERATOR_TAKEOVER_NOTE, language)}
+          </Text>
+        </View>
+      ) : (
       <View style={styles.noticeBox}>
         <MaterialIcons name="smart-toy" size={15} color={V2.blue} />
         <Text style={styles.noticeText}>
@@ -396,6 +436,7 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
           )}`}
         </Text>
       </View>
+      )}
 
       {claimableToken ? (
         <View style={styles.claimBox}>
@@ -651,6 +692,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(88,150,220,0.08)",
   },
   noticeText: { flex: 1, color: V2.textMuted, fontSize: 11, lineHeight: 17 },
+  takeoverBox: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "rgba(198,160,74,0.36)",
+    borderRadius: 5,
+    backgroundColor: "rgba(198,160,74,0.10)",
+  },
+  takeoverText: { flex: 1, color: V2.text, fontSize: 11, lineHeight: 17 },
   claimBox: {
     gap: 8,
     padding: 10,

@@ -66,6 +66,46 @@ export const SUPPORT_HUMAN_HANDOFF = {
   },
 } as const;
 
+/**
+ * 「这条会话现在是不是真人手动接管」的**唯一一份判定**。前端 / 后端 / 内存 store / 真库 store
+ * 全部调这一个函数，不许各写一遍——两处漂移就是「运营已经回过话、机器人还在抢答」的来源。
+ *
+ * 状态只用一个可空列 `autoAssistEnabled` 表达，尽量靠已有字段推导：
+ *   - `null`（默认，也是所有存量行的值）：按 `operatorMessageCount` 推导。
+ *     运营一条都没回过 → 自动接待；回过 → 已接管。**存量会话不用回填就是对的**，
+ *     线上那条已经被运营回过的 EAX-XRY3JF4 升级后立刻停掉自动抢答。
+ *   - `false`：后台显式停掉自动接待（运营回复时也会写成 false，所以「交还之后又回了一条」
+ *     会重新接管，不会停在旧状态）。
+ *   - `true`：后台显式**交还自动接待**，之后访客再问由机器人先答。
+ */
+export function isAutoAssistEnabled(conversation: {
+  autoAssistEnabled: boolean | null;
+  operatorMessageCount: number;
+}): boolean {
+  if (conversation.autoAssistEnabled !== null) return conversation.autoAssistEnabled;
+  return conversation.operatorMessageCount <= 0;
+}
+
+/** 真人手动接管中 = 自动接待关着。界面上显示「运营回复中」用的就是它。 */
+export function isOperatorTakeover(conversation: {
+  autoAssistEnabled: boolean | null;
+  operatorMessageCount: number;
+}): boolean {
+  return !isAutoAssistEnabled(conversation);
+}
+
+/**
+ * 手动接管期间给客户看的状态条。
+ *
+ * 措辞只说**做了什么**（运营在这条会话里回复、机器人已停），不声称对面是哪一位真人——
+ * 后台的回复可能是经营者本人打的，也可能是他借工具起草后发出的，这里不替他认领身份。
+ */
+export const SUPPORT_OPERATOR_TAKEOVER_NOTE = {
+  zh: "运营回复中：这条会话已由后台接手，自动接待已停，你发的消息会直接留给运营。",
+  en: "Operator replying: this thread is handled from the console, the automated assistant is paused, and your messages go straight to the operator.",
+  ar: "فريق التشغيل يرد: تُدار هذه المحادثة من لوحة التحكم، وتم إيقاف المساعد الآلي، وتصل رسائلك إلى المشغّل مباشرة.",
+} as const;
+
 export type SupportMessageView = {
   id: number;
   role: SupportRole;
@@ -89,6 +129,11 @@ export type SupportConversationView = {
   strategyTitle: string | null;
   customerMessageCount: number;
   operatorMessageCount: number;
+  /**
+   * 真人手动接管中。为 true 时：访客的新消息只落库 + 提醒运营，**不再生成自动回复**。
+   * 由服务端按 `isOperatorTakeover` 算好后下发，客户端不自己推导，免得两边算法漂移。
+   */
+  operatorTakeover: boolean;
   lastMessageAt: string;
 };
 

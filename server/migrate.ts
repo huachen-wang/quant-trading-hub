@@ -49,6 +49,14 @@ const SUPPORT_ADDED_COLUMNS: Array<{ table: string; column: string; definition: 
     column: "generation",
     definition: "int NOT NULL DEFAULT 0",
   },
+  {
+    // 手动接管开关的显式覆盖。**可空且不给默认值**是有意的：存量会话补出来是 NULL，
+    // 走 `isAutoAssistEnabled` 的推导分支——运营已经回过话的会话（线上 EAX-XRY3JF4）
+    // 升级完立刻停掉自动抢答，一行数据都不用回填。
+    table: "support_conversations",
+    column: "autoAssistEnabled",
+    definition: "tinyint(1) NULL DEFAULT NULL",
+  },
 ];
 
 /**
@@ -121,6 +129,7 @@ export async function ensureSupportChatSchema(connection: mysql.Connection): Pro
       \`status\` enum('open','answered','closed') NOT NULL DEFAULT 'open',
       \`customerMessageCount\` int NOT NULL DEFAULT 0,
       \`operatorMessageCount\` int NOT NULL DEFAULT 0,
+      \`autoAssistEnabled\` tinyint(1) NULL DEFAULT NULL,
       \`notifyGeneration\` int NOT NULL DEFAULT 0,
       \`lastMessageAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
       \`lastCustomerMessageAt\` timestamp NULL,
