@@ -1346,6 +1346,116 @@ async function runMigrations(options: { strict?: boolean } = {}) {
       VALUES ('exness', 'NOT_APPROVED'), ('ic-markets', 'NOT_APPROVED'), ('blueberry-markets', 'NOT_APPROVED')
     `);
 
+    // ─── 站内咨询（网页客服会话）───
+    // 生产迁移在这里，跟其余表一样是可重复执行的 IF NOT EXISTS，启动时自动跑。
+    console.log("[migrate] Ensuring support chat tables exist...");
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`support_conversations\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`publicNo\` varchar(32) NOT NULL,
+        \`visitorTokenHash\` varchar(64) NOT NULL,
+        \`userId\` int,
+        \`strategyId\` int,
+        \`strategyKey\` int NOT NULL DEFAULT 0,
+        \`strategyTitle\` varchar(255),
+        \`pageUrl\` text,
+        \`locale\` varchar(8) NOT NULL DEFAULT 'zh',
+        \`status\` enum('open','answered','closed') NOT NULL DEFAULT 'open',
+        \`customerMessageCount\` int NOT NULL DEFAULT 0,
+        \`operatorMessageCount\` int NOT NULL DEFAULT 0,
+        \`lastMessageAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`lastCustomerMessageAt\` timestamp NULL,
+        \`lastOperatorMessageAt\` timestamp NULL,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT \`support_conversations_id\` PRIMARY KEY(\`id\`),
+        CONSTRAINT \`support_conversations_publicNo_unique\` UNIQUE(\`publicNo\`),
+        CONSTRAINT \`support_conversation_visitor_strategy_unique_idx\` UNIQUE(\`visitorTokenHash\`,\`strategyKey\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    await ensureIndex(
+      "support_conversations",
+      "support_conversation_status_idx",
+      "CREATE INDEX `support_conversation_status_idx` ON `support_conversations` (`status`)",
+    );
+    await ensureIndex(
+      "support_conversations",
+      "support_conversation_last_message_idx",
+      "CREATE INDEX `support_conversation_last_message_idx` ON `support_conversations` (`lastMessageAt`)",
+    );
+    await ensureIndex(
+      "support_conversations",
+      "support_conversation_user_idx",
+      "CREATE INDEX `support_conversation_user_idx` ON `support_conversations` (`userId`)",
+    );
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`support_messages\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`conversationId\` int NOT NULL,
+        \`role\` enum('customer','auto','operator') NOT NULL,
+        \`body\` text NOT NULL,
+        \`clientMsgId\` varchar(64),
+        \`autoRuleKey\` varchar(64),
+        \`operatorId\` int,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT \`support_messages_id\` PRIMARY KEY(\`id\`),
+        CONSTRAINT \`support_message_client_msg_unique_idx\` UNIQUE(\`conversationId\`,\`clientMsgId\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    await ensureIndex(
+      "support_messages",
+      "support_message_conversation_idx",
+      "CREATE INDEX `support_message_conversation_idx` ON `support_messages` (`conversationId`,`id`)",
+    );
+    await ensureIndex(
+      "support_messages",
+      "support_message_created_idx",
+      "CREATE INDEX `support_message_created_idx` ON `support_messages` (`createdAt`)",
+    );
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`support_notifications\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`dedupeKey\` varchar(120) NOT NULL,
+        \`conversationId\` int NOT NULL,
+        \`summary\` text NOT NULL,
+        \`status\` enum('pending','sending','sent','held','failed') NOT NULL DEFAULT 'pending',
+        \`attempts\` int NOT NULL DEFAULT 0,
+        \`lastError\` varchar(255),
+        \`nextAttemptAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`claimedAt\` timestamp NULL,
+        \`claimToken\` varchar(64),
+        \`sentAt\` timestamp NULL,
+        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT \`support_notifications_id\` PRIMARY KEY(\`id\`),
+        CONSTRAINT \`support_notifications_dedupeKey_unique\` UNIQUE(\`dedupeKey\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    await ensureIndex(
+      "support_notifications",
+      "support_notification_due_idx",
+      "CREATE INDEX `support_notification_due_idx` ON `support_notifications` (`status`,`nextAttemptAt`)",
+    );
+    await ensureIndex(
+      "support_notifications",
+      "support_notification_conversation_idx",
+      "CREATE INDEX `support_notification_conversation_idx` ON `support_notifications` (`conversationId`)",
+    );
+
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS \`support_rate_limits\` (
+        \`id\` int AUTO_INCREMENT NOT NULL,
+        \`bucketKey\` varchar(160) NOT NULL,
+        \`windowStart\` int NOT NULL,
+        \`hits\` int NOT NULL DEFAULT 0,
+        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT \`support_rate_limits_id\` PRIMARY KEY(\`id\`),
+        CONSTRAINT \`support_rate_limit_bucket_window_unique_idx\` UNIQUE(\`bucketKey\`,\`windowStart\`)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
     try {
       const catalogChanges = await syncCuratedStrategyCatalog(connection);
       if (catalogChanges > 0) {

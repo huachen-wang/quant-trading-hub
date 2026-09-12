@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { SupportChat } from "@/components/support-chat";
 import { V2 } from "@/components/v2/tokens";
 import {
   INQUIRY_FLOW_STEPS,
@@ -20,6 +21,7 @@ import {
   buildTelegramChatLink,
   type InquiryContext,
 } from "@/lib/inquiry-message";
+import { SUPPORT_QQ_FALLBACK } from "@/lib/support-faq";
 import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
 
@@ -36,7 +38,7 @@ interface ContactModalProps {
 const CONTACT_FALLBACKS = {
   telegram: "@xau6000",
   telegramLink: "https://t.me/xau6000",
-  qq: "1226426670 / 3832001817",
+  qq: SUPPORT_QQ_FALLBACK,
   wechat: "oooiniooo0624 / xau6000",
   description: "咨询时请备注策略名称，客服会确认文件版本、部署要求与交付方式。",
 };
@@ -47,11 +49,15 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const [copiedMethod, setCopiedMethod] = useState("");
   const [inquiryCopied, setInquiryCopied] = useState(false);
+  // 默认停在「在线咨询」：这是唯一能把双方对话留存下来的入口。
+  // 但停在这个页签本身不写任何库——会话要等客户真的发出第一条消息才建。
+  const [tab, setTab] = useState<"chat" | "contact">("chat");
 
   useEffect(() => {
     if (!visible) return;
     setCopiedMethod("");
     setInquiryCopied(false);
+    setTab("chat");
     scaleAnim.setValue(0.96);
     opacityAnim.setValue(0);
     Animated.parallel([
@@ -253,7 +259,46 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
               ))}
             </View>
 
-            {inquiryMessage ? (
+            <View style={styles.tabRow}>
+              {([
+                { key: "chat" as const, label: text("在线咨询", "Live chat", "دردشة") },
+                { key: "contact" as const, label: text("联系方式", "Contacts", "جهات الاتصال") },
+              ]).map((item) => {
+                const activeTab = tab === item.key;
+                return (
+                  <Pressable
+                    key={item.key}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: activeTab }}
+                    onPress={() => setTab(item.key)}
+                    style={({ pressed }) => [
+                      styles.tabItem,
+                      activeTab && styles.tabItemActive,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.tabText, activeTab && styles.tabTextActive]}>
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {tab === "chat" ? (
+              <SupportChat
+                active={visible && tab === "chat"}
+                strategyId={
+                  typeof context?.productId === "number"
+                    ? context.productId
+                    : Number.parseInt(String(context?.productId ?? ""), 10) || null
+                }
+                strategyTitle={context?.productTitle ?? null}
+                pageUrl={context?.pageUrl ?? null}
+              />
+            ) : null}
+
+            {tab === "contact" && inquiryMessage ? (
               <View style={styles.inquiryBox}>
                 <View style={styles.inquiryHead}>
                   <MaterialIcons name="assignment" size={15} color={V2.gold} />
@@ -326,11 +371,11 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
               </View>
             ) : null}
 
-            {isLoading ? (
+            {tab === "contact" && isLoading ? (
               <View style={styles.loadingBox}>
                 <ActivityIndicator size="large" color={V2.gold} />
               </View>
-            ) : (
+            ) : tab === "contact" ? (
               <View style={styles.contactList}>
                 {contactMethods.map((method) => {
                   const copied = copiedMethod === method.id;
@@ -391,9 +436,9 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
                   );
                 })}
               </View>
-            )}
+            ) : null}
 
-            {description ? (
+            {tab === "contact" && description ? (
               <View style={styles.descBox}>
                 <MaterialIcons name="info-outline" size={17} color={V2.blue} />
                 <Text style={styles.descText}>{description}</Text>
@@ -423,6 +468,25 @@ const styles = StyleSheet.create({
     backgroundColor: V2.backgroundRaised,
   },
   modalInner: { width: "100%", padding: 20 },
+  tabRow: {
+    flexDirection: "row",
+    marginTop: 13,
+    gap: 6,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: V2.border,
+    borderRadius: 5,
+    backgroundColor: "rgba(255,255,255,0.02)",
+  },
+  tabItem: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: "center",
+    borderRadius: 4,
+  },
+  tabItemActive: { backgroundColor: "rgba(216,188,131,0.14)" },
+  tabText: { color: V2.textMuted, fontSize: 11, fontWeight: "800" },
+  tabTextActive: { color: V2.gold },
   headingRow: {
     flexDirection: "row",
     alignItems: "center",

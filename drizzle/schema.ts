@@ -1004,3 +1004,116 @@ export const managedBrokerCollectionApprovals = mysqlTable("managed_broker_colle
 
 export type ManagedBrokerCollectionApproval = typeof managedBrokerCollectionApprovals.$inferSelect;
 export type InsertManagedBrokerCollectionApproval = typeof managedBrokerCollectionApprovals.$inferInsert;
+
+// ==================== 商品在线咨询（站内客服会话） ====================
+// 设计口径（避免另一批次已复盘过的坑）：
+//   1. 弹窗打开不建会话——只有客户真的发出第一条消息才 INSERT，后台线索不会被空会话稀释。
+//   2. 顺序用 messages 表的自增 id，不另设 next_seq 计数列；不存在「读-改-写」抢号导致丢消息。
+//   3. 通知走持久外发箱 + 租约回收，不是进程内内存重试。
+//   4. 会话归属一旦绑定登录用户，就只认该用户；匿名 token 不能再读回去。
+export const supportConversations = mysqlTable("support_conversations", {
+  id: int("id").autoincrement().primaryKey(),
+  // 对客编号，如 EAX-7K3Q9M。通知与后台都用它指代会话，正文不进 Telegram。
+  publicNo: varchar("publicNo", { length: 32 }).notNull().unique(),
+  // 访客令牌的 sha256，只存摘要不存原值。
+  visitorTokenHash: varchar("visitorTokenHash", { length: 64 }).notNull(),
+  // 绑定后只认这个登录用户；null 表示仍是匿名访客会话。
+  userId: int("userId"),
+  strategyId: int("strategyId"),
+  // strategyId 的非空投影（无商品上下文时为 0），只为能建唯一索引：
+  // 「同一访客 + 同一商品」永远只有一条会话线，并发首条消息由数据库挡住，不会分叉成两条线索。
+  strategyKey: int("strategyKey").default(0).notNull(),
+  strategyTitle: varchar("strategyTitle", { length: 255 }),
+  pageUrl: text("pageUrl"),
+  locale: varchar("locale", { length: 8 }).default("zh").notNull(),
+  status: mysqlEnum("status", ["open", "answered", "closed"]).default("open").notNull(),
+  // 客户真实发言条数。为 0 的会话不存在（首条才建），保留计数便于后台排序与过滤。
+  customerMessageCount: int("customerMessageCount").default(0).notNull(),
+  operatorMessageCount: int("operatorMessageCount").default(0).notNull(),
+  lastMessageAt: timestamp("lastMessageAt").defaultNow().notNull(),
+  lastCustomerMessageAt: timestamp("lastCustomerMessageAt"),
+  lastOperatorMessageAt: timestamp("lastOperatorMessageAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  visitorStrategyUnique: uniqueIndex("support_conversation_visitor_strategy_unique_idx").on(
+    table.visitorTokenHash,
+    table.strategyKey,
+  ),
+  userIdx: index("support_conversation_user_idx").on(table.userId),
+  statusIdx: index("support_conversation_status_idx").on(table.status),
+  lastMessageIdx: index("support_conversation_last_message_idx").on(table.lastMessageAt),
+}));
+
+export type SupportConversation = typeof supportConversations.$inferSelect;
+export type InsertSupportConversation = typeof supportConversations.$inferInsert;
+
+export const supportMessages = mysqlTable("support_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  conversationId: int("conversationId").notNull(),
+  // customer = 客户；auto = 自动值守（机器人，界面必须标注）；operator = 真人经营者。
+  role: mysqlEnum("role", ["customer", "auto", "operator"]).notNull(),
+  body: text("body").notNull(),
+  // 客户端生成的幂等键，重复提交只落一条。
+  clientMsgId: varchar("clientMsgId", { length: 64 }),
+  // 自动回复命中的 FAQ 规则 key，便于后台看出这条是机器人按哪条规则答的。
+  autoRuleKey: varchar("autoRuleKey", { length: 64 }),
+  operatorId: int("operatorId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  conversationIdx: index("support_message_conversation_idx").on(table.conversationId, table.id),
+  clientMsgUnique: uniqueIndex("support_message_client_msg_unique_idx").on(
+    table.conversationId,
+    table.clientMsgId,
+  ),
+  createdIdx: index("support_message_created_idx").on(table.createdAt),
+}));
+
+export type SupportMessage = typeof supportMessages.$inferSelect;
+export type InsertSupportMessage = typeof supportMessages.$inferInsert;
+
+// Telegram 提醒外发箱。失败要留痕、要退避、要能被下一轮 cron 接着投，
+// 不能只在进程内重试一次然后静默丢弃。
+export const supportNotifications = mysqlTable("support_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  // 去重键：同一会话在一个节流窗口内只排一条待发。
+  dedupeKey: varchar("dedupeKey", { length: 120 }).notNull().unique(),
+  conversationId: int("conversationId").notNull(),
+  // 只放摘要（编号 / 商品 / 条数 / 后台链接），永远不含消息正文与联系方式。
+  summary: text("summary").notNull(),
+  status: mysqlEnum("status", ["pending", "sending", "sent", "held", "failed"])
+    .default("pending")
+    .notNull(),
+  attempts: int("attempts").default(0).notNull(),
+  lastError: varchar("lastError", { length: 255 }),
+  nextAttemptAt: timestamp("nextAttemptAt").defaultNow().notNull(),
+  claimedAt: timestamp("claimedAt"),
+  claimToken: varchar("claimToken", { length: 64 }),
+  sentAt: timestamp("sentAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  dueIdx: index("support_notification_due_idx").on(table.status, table.nextAttemptAt),
+  conversationIdx: index("support_notification_conversation_idx").on(table.conversationId),
+}));
+
+export type SupportNotification = typeof supportNotifications.$inferSelect;
+export type InsertSupportNotification = typeof supportNotifications.$inferInsert;
+
+// 限流计数。自增走单条 SQL（INSERT ... ON DUPLICATE KEY UPDATE），
+// 不用「先 count 再 insert」那种并发下会被整片绕过的写法。
+export const supportRateLimits = mysqlTable("support_rate_limits", {
+  id: int("id").autoincrement().primaryKey(),
+  bucketKey: varchar("bucketKey", { length: 160 }).notNull(),
+  windowStart: int("windowStart").notNull(),
+  hits: int("hits").default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  bucketWindowUnique: uniqueIndex("support_rate_limit_bucket_window_unique_idx").on(
+    table.bucketKey,
+    table.windowStart,
+  ),
+}));
+
+export type SupportRateLimit = typeof supportRateLimits.$inferSelect;
+export type InsertSupportRateLimit = typeof supportRateLimits.$inferInsert;
