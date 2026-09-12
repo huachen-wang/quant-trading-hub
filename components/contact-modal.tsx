@@ -7,6 +7,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -85,6 +86,20 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
 
   const handleCopyInquiry = async () => {
     if (!inquiryMessage) return;
+
+    // 原生端没有 navigator.clipboard，也不为此新增依赖：用 RN 自带的 Share，
+    // 让用户在系统分享里直接选 Telegram / 微信 / QQ，咨询内容随之带过去。
+    if (Platform.OS !== "web") {
+      try {
+        const result = await Share.share({ message: inquiryMessage });
+        if (result.action === Share.sharedAction) return;
+      } catch {
+        // 分享被系统拒绝时继续走下面的打开链接分支
+      }
+      if (telegramChatLink) await Linking.openURL(telegramChatLink);
+      return;
+    }
+
     let copied = false;
     try {
       await globalThis.navigator?.clipboard?.writeText(inquiryMessage);
@@ -267,20 +282,28 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
                   ]}
                 >
                   <MaterialIcons
-                    name={inquiryCopied ? "check" : "content-copy"}
+                    name={
+                      inquiryCopied
+                        ? "check"
+                        : Platform.OS !== "web"
+                          ? "ios-share"
+                          : "content-copy"
+                    }
                     size={16}
                     color={V2.background}
                   />
                   <Text style={styles.inquiryActionText}>
                     {inquiryCopied
                       ? text("已复制", "Copied", "تم النسخ")
-                      : telegramChatLink
-                        ? text(
-                            "复制并打开 Telegram",
-                            "Copy & open Telegram",
-                            "انسخ وافتح تيليجرام",
-                          )
-                        : text("复制咨询内容", "Copy inquiry", "انسخ الاستفسار")}
+                      : Platform.OS !== "web"
+                        ? text("发送咨询内容", "Send inquiry", "إرسال الاستفسار")
+                        : telegramChatLink
+                          ? text(
+                              "复制并打开 Telegram",
+                              "Copy & open Telegram",
+                              "انسخ وافتح تيليجرام",
+                            )
+                          : text("复制咨询内容", "Copy inquiry", "انسخ الاستفسار")}
                   </Text>
                 </Pressable>
                 <View style={styles.flowRow}>
