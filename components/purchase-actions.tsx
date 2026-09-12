@@ -164,7 +164,7 @@ export function PurchaseActions({
           <Text style={[styles.inquiryTitle, { color: "#D8BC83" }]}>商务授权合作</Text>
         </View>
         <Text style={[styles.inquiryDesc, { color: colors.muted }]}>
-          此商品采用工作室授权模式，价格与授权范围按版本单独确认，页面不预设报价。咨询里会当场落定：
+          此商品采用工作室授权模式，价格与授权范围按版本单独确认。咨询时一起核对：
         </Text>
         <View style={styles.inquiryChecklist}>
           {INQUIRY_CHECKLIST.map((item, index) => (

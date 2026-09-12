@@ -102,8 +102,10 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
 
     let copied = false;
     try {
-      await globalThis.navigator?.clipboard?.writeText(inquiryMessage);
-      copied = true;
+      if (typeof globalThis.navigator?.clipboard?.writeText === "function") {
+        await globalThis.navigator.clipboard.writeText(inquiryMessage);
+        copied = true;
+      }
     } catch {
       copied = false;
     }
