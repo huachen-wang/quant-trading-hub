@@ -161,7 +161,10 @@ describe("身份切换：上一位的任何东西都不能留在屏幕上", () =
   });
 
   it("发送时带上自报身份，服务端拦截身份切换竞态", () => {
-    expect(chatSource).toContain("const expectedIdentity = identity;");
+    // 草稿自带作者身份：送出去的是**打字时**那个身份，不是此刻 useAuth 的身份。
+    expect(chatSource).toContain("const authored = draftIdentity.current ?? identity;");
+    expect(chatSource).toContain("const expectedIdentity = authored;");
+    expect(chatSource).toContain("draftIdentity.current = identity;");
     expect(chatSource).toContain("expectedIdentity,");
     const serviceSource = readFileSync(join(repoRoot, "server", "support", "service.ts"), "utf-8");
     expect(serviceSource).toContain("assertExpectedIdentity");

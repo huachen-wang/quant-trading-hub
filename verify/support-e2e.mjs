@@ -40,10 +40,20 @@ async function rawQuery(path, input, headers = {}) {
 }
 
 async function rawMutate(path, input, headers = {}) {
+  // 服务端要求身份绑定（缺绑定 = 拒绝并要求刷新）。这支脚本全程匿名，统一补 guest；
+  // 身份竞态本身在 verify/support-identity-e2e.mjs 里测。
+  const payload = input ?? {};
+  const withIdentity =
+    (path === "support.send" || path === "support.claim") &&
+    payload &&
+    typeof payload === "object" &&
+    payload.expectedIdentity === undefined
+      ? { ...payload, expectedIdentity: "guest" }
+      : payload;
   const response = await fetch(`${TRPC}/${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", ...headers },
-    body: JSON.stringify({ json: input ?? {} }),
+    body: JSON.stringify({ json: withIdentity }),
   });
   return { status: response.status, body: await response.json() };
 }

@@ -58,6 +58,8 @@ function noopDrain() {}
 
 function send(store: SupportStore, overrides: Record<string, any> = {}) {
   return sendCustomerMessage({
+    // 身份绑定是必填的（缺绑定 = 要求刷新）；竞态用例自己覆盖。
+    expectedIdentity: overrides.userId ? `user:${overrides.userId}` : "guest",
     visitorToken: TOKEN_A,
     userId: null,
     ip: "203.0.113.7",
@@ -391,6 +393,7 @@ describe("会话归属与隔离", () => {
     const guest = await send(store, { strategyId: 1, body: "我是同一个人，先匿名问的" });
 
     const claimed = await claimAnonymousConversation({
+      expectedIdentity: `user:42`,
       previousVisitorToken: TOKEN_A,
       visitorToken: TOKEN_B,
       userId: 42,
@@ -416,6 +419,7 @@ describe("会话归属与隔离", () => {
     const store = createMemorySupportStore();
     await send(store, { strategyId: 1, userId: 42, body: "甲的会话" });
     const stolen = await claimAnonymousConversation({
+      expectedIdentity: `user:99`,
       previousVisitorToken: TOKEN_A,
       visitorToken: TOKEN_B,
       userId: 99,
@@ -479,7 +483,7 @@ describe("身份切换竞态闸门（内存层语义）", () => {
     expect(await store.countConversations("all")).toBe(0);
   });
 
-  it("对得上就放行；不传这个字段行为不变", async () => {
+  it("对得上就放行", async () => {
     const store = createMemorySupportStore();
     const matched = await send(store, {
       expectedIdentity: "user:42",
@@ -487,11 +491,20 @@ describe("身份切换竞态闸门（内存层语义）", () => {
       clientMsgId: "identity-ok-1",
     });
     expect(matched.duplicate).toBe(false);
-    const legacy = await send(store, {
-      visitorToken: TOKEN_B,
-      clientMsgId: "identity-legacy-1",
-    });
-    expect(legacy.duplicate).toBe(false);
+  });
+
+  it("旧客户端不带绑定 → 拒绝并要求刷新，不建会话不落消息", async () => {
+    const store = createMemorySupportStore();
+    await expect(
+      send(store, {
+        expectedIdentity: undefined,
+        visitorToken: TOKEN_B,
+        userId: 42,
+        clientMsgId: "identity-legacy-1",
+        body: "旧 tab 在身份变化期间发出的草稿",
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(await store.countConversations("all")).toBe(0);
   });
 });
 

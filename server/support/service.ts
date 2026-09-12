@@ -131,14 +131,26 @@ export function identityKeyOf(userId: number | null) {
  *
  * 客户端已经在身份变更时清掉草稿（见 support-chat.tsx 的 wipeIdentityBoundState），
  * 这里是服务端的第二道：请求自报的身份和服务端解析出来的身份对不上就**拒绝写入**。
- * 它只会更严，永远不会放宽——没带 expectedIdentity 的老客户端行为不变。
+ * 它只会更严，永远不会放宽：`expectedIdentity` 只能让请求被**拒绝**，永远不能指定写给谁——
+ * 会话归属一律取服务端解析出来的 `userId`（`ctx.user`），这个字段碰不到授权。
+ * 缺绑定的请求（旧客户端/旧 tab）一律拒绝并要求刷新，见下。
  */
 export function assertExpectedIdentity(
   expectedIdentity: string | null | undefined,
   userId: number | null,
 ) {
   const expected = typeof expectedIdentity === "string" ? expectedIdentity.trim() : "";
-  if (!expected) return;
+  if (!expected) {
+    // 复核回合 5：可选字段等于给旧客户端留着原来的洞——旧 tab 在身份变化期间发出的请求
+    // 不带绑定，`ensureConversation` 照样会用**当时解析出来的** userId 建会话，
+    // 上一位没发出去的草稿仍可能落到下一位账号名下。所以缺绑定 = 拒绝写入并要求刷新，
+    // 而不是放行。BAD_REQUEST 的服务端文案在旧客户端的白名单里就是原样展示的那一档，
+    // 旧 tab 会直接看到「请刷新」而不是一句看不懂的通用错误。
+    throw new SupportError(
+      "BAD_REQUEST",
+      "页面版本过旧，这条没有发出去，请刷新页面后重发",
+    );
+  }
   const actual = identityKeyOf(userId);
   if (expected !== actual) {
     throw new SupportError(

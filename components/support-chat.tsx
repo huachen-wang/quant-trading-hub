@@ -74,6 +74,16 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
   const [claimableToken, setClaimableToken] = useState<string | null>(null);
   const [messages, setMessages] = useState<SupportMessageView[]>([]);
   const [draft, setDraft] = useState("");
+  /**
+   * 这段草稿是**在哪个身份下打的**。
+   *
+   * 复核回合 5：`wipeIdentityBoundState` 挂在身份变更 effect 里，而那个 effect 要等
+   * `ensureVisitorToken` 这个异步调用回来才清。在「身份已经变成 B、令牌还没换回来」的那段窗口里，
+   * 客户点发送，`handleSend` 拿的是 B 的身份，盖在 A 打的那段字上——服务端一比对「自报=实际」，
+   * 顺利放行，A 的字进了 B 的库。闸门拦不住这种，因为它本来就是被骗着盖章的。
+   * 所以草稿自带作者身份：发送时用**打字时那个身份**去比对，身份变了就不发。
+   */
+  const draftIdentity = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [publicNo, setPublicNo] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
@@ -112,6 +122,7 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
     setMessages([]);
     setPublicNo(null);
     setDraft("");
+    draftIdentity.current = null;
     setError(null);
     setUnresolvedAttempt(null);
     pendingAttempt.current = null;
@@ -202,9 +213,22 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
   const handleSend = useCallback(async () => {
     const typed = draft.trim();
     if (!typed || sendMutation.isPending) return;
-    // 记下**发起这次发送时**的身份，随请求送给服务端比对：
-    // 如果在途中登录状态变了，服务端会拒绝写入，而不是把这段话记到另一个账号名下。
-    const expectedIdentity = identity;
+    // 送给服务端比对的是**这段字被打出来时**的身份，不是此刻 useAuth 的身份。
+    // 两者不一致 = 打字的人和现在登录的人不是同一个：这条一个字都不许发，
+    // 就地把上一位留下的所有状态清干净（不等身份 effect 里那个异步回调）。
+    const authored = draftIdentity.current ?? identity;
+    if (authored !== identity) {
+      wipeIdentityBoundState();
+      setError(
+        text(
+          "登录状态已经变了，刚才还没发出去的那段字不会发给当前账号，已清除，请重新输入。",
+          "Your sign-in changed. The text that had not been sent will NOT be sent under the current account — it has been cleared, please type it again.",
+          "تغيّرت حالة تسجيل الدخول. لن يُرسل النص الذي لم يُرسل بعد باسم الحساب الحالي — تم مسحه، يرجى كتابته من جديد.",
+        ),
+      );
+      return;
+    }
+    const expectedIdentity = authored;
     let token = visitorToken;
     if (!token) {
       token = (await ensureVisitorToken(identity)).token;
@@ -274,7 +298,18 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
       // 草稿和这次尝试都保留：客户再点一次是**重试同一条**，不会变成第二条消息。
       setError(readableSupportError(err, text));
     }
-  }, [draft, identity, pageUrl, rotateIdentity, sendMutation, strategyId, utils, visitorToken]);
+  }, [
+    draft,
+    identity,
+    pageUrl,
+    rotateIdentity,
+    sendMutation,
+    strategyId,
+    text,
+    utils,
+    visitorToken,
+    wipeIdentityBoundState,
+  ]);
 
   /** 把待确认那条的原文放回输入框并复用原键——重试对应的就是原文那一条。 */
   const handleResendUnresolved = useCallback(() => {
@@ -284,9 +319,10 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
       body: unresolvedAttempt.body,
     };
     setDraft(unresolvedAttempt.body);
+    draftIdentity.current = identity;
     setUnresolvedAttempt(null);
     setError(null);
-  }, [unresolvedAttempt]);
+  }, [identity, unresolvedAttempt]);
 
   const handleClaim = useCallback(
     async (accept: boolean) => {
@@ -533,7 +569,11 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
       <View style={styles.composer}>
         <TextInput
           value={draft}
-          onChangeText={(value) => setDraft(value.slice(0, SUPPORT_MESSAGE_MAX_LENGTH))}
+          onChangeText={(value) => {
+            // 草稿跟着**当前**身份走：每次输入都把作者身份钉上，发送时再比对。
+            draftIdentity.current = identity;
+            setDraft(value.slice(0, SUPPORT_MESSAGE_MAX_LENGTH));
+          }}
           placeholder={text(
             "说说你想确认的版本、账户数或安装环境",
             "Tell us the version, account count or install environment you want to confirm",

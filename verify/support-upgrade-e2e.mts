@@ -113,6 +113,7 @@ async function main() {
   const visitorToken = `upgrade-e2e-${Date.now()}-${"x".repeat(12)}`;
   try {
     const sent = await service.sendCustomerMessage({
+      expectedIdentity: "guest",
       visitorToken,
       userId: null,
       ip: "203.0.113.31",

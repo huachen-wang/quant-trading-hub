@@ -48,7 +48,22 @@ async function session(openId, name) {
     .sign(new TextEncoder().encode(SESSION_SECRET));
 }
 
+/**
+ * 服务端现在**要求**身份绑定（缺绑定 = 拒绝并要求刷新，见 assertExpectedIdentity）。
+ * 这支脚本大部分场景测的是别的性质，所以按「这次用的是谁的令牌」自动补上绑定；
+ * 竞态 / 旧客户端那几条用例在调用处显式给值（或显式不给），不会被这里覆盖。
+ */
+const identityByToken = new Map();
+
 async function call(method, path, input, token) {
+  if (
+    (path === "support.send" || path === "support.claim") &&
+    input &&
+    typeof input === "object" &&
+    !("expectedIdentity" in input)
+  ) {
+    input = { ...input, expectedIdentity: token ? identityByToken.get(token) ?? "guest" : "guest" };
+  }
   const headers = { "content-type": "application/json" };
   if (token) headers.authorization = `Bearer ${token}`;
   const url =
@@ -127,6 +142,8 @@ async function main() {
   const userB = rows.find((r) => r.openId === openIdB);
   const tokenA = await session(openIdA, "E2E 用户A");
   const tokenB = await session(openIdB, "E2E 用户B");
+  identityByToken.set(tokenA, `user:${userA.id}`);
+  identityByToken.set(tokenB, `user:${userB.id}`);
 
   const me = data(await call("GET", "auth.me", undefined, tokenA));
   check("会话 JWT 被服务端接受（真实登录链路）", me?.openId === openIdA, JSON.stringify(me)?.slice(0, 80));
@@ -342,6 +359,53 @@ async function main() {
     [raceBody],
   );
   check("被拒的那段文字一个字都没落库", Number(racedRows[0].n) === 0, `rows=${racedRows[0].n}`);
+
+  // ── 场景七b：旧客户端（根本不带绑定字段）在身份变化期间发送 → 必须拒绝并要求刷新
+  const legacyBody = "旧 tab 里匿名打的草稿，登录后点了发送";
+  // B 在前面的场景里本来就有自己的会话，所以先取个基线，只看这次调用有没有新增。
+  const [beforeRows] = await connection.query(
+    "SELECT COUNT(*) AS n FROM support_conversations WHERE userId = ?",
+    [userB.id],
+  );
+  const legacyBaseline = Number(beforeRows[0].n);
+  const legacy = data(
+    await call(
+      "POST",
+      "support.send",
+      {
+        visitorToken: `e2e-legacy-${stamp}-${"x".repeat(12)}`,
+        clientMsgId: `${stamp}-legacy-1`,
+        body: legacyBody,
+        strategyId: 1,
+        pageUrl: null,
+        locale: "zh",
+        // 注意：这里**故意不带** expectedIdentity，模拟部署前就加载好的旧页面。
+        // 下面这个 key 存在但值是 undefined，`"expectedIdentity" in input` 为真，
+        // 所以上面的自动补全不会插手；JSON.stringify 会把它整个丢掉，线上就是「没这个字段」。
+        expectedIdentity: undefined,
+      },
+      tokenB,
+    ),
+  );
+  check(
+    "旧客户端不带身份绑定 → 拒绝写入并要求刷新",
+    legacy?.code === "BAD_REQUEST" && String(legacy?.error ?? "").includes("刷新"),
+    `code=${legacy?.code} msg=${legacy?.error}`,
+  );
+  const [legacyRows] = await connection.query(
+    "SELECT COUNT(*) AS n FROM support_messages WHERE body = ?",
+    [legacyBody],
+  );
+  check("旧客户端那段文字一个字都没落库", Number(legacyRows[0].n) === 0, `rows=${legacyRows[0].n}`);
+  const [legacyOwned] = await connection.query(
+    "SELECT COUNT(*) AS n FROM support_conversations WHERE userId = ?",
+    [userB.id],
+  );
+  check(
+    "也没有在 B 名下新建任何会话",
+    Number(legacyOwned[0].n) === legacyBaseline,
+    `B 名下会话数 ${legacyBaseline} → ${legacyOwned[0].n}`,
+  );
 
   const racedOk = data(
     await call(

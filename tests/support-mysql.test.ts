@@ -57,8 +57,11 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
   let store: SupportStore;
   let close: () => Promise<void>;
 
+  // 服务端现在**要求**身份绑定（缺绑定 = 拒绝并要求刷新），所以 helper 按 userId 补一个默认值；
+  // 竞态用例在自己的 it 里显式覆盖 expectedIdentity。
   const send = (overrides: Record<string, any> = {}) =>
     sendCustomerMessage({
+      expectedIdentity: overrides.userId ? `user:${overrides.userId}` : "guest",
       visitorToken: TOKEN_A,
       userId: null,
       ip: "203.0.113.9",
@@ -624,6 +627,7 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
       const guest = await send({ body: "我先匿名问一句", clientMsgId: "ident-5" });
 
       const stolen = await claimAnonymousConversation({
+      expectedIdentity: `user:888`,
         previousVisitorToken: TOKEN_A,
         visitorToken: TOKEN_C,
         userId: 888,
@@ -634,6 +638,7 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
 
       // 已经有主之后，别人再认领必然失败
       const second = await claimAnonymousConversation({
+      expectedIdentity: `user:999`,
         previousVisitorToken: TOKEN_C,
         visitorToken: TOKEN_B,
         userId: 999,
@@ -689,7 +694,7 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
       expect(Number(rows[0].n)).toBe(0);
     });
 
-    it("对得上就正常放行；不带这个字段的老客户端行为不变", async () => {
+    it("对得上就正常放行", async () => {
       const matched = await send({
         expectedIdentity: "user:777",
         userId: 777,
@@ -697,13 +702,31 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
         body: "身份对得上",
       });
       expect(matched.duplicate).toBe(false);
+    });
 
-      const legacy = await send({
-        visitorToken: TOKEN_B,
-        clientMsgId: "race-identity-5",
-        body: "老客户端不带 expectedIdentity",
-      });
-      expect(legacy.duplicate).toBe(false);
+    it("旧客户端不带绑定 → 拒绝并要求刷新，库里一个字都没有", async () => {
+      // 回合 5：可选字段 = 旧 tab 仍然能在身份变化期间把 A 的草稿写进 B。
+      // 现在缺绑定就不写，客户看到的是「请刷新页面后重发」。
+      const legacyBody = "旧客户端在身份变化期间发出的草稿";
+      await expect(
+        send({
+          expectedIdentity: undefined,
+          visitorToken: TOKEN_B,
+          userId: 888,
+          clientMsgId: "race-identity-5",
+          body: legacyBody,
+        }),
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+      const [rows]: any = await connection.query(
+        "SELECT COUNT(*) AS n FROM support_messages WHERE body = ?",
+        [legacyBody],
+      );
+      expect(Number(rows[0].n)).toBe(0);
+      const [owned]: any = await connection.query(
+        "SELECT COUNT(*) AS n FROM support_conversations WHERE userId = 888",
+      );
+      expect(Number(owned[0].n)).toBe(0);
     });
 
     it("竞态请求被拒时不吃发送配额（闸门排在限流之前）", async () => {
