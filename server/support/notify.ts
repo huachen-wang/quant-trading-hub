@@ -18,7 +18,7 @@ const BASE_BACKOFF_MS = 30_000;
 const MAX_BACKOFF_MS = 60 * 60_000;
 /** 认领后多久算租约过期，可被下一轮回收。 */
 export const NOTIFICATION_LEASE_TIMEOUT_MS = 5 * 60_000;
-/** 未开启投递时的重扫间隔，避免 attempts 无限膨胀。 */
+/** 未开启投递时的重扫间隔。 */
 const DISABLED_RECHECK_MS = 6 * 60 * 60_000;
 /** 同一会话的提醒节流窗口：5 分钟内只排一条。 */
 export const NOTIFY_THROTTLE_SECONDS = 5 * 60;
@@ -187,6 +187,10 @@ export async function processDueSupportNotifications(options: {
   for (const row of claimed) {
     if (config.mode !== "live") {
       // 未开启真实投递：明确记为 held，留痕但不外发，也不谎称已发送。
+      //
+      // attempts 要**退回认领前的值**：这一轮压根没往外发过，不能算一次尝试。
+      // 否则开关一直关着时 held 会被反复认领，attempts 每 6 小时 +1 一直涨，
+      // 后台卡片上会出现「尝试 137 次」这种既难看又不真实的数字（复核回合 2 低 2）。
       await store.finishNotification({
         id: row.id,
         claimToken: row.claimToken!,
@@ -194,6 +198,7 @@ export async function processDueSupportNotifications(options: {
         nextAttemptAt: new Date(now.getTime() + DISABLED_RECHECK_MS),
         lastError: "notify_disabled",
         sentAt: null,
+        attempts: Math.max(0, row.attempts - 1),
       });
       result.held += 1;
       continue;

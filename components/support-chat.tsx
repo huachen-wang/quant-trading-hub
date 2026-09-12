@@ -7,7 +7,8 @@
  *   - 自动回复必须一眼看出是机器人：气泡上有「自动值守 · 机器人」角标，
  *     正文第一行也写明。不做「模拟正在输入」这类让人误以为是真人的效果。
  *   - 真人回复后客户不用刷新：面板展开时按固定间隔轮询增量。
- *   - 发送失败时输入框里的字要还回去，不能吞掉客户刚打的内容。
+ *   - 发送失败时输入框里的字要还回去，不能吞掉客户刚打的内容；
+ *     改了内容再发就是**另一条**，绝不用上一次的幂等键把新正文吞掉（见 pendingAttempt）。
  *   - QQ 入口始终在面板里，鼓励走 QQ 继续聊。
  */
 
@@ -74,11 +75,23 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
   const [publicNo, setPublicNo] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
   /**
-   * 这一条草稿的幂等键。复核 B3：旧版每次点发送都现生成一个，
-   * 「请求已落库、响应丢了、客户再点一次」就会真重复入库。
-   * 现在只有服务端确认收下（或客户改了内容重新开始一条）才换新值。
+   * 正在飞行 / 刚失败的那一次发送尝试：**幂等键和它当时的正文绑在一起**。
+   *
+   * 复核回合 2 的 P2：只存一个键是不够的。客户点发送 → 服务端已经落库 → 响应丢了 →
+   * 客户看到「再试一次」→ **改了内容**再点 → 旧键 + 新正文 → 服务端命中唯一索引走幂等分支 →
+   * 返回旧正文、`duplicate=true` → 客户端当成功清空草稿。客户补的那段话一个字都没进库，
+   * 接口还报成功。
+   *
+   * 现在的规则：
+   *   - 正文没变 = 重试同一条 → 复用同一个键，**而且用当初那份正文发**（键与正文永远对应）；
+   *   - 正文变了 = 客户有意发新内容 → **新键**，同时把上一次那条标成「待确认」并在界面上说清楚
+   *     （它可能已经落库了），绝不用旧键把新正文吞掉。
    */
-  const pendingClientMsgId = useRef<string | null>(null);
+  const pendingAttempt = useRef<{ clientMsgId: string; body: string } | null>(null);
+  /** 上一次尝试改内容后变成「不知道到没到」的状态，界面要明说，并给一个重发原文的出口。 */
+  const [unresolvedAttempt, setUnresolvedAttempt] = useState<
+    { clientMsgId: string; body: string; landed: boolean } | null
+  >(null);
   /** 防止「换令牌 → 再被判 foreign → 再换」打转，一个挂载周期最多换两次。 */
   const rotations = useRef(0);
 
@@ -150,27 +163,46 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
     }
   }, [rotateIdentity, thread.data]);
 
+  // 待确认那条到底有没有落库，用它自己的 clientMsgId 在线程里查——不靠正文猜。
+  useEffect(() => {
+    if (!unresolvedAttempt || unresolvedAttempt.landed) return;
+    const landed = messages.some(
+      (message) =>
+        message.role === "customer" && message.clientMsgId === unresolvedAttempt.clientMsgId,
+    );
+    if (landed) setUnresolvedAttempt({ ...unresolvedAttempt, landed: true });
+  }, [messages, unresolvedAttempt]);
+
   const utils = trpc.useUtils();
   const sendMutation = trpc.support.send.useMutation();
   const claimMutation = trpc.support.claim.useMutation();
 
   const handleSend = useCallback(async () => {
-    const body = draft.trim();
-    if (!body || sendMutation.isPending) return;
+    const typed = draft.trim();
+    if (!typed || sendMutation.isPending) return;
     let token = visitorToken;
     if (!token) {
       token = (await ensureVisitorToken(identity)).token;
       setVisitorToken(token);
     }
-    // 同一条草稿重试时复用同一个幂等键；只有服务端收下之后才作废。
-    if (!pendingClientMsgId.current) pendingClientMsgId.current = newClientMsgId();
-    const clientMsgId = pendingClientMsgId.current;
+
+    let attempt = pendingAttempt.current;
+    if (attempt && attempt.body !== typed) {
+      // 客户改了内容再发。上一次那条**可能已经落库**了（响应丢了而已），
+      // 所以这次必须是一条新消息、用新键；同时把上一次标成待确认，界面上说清楚。
+      setUnresolvedAttempt({ ...attempt, landed: false });
+      attempt = null;
+    }
+    if (!attempt) attempt = { clientMsgId: newClientMsgId(), body: typed };
+    pendingAttempt.current = attempt;
+    const sending = attempt;
 
     const submit = async (withToken: string) =>
       sendMutation.mutateAsync({
         visitorToken: withToken,
-        clientMsgId,
-        body,
+        clientMsgId: sending.clientMsgId,
+        // 用这次尝试**当初记下的正文**，不是当前草稿：键和正文必须永远对得上。
+        body: sending.body,
         strategyId: strategyId ?? null,
         pageUrl: pageUrl ?? null,
         locale: "zh",
@@ -193,14 +225,38 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
       setMessages((previous) => mergeMessages(previous, data.messages));
       setPublicNo(data.conversation.publicNo);
       setError(null);
-      pendingClientMsgId.current = null;
-      setDraft("");
+      pendingAttempt.current = null;
+
+      if (data.duplicate && data.bodyMismatch) {
+        // 服务端的第二道：这个幂等键早就落过库了，而且正文和这次提交的不一样 ——
+        // 这次的内容一个字都没进库。**不能清空草稿**，要如实告诉客户再发一次。
+        setUnresolvedAttempt({ ...sending, landed: true });
+        setError(
+          "刚才那条已经在记录里了，这次改后的内容还没发出去——请再点一次发送。",
+        );
+        return;
+      }
+
+      // 只有草稿还是这次发出去的那份时才清空——客户在请求飞行期间改过的字不能被抹掉。
+      setDraft((current) => (current.trim() === sending.body ? "" : current));
       void utils.support.thread.invalidate();
     } catch (err: any) {
-      // 草稿和幂等键都保留：客户再点一次是**重试同一条**，不会变成第二条消息。
+      // 草稿和这次尝试都保留：客户再点一次是**重试同一条**，不会变成第二条消息。
       setError(readableSupportError(err));
     }
   }, [draft, identity, pageUrl, rotateIdentity, sendMutation, strategyId, utils, visitorToken]);
+
+  /** 把待确认那条的原文放回输入框并复用原键——重试对应的就是原文那一条。 */
+  const handleResendUnresolved = useCallback(() => {
+    if (!unresolvedAttempt) return;
+    pendingAttempt.current = {
+      clientMsgId: unresolvedAttempt.clientMsgId,
+      body: unresolvedAttempt.body,
+    };
+    setDraft(unresolvedAttempt.body);
+    setUnresolvedAttempt(null);
+    setError(null);
+  }, [unresolvedAttempt]);
 
   const handleClaim = useCallback(
     async (accept: boolean) => {
@@ -340,6 +396,46 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
         ) : null}
       </ScrollView>
 
+      {unresolvedAttempt ? (
+        <View style={styles.unresolvedBox}>
+          <MaterialIcons
+            name={unresolvedAttempt.landed ? "check-circle" : "help-outline"}
+            size={14}
+            color={unresolvedAttempt.landed ? V2.green : V2.blue}
+          />
+          <View style={styles.unresolvedBody}>
+            <Text style={styles.unresolvedText}>
+              {unresolvedAttempt.landed
+                ? `你之前那条「${unresolvedAttempt.body.slice(0, 18)}${
+                    unresolvedAttempt.body.length > 18 ? "…" : ""
+                  }」已经确认送到了，就在上面的记录里。这次改后的内容会另发一条。`
+                : `你之前那条「${unresolvedAttempt.body.slice(0, 18)}${
+                    unresolvedAttempt.body.length > 18 ? "…" : ""
+                  }」已经提交过一次，我们还没确认它有没有送到——它如果到了会出现在上面的记录里。` +
+                  `你改后的内容会另发一条，不会顶掉那一条。`}
+            </Text>
+            <View style={styles.unresolvedActions}>
+              {!unresolvedAttempt.landed ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleResendUnresolved}
+                  style={({ pressed }) => [styles.unresolvedAction, pressed && styles.pressed]}
+                >
+                  <Text style={styles.unresolvedActionText}>重发原来那条</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setUnresolvedAttempt(null)}
+                style={({ pressed }) => [styles.unresolvedAction, pressed && styles.pressed]}
+              >
+                <Text style={styles.unresolvedActionText}>知道了</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       {error ? (
         <View style={styles.errorBox}>
           <MaterialIcons name="error-outline" size={14} color={V2.red} />
@@ -477,6 +573,26 @@ const styles = StyleSheet.create({
   bubbleRoleAuto: { color: V2.blue },
   bubbleRoleOperator: { color: V2.gold },
   bubbleText: { color: V2.text, fontSize: 12, lineHeight: 19 },
+  unresolvedBox: {
+    flexDirection: "row",
+    gap: 8,
+    padding: 9,
+    borderWidth: 1,
+    borderColor: "rgba(88,150,220,0.32)",
+    borderRadius: 5,
+    backgroundColor: "rgba(88,150,220,0.07)",
+  },
+  unresolvedBody: { flex: 1, gap: 6 },
+  unresolvedText: { color: V2.textMuted, fontSize: 11, lineHeight: 17 },
+  unresolvedActions: { flexDirection: "row", gap: 8 },
+  unresolvedAction: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: V2.border,
+    borderRadius: 4,
+  },
+  unresolvedActionText: { color: V2.text, fontSize: 10, fontWeight: "700" },
   errorBox: { flexDirection: "row", alignItems: "center", gap: 6 },
   errorText: { color: V2.red, fontSize: 11, flex: 1 },
   composer: { flexDirection: "row", alignItems: "flex-end", gap: 8 },

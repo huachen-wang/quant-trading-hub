@@ -76,13 +76,20 @@ async function writeStored(token: string, identity: string, previousToken: strin
 }
 
 let pending: Promise<VisitorIdentity> | null = null;
+/** `pending` 是为哪个身份发起的。不记这个的话，登录瞬间会把飞行中的 guest 结果发给登录态。 */
+let pendingIdentity: string | null = null;
 
 /**
  * 取当前身份下该用的访客令牌；身份变了就换一枚新的（旧的留作认领用）。
- * 并发调用只会跑一次。
+ *
+ * 并发合流**按身份区分**：只有同一个身份的并发调用才共用同一个 Promise。
+ * 复核回合 2 低 1 指出，旧版 `if (pending) return pending` 不比较身份，
+ * 登录那一次会拿到 guest 那次的令牌——虽然服务端仍然三态判定不会越权，
+ * 但面板会白白多一次 rotate，也让「身份变了就换令牌」这条不再是确定行为。
  */
 export function ensureVisitorToken(identity: string): Promise<VisitorIdentity> {
-  if (pending) return pending;
+  if (pending && pendingIdentity === identity) return pending;
+  pendingIdentity = identity;
   pending = (async () => {
     const stored = await readStored();
     if (stored.token && stored.token.length >= 16 && stored.identity === identity) {
@@ -99,13 +106,20 @@ export function ensureVisitorToken(identity: string): Promise<VisitorIdentity> {
     await writeStored(token, identity, carryPrevious);
     return { token, rotated: Boolean(stored.token), previousToken: carryPrevious };
   })().finally(() => {
-    pending = null;
+    // 只清掉「自己这一次」；期间如果有别的身份发起过新的一次，别把人家的清了。
+    if (pendingIdentity === identity) {
+      pending = null;
+      pendingIdentity = null;
+    }
   });
   return pending;
 }
 
 /** 服务端说「这个窗口属于别的身份」时，强制换一枚新令牌重开一条线。 */
 export async function rotateVisitorToken(identity: string): Promise<VisitorIdentity> {
+  // 作废飞行中的 ensure：它可能正要返回刚被换掉的那枚令牌。
+  pending = null;
+  pendingIdentity = null;
   const token = randomToken();
   await writeStored(token, identity, null);
   return { token, rotated: true, previousToken: null };

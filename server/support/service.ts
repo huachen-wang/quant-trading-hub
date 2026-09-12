@@ -83,6 +83,8 @@ export function toMessageView(row: MessageRow): SupportMessageView {
     role: row.role,
     body: row.body,
     autoRuleKey: row.autoRuleKey,
+    // 只回客户自己那条的幂等键，用于「我刚才那条到底发出去了没有」的确认。
+    clientMsgId: row.role === "customer" ? row.clientMsgId : null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -275,6 +277,9 @@ export async function sendCustomerMessage(input: SendMessageInput) {
   const messages = await store.listRecentMessages(conversation.id, SUPPORT_HISTORY_LIMIT);
   return {
     duplicate: !turn.created,
+    // 幂等命中但正文对不上：这次的内容**没有**落库。客户端据此保住草稿、如实告知客户，
+    // 不许当成「发送成功」清空输入框（复核回合 2 的 P2）。
+    bodyMismatch: turn.bodyMismatch,
     conversation: toConversationView(turn.conversation),
     messages: messages.map(toMessageView),
   };

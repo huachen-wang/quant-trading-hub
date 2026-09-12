@@ -24,14 +24,41 @@ export function resolveDatabaseUrl(env: DatabaseEnvironment = process.env) {
 
 
 /**
- * 站内咨询的四张表 + 索引。
+ * 站内咨询这一版**新增的列**。
  *
- * 单独抽成导出函数有两个理由：
+ * `CREATE TABLE IF NOT EXISTS` 对已经存在的表是 no-op —— 库里已经有上一版表的时候，
+ * 新加的列永远补不上。独立复核回合 2 的 P1 就是这个：跑过 `cdbaefb` 的库升到这一版后，
+ * 每一次 `support.send` / `support.thread` 都 `Unknown column 'notifyGeneration'`，
+ * 而迁移本身「成功」了，什么都没报。
+ *
+ * **以后每加一列都必须往这张表里加一行**，否则升级路径就断。
+ * `tests/support-mysql.test.ts` 里有一条漂移守卫：拿旧版 DDL 建库、跑完本函数之后，
+ * 断言 `drizzle/schema.ts` 声明的每一列在库里都存在——漏登记会直接测挂。
+ */
+const SUPPORT_ADDED_COLUMNS: Array<{ table: string; column: string; definition: string }> = [
+  {
+    table: "support_conversations",
+    column: "notifyGeneration",
+    definition: "int NOT NULL DEFAULT 0",
+  },
+  {
+    table: "support_notifications",
+    column: "generation",
+    definition: "int NOT NULL DEFAULT 0",
+  },
+];
+
+/**
+ * 站内咨询的四张表 + 索引 + 增量列。
+ *
+ * 单独抽成导出函数有三个理由：
  *   1. 生产迁移链的最前面调用它——在线咨询是对客入口，不能因为后面某张历史表迁移失败就建不出来；
  *   2. **测试可以直接调用它**，于是打真 MySQL 的存储契约测试跑的就是这段生产 DDL 本身，
- *      不用像复核那样把语句从源码里抠出来另跑一份。
+ *      不用像复核那样把语句从源码里抠出来另跑一份；
+ *   3. 升级路径和全新安装走的是同一段代码——测试喂一个旧版 schema 进来就能验。
  *
- * 全部 `IF NOT EXISTS` / 先查 INFORMATION_SCHEMA，可重复执行。
+ * 全部 `IF NOT EXISTS` / 先查 INFORMATION_SCHEMA，可重复执行：
+ * 新库建表、旧库补列、已经是最新的库一句都不跑。
  */
 export async function ensureSupportChatSchema(connection: mysql.Connection): Promise<number> {
   let statements = 0;
@@ -45,6 +72,37 @@ export async function ensureSupportChatSchema(connection: mysql.Connection): Pro
       statements++;
     }
   };
+
+  /**
+   * 和 `ensureSupportIndex` 对称：列已经在就什么都不做，不在才 ALTER。
+   * 表还不存在时直接跳过——同一次调用里后面的 `CREATE TABLE` 会带着完整列建出来。
+   */
+  const ensureSupportColumn = async (
+    tableName: string,
+    columnName: string,
+    definition: string,
+  ) => {
+    const [tables] = (await connection.query(
+      "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? LIMIT 1",
+      [tableName],
+    )) as any[];
+    if (!tables.length) return;
+    const [columns] = (await connection.query(
+      "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1",
+      [tableName, columnName],
+    )) as any[];
+    if (columns.length) return; // 已经是最新的库：一句 SQL 都不跑
+    await connection.query(
+      `ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnName}\` ${definition}`,
+    );
+    statements++;
+    console.log(`[migrate] support: added ${tableName}.${columnName}`);
+  };
+
+  // 先补列再建表：库里已有旧版表时补列，全新库这一步全是 no-op（表还不存在）。
+  for (const column of SUPPORT_ADDED_COLUMNS) {
+    await ensureSupportColumn(column.table, column.column, column.definition);
+  }
 
   await connection.query(`
     CREATE TABLE IF NOT EXISTS \`support_conversations\` (

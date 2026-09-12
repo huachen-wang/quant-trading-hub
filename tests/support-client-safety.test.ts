@@ -2,7 +2,8 @@
  * 客户端侧的两条硬要求（对应独立复核 B2 / B3），用纯函数 + 源码断言各守一半。
  *
  * B2：聊天框上方永远不许出现 SQL 或客户正文。
- * B3：同一条草稿的重试必须复用同一个 clientMsgId。
+ * B3 / P2：同一条草稿的重试复用同一个 clientMsgId；**草稿改了就必须换新键**，
+ *   并且界面要明说上一次那条可能已经落库——绝不能用旧键把新正文吞掉还报成功。
  * 另外顺手守住「商品上下文要从联系弹窗传进咨询面板」，别在改版里悄悄丢了。
  */
 
@@ -62,26 +63,63 @@ describe("B2 错误文案不泄露", () => {
   });
 });
 
-describe("B3 幂等键在重试时复用", () => {
-  it("发送路径用的是 ref 里的 clientMsgId，不是每次现生成", () => {
-    // 只允许在「ref 为空时」生成一次
-    expect(chatSource).toContain("if (!pendingClientMsgId.current) pendingClientMsgId.current = newClientMsgId();");
-    // mutate 调用里传的必须是那个变量，而不是 newClientMsgId() 的即时调用
-    expect(chatSource).not.toMatch(/clientMsgId:\s*newClientMsgId\(\)/);
+describe("B3 / P2 幂等键与草稿内容绑在一起", () => {
+  it("幂等键和当时的正文存在同一个 ref 里，不是只存一个键", () => {
+    expect(chatSource).toContain(
+      "const pendingAttempt = useRef<{ clientMsgId: string; body: string } | null>(null);",
+    );
+    // 发出去的是这次尝试记下的正文，不是当前草稿——键和正文必须对得上
+    expect(chatSource).toContain("body: sending.body,");
+    expect(chatSource).not.toMatch(/clientMsgId:\s*newClientMsgId\(\)\s*,\s*\n\s*body:/);
   });
 
-  it("只有成功之后才作废幂等键（失败要保留，才能重试同一条）", () => {
-    const successBlock = chatSource.slice(chatSource.indexOf("pendingClientMsgId.current = null"));
-    expect(successBlock).toContain("setDraft(\"\")");
-    // catch 分支里不许清空幂等键或草稿
-    // handleSend 里有内外两层 catch（内层是 CONFLICT 换令牌重试），要看的是**最外层**那个。
+  it("正文变了就换新键，并把上一次标成待确认（不能用旧键吞新正文）", () => {
+    const block = chatSource.slice(
+      chatSource.indexOf("let attempt = pendingAttempt.current;"),
+      chatSource.indexOf("const submit = async"),
+    );
+    expect(block).toContain("attempt.body !== typed");
+    expect(block).toContain("setUnresolvedAttempt");
+    expect(block).toContain("attempt = null;");
+    expect(block).toContain("newClientMsgId()");
+  });
+
+  it("待确认那条是用它自己的 clientMsgId 去线程里核对，不靠正文猜", () => {
+    expect(chatSource).toContain("message.clientMsgId === unresolvedAttempt.clientMsgId");
+    // 服务端把客户自己的幂等键回传了，才核对得了
+    const contracts = readFileSync(
+      join(repoRoot, "shared", "support", "contracts.ts"),
+      "utf-8",
+    );
+    expect(contracts).toContain("clientMsgId: string | null;");
+    const serviceSource = readFileSync(join(repoRoot, "server", "support", "service.ts"), "utf-8");
+    expect(serviceSource).toContain('row.role === "customer" ? row.clientMsgId : null');
+  });
+
+  it("界面上必须明说上一条可能已经发出去，并给重发原文的出口", () => {
+    expect(chatSource).toContain("我们还没确认它有没有送到");
+    expect(chatSource).toContain("重发原来那条");
+    expect(chatSource).toContain("handleResendUnresolved");
+    // 重发原文走的是原来的键
+    const resend = chatSource.slice(chatSource.indexOf("const handleResendUnresolved"));
+    expect(resend).toContain("clientMsgId: unresolvedAttempt.clientMsgId");
+    expect(resend).toContain("body: unresolvedAttempt.body");
+  });
+
+  it("只有成功之后才作废这次尝试（失败要保留，才能重试同一条）", () => {
     const handleSendBlock = chatSource.slice(
       chatSource.indexOf("const handleSend"),
-      chatSource.indexOf("const handleClaim"),
+      chatSource.indexOf("const handleResendUnresolved"),
     );
     const catchBlock = handleSendBlock.slice(handleSendBlock.lastIndexOf("} catch (err: any) {"));
-    expect(catchBlock).not.toContain("pendingClientMsgId.current = null");
-    expect(catchBlock).not.toContain("setDraft(\"\")");
+    expect(catchBlock).not.toContain("pendingAttempt.current = null");
+    expect(catchBlock).not.toContain("setDraft(");
+  });
+
+  it("清空草稿前先确认草稿还是这次发出去的那份（飞行期间改的字不能被抹掉）", () => {
+    expect(chatSource).toContain(
+      'setDraft((current) => (current.trim() === sending.body ? "" : current));',
+    );
   });
 
   it("后台回复同样带幂等键", () => {

@@ -16,7 +16,9 @@
  */
 
 import mysql from "mysql2/promise";
+import { getTableColumns } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import * as schema from "../drizzle/schema";
 import { ensureSupportChatSchema } from "../server/migrate";
 import {
   createMysqlSupportStore,
@@ -94,6 +96,97 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
 
   it("用的是 MySQL 适配器，不是内存实现", () => {
     expect(store.kind).toBe("mysql");
+  });
+
+  describe("P1 升级路径：库里已经有旧版表", () => {
+    /**
+     * 复核回合 2 的 P1：`CREATE TABLE IF NOT EXISTS` 对已存在的表是 no-op，
+     * 所以这一版新加的 `notifyGeneration` / `generation` 在**升级**的库上永远补不上，
+     * 升完每一次咨询请求都 `Unknown column`。而上一轮所有测试库都是全新建的，
+     * 全新安装路径把升级路径完全掩盖了。
+     *
+     * 这里用「建新表再把新列 DROP 掉」精确模拟上一版的库——不依赖 git 历史，
+     * 任何环境都能跑。真·上一版 DDL 的验证在 `verify/support-upgrade-e2e.mts`
+     * （从 `git show cdbaefb:server/migrate.ts` 原样取）。
+     */
+    const downgradeToPreviousSchema = async () => {
+      await connection.query(
+        "ALTER TABLE `support_conversations` DROP COLUMN `notifyGeneration`",
+      );
+      await connection.query("ALTER TABLE `support_notifications` DROP COLUMN `generation`");
+    };
+
+    const columnsOf = async (table: string) => {
+      const [rows]: any = await connection.query(
+        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
+        [table],
+      );
+      return new Set(rows.map((r: any) => String(r.COLUMN_NAME)));
+    };
+
+    it("旧 schema → 跑迁移 → 新列补上，客户能正常发消息", async () => {
+      await downgradeToPreviousSchema();
+      expect(await columnsOf("support_conversations")).not.toContain("notifyGeneration");
+      expect(await columnsOf("support_notifications")).not.toContain("generation");
+
+      const statements = await ensureSupportChatSchema(connection);
+      expect(statements).toBeGreaterThanOrEqual(2); // 至少两条 ADD COLUMN
+
+      expect(await columnsOf("support_conversations")).toContain("notifyGeneration");
+      expect(await columnsOf("support_notifications")).toContain("generation");
+
+      // 光有列不算数：走一遍真实业务入口，确认升级后的库真的能用
+      const sent = await send({ clientMsgId: "upgrade-1", body: "升级后第一条消息" });
+      expect(sent.duplicate).toBe(false);
+      expect(sent.conversation.publicNo).toMatch(/^EAX-/);
+      const [rows]: any = await connection.query(
+        "SELECT notifyGeneration FROM support_conversations WHERE publicNo = ?",
+        [sent.conversation.publicNo],
+      );
+      expect(Number(rows[0].notifyGeneration)).toBe(0);
+      const [notifications]: any = await connection.query(
+        "SELECT generation FROM support_notifications",
+      );
+      expect(Number(notifications[0].generation)).toBe(0);
+    });
+
+    it("已经是最新的库再跑一遍：一句 SQL 都不跑，也不报错（幂等）", async () => {
+      await ensureSupportChatSchema(connection); // 先确保是最新态，不依赖用例顺序
+      const first = await ensureSupportChatSchema(connection);
+      const second = await ensureSupportChatSchema(connection);
+      expect(first).toBe(0);
+      expect(second).toBe(0);
+    });
+
+    it("漂移守卫：schema.ts 声明的每一列，升级后的库里都得有", async () => {
+      // 忘了往 SUPPORT_ADDED_COLUMNS 登记新列的话，这条会直接挂。
+      await downgradeToPreviousSchema();
+      await ensureSupportChatSchema(connection);
+
+      const declared: Array<[string, string[]]> = [
+        [
+          "support_conversations",
+          Object.values(getTableColumns(schema.supportConversations)).map((c: any) => c.name),
+        ],
+        [
+          "support_messages",
+          Object.values(getTableColumns(schema.supportMessages)).map((c: any) => c.name),
+        ],
+        [
+          "support_notifications",
+          Object.values(getTableColumns(schema.supportNotifications)).map((c: any) => c.name),
+        ],
+        [
+          "support_rate_limits",
+          Object.values(getTableColumns(schema.supportRateLimits)).map((c: any) => c.name),
+        ],
+      ];
+      for (const [table, columns] of declared) {
+        const actual = await columnsOf(table);
+        const missing = columns.filter((name) => !actual.has(name));
+        expect(missing, `${table} 少了这些列（去 SUPPORT_ADDED_COLUMNS 登记）`).toEqual([]);
+      }
+    });
   });
 
   describe("B1 重复键识别", () => {
@@ -197,6 +290,54 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
         ["race-same-id"],
       );
       expect(Number(rows[0].n)).toBe(1);
+    });
+  });
+
+  describe("P2 旧幂等键 + 新正文：新内容不能被静默吞掉", () => {
+    it("同键同正文 = 重试，报 duplicate 但不报 bodyMismatch", async () => {
+      await send({ clientMsgId: "same-body-1", body: "第一版：这个多少钱" });
+      const again = await send({ clientMsgId: "same-body-1", body: "第一版：这个多少钱" });
+      expect(again.duplicate).toBe(true);
+      expect(again.bodyMismatch).toBe(false);
+    });
+
+    it("同键不同正文 = 新内容没落库，服务端明确报 bodyMismatch", async () => {
+      await send({ clientMsgId: "edited-1", body: "第一版：这个多少钱" });
+      const edited = await send({
+        clientMsgId: "edited-1",
+        body: "第二版：这个多少钱？另外能装 VPS 吗",
+      });
+      expect(edited.duplicate).toBe(true);
+      // 关键：不能让调用方以为发成功了
+      expect(edited.bodyMismatch).toBe(true);
+
+      const [rows]: any = await connection.query(
+        "SELECT body FROM support_messages WHERE clientMsgId = ?",
+        ["edited-1"],
+      );
+      expect(rows).toHaveLength(1);
+      expect(String(rows[0].body)).toBe("第一版：这个多少钱");
+    });
+
+    it("换新键才真的把改后的内容发出去", async () => {
+      await send({ clientMsgId: "edited-2", body: "第一版：这个多少钱" });
+      const fresh = await send({
+        clientMsgId: "edited-2-new",
+        body: "第二版：这个多少钱？另外能装 VPS 吗",
+      });
+      expect(fresh.duplicate).toBe(false);
+      expect(fresh.bodyMismatch).toBe(false);
+      expect(fresh.conversation.customerMessageCount).toBe(2);
+      const bodies = fresh.messages.filter((m) => m.role === "customer").map((m) => m.body);
+      expect(bodies).toEqual(["第一版：这个多少钱", "第二版：这个多少钱？另外能装 VPS 吗"]);
+    });
+
+    it("客户自己的 clientMsgId 会回传，客户端才能核对「刚才那条到底到没到」", async () => {
+      const sent = await send({ clientMsgId: "echo-key-1", body: "核对用" });
+      const mine = sent.messages.find((m) => m.role === "customer");
+      expect(mine?.clientMsgId).toBe("echo-key-1");
+      // 机器人 / 运营的消息不回传这个字段
+      expect(sent.messages.find((m) => m.role === "auto")?.clientMsgId).toBeNull();
     });
   });
 
@@ -381,6 +522,28 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
       expect(rows[0].status).toBe("held");
       expect(rows[0].sentAt).toBeNull();
       expect(String(rows[0].summary)).not.toContain("1234567890");
+    });
+
+    it("dry_run 反复扫描不会让 attempts 一直涨", async () => {
+      await send({ clientMsgId: "attempts-1", body: "attempts 探针" });
+      for (let round = 0; round < 4; round++) {
+        const result = await processDueSupportNotifications({
+          store,
+          env: {} as any,
+          // 每轮都把时间推过 6 小时重扫间隔
+          now: new Date(Date.now() + round * 7 * 60 * 60_000),
+          sender: async () => {
+            throw new Error("dry_run 下不该调用真实发送");
+          },
+        });
+        expect(result.held).toBe(1);
+      }
+      const [rows]: any = await connection.query(
+        "SELECT attempts, status FROM support_notifications",
+      );
+      expect(rows[0].status).toBe("held");
+      // 一次都没真的投递过，attempts 就该是 0
+      expect(Number(rows[0].attempts)).toBe(0);
     });
 
     it("崩在 sending 上的租约超时后能被回收，双 worker 不重复认领", async () => {

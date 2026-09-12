@@ -129,6 +129,14 @@ export type CustomerTurnResult = {
   conversation: ConversationRow;
   customerMessage: MessageRow;
   autoMessage: MessageRow | null;
+  /**
+   * 幂等命中了，但**这次提交的正文和当初落库的那条不一样**。
+   *
+   * 说明调用方拿旧的幂等键发了新内容：按幂等语义我们只能返回当初那条，新内容一个字都没进库。
+   * 这时候绝不能让调用方以为「发成功了」——客户端要据此保住草稿并如实告诉客户。
+   * 客户端本来就不该这么发（见 support-chat.tsx 的 pendingAttempt），这里是第二道。
+   */
+  bodyMismatch: boolean;
 };
 
 export type SupportStore = {
@@ -190,6 +198,8 @@ export type SupportStore = {
     nextAttemptAt?: Date;
     lastError?: string | null;
     sentAt?: Date | null;
+    /** 显式回写尝试次数。用于「这一次认领根本没真的投递」的情况（dry_run）。 */
+    attempts?: number;
   }): Promise<void>;
   listNotifications(conversationId: number): Promise<NotificationRow[]>;
   /** 后台列表用：一次取多条会话的最新提醒，避免逐行查询。 */
@@ -506,6 +516,7 @@ class MemorySupportStore implements SupportStore {
         conversation: cloneConversation(conversationAfter),
         customerMessage: stored.message,
         autoMessage: null,
+        bodyMismatch: stored.message.body !== input.body,
       };
     }
     const auto = this.appendMessageSync({
@@ -537,6 +548,7 @@ class MemorySupportStore implements SupportStore {
       conversation: fresh,
       customerMessage: stored.message,
       autoMessage: auto.message,
+      bodyMismatch: false,
     };
   }
 
@@ -691,10 +703,12 @@ class MemorySupportStore implements SupportStore {
     nextAttemptAt?: Date;
     lastError?: string | null;
     sentAt?: Date | null;
+    attempts?: number;
   }) {
     const row = this.notifications.get(input.id);
     if (!row || row.claimToken !== input.claimToken) return;
     row.status = input.status;
+    if (input.attempts !== undefined) row.attempts = Math.max(0, input.attempts);
     row.claimToken = null;
     row.claimedAt = null;
     if (input.nextAttemptAt) row.nextAttemptAt = input.nextAttemptAt;
@@ -1046,6 +1060,7 @@ class MysqlSupportStore implements SupportStore {
             conversation: await readConversation(),
             customerMessage: stored.message,
             autoMessage: null,
+            bodyMismatch: stored.message.body !== input.body,
           };
         }
 
@@ -1093,6 +1108,7 @@ class MysqlSupportStore implements SupportStore {
           conversation: fresh,
           customerMessage: stored.message,
           autoMessage: auto.message,
+          bodyMismatch: false,
         };
       }),
     );
@@ -1301,6 +1317,7 @@ class MysqlSupportStore implements SupportStore {
     nextAttemptAt?: Date;
     lastError?: string | null;
     sentAt?: Date | null;
+    attempts?: number;
   }) {
     await withDeadlockRetry(() =>
       this.db.transaction(async (tx: any) => {
@@ -1327,6 +1344,10 @@ class MysqlSupportStore implements SupportStore {
               ? { nextAttemptAt: input.nextAttemptAt }
               : {}),
             ...(input.sentAt !== undefined ? { sentAt: input.sentAt } : {}),
+            // dry_run 的 held 会把 attempts 退回认领前的值：那一轮根本没往外发过。
+            ...(input.attempts !== undefined
+              ? { attempts: Math.max(0, input.attempts) }
+              : {}),
           })
           .where(eq(supportNotifications.id, input.id));
         if (input.status === "sent" || input.status === "failed") {

@@ -57,6 +57,13 @@ export type SupportMessageView = {
   body: string;
   /** 自动回复命中的规则 key；仅自动消息有值。 */
   autoRuleKey: string | null;
+  /**
+   * 客户自己发送时带上来的幂等键，原样回给客户端。
+   *
+   * 用途只有一个：客户改了草稿再发时，**客户端要能确认上一次那条到底落库了没有**。
+   * 这是客户自己生成的值，回给他自己不构成泄露；其它角色的消息为 null。
+   */
+  clientMsgId: string | null;
   createdAt: string;
 };
 

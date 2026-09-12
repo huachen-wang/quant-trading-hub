@@ -208,6 +208,32 @@ describe("幂等与并发", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it("同键同正文 = 重试；同键改了正文 = 服务端明确报 bodyMismatch，新内容没落库", async () => {
+    const store = createMemorySupportStore();
+    await send(store, { clientMsgId: "edit-probe", body: "第一版：多少钱" });
+
+    const retry = await send(store, { clientMsgId: "edit-probe", body: "第一版：多少钱" });
+    expect(retry.duplicate).toBe(true);
+    expect(retry.bodyMismatch).toBe(false);
+
+    const edited = await send(store, {
+      clientMsgId: "edit-probe",
+      body: "第二版：多少钱？能装 VPS 吗",
+    });
+    expect(edited.duplicate).toBe(true);
+    // 关键：不能让调用方以为「发成功了」
+    expect(edited.bodyMismatch).toBe(true);
+    const bodies = edited.messages.filter((m) => m.role === "customer").map((m) => m.body);
+    expect(bodies).toEqual(["第一版：多少钱"]);
+  });
+
+  it("客户自己的 clientMsgId 会回传，机器人消息不带", async () => {
+    const store = createMemorySupportStore();
+    const sent = await send(store, { clientMsgId: "echo-probe", body: "核对用" });
+    expect(sent.messages.find((m) => m.role === "customer")?.clientMsgId).toBe("echo-probe");
+    expect(sent.messages.find((m) => m.role === "auto")?.clientMsgId).toBeNull();
+  });
+
   it("并发重复提交同一 clientMsgId 也只落一条", async () => {
     const store = createMemorySupportStore();
     const results = await Promise.all(
@@ -542,6 +568,25 @@ describe("Telegram 提醒", () => {
     const notifications = await store.listNotifications(1);
     expect(notifications[0].status).toBe("held");
     expect(notifications[0].sentAt).toBeNull();
+  });
+
+  it("dry_run 反复扫描不会让 attempts 一直涨", async () => {
+    const store = createMemorySupportStore();
+    await send(store, { strategyId: 1 });
+    for (let round = 0; round < 4; round++) {
+      const result = await processDueSupportNotifications({
+        store,
+        env: {} as any,
+        now: new Date(Date.now() + round * 7 * 60 * 60_000),
+        sender: async () => {
+          throw new Error("dry_run 下不该调用真实发送");
+        },
+      });
+      expect(result.held).toBe(1);
+    }
+    const notifications = await store.listNotifications(1);
+    expect(notifications[0].status).toBe("held");
+    expect(notifications[0].attempts).toBe(0);
   });
 
   it("凭据齐全且 live 时才真发", async () => {
