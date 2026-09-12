@@ -24,6 +24,11 @@ import {
 } from "../shared/support/contracts";
 import { buildAutoReply, matchSupportFaq } from "../lib/support-faq";
 import {
+  readableSupportError,
+  SUPPORT_ERROR_TEXT,
+  SUPPORT_ERROR_TEXT_I18N,
+} from "../lib/support-error-text";
+import {
   createMemorySupportStore,
   hashVisitorToken,
   type SupportStore,
@@ -116,6 +121,68 @@ describe("自动值守 FAQ", () => {
     const match = matchSupportFaq("怎么付款");
     expect(match?.key).toBe("payment");
     expect(match?.body).toContain("不在这里发收款账号");
+  });
+});
+
+describe("三语：英语 / 阿语客户不该收到整段中文", () => {
+  const en = (zh: string, english: string) => english;
+  it("机器人身份声明按语言走，三种语言都自报是机器人", () => {
+    const zhReply = buildAutoReply("多少钱", { language: "zh" });
+    const enReply = buildAutoReply("how much", { language: "en" });
+    const arReply = buildAutoReply("سعر", { language: "ar" });
+    expect(zhReply.body.startsWith(`【${SUPPORT_AUTO_DISCLOSURE.zh}】`)).toBe(true);
+    expect(enReply.body.startsWith(`【${SUPPORT_AUTO_DISCLOSURE.en}】`)).toBe(true);
+    expect(arReply.body.startsWith(`【${SUPPORT_AUTO_DISCLOSURE.ar}】`)).toBe(true);
+    expect(enReply.body).toContain("bot reply, not a human");
+  });
+
+  it("英语回复里没有中文字符", () => {
+    for (const message of ["how much", "install", "refund", "something with no keyword"]) {
+      const reply = buildAutoReply(message, { language: "en", qq: "1226426670" });
+      expect(reply.body, `英语回复混入中文: ${reply.body}`).not.toMatch(/[\u4e00-\u9fa5]/);
+    }
+  });
+
+  it("阿语回复里没有中文字符", () => {
+    for (const message of ["سعر", "تثبيت", "no keyword here"]) {
+      const reply = buildAutoReply(message, { language: "ar", qq: "1226426670" });
+      expect(reply.body, `阿语回复混入中文: ${reply.body}`).not.toMatch(/[\u4e00-\u9fa5]/);
+    }
+  });
+
+  it("三种语言的收益口径一致：都不做收益承诺", () => {
+    expect(matchSupportFaq("收益", { language: "zh" })?.body).toContain("不做任何收益承诺");
+    expect(matchSupportFaq("profit", { language: "en" })?.body).toContain("no return promises");
+    expect(matchSupportFaq("ربح", { language: "ar" })?.body).toContain("لا نقدّم أي وعود بالأرباح");
+  });
+
+  it("三种语言都不在自动回复里发收款账号", () => {
+    expect(matchSupportFaq("怎么付款", { language: "zh" })?.body).toContain("不在这里发收款账号");
+    expect(matchSupportFaq("payment", { language: "en" })?.body).toContain(
+      "do not post any payment account here",
+    );
+    expect(matchSupportFaq("دفع", { language: "ar" })?.body).toContain("لا أنشر أي حساب للدفع هنا");
+  });
+
+  it("提醒通道没开时，英语客户也拿到「这是留言」而不是「有人在看」", () => {
+    const reply = buildAutoReply("install", { language: "en", attended: false });
+    expect(reply.body).toContain("Nobody is guaranteed to be online right now");
+    const attended = buildAutoReply("install", { language: "en", attended: true });
+    expect(attended.body).toContain("An advisor is paged for this thread");
+  });
+
+  it("错误文案按语言给，且仍然不泄露服务端原文", () => {
+    const err = { message: "发送太频繁了，稍等一下再试", data: { code: "TOO_MANY_REQUESTS" } };
+    // 中文界面：服务端那句短提示是我们自己写的，可以原样展示
+    expect(readableSupportError(err)).toBe("发送太频繁了，稍等一下再试");
+    // 英语界面不展示服务端那句中文，走本地英文白名单
+    const englishText = readableSupportError(err, en as any);
+    expect(englishText).toBe(SUPPORT_ERROR_TEXT_I18N.TOO_MANY_REQUESTS[1]);
+    expect(englishText).not.toMatch(/[\u4e00-\u9fa5]/);
+  });
+
+  it("缺省（不传语言）仍然是中文，老调用点行为不变", () => {
+    expect(buildAutoReply("多少钱", {}).body).toContain(SUPPORT_AUTO_DISCLOSURE.zh);
   });
 });
 
@@ -400,6 +467,31 @@ describe("会话归属与隔离", () => {
     await expect(send(store, { visitorToken: "abc" })).rejects.toMatchObject({
       code: "BAD_REQUEST",
     });
+  });
+});
+
+describe("身份切换竞态闸门（内存层语义）", () => {
+  it("自报身份对不上就拒绝，不建会话不落消息", async () => {
+    const store = createMemorySupportStore();
+    await expect(
+      send(store, { expectedIdentity: "guest", userId: 42, body: "匿名时打的草稿" }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(await store.countConversations("all")).toBe(0);
+  });
+
+  it("对得上就放行；不传这个字段行为不变", async () => {
+    const store = createMemorySupportStore();
+    const matched = await send(store, {
+      expectedIdentity: "user:42",
+      userId: 42,
+      clientMsgId: "identity-ok-1",
+    });
+    expect(matched.duplicate).toBe(false);
+    const legacy = await send(store, {
+      visitorToken: TOKEN_B,
+      clientMsgId: "identity-legacy-1",
+    });
+    expect(legacy.duplicate).toBe(false);
   });
 });
 

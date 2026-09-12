@@ -651,6 +651,73 @@ describeIfDb("站内咨询 · 真实 MySQL 存储契约", () => {
     });
   });
 
+  describe("身份切换竞态：A 的文字不能写进 B 的账号", () => {
+    it("自报身份与服务端解析出来的身份对不上 → 拒绝写入，库里一个字都没有", async () => {
+      // 客户在匿名状态下打好草稿，期间登录成了 777：请求带着 guest 的自报身份到达。
+      await expect(
+        send({
+          expectedIdentity: "guest",
+          userId: 777,
+          body: "匿名时打的草稿，不该落到 777 名下",
+          clientMsgId: "race-identity-1",
+        }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+
+      const [messages]: any = await connection.query(
+        "SELECT COUNT(*) AS n FROM support_messages",
+      );
+      expect(Number(messages[0].n)).toBe(0);
+      const [conversations]: any = await connection.query(
+        "SELECT COUNT(*) AS n FROM support_conversations",
+      );
+      expect(Number(conversations[0].n)).toBe(0);
+    });
+
+    it("反方向也拦：自报已登录、实际是匿名", async () => {
+      await expect(
+        send({ expectedIdentity: "user:777", userId: null, clientMsgId: "race-identity-2" }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+      const [rows]: any = await connection.query("SELECT COUNT(*) AS n FROM support_messages");
+      expect(Number(rows[0].n)).toBe(0);
+    });
+
+    it("换了账号也拦：自报 user:777、实际 user:888", async () => {
+      await expect(
+        send({ expectedIdentity: "user:777", userId: 888, clientMsgId: "race-identity-3" }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+      const [rows]: any = await connection.query("SELECT COUNT(*) AS n FROM support_messages");
+      expect(Number(rows[0].n)).toBe(0);
+    });
+
+    it("对得上就正常放行；不带这个字段的老客户端行为不变", async () => {
+      const matched = await send({
+        expectedIdentity: "user:777",
+        userId: 777,
+        clientMsgId: "race-identity-4",
+        body: "身份对得上",
+      });
+      expect(matched.duplicate).toBe(false);
+
+      const legacy = await send({
+        visitorToken: TOKEN_B,
+        clientMsgId: "race-identity-5",
+        body: "老客户端不带 expectedIdentity",
+      });
+      expect(legacy.duplicate).toBe(false);
+    });
+
+    it("竞态请求被拒时不吃发送配额（闸门排在限流之前）", async () => {
+      for (let i = 0; i < 5; i++) {
+        await expect(
+          send({ expectedIdentity: "guest", userId: 777, clientMsgId: `race-quota-${i}` }),
+        ).rejects.toMatchObject({ code: "CONFLICT" });
+      }
+      // 访客每分钟上限 6 条：上面 5 次全被拒，配额应该还没动过
+      const ok = await send({ clientMsgId: "race-quota-ok", body: "配额还在" });
+      expect(ok.duplicate).toBe(false);
+    });
+  });
+
   describe("运营回路", () => {
     it("客户发问 → 后台看到 → 真人回复 → 客户轮询读到", async () => {
       const sent = await send({ body: "这个能绑几个账户", clientMsgId: "loop-1" });

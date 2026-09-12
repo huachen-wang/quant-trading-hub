@@ -4,6 +4,18 @@
  * 只放纯类型与常量，不 import 任何运行时依赖，Expo web / node 两端都能直接引。
  */
 
+/** 站点支持的三种语言，与 `lib/language-core.ts` 的 AppLanguage 保持一致。 */
+export type SupportLanguage = "zh" | "en" | "ar";
+
+/** 一段三语文案。服务端按请求里的 locale 选一份，客户端按当前语言选一份。 */
+export type SupportText = { zh: string; en: string; ar: string };
+
+export function pickSupportText(value: SupportText, language: string | null | undefined): string {
+  if (language === "en") return value.en;
+  if (language === "ar") return value.ar;
+  return value.zh;
+}
+
 export type SupportRole = "customer" | "auto" | "operator";
 export type SupportStatus = "open" | "answered" | "closed";
 
@@ -31,6 +43,7 @@ export const SUPPORT_POLL_INTERVAL_MS = 5000;
 export const SUPPORT_AUTO_DISCLOSURE = {
   zh: "自动值守（机器人回复，不是人工）",
   en: "Automated assistant (bot reply, not a human)",
+  ar: "مساعد آلي (رد آلي، ليس شخصًا)",
 } as const;
 
 /**
@@ -44,10 +57,12 @@ export const SUPPORT_HUMAN_HANDOFF = {
   attended: {
     zh: "顾问会收到这条会话的提醒，回复直接出现在这里。",
     en: "An advisor is paged for this thread; their reply lands right here.",
+    ar: "يتم تنبيه المستشار بهذه المحادثة، وسيظهر رده هنا مباشرة.",
   },
   unattended: {
     zh: "这里是留言：内容已经存下来，顾问下次查看后台时会看到并在这里回你。现在不保证有人实时在线，急事请走下面的 QQ。",
     en: "This is a message drop: it is stored and an advisor will reply here next time they check the console. Nobody is guaranteed to be online right now — for anything urgent use the QQ contact below.",
+    ar: "هذه رسالة محفوظة: سيطّلع عليها المستشار عند فتح لوحة التحكم ويرد هنا. لا نضمن وجود أحد متصل الآن — للأمور العاجلة استخدم QQ أدناه.",
   },
 } as const;
 

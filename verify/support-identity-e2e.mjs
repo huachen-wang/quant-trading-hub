@@ -312,6 +312,95 @@ async function main() {
     `identity=${aBack?.identity} messages=${aBack?.messages?.length}`,
   );
 
+  // ── 场景七：身份切换竞态（真 HTTP）——A 的文字不能写进 B 的账号
+  const raceVisitor = `e2e-race-${stamp}-${"x".repeat(12)}`;
+  const raceBody = "匿名时打好的草稿，绝不能记到别人账号名下";
+  const raced = data(
+    await call(
+      "POST",
+      "support.send",
+      {
+        visitorToken: raceVisitor,
+        clientMsgId: `${stamp}-race-1`,
+        body: raceBody,
+        strategyId: 1,
+        pageUrl: null,
+        locale: "zh",
+        // 客户自报「我现在是访客」，但请求带着 B 的登录凭据到达
+        expectedIdentity: "guest",
+      },
+      tokenB,
+    ),
+  );
+  check(
+    "自报 guest 但实际已登录 → 服务端拒绝写入（身份切换竞态）",
+    raced?.code === "CONFLICT",
+    `code=${raced?.code} msg=${raced?.error}`,
+  );
+  const [racedRows] = await connection.query(
+    "SELECT COUNT(*) AS n FROM support_messages WHERE body = ?",
+    [raceBody],
+  );
+  check("被拒的那段文字一个字都没落库", Number(racedRows[0].n) === 0, `rows=${racedRows[0].n}`);
+
+  const racedOk = data(
+    await call(
+      "POST",
+      "support.send",
+      {
+        visitorToken: raceVisitor,
+        clientMsgId: `${stamp}-race-2`,
+        body: "身份对得上，正常发出",
+        strategyId: 1,
+        pageUrl: null,
+        locale: "zh",
+        expectedIdentity: `user:${userB.id}`,
+      },
+      tokenB,
+    ),
+  );
+  check(
+    "自报身份与实际一致 → 正常放行",
+    racedOk?.duplicate === false,
+    racedOk?.conversation?.publicNo ?? JSON.stringify(racedOk)?.slice(0, 80),
+  );
+
+  // ── 场景八：三语（真 HTTP）——英语/阿语客户不该收到整段中文
+  for (const [locale, mustContain] of [
+    ["en", "bot reply, not a human"],
+    ["ar", "رد آلي"],
+  ]) {
+    const localized = data(
+      await call(
+        "POST",
+        "support.send",
+        {
+          visitorToken: `e2e-i18n-${locale}-${stamp}-${"x".repeat(12)}`,
+          clientMsgId: `${stamp}-i18n-${locale}`,
+          body: locale === "en" ? "how much does it cost" : "كم سعر هذا",
+          strategyId: 1,
+          pageUrl: null,
+          locale,
+        },
+      ),
+    );
+    const autoReply = localized?.messages?.find((m) => m.role === "auto")?.body ?? "";
+    check(
+      `locale=${locale} 的机器人回复自报是机器人且不是中文`,
+      autoReply.includes(mustContain) && !/[\u4e00-\u9fa5]/.test(autoReply),
+      autoReply.slice(0, 70),
+    );
+  }
+
+  const entryEn = data(
+    await call("GET", "support.entry", { locale: "en" }),
+  );
+  check(
+    "entry 按语言返回身份声明",
+    String(entryEn?.autoDisclosure ?? "").includes("bot reply, not a human"),
+    String(entryEn?.autoDisclosure ?? ""),
+  );
+
   await connection.end();
   console.log("");
   if (failures) {

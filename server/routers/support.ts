@@ -29,6 +29,7 @@ import {
   SUPPORT_AUTO_DISCLOSURE,
   SUPPORT_HUMAN_HANDOFF,
   SUPPORT_MESSAGE_MAX_LENGTH,
+  pickSupportText,
 } from "../../shared/support/contracts";
 
 /** 只有这些前缀的文案允许回给客户端 —— 全部来自 `SupportError`，由我们自己写死。 */
@@ -59,19 +60,23 @@ export const supportRouter = router({
    * 咨询面板要展示的静态信息：机器人身份声明 + QQ 入口。
    * 纯读、不写库、不建会话——打开弹窗不产生任何线索。
    */
-  entry: publicProcedure.query(async () => {
+  entry: publicProcedure
+    .input(z.object({ locale: z.string().max(8).optional() }).optional())
+    .query(async ({ input }) => {
+    const language = input?.locale || "zh";
     const qq = await resolveQq();
     // attended = 经营者的提醒通道真的开着。关着的时候前端和机器人都只能说「留言」，
     // 不许说「有人看着」。见 shared/support/contracts.ts 的 SUPPORT_HUMAN_HANDOFF。
     const attended = resolveTelegramConfig().mode === "live";
     return {
-      autoDisclosure: SUPPORT_AUTO_DISCLOSURE.zh,
+      autoDisclosure: pickSupportText(SUPPORT_AUTO_DISCLOSURE, language),
       attended,
-      attendanceNote: attended
-        ? SUPPORT_HUMAN_HANDOFF.attended.zh
-        : SUPPORT_HUMAN_HANDOFF.unattended.zh,
+      attendanceNote: pickSupportText(
+        attended ? SUPPORT_HUMAN_HANDOFF.attended : SUPPORT_HUMAN_HANDOFF.unattended,
+        language,
+      ),
       qq,
-      qqLine: buildQqLine({ qq }),
+      qqLine: buildQqLine({ qq, language }),
       maxLength: SUPPORT_MESSAGE_MAX_LENGTH,
     };
   }),
@@ -85,6 +90,8 @@ export const supportRouter = router({
         strategyId: strategyIdSchema,
         pageUrl: z.string().max(500).nullable().optional(),
         locale: z.string().max(8).optional(),
+        /** 客户端自报的身份，用于拦住「登录状态在途中变了」的竞态。 */
+        expectedIdentity: z.string().max(64).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -96,6 +103,7 @@ export const supportRouter = router({
           strategyId: input.strategyId ?? null,
           pageUrl: input.pageUrl ?? null,
           locale: input.locale ?? "zh",
+          expectedIdentity: input.expectedIdentity ?? null,
           // 管理员账号不占用访客身份；只有真实登录用户才绑定会话。
           userId: ctx.user && ctx.user.role !== "admin" ? ctx.user.id : null,
           ip: requestIp(ctx.req as any),
@@ -136,6 +144,7 @@ export const supportRouter = router({
         previousVisitorToken: visitorTokenSchema,
         visitorToken: visitorTokenSchema,
         strategyId: strategyIdSchema,
+        expectedIdentity: z.string().max(64).optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
@@ -148,6 +157,7 @@ export const supportRouter = router({
           previousVisitorToken: input.previousVisitorToken,
           visitorToken: input.visitorToken,
           strategyId: input.strategyId ?? null,
+          expectedIdentity: input.expectedIdentity ?? null,
           userId,
         });
       } catch (error) {

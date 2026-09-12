@@ -114,6 +114,40 @@ export function toConversationView(row: ConversationRow): SupportConversationVie
  *   - `foreign`   这条会话不属于当前身份（换人、换号、登出）—— 不报错，让客户端换一枚
  *                 新访客令牌重新开一条线（identity bootstrap），旧记录原样留在原主名下。
  */
+/**
+ * 把「当前是谁」压成一个可比对的短串：`guest` 或 `user:<id>`。
+ * 客户端发请求时带上它**自认为**的身份，服务端拿真实解析出来的身份对一遍。
+ */
+export function identityKeyOf(userId: number | null) {
+  return userId ? `user:${userId}` : "guest";
+}
+
+/**
+ * 身份切换竞态的闸门。
+ *
+ * 场景：客户在**匿名**状态下打好草稿 → 期间登录（或换了账号）→ 请求带着旧的访客令牌
+ * 但用新账号的会话凭据到达服务端。如果这个访客令牌还没有对应会话，`ensureConversation`
+ * 会用**新账号**的 userId 建一条会话，于是上一位打的字被写进了另一个人的账号名下。
+ *
+ * 客户端已经在身份变更时清掉草稿（见 support-chat.tsx 的 wipeIdentityBoundState），
+ * 这里是服务端的第二道：请求自报的身份和服务端解析出来的身份对不上就**拒绝写入**。
+ * 它只会更严，永远不会放宽——没带 expectedIdentity 的老客户端行为不变。
+ */
+export function assertExpectedIdentity(
+  expectedIdentity: string | null | undefined,
+  userId: number | null,
+) {
+  const expected = typeof expectedIdentity === "string" ? expectedIdentity.trim() : "";
+  if (!expected) return;
+  const actual = identityKeyOf(userId);
+  if (expected !== actual) {
+    throw new SupportError(
+      "CONFLICT",
+      "登录状态在发送过程中变了，这条没有发出去，请确认身份后重发",
+    );
+  }
+}
+
 export type ConversationAccess = "ok" | "unclaimed" | "foreign";
 
 export function evaluateConversationAccess(
@@ -191,6 +225,8 @@ export type SendMessageInput = {
   locale: string;
   now?: Date;
   store?: SupportStore;
+  /** 客户端自报的身份（`guest` / `user:<id>`）；与服务端解析结果不一致就拒绝。 */
+  expectedIdentity?: string | null;
   /** 测试注入：跳过通知 drain 的真实调度。 */
   scheduleDrain?: () => void;
 };
@@ -204,6 +240,9 @@ export async function sendCustomerMessage(input: SendMessageInput) {
   if (!clientMsgId || clientMsgId.length > 64) {
     throw new SupportError("BAD_REQUEST", "clientMsgId 无效");
   }
+  // 身份对不上就直接拒，放在限流之前：竞态请求不该先吃掉客户的发送配额。
+  assertExpectedIdentity(input.expectedIdentity, input.userId);
+
   const visitorTokenHash = hashVisitorToken(visitorToken);
 
   await enforceRateLimits(store, { visitorTokenHash, ip: input.ip || "unknown", now });
@@ -246,7 +285,14 @@ export async function sendCustomerMessage(input: SendMessageInput) {
 
   const qq = await resolveQq();
   const attended = resolveTelegramConfig().mode === "live";
-  const auto = buildAutoReply(body, { strategyTitle, strategyId, qq, attended });
+  const auto = buildAutoReply(body, {
+    strategyTitle,
+    strategyId,
+    qq,
+    attended,
+    // 客户当前用的站点语言：英语/阿语客户不该收到整段中文（复核 M6）。
+    language: input.locale || "zh",
+  });
 
   // 客户消息 + 计数 + 机器人回复 + 提醒排队：一个事务，要么全成要么全不成。
   // 这样不会出现「消息在库里、机器人回复丢了、客户重试又命中幂等直接返回」的死角。
@@ -296,10 +342,12 @@ export async function claimAnonymousConversation(input: {
   visitorToken: string;
   userId: number;
   strategyId: number | null;
+  expectedIdentity?: string | null;
   store?: SupportStore;
 }) {
   const store = input.store ?? getSupportStore();
   if (!input.userId) throw new SupportError("FORBIDDEN", "请先登录再认领咨询记录");
+  assertExpectedIdentity(input.expectedIdentity, input.userId);
   const previousHash = hashVisitorToken(normalizeVisitorToken(input.previousVisitorToken));
   const currentHash = hashVisitorToken(normalizeVisitorToken(input.visitorToken));
   if (previousHash === currentHash) {

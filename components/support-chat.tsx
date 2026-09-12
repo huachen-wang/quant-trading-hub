@@ -27,6 +27,7 @@ import {
 import { V2 } from "@/components/v2/tokens";
 import { readableSupportError } from "@/lib/support-error-text";
 import { useAuth } from "@/hooks/use-auth";
+import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
 import {
   ensureVisitorToken,
@@ -50,10 +51,11 @@ type SupportChatProps = {
   pageUrl?: string | null;
 };
 
-const ROLE_LABEL: Record<SupportMessageView["role"], string> = {
-  customer: "你",
-  auto: "自动值守 · 机器人",
-  operator: "EAXAU 顾问（真人）",
+/** 角色标签三语。「机器人必须自报是机器人」对英语/阿语客户同样成立。 */
+const ROLE_LABEL: Record<SupportMessageView["role"], [string, string, string]> = {
+  customer: ["你", "You", "أنت"],
+  auto: ["自动值守 · 机器人", "Automated · bot", "آلي · روبوت"],
+  operator: ["EAXAU 顾问（真人）", "EAXAU advisor (human)", "مستشار EAXAU (شخص)"],
 };
 
 function mergeMessages(previous: SupportMessageView[], incoming: SupportMessageView[]) {
@@ -66,6 +68,7 @@ function mergeMessages(previous: SupportMessageView[], incoming: SupportMessageV
 
 export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: SupportChatProps) {
   const { user, loading: authLoading } = useAuth();
+  const { language, text } = useLanguage();
   const identity = identityKeyFor(user);
   const [visitorToken, setVisitorToken] = useState<string | null>(null);
   const [claimableToken, setClaimableToken] = useState<string | null>(null);
@@ -95,18 +98,32 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
   /** 防止「换令牌 → 再被判 foreign → 再换」打转，一个挂载周期最多换两次。 */
   const rotations = useRef(0);
 
-  // 身份变了（登录 / 登出 / 换账号）就换一枚新访客令牌，并清掉本地已渲染的消息。
-  // 这台电脑上的上一位说过什么，下一位一个字都看不到。
+  /**
+   * 身份变了（登录 / 登出 / 换账号）就换一枚新访客令牌，并把**这台设备上所有跟身份绑定的
+   * 客户端状态一次清干净**：已渲染的消息、会话编号、输入框草稿、待确认提示、幂等键。
+   *
+   * 复核回合 3 指出：上一版只清了 messages / publicNo，草稿和「你之前那条『…』」提示条
+   * 会跨过登录/登出留在屏幕上——上一位输入过、发送失败、又改过内容的那段文字，
+   * 下一位一眼就能看到（提示条里还带 18 字摘要）。和这里注释承诺的"一个字都看不到"对不上。
+   *
+   * 顺带把幂等键也清掉：那是上一位那条消息的键，留着只会让下一位的重试挂到别人的消息上。
+   */
+  const wipeIdentityBoundState = useCallback(() => {
+    setMessages([]);
+    setPublicNo(null);
+    setDraft("");
+    setError(null);
+    setUnresolvedAttempt(null);
+    pendingAttempt.current = null;
+  }, []);
+
   useEffect(() => {
     if (!active || authLoading) return;
     let cancelled = false;
     void ensureVisitorToken(identity).then((result) => {
       if (cancelled) return;
       setVisitorToken((current) => {
-        if (current && current !== result.token) {
-          setMessages([]);
-          setPublicNo(null);
-        }
+        if (current && current !== result.token) wipeIdentityBoundState();
         return result.token;
       });
       setClaimableToken(result.previousToken);
@@ -114,9 +131,10 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
     return () => {
       cancelled = true;
     };
-  }, [active, authLoading, identity]);
+  }, [active, authLoading, identity, wipeIdentityBoundState]);
 
-  const entry = trpc.support.entry.useQuery(undefined, { enabled: active });
+  // 身份声明 / 值守说明由服务端按语言给，和机器人回复用的是同一份文案源。
+  const entry = trpc.support.entry.useQuery({ locale: language }, { enabled: active });
 
   const lastId = messages.length ? messages[messages.length - 1].id : 0;
 
@@ -141,6 +159,10 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
     setVisitorToken(next.token);
     setMessages([]);
     setPublicNo(null);
+    // 换了会话线之后，旧那条「待确认」再也没法在这个线程里核对了
+    // （落库判定是拿 messages 比对的，而 messages 刚被清空）——不要让提示条永远停在
+    // 「还没确认它有没有送到」。草稿和幂等键保留：这次轮换是同一个人换条线，重试还要用。
+    setUnresolvedAttempt(null);
     return next.token;
   }, [identity]);
 
@@ -180,6 +202,9 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
   const handleSend = useCallback(async () => {
     const typed = draft.trim();
     if (!typed || sendMutation.isPending) return;
+    // 记下**发起这次发送时**的身份，随请求送给服务端比对：
+    // 如果在途中登录状态变了，服务端会拒绝写入，而不是把这段话记到另一个账号名下。
+    const expectedIdentity = identity;
     let token = visitorToken;
     if (!token) {
       token = (await ensureVisitorToken(identity)).token;
@@ -205,7 +230,8 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
         body: sending.body,
         strategyId: strategyId ?? null,
         pageUrl: pageUrl ?? null,
-        locale: "zh",
+        locale: language,
+        expectedIdentity,
       });
 
     try {
@@ -232,7 +258,11 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
         // 这次的内容一个字都没进库。**不能清空草稿**，要如实告诉客户再发一次。
         setUnresolvedAttempt({ ...sending, landed: true });
         setError(
-          "刚才那条已经在记录里了，这次改后的内容还没发出去——请再点一次发送。",
+          text(
+            "刚才那条已经在记录里了，这次改后的内容还没发出去——请再点一次发送。",
+            "Your earlier message is already on record; the edited text has NOT been sent yet — please press send once more.",
+            "رسالتك السابقة مسجّلة بالفعل؛ أما النص المعدّل فلم يُرسل بعد — اضغط إرسال مرة أخرى من فضلك.",
+          ),
         );
         return;
       }
@@ -242,7 +272,7 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
       void utils.support.thread.invalidate();
     } catch (err: any) {
       // 草稿和这次尝试都保留：客户再点一次是**重试同一条**，不会变成第二条消息。
-      setError(readableSupportError(err));
+      setError(readableSupportError(err, text));
     }
   }, [draft, identity, pageUrl, rotateIdentity, sendMutation, strategyId, utils, visitorToken]);
 
@@ -269,6 +299,7 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
           previousVisitorToken: previous,
           visitorToken,
           strategyId: strategyId ?? null,
+          expectedIdentity: identity,
         });
         if (result.claimed) {
           setMessages(result.messages);
@@ -277,10 +308,10 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
         }
         void utils.support.thread.invalidate();
       } catch (err: any) {
-        setError(readableSupportError(err));
+        setError(readableSupportError(err, text));
       }
     },
-    [claimMutation, claimableToken, strategyId, utils, visitorToken],
+    [claimMutation, claimableToken, identity, strategyId, utils, visitorToken],
   );
 
   useEffect(() => {
@@ -291,15 +322,26 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
 
   const qqLine = entry.data?.qqLine || "";
   const attendanceNote =
-    entry.data?.attendanceNote ?? "留言会存下来，顾问看到后在这里回你。";
+    entry.data?.attendanceNote ??
+    text(
+      "留言会存下来，顾问看到后在这里回你。",
+      "Your message is stored and an advisor will reply here.",
+      "تُحفظ رسالتك وسيرد عليك المستشار هنا.",
+    );
   const remaining = SUPPORT_MESSAGE_MAX_LENGTH - draft.length;
 
   const intro = useMemo(() => {
     const product = strategyTitle?.trim();
-    return product
-      ? `正在咨询：${product}${strategyId ? `（商品编号 ${strategyId}）` : ""}`
-      : "正在咨询：通用授权与部署问题";
-  }, [strategyId, strategyTitle]);
+    if (product) {
+      const suffix = strategyId ? text(`（商品编号 ${strategyId}）`, ` (item #${strategyId})`, ` (المنتج رقم ${strategyId})`) : "";
+      return `${text("正在咨询：", "Asking about: ", "الاستفسار عن: ")}${product}${suffix}`;
+    }
+    return text(
+      "正在咨询：通用授权与部署问题",
+      "Asking about: licensing and deployment in general",
+      "الاستفسار عن: الترخيص والنشر بشكل عام",
+    );
+  }, [strategyId, strategyTitle, text]);
 
   return (
     <View style={styles.wrap}>
@@ -307,15 +349,26 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
         <MaterialIcons name="smart-toy" size={15} color={V2.blue} />
         <Text style={styles.noticeText}>
           {/* 值守说法跟着服务端的真实开关走：提醒通道没开就只说「留言」，不说「有人看着」。 */}
-          {`先由${SUPPORT_AUTO_DISCLOSURE.zh}接待。${attendanceNote}双方的消息都留在这里，刷新或换天再来都读得到。`}
+          {`${text(
+            `先由${entry.data?.autoDisclosure ?? SUPPORT_AUTO_DISCLOSURE.zh}接待。`,
+            `You are first met by an ${entry.data?.autoDisclosure ?? SUPPORT_AUTO_DISCLOSURE.en}. `,
+            `يستقبلك أولًا ${entry.data?.autoDisclosure ?? SUPPORT_AUTO_DISCLOSURE.ar}. `,
+          )}${attendanceNote}${text(
+            "双方的消息都留在这里，刷新或换天再来都读得到。",
+            " Both sides' messages stay in this thread — refresh or come back another day and they are still here.",
+            " تبقى رسائل الطرفين في هذه المحادثة — حدّث الصفحة أو عُد في يوم آخر وستجدها كما هي.",
+          )}`}
         </Text>
       </View>
 
       {claimableToken ? (
         <View style={styles.claimBox}>
           <Text style={styles.claimText}>
-            这台设备上有一段以访客身份留下的咨询记录。要并入你现在登录的账号吗？
-            不并入的话它会留在原处，你这边从一条新会话开始。
+            {text(
+              "这台设备上有一段以访客身份留下的咨询记录。要并入你现在登录的账号吗？不并入的话它会留在原处，你这边从一条新会话开始。",
+              "There is a chat left on this device from a guest session. Merge it into the account you are signed in with? If not, it stays where it is and you start a fresh thread.",
+              "توجد محادثة على هذا الجهاز من جلسة زائر. هل تريد دمجها في الحساب الذي سجّلت الدخول به؟ إن لم ترغب فستبقى في مكانها وتبدأ أنت محادثة جديدة.",
+            )}
           </Text>
           <View style={styles.claimActions}>
             <Pressable
@@ -323,14 +376,18 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
               onPress={() => void handleClaim(true)}
               style={({ pressed }) => [styles.claimPrimary, pressed && styles.pressed]}
             >
-              <Text style={styles.claimPrimaryText}>并入我的账号</Text>
+              <Text style={styles.claimPrimaryText}>
+                {text("并入我的账号", "Merge into my account", "دمجها في حسابي")}
+              </Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
               onPress={() => void handleClaim(false)}
               style={({ pressed }) => [styles.claimGhost, pressed && styles.pressed]}
             >
-              <Text style={styles.claimGhostText}>不用，开新会话</Text>
+              <Text style={styles.claimGhostText}>
+                {text("不用，开新会话", "No, start fresh", "لا، ابدأ محادثة جديدة")}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -340,7 +397,11 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
         <Text style={styles.metaText} numberOfLines={1}>
           {intro}
         </Text>
-        {publicNo ? <Text style={styles.metaNo}>会话 {publicNo}</Text> : null}
+        {publicNo ? (
+          <Text style={styles.metaNo}>
+            {text("会话", "Thread", "المحادثة")} {publicNo}
+          </Text>
+        ) : null}
       </View>
 
       <ScrollView
@@ -351,11 +412,25 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
       >
         {messages.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyTitle}>直接把问题打出来就行</Text>
+            <Text style={styles.emptyTitle}>
+              {text(
+                "直接把问题打出来就行",
+                "Just type your question",
+                "اكتب سؤالك مباشرة",
+              )}
+            </Text>
             <Text style={styles.emptyText}>
-              比如「这个能绑几个账户」「MT5 装不上怎么办」「报价怎么算」。
+              {text(
+                "比如「这个能绑几个账户」「MT5 装不上怎么办」「报价怎么算」。",
+                'For example: "how many accounts does the licence cover", "MT5 install fails", "how is the price worked out".',
+                'مثال: «كم حسابًا يغطي الترخيص»، «فشل تثبيت MT5»، «كيف يُحتسب السعر».',
+              )}
               {"\n"}
-              你发出第一条之前，我们这边不会留下任何记录。
+              {text(
+                "你发出第一条之前，我们这边不会留下任何记录。",
+                "Nothing is recorded on our side until you send the first message.",
+                "لا نسجّل أي شيء لدينا قبل أن ترسل رسالتك الأولى.",
+              )}
             </Text>
           </View>
         ) : (
@@ -380,7 +455,7 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
                         message.role === "operator" && styles.bubbleRoleOperator,
                       ]}
                     >
-                      {ROLE_LABEL[message.role]}
+                      {text(...ROLE_LABEL[message.role])}
                     </Text>
                   </View>
                   <Text style={styles.bubbleText} selectable>
@@ -405,14 +480,22 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
           />
           <View style={styles.unresolvedBody}>
             <Text style={styles.unresolvedText}>
-              {unresolvedAttempt.landed
-                ? `你之前那条「${unresolvedAttempt.body.slice(0, 18)}${
-                    unresolvedAttempt.body.length > 18 ? "…" : ""
-                  }」已经确认送到了，就在上面的记录里。这次改后的内容会另发一条。`
-                : `你之前那条「${unresolvedAttempt.body.slice(0, 18)}${
-                    unresolvedAttempt.body.length > 18 ? "…" : ""
-                  }」已经提交过一次，我们还没确认它有没有送到——它如果到了会出现在上面的记录里。` +
-                  `你改后的内容会另发一条，不会顶掉那一条。`}
+              {(() => {
+                const excerpt = `${unresolvedAttempt.body.slice(0, 18)}${
+                  unresolvedAttempt.body.length > 18 ? "…" : ""
+                }`;
+                return unresolvedAttempt.landed
+                  ? text(
+                      `你之前那条「${excerpt}」已经确认送到了，就在上面的记录里。这次改后的内容会另发一条。`,
+                      `Your earlier message “${excerpt}” is confirmed delivered — it is in the thread above. Your edited text will be sent as a separate message.`,
+                      `رسالتك السابقة «${excerpt}» وصلت بالتأكيد — تجدها في المحادثة أعلاه. وسيُرسل النص المعدّل كرسالة منفصلة.`,
+                    )
+                  : text(
+                      `你之前那条「${excerpt}」已经提交过一次，我们还没确认它有没有送到——它如果到了会出现在上面的记录里。你改后的内容会另发一条，不会顶掉那一条。`,
+                      `Your earlier message “${excerpt}” was already submitted once and we have not confirmed whether it arrived — if it did, it will appear in the thread above. Your edited text goes out as a separate message and will not replace it.`,
+                      `رسالتك السابقة «${excerpt}» أُرسلت مرة بالفعل ولم نؤكد وصولها بعد — إن وصلت فستظهر في المحادثة أعلاه. وسيُرسل النص المعدّل كرسالة منفصلة ولن يحل محلها.`,
+                    );
+              })()}
             </Text>
             <View style={styles.unresolvedActions}>
               {!unresolvedAttempt.landed ? (
@@ -421,7 +504,9 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
                   onPress={handleResendUnresolved}
                   style={({ pressed }) => [styles.unresolvedAction, pressed && styles.pressed]}
                 >
-                  <Text style={styles.unresolvedActionText}>重发原来那条</Text>
+                  <Text style={styles.unresolvedActionText}>
+                    {text("重发原来那条", "Resend the original", "إعادة إرسال الأصلية")}
+                  </Text>
                 </Pressable>
               ) : null}
               <Pressable
@@ -429,7 +514,9 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
                 onPress={() => setUnresolvedAttempt(null)}
                 style={({ pressed }) => [styles.unresolvedAction, pressed && styles.pressed]}
               >
-                <Text style={styles.unresolvedActionText}>知道了</Text>
+                <Text style={styles.unresolvedActionText}>
+                  {text("知道了", "Got it", "حسنًا")}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -447,7 +534,11 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
         <TextInput
           value={draft}
           onChangeText={(value) => setDraft(value.slice(0, SUPPORT_MESSAGE_MAX_LENGTH))}
-          placeholder="说说你想确认的版本、账户数或安装环境"
+          placeholder={text(
+            "说说你想确认的版本、账户数或安装环境",
+            "Tell us the version, account count or install environment you want to confirm",
+            "أخبرنا بالإصدار أو عدد الحسابات أو بيئة التثبيت التي تريد تأكيدها",
+          )}
           placeholderTextColor={V2.textMuted}
           multiline
           style={styles.input}
@@ -466,7 +557,7 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
         />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="发送咨询消息"
+          accessibilityLabel={text("发送咨询消息", "Send message", "إرسال الرسالة")}
           disabled={!draft.trim() || sendMutation.isPending}
           onPress={() => void handleSend()}
           style={({ pressed }) => [
@@ -483,7 +574,17 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
         </Pressable>
       </View>
       <Text style={styles.counter}>
-        {remaining < 200 ? `还可以输入 ${remaining} 字` : `单条最多 ${SUPPORT_MESSAGE_MAX_LENGTH} 字`}
+        {remaining < 200
+          ? text(
+              `还可以输入 ${remaining} 字`,
+              `${remaining} characters left`,
+              `تبقّى ${remaining} حرفًا`,
+            )
+          : text(
+              `单条最多 ${SUPPORT_MESSAGE_MAX_LENGTH} 字`,
+              `Up to ${SUPPORT_MESSAGE_MAX_LENGTH} characters per message`,
+              `حتى ${SUPPORT_MESSAGE_MAX_LENGTH} حرفًا لكل رسالة`,
+            )}
       </Text>
 
       {qqLine ? (

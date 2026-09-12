@@ -128,6 +128,79 @@ describe("B3 / P2 幂等键与草稿内容绑在一起", () => {
   });
 });
 
+describe("身份切换：上一位的任何东西都不能留在屏幕上", () => {
+  it("身份变了要把消息 / 编号 / 草稿 / 待确认提示 / 幂等键一次清干净", () => {
+    const wipe = chatSource.slice(
+      chatSource.indexOf("const wipeIdentityBoundState"),
+      chatSource.indexOf("useEffect(() => {", chatSource.indexOf("const wipeIdentityBoundState")),
+    );
+    expect(wipe).toContain("setMessages([])");
+    expect(wipe).toContain("setPublicNo(null)");
+    expect(wipe).toContain('setDraft("")');
+    expect(wipe).toContain("setError(null)");
+    expect(wipe).toContain("setUnresolvedAttempt(null)");
+    expect(wipe).toContain("pendingAttempt.current = null");
+  });
+
+  it("身份变更 effect 真的调用了这个清理函数", () => {
+    const effect = chatSource.slice(
+      chatSource.indexOf("void ensureVisitorToken(identity)"),
+      chatSource.indexOf("const entry = trpc.support.entry"),
+    );
+    expect(effect).toContain("wipeIdentityBoundState()");
+  });
+
+  it("换会话线（rotate）时清掉再也核对不了的待确认提示，但保留草稿和幂等键", () => {
+    const rotate = chatSource.slice(
+      chatSource.indexOf("const rotateIdentity"),
+      chatSource.indexOf("useEffect(() => {", chatSource.indexOf("const rotateIdentity")),
+    );
+    expect(rotate).toContain("setUnresolvedAttempt(null)");
+    expect(rotate).not.toContain('setDraft("")');
+    expect(rotate).not.toContain("pendingAttempt.current = null");
+  });
+
+  it("发送时带上自报身份，服务端拦截身份切换竞态", () => {
+    expect(chatSource).toContain("const expectedIdentity = identity;");
+    expect(chatSource).toContain("expectedIdentity,");
+    const serviceSource = readFileSync(join(repoRoot, "server", "support", "service.ts"), "utf-8");
+    expect(serviceSource).toContain("assertExpectedIdentity");
+    // 闸门排在限流之前：竞态请求不该吃掉客户的发送配额
+    const sendBlock = serviceSource.slice(
+      serviceSource.indexOf("export async function sendCustomerMessage"),
+      serviceSource.indexOf("export async function claimAnonymousConversation"),
+    );
+    expect(sendBlock.indexOf("assertExpectedIdentity")).toBeLessThan(
+      sendBlock.indexOf("enforceRateLimits"),
+    );
+  });
+});
+
+describe("三语：聊天面板不许只给中文", () => {
+  it("面板用的是仓库现有的 useLanguage / text(zh,en,ar)，没有另造一套", () => {
+    expect(chatSource).toContain('from "@/lib/language"');
+    expect(chatSource).toContain("const { language, text } = useLanguage();");
+  });
+
+  it("发送时把当前语言送给服务端，不再写死 zh", () => {
+    expect(chatSource).toContain("locale: language,");
+    expect(chatSource).not.toContain('locale: "zh",');
+  });
+
+  it("角色标签三语，机器人标签在三种语言里都标明是机器人", () => {
+    expect(chatSource).toContain('auto: ["自动值守 · 机器人", "Automated · bot", "آلي · روبوت"]');
+    expect(chatSource).toContain("text(...ROLE_LABEL[message.role])");
+  });
+
+  it("身份声明 / 值守说明按请求语言由服务端给", () => {
+    const routerSource = readFileSync(join(repoRoot, "server", "routers", "support.ts"), "utf-8");
+    expect(routerSource).toContain("pickSupportText(SUPPORT_AUTO_DISCLOSURE, language)");
+    expect(routerSource).toContain("locale: z.string().max(8).optional()");
+    const serviceSource = readFileSync(join(repoRoot, "server", "support", "service.ts"), "utf-8");
+    expect(serviceSource).toContain('language: input.locale || "zh"');
+  });
+});
+
 describe("商品上下文不能在改版里丢掉", () => {
   it("联系弹窗把商品编号 / 标题 / 页面地址传进咨询面板", () => {
     const usage = modalSource.slice(modalSource.indexOf("<SupportChat"));
