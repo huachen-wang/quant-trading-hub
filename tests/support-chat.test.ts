@@ -1,7 +1,11 @@
 /**
- * 站内咨询的行为测试。
+ * 站内咨询的**产品行为**测试（内存适配器，跑得快）。
  *
- * 覆盖的都是另外两批复盘里真实出过事的点，不是happy path 走一遍：
+ * 边界说清楚：这一层只证明产品口径——不建空会话、机器人自报身份、不承诺收益、
+ * 摘要不含正文、回复流转。**它不是并发与存储的证据**：内存实现永远不会抛 MySQL 的重复键错误，
+ * 撞键分支在这里走不到。存储契约与并发行为看 `tests/support-mysql.test.ts`（打真库）。
+ *
+ * 覆盖的都是几批复盘里真实出过事的点，不是happy path 走一遍：
  *   - 打开面板不建会话，首条真实消息才建；
  *   - clientMsgId 幂等（双击 / 重试 / 双标签页）；
  *   - 并发发送不丢消息、不分叉成两条会话；
@@ -11,8 +15,6 @@
  *   - 外发箱失败要重投、崩在 sending 的租约要能回收；
  *   - 自动回复必须自报是机器人。
  *
- * 存储用内存适配器（与 MySQL 版同一套唯一约束语义）。**没有连过真实 MySQL**，
- * 生产 DDL 与真并发隔离级别未在本轮验证。
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -29,6 +31,7 @@ import {
 import {
   SUPPORT_RATE_LIMITS,
   SupportError,
+  claimAnonymousConversation,
   fetchVisitorThread,
   getAdminThread,
   listAdminConversations,
@@ -90,7 +93,18 @@ describe("自动值守 FAQ", () => {
     const reply = buildAutoReply("请帮我预测下周金价走势", {});
     expect(reply.ruleKey).toBe("fallback");
     expect(reply.body).toContain("我答不了");
-    expect(reply.body).toContain("真人顾问");
+    expect(reply.body).toContain("顾问");
+  });
+
+  it("提醒通道没开时，机器人只说留言，不说「有人在看」", () => {
+    const reply = buildAutoReply("怎么安装", { attended: false });
+    expect(reply.body).toContain("现在不保证有人实时在线");
+    expect(reply.body).not.toContain("消息不会丢");
+  });
+
+  it("提醒通道开着时才说顾问会收到提醒", () => {
+    const reply = buildAutoReply("怎么安装", { attended: true });
+    expect(reply.body).toContain("顾问会收到这条会话的提醒");
   });
 
   it("配置了 QQ 就把 QQ 入口带出来", () => {
@@ -252,39 +266,107 @@ describe("会话归属与隔离", () => {
     expect(other.conversation).toBeNull();
   });
 
-  it("聊到一半登录：收归账号，不另起一条新会话", async () => {
+  it("登录身份不会自动继承这台设备上的匿名记录（要显式认领）", async () => {
     const store = createMemorySupportStore();
-    const guest = await send(store, { strategyId: 1, body: "价格" });
-    const member = await send(store, { strategyId: 1, body: "我登录了", userId: 42 });
-    expect(member.conversation.publicNo).toBe(guest.conversation.publicNo);
-    expect(await store.countConversations("all")).toBe(1);
-    const conversation = await store.findConversationByVisitor(hashVisitorToken(TOKEN_A), 1);
-    expect(conversation?.userId).toBe(42);
+    const guest = await send(store, { strategyId: 1, body: "访客甲：我的手机号是 138xxxx" });
+
+    // 同一台电脑上换成登录身份：读不到前一位的内容，只拿到「可认领」的信号
+    const peek = await fetchVisitorThread({
+      visitorToken: TOKEN_A,
+      userId: 42,
+      strategyId: 1,
+      afterId: 0,
+      store,
+    });
+    expect(peek.identity).toBe("claimable");
+    expect(peek.conversation).toBeNull();
+    expect(peek.messages).toHaveLength(0);
+
+    // 直接发消息也不行：不往别人的匿名会话里写
+    await expect(
+      send(store, { strategyId: 1, body: "乙：我是另一个人", userId: 42, clientMsgId: "b-1" }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+
+    // 会话归属没有被动过
+    const untouched = await store.findConversationByVisitor(hashVisitorToken(TOKEN_A), 1);
+    expect(untouched?.userId).toBeNull();
+    expect(untouched?.publicNo).toBe(guest.conversation.publicNo);
   });
 
-  it("会话绑定账号后，同一浏览器换人（或登出）拿残留令牌读不回去", async () => {
+  it("本人显式认领后，记录并入账号并迁到新令牌上", async () => {
     const store = createMemorySupportStore();
-    await send(store, { strategyId: 1, userId: 42, body: "价格" });
+    const guest = await send(store, { strategyId: 1, body: "我是同一个人，先匿名问的" });
 
-    await expect(
-      fetchVisitorThread({
-        visitorToken: TOKEN_A,
-        userId: null,
-        strategyId: 1,
-        afterId: 0,
-        store,
-      }),
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const claimed = await claimAnonymousConversation({
+      previousVisitorToken: TOKEN_A,
+      visitorToken: TOKEN_B,
+      userId: 42,
+      strategyId: 1,
+      store,
+    });
+    expect(claimed.claimed).toBe(true);
+    expect(claimed.claimed && claimed.conversation.publicNo).toBe(guest.conversation.publicNo);
 
-    await expect(
-      fetchVisitorThread({
-        visitorToken: TOKEN_A,
-        userId: 99,
-        strategyId: 1,
-        afterId: 0,
-        store,
-      }),
-    ).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const mine = await fetchVisitorThread({
+      visitorToken: TOKEN_B,
+      userId: 42,
+      strategyId: 1,
+      afterId: 0,
+      store,
+    });
+    expect(mine.identity).toBe("ok");
+    expect(mine.messages.some((m) => m.body.includes("先匿名问的"))).toBe(true);
+    expect(await store.countConversations("all")).toBe(1);
+  });
+
+  it("已经有主的会话不能被别人认领", async () => {
+    const store = createMemorySupportStore();
+    await send(store, { strategyId: 1, userId: 42, body: "甲的会话" });
+    const stolen = await claimAnonymousConversation({
+      previousVisitorToken: TOKEN_A,
+      visitorToken: TOKEN_B,
+      userId: 99,
+      strategyId: 1,
+      store,
+    });
+    expect(stolen.claimed).toBe(false);
+    expect(stolen.claimed === false && stolen.reason).toBe("already_owned");
+  });
+
+  it("换人 / 登出不会永久锁死：返回 rotate 让客户端换令牌重开，而不是一直 FORBIDDEN", async () => {
+    const store = createMemorySupportStore();
+    await send(store, { strategyId: 1, userId: 42, body: "甲登录后问的" });
+
+    const afterLogout = await fetchVisitorThread({
+      visitorToken: TOKEN_A,
+      userId: null,
+      strategyId: 1,
+      afterId: 0,
+      store,
+    });
+    expect(afterLogout.identity).toBe("rotate");
+    expect(afterLogout.conversation).toBeNull();
+
+    const otherUser = await fetchVisitorThread({
+      visitorToken: TOKEN_A,
+      userId: 99,
+      strategyId: 1,
+      afterId: 0,
+      store,
+    });
+    expect(otherUser.identity).toBe("rotate");
+    expect(otherUser.messages).toHaveLength(0);
+
+    // 客户端换一枚新令牌后，立刻能正常开一条自己的线（不是死路）
+    const fresh = await send(store, {
+      visitorToken: TOKEN_B,
+      strategyId: 1,
+      body: "乙自己的问题",
+      clientMsgId: "fresh-1",
+      userId: 99,
+    });
+    expect(fresh.conversation.customerMessageCount).toBe(1);
+    expect(await store.countConversations("all")).toBe(2);
   });
 
   it("令牌太短直接拒绝，不给人拿短串去撞别人的会话", async () => {
@@ -444,16 +526,6 @@ describe("Telegram 提醒", () => {
     expect(notifications[0].summary).not.toContain("abcdefg");
   });
 
-  it("同一会话在节流窗口内只排一条通知", async () => {
-    const store = createMemorySupportStore();
-    const now = new Date("2026-09-13T02:00:00Z");
-    const sent = await send(store, { strategyId: 1, body: "价格", clientMsgId: "t-1", now });
-    await send(store, { strategyId: 1, body: "怎么装", clientMsgId: "t-2", now });
-    const conversation = await store.findConversationByPublicNo(sent.conversation.publicNo);
-    const notifications = await store.listNotifications(conversation!.id);
-    expect(notifications).toHaveLength(1);
-  });
-
   it("默认不发：没有 live 开关和凭据时记为 held，不谎称已发送", async () => {
     const store = createMemorySupportStore();
     await send(store, { strategyId: 1 });
@@ -606,10 +678,49 @@ describe("Telegram 提醒", () => {
     expect(a.length + b.length).toBe(1);
   });
 
-  it("节流键按会话 + 时间窗划分，不同会话不会互相覆盖", () => {
-    const now = new Date("2026-09-13T02:00:00Z");
-    expect(buildDedupeKey(1, now)).not.toBe(buildDedupeKey(2, now));
-    expect(buildDedupeKey(1, now)).toBe(buildDedupeKey(1, new Date("2026-09-13T02:04:00Z")));
-    expect(buildDedupeKey(1, now)).not.toBe(buildDedupeKey(1, new Date("2026-09-13T02:06:00Z")));
+  it("去重键按会话 + 提醒代数划分，不同会话 / 不同代互不覆盖", () => {
+    expect(buildDedupeKey(1, 0)).not.toBe(buildDedupeKey(2, 0));
+    expect(buildDedupeKey(1, 0)).toBe(buildDedupeKey(1, 0));
+    expect(buildDedupeKey(1, 0)).not.toBe(buildDedupeKey(1, 1));
+  });
+
+  it("提醒发出之后，同一会话的后续消息会排新的一条，不会被去重键吞掉", async () => {
+    const store = createMemorySupportStore();
+    const env = {
+      TELEGRAM_BOT_TOKEN: "token",
+      TELEGRAM_CHAT_ID: "-100123",
+      SUPPORT_TELEGRAM_NOTIFY_MODE: "live",
+    } as any;
+
+    await send(store, { strategyId: 1, body: "第一条", clientMsgId: "gen-1" });
+    const first = await processDueSupportNotifications({
+      store,
+      env,
+      sender: async () => ({ ok: true, retryable: false }),
+    });
+    expect(first.sent).toBe(1);
+
+    // 上一条已经发出去了 —— 客户接着追问，必须排新的一条，不能被吞
+    await send(store, { strategyId: 1, body: "第二条追问", clientMsgId: "gen-2" });
+    const notifications = await store.listNotifications(1);
+    expect(notifications).toHaveLength(2);
+    expect(notifications[1].status).toBe("pending");
+    expect(notifications[1].summary).toContain("客户消息 2 条");
+
+    const second = await processDueSupportNotifications({
+      store,
+      env,
+      sender: async () => ({ ok: true, retryable: false }),
+    });
+    expect(second.sent).toBe(1);
+  });
+
+  it("提醒还没发出去时，后续消息只刷新摘要，不重复轰炸", async () => {
+    const store = createMemorySupportStore();
+    await send(store, { strategyId: 1, body: "第一条", clientMsgId: "coalesce-1" });
+    await send(store, { strategyId: 1, body: "第二条", clientMsgId: "coalesce-2" });
+    const notifications = await store.listNotifications(1);
+    expect(notifications).toHaveLength(1);
+    expect(notifications[0].summary).toContain("客户消息 2 条");
   });
 });

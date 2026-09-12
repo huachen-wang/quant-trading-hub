@@ -33,9 +33,22 @@ export const SUPPORT_AUTO_DISCLOSURE = {
   en: "Automated assistant (bot reply, not a human)",
 } as const;
 
+/**
+ * 交给真人的说法有两套，按**提醒通道是否真的开着**选。
+ *
+ * 复核 M3 指出的问题：提醒默认 dry_run（不外发），机器人却对客户说「有人看着」「消息不会丢」——
+ * 这是对外承诺了做不到的事。现在只有 `attended`（`SUPPORT_TELEGRAM_NOTIFY_MODE=live` 且凭据齐全）
+ * 时才说顾问会收到提醒；否则老实说这是留言，实时找人请走 QQ。
+ */
 export const SUPPORT_HUMAN_HANDOFF = {
-  zh: "真人顾问看到后会在这个会话里直接回你，消息不会丢。",
-  en: "A human advisor will reply in this same thread; nothing gets lost.",
+  attended: {
+    zh: "顾问会收到这条会话的提醒，回复直接出现在这里。",
+    en: "An advisor is paged for this thread; their reply lands right here.",
+  },
+  unattended: {
+    zh: "这里是留言：内容已经存下来，顾问下次查看后台时会看到并在这里回你。现在不保证有人实时在线，急事请走下面的 QQ。",
+    en: "This is a message drop: it is stored and an advisor will reply here next time they check the console. Nobody is guaranteed to be online right now — for anything urgent use the QQ contact below.",
+  },
 } as const;
 
 export type SupportMessageView = {

@@ -98,9 +98,18 @@ export function buildNotificationSummary(
   return lines.join("\n");
 }
 
-export function buildDedupeKey(conversationId: number, now: Date = new Date()) {
-  const bucket = Math.floor(now.getTime() / 1000 / NOTIFY_THROTTLE_SECONDS);
-  return `support:conv:${conversationId}:${bucket}`;
+/**
+ * 提醒的去重键 = 会话 + **提醒代数**。
+ *
+ * 原来用的是时间窗（5 分钟一个桶），复核 M2 实测出一个真缺陷：窗口内第一条提醒已经发出去之后，
+ * 同窗口的后续消息撞上同一个去重键，`ON DUPLICATE KEY UPDATE` 对已 sent 的行什么都不做 ——
+ * 客户连着追问，经营者只收到第一声，摘要还停在旧数字。
+ *
+ * 换成代数以后：上一条还没发出去 → 同一代 → 只刷新摘要（不重复轰炸）；
+ * 上一条已经发出或彻底失败 → 代数 +1 → 新消息排一条新的提醒（**不会丢**）。
+ */
+export function buildDedupeKey(conversationId: number, generation: number) {
+  return `support:conv:${conversationId}:g${Math.max(0, Math.trunc(generation))}`;
 }
 
 export type TelegramSender = (input: {

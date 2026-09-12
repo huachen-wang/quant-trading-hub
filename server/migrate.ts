@@ -22,15 +22,159 @@ export function resolveDatabaseUrl(env: DatabaseEnvironment = process.env) {
   return databaseUrl || null;
 }
 
-async function runMigrations(options: { strict?: boolean } = {}) {
+
+/**
+ * 站内咨询的四张表 + 索引。
+ *
+ * 单独抽成导出函数有两个理由：
+ *   1. 生产迁移链的最前面调用它——在线咨询是对客入口，不能因为后面某张历史表迁移失败就建不出来；
+ *   2. **测试可以直接调用它**，于是打真 MySQL 的存储契约测试跑的就是这段生产 DDL 本身，
+ *      不用像复核那样把语句从源码里抠出来另跑一份。
+ *
+ * 全部 `IF NOT EXISTS` / 先查 INFORMATION_SCHEMA，可重复执行。
+ */
+export async function ensureSupportChatSchema(connection: mysql.Connection): Promise<number> {
+  let statements = 0;
+  const ensureSupportIndex = async (tableName: string, indexName: string, statement: string) => {
+    const [rows] = (await connection.query(
+      "SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ? LIMIT 1",
+      [tableName, indexName],
+    )) as any[];
+    if (!rows.length) {
+      await connection.query(statement);
+      statements++;
+    }
+  };
+
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS \`support_conversations\` (
+      \`id\` int AUTO_INCREMENT NOT NULL,
+      \`publicNo\` varchar(32) NOT NULL,
+      \`visitorTokenHash\` varchar(64) NOT NULL,
+      \`userId\` int,
+      \`strategyId\` int,
+      \`strategyKey\` int NOT NULL DEFAULT 0,
+      \`strategyTitle\` varchar(255),
+      \`pageUrl\` text,
+      \`locale\` varchar(8) NOT NULL DEFAULT 'zh',
+      \`status\` enum('open','answered','closed') NOT NULL DEFAULT 'open',
+      \`customerMessageCount\` int NOT NULL DEFAULT 0,
+      \`operatorMessageCount\` int NOT NULL DEFAULT 0,
+      \`notifyGeneration\` int NOT NULL DEFAULT 0,
+      \`lastMessageAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`lastCustomerMessageAt\` timestamp NULL,
+      \`lastOperatorMessageAt\` timestamp NULL,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT \`support_conversations_id\` PRIMARY KEY(\`id\`),
+      CONSTRAINT \`support_conversations_publicNo_unique\` UNIQUE(\`publicNo\`),
+      CONSTRAINT \`support_conversation_visitor_strategy_unique_idx\` UNIQUE(\`visitorTokenHash\`,\`strategyKey\`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+  await ensureSupportIndex(
+    "support_conversations",
+    "support_conversation_status_idx",
+    "CREATE INDEX `support_conversation_status_idx` ON `support_conversations` (`status`)",
+  );
+  await ensureSupportIndex(
+    "support_conversations",
+    "support_conversation_last_message_idx",
+    "CREATE INDEX `support_conversation_last_message_idx` ON `support_conversations` (`lastMessageAt`)",
+  );
+  await ensureSupportIndex(
+    "support_conversations",
+    "support_conversation_user_idx",
+    "CREATE INDEX `support_conversation_user_idx` ON `support_conversations` (`userId`)",
+  );
+
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS \`support_messages\` (
+      \`id\` int AUTO_INCREMENT NOT NULL,
+      \`conversationId\` int NOT NULL,
+      \`role\` enum('customer','auto','operator') NOT NULL,
+      \`body\` text NOT NULL,
+      \`clientMsgId\` varchar(64),
+      \`autoRuleKey\` varchar(64),
+      \`operatorId\` int,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT \`support_messages_id\` PRIMARY KEY(\`id\`),
+      CONSTRAINT \`support_message_client_msg_unique_idx\` UNIQUE(\`conversationId\`,\`clientMsgId\`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+  await ensureSupportIndex(
+    "support_messages",
+    "support_message_conversation_idx",
+    "CREATE INDEX `support_message_conversation_idx` ON `support_messages` (`conversationId`,`id`)",
+  );
+  await ensureSupportIndex(
+    "support_messages",
+    "support_message_created_idx",
+    "CREATE INDEX `support_message_created_idx` ON `support_messages` (`createdAt`)",
+  );
+
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS \`support_notifications\` (
+      \`id\` int AUTO_INCREMENT NOT NULL,
+      \`dedupeKey\` varchar(120) NOT NULL,
+      \`conversationId\` int NOT NULL,
+      \`generation\` int NOT NULL DEFAULT 0,
+      \`summary\` text NOT NULL,
+      \`status\` enum('pending','sending','sent','held','failed') NOT NULL DEFAULT 'pending',
+      \`attempts\` int NOT NULL DEFAULT 0,
+      \`lastError\` varchar(255),
+      \`nextAttemptAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`claimedAt\` timestamp NULL,
+      \`claimToken\` varchar(64),
+      \`sentAt\` timestamp NULL,
+      \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT \`support_notifications_id\` PRIMARY KEY(\`id\`),
+      CONSTRAINT \`support_notifications_dedupeKey_unique\` UNIQUE(\`dedupeKey\`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+  await ensureSupportIndex(
+    "support_notifications",
+    "support_notification_due_idx",
+    "CREATE INDEX `support_notification_due_idx` ON `support_notifications` (`status`,`nextAttemptAt`)",
+  );
+  await ensureSupportIndex(
+    "support_notifications",
+    "support_notification_conversation_idx",
+    "CREATE INDEX `support_notification_conversation_idx` ON `support_notifications` (`conversationId`)",
+  );
+
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS \`support_rate_limits\` (
+      \`id\` int AUTO_INCREMENT NOT NULL,
+      \`bucketKey\` varchar(160) NOT NULL,
+      \`windowStart\` int NOT NULL,
+      \`hits\` int NOT NULL DEFAULT 0,
+      \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      CONSTRAINT \`support_rate_limits_id\` PRIMARY KEY(\`id\`),
+      CONSTRAINT \`support_rate_limit_bucket_window_unique_idx\` UNIQUE(\`bucketKey\`,\`windowStart\`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `);
+  return statements;
+}
+
+/**
+ * 返回 true 表示整条迁移链跑干净了。
+ *
+ * 非生产环境下迁移失败会被吞掉继续启动（保留既有行为，不改），但**必须让调用方知道**——
+ * 复核实测过一次「迁移在中途 ER_NO_SUCH_TABLE 断掉、日志照样打 Migrations complete、
+ * 服务照常起来」的情况。启动日志不能说没发生过的事。
+ */
+async function runMigrations(options: { strict?: boolean } = {}): Promise<boolean> {
   const databaseUrl = resolveDatabaseUrl();
   if (!databaseUrl) {
     console.warn("[migrate] DATABASE_URL not set, skipping migrations");
-    return;
+    // 没有库可迁：不算失败（本地开发会落到内存/mock 分支），但也不是「跑完了」。
+    return true;
   }
 
   let connection: mysql.Connection | null = null;
   let migrationLockAcquired = false;
+  let migrationFailed = false;
   try {
     connection = await mysql.createConnection(databaseUrl);
     const [lockRows] = (await connection.query(
@@ -73,6 +217,14 @@ async function runMigrations(options: { strict?: boolean } = {}) {
         migrationsRun++;
       }
     };
+
+    // 站内咨询的四张表放在迁移链最前面，紧跟 ensureIndex 定义之后。
+    // 原因：后面那串 legacy 表的迁移只要有一步失败，非生产环境会吞掉异常继续启动，
+    // 结果就是「服务在跑、咨询表不存在、每条消息 500」。在线咨询是对客入口，
+    // 不能依赖前面任何一张历史表迁移成功。
+    // 站内咨询的四张表：见 ensureSupportChatSchema 的说明，它必须先于历史表迁移跑完。
+    console.log("[migrate] Ensuring support chat tables exist...");
+    migrationsRun += await ensureSupportChatSchema(connection);
 
     // strategies 表新增字段
     const strategyMigrations: [string, string][] = [
@@ -1346,116 +1498,6 @@ async function runMigrations(options: { strict?: boolean } = {}) {
       VALUES ('exness', 'NOT_APPROVED'), ('ic-markets', 'NOT_APPROVED'), ('blueberry-markets', 'NOT_APPROVED')
     `);
 
-    // ─── 站内咨询（网页客服会话）───
-    // 生产迁移在这里，跟其余表一样是可重复执行的 IF NOT EXISTS，启动时自动跑。
-    console.log("[migrate] Ensuring support chat tables exist...");
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS \`support_conversations\` (
-        \`id\` int AUTO_INCREMENT NOT NULL,
-        \`publicNo\` varchar(32) NOT NULL,
-        \`visitorTokenHash\` varchar(64) NOT NULL,
-        \`userId\` int,
-        \`strategyId\` int,
-        \`strategyKey\` int NOT NULL DEFAULT 0,
-        \`strategyTitle\` varchar(255),
-        \`pageUrl\` text,
-        \`locale\` varchar(8) NOT NULL DEFAULT 'zh',
-        \`status\` enum('open','answered','closed') NOT NULL DEFAULT 'open',
-        \`customerMessageCount\` int NOT NULL DEFAULT 0,
-        \`operatorMessageCount\` int NOT NULL DEFAULT 0,
-        \`lastMessageAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        \`lastCustomerMessageAt\` timestamp NULL,
-        \`lastOperatorMessageAt\` timestamp NULL,
-        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        CONSTRAINT \`support_conversations_id\` PRIMARY KEY(\`id\`),
-        CONSTRAINT \`support_conversations_publicNo_unique\` UNIQUE(\`publicNo\`),
-        CONSTRAINT \`support_conversation_visitor_strategy_unique_idx\` UNIQUE(\`visitorTokenHash\`,\`strategyKey\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    `);
-    await ensureIndex(
-      "support_conversations",
-      "support_conversation_status_idx",
-      "CREATE INDEX `support_conversation_status_idx` ON `support_conversations` (`status`)",
-    );
-    await ensureIndex(
-      "support_conversations",
-      "support_conversation_last_message_idx",
-      "CREATE INDEX `support_conversation_last_message_idx` ON `support_conversations` (`lastMessageAt`)",
-    );
-    await ensureIndex(
-      "support_conversations",
-      "support_conversation_user_idx",
-      "CREATE INDEX `support_conversation_user_idx` ON `support_conversations` (`userId`)",
-    );
-
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS \`support_messages\` (
-        \`id\` int AUTO_INCREMENT NOT NULL,
-        \`conversationId\` int NOT NULL,
-        \`role\` enum('customer','auto','operator') NOT NULL,
-        \`body\` text NOT NULL,
-        \`clientMsgId\` varchar(64),
-        \`autoRuleKey\` varchar(64),
-        \`operatorId\` int,
-        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT \`support_messages_id\` PRIMARY KEY(\`id\`),
-        CONSTRAINT \`support_message_client_msg_unique_idx\` UNIQUE(\`conversationId\`,\`clientMsgId\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    `);
-    await ensureIndex(
-      "support_messages",
-      "support_message_conversation_idx",
-      "CREATE INDEX `support_message_conversation_idx` ON `support_messages` (`conversationId`,`id`)",
-    );
-    await ensureIndex(
-      "support_messages",
-      "support_message_created_idx",
-      "CREATE INDEX `support_message_created_idx` ON `support_messages` (`createdAt`)",
-    );
-
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS \`support_notifications\` (
-        \`id\` int AUTO_INCREMENT NOT NULL,
-        \`dedupeKey\` varchar(120) NOT NULL,
-        \`conversationId\` int NOT NULL,
-        \`summary\` text NOT NULL,
-        \`status\` enum('pending','sending','sent','held','failed') NOT NULL DEFAULT 'pending',
-        \`attempts\` int NOT NULL DEFAULT 0,
-        \`lastError\` varchar(255),
-        \`nextAttemptAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        \`claimedAt\` timestamp NULL,
-        \`claimToken\` varchar(64),
-        \`sentAt\` timestamp NULL,
-        \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        CONSTRAINT \`support_notifications_id\` PRIMARY KEY(\`id\`),
-        CONSTRAINT \`support_notifications_dedupeKey_unique\` UNIQUE(\`dedupeKey\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    `);
-    await ensureIndex(
-      "support_notifications",
-      "support_notification_due_idx",
-      "CREATE INDEX `support_notification_due_idx` ON `support_notifications` (`status`,`nextAttemptAt`)",
-    );
-    await ensureIndex(
-      "support_notifications",
-      "support_notification_conversation_idx",
-      "CREATE INDEX `support_notification_conversation_idx` ON `support_notifications` (`conversationId`)",
-    );
-
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS \`support_rate_limits\` (
-        \`id\` int AUTO_INCREMENT NOT NULL,
-        \`bucketKey\` varchar(160) NOT NULL,
-        \`windowStart\` int NOT NULL,
-        \`hits\` int NOT NULL DEFAULT 0,
-        \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        CONSTRAINT \`support_rate_limits_id\` PRIMARY KEY(\`id\`),
-        CONSTRAINT \`support_rate_limit_bucket_window_unique_idx\` UNIQUE(\`bucketKey\`,\`windowStart\`)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-    `);
-
     try {
       const catalogChanges = await syncCuratedStrategyCatalog(connection);
       if (catalogChanges > 0) {
@@ -1480,6 +1522,7 @@ async function runMigrations(options: { strict?: boolean } = {}) {
     console.error("[migrate] Migration error:", error);
     // 生产环境必须 fail closed：资管与结算状态不能在半迁移的 schema 上运行。
     if (options.strict || isProductionRuntime()) throw error;
+    migrationFailed = true;
   } finally {
     if (connection) {
       if (migrationLockAcquired) {
@@ -1494,6 +1537,7 @@ async function runMigrations(options: { strict?: boolean } = {}) {
       await connection.end();
     }
   }
+  return !migrationFailed;
 }
 
 export { runMigrations };

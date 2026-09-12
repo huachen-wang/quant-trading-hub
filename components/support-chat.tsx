@@ -24,8 +24,16 @@ import {
   View,
 } from "react-native";
 import { V2 } from "@/components/v2/tokens";
+import { readableSupportError } from "@/lib/support-error-text";
+import { useAuth } from "@/hooks/use-auth";
 import { trpc } from "@/lib/trpc";
-import { getVisitorToken, newClientMsgId } from "@/lib/support-visitor";
+import {
+  ensureVisitorToken,
+  forgetPreviousVisitorToken,
+  identityKeyFor,
+  newClientMsgId,
+  rotateVisitorToken,
+} from "@/lib/support-visitor";
 import {
   SUPPORT_AUTO_DISCLOSURE,
   SUPPORT_MESSAGE_MAX_LENGTH,
@@ -56,23 +64,44 @@ function mergeMessages(previous: SupportMessageView[], incoming: SupportMessageV
 }
 
 export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: SupportChatProps) {
+  const { user, loading: authLoading } = useAuth();
+  const identity = identityKeyFor(user);
   const [visitorToken, setVisitorToken] = useState<string | null>(null);
+  const [claimableToken, setClaimableToken] = useState<string | null>(null);
   const [messages, setMessages] = useState<SupportMessageView[]>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [publicNo, setPublicNo] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
+  /**
+   * 这一条草稿的幂等键。复核 B3：旧版每次点发送都现生成一个，
+   * 「请求已落库、响应丢了、客户再点一次」就会真重复入库。
+   * 现在只有服务端确认收下（或客户改了内容重新开始一条）才换新值。
+   */
+  const pendingClientMsgId = useRef<string | null>(null);
+  /** 防止「换令牌 → 再被判 foreign → 再换」打转，一个挂载周期最多换两次。 */
+  const rotations = useRef(0);
 
+  // 身份变了（登录 / 登出 / 换账号）就换一枚新访客令牌，并清掉本地已渲染的消息。
+  // 这台电脑上的上一位说过什么，下一位一个字都看不到。
   useEffect(() => {
-    if (!active || visitorToken) return;
+    if (!active || authLoading) return;
     let cancelled = false;
-    void getVisitorToken().then((token) => {
-      if (!cancelled) setVisitorToken(token);
+    void ensureVisitorToken(identity).then((result) => {
+      if (cancelled) return;
+      setVisitorToken((current) => {
+        if (current && current !== result.token) {
+          setMessages([]);
+          setPublicNo(null);
+        }
+        return result.token;
+      });
+      setClaimableToken(result.previousToken);
     });
     return () => {
       cancelled = true;
     };
-  }, [active, visitorToken]);
+  }, [active, authLoading, identity]);
 
   const entry = trpc.support.entry.useQuery(undefined, { enabled: active });
 
@@ -92,44 +121,111 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
     },
   );
 
+  const rotateIdentity = useCallback(async () => {
+    if (rotations.current >= 2) return null;
+    rotations.current += 1;
+    const next = await rotateVisitorToken(identity);
+    setVisitorToken(next.token);
+    setMessages([]);
+    setPublicNo(null);
+    return next.token;
+  }, [identity]);
+
   useEffect(() => {
     if (!thread.data) return;
+    // 服务端说这条线不属于当前身份：不报错、不卡死，换一枚令牌重新开一条。
+    if (thread.data.identity === "rotate") {
+      void rotateIdentity();
+      return;
+    }
+    // 登录身份遇到本机的匿名记录：等客户点「并入我的账号」才给看，不自动继承。
+    if (thread.data.identity === "claimable") {
+      setMessages([]);
+      setPublicNo(null);
+      return;
+    }
     if (thread.data.conversation) setPublicNo(thread.data.conversation.publicNo);
     if (thread.data.messages.length) {
       setMessages((previous) => mergeMessages(previous, thread.data!.messages));
     }
-  }, [thread.data]);
+  }, [rotateIdentity, thread.data]);
 
   const utils = trpc.useUtils();
-  const sendMutation = trpc.support.send.useMutation({
-    onSuccess: (data) => {
-      setMessages((previous) => mergeMessages(previous, data.messages));
-      setPublicNo(data.conversation.publicNo);
-      setError(null);
-      void utils.support.thread.invalidate();
-    },
-  });
+  const sendMutation = trpc.support.send.useMutation();
+  const claimMutation = trpc.support.claim.useMutation();
 
   const handleSend = useCallback(async () => {
     const body = draft.trim();
     if (!body || sendMutation.isPending) return;
-    const token = visitorToken ?? (await getVisitorToken());
-    if (!visitorToken) setVisitorToken(token);
-    // 先不清空输入框：失败时客户打的字必须还在。
-    try {
-      await sendMutation.mutateAsync({
-        visitorToken: token,
-        clientMsgId: newClientMsgId(),
+    let token = visitorToken;
+    if (!token) {
+      token = (await ensureVisitorToken(identity)).token;
+      setVisitorToken(token);
+    }
+    // 同一条草稿重试时复用同一个幂等键；只有服务端收下之后才作废。
+    if (!pendingClientMsgId.current) pendingClientMsgId.current = newClientMsgId();
+    const clientMsgId = pendingClientMsgId.current;
+
+    const submit = async (withToken: string) =>
+      sendMutation.mutateAsync({
+        visitorToken: withToken,
+        clientMsgId,
         body,
         strategyId: strategyId ?? null,
         pageUrl: pageUrl ?? null,
         locale: "zh",
       });
+
+    try {
+      let data;
+      try {
+        data = await submit(token);
+      } catch (err: any) {
+        // 身份对不上：换一枚令牌开新线，然后用**同一个 clientMsgId** 再发一次。
+        if (err?.data?.code === "CONFLICT") {
+          const rotated = await rotateIdentity();
+          if (!rotated) throw err;
+          data = await submit(rotated);
+        } else {
+          throw err;
+        }
+      }
+      setMessages((previous) => mergeMessages(previous, data.messages));
+      setPublicNo(data.conversation.publicNo);
+      setError(null);
+      pendingClientMsgId.current = null;
       setDraft("");
+      void utils.support.thread.invalidate();
     } catch (err: any) {
-      setError(err?.message || "发送失败，请稍后再试");
+      // 草稿和幂等键都保留：客户再点一次是**重试同一条**，不会变成第二条消息。
+      setError(readableSupportError(err));
     }
-  }, [draft, pageUrl, sendMutation, strategyId, visitorToken]);
+  }, [draft, identity, pageUrl, rotateIdentity, sendMutation, strategyId, utils, visitorToken]);
+
+  const handleClaim = useCallback(
+    async (accept: boolean) => {
+      const previous = claimableToken;
+      setClaimableToken(null);
+      await forgetPreviousVisitorToken();
+      if (!accept || !previous || !visitorToken) return;
+      try {
+        const result = await claimMutation.mutateAsync({
+          previousVisitorToken: previous,
+          visitorToken,
+          strategyId: strategyId ?? null,
+        });
+        if (result.claimed) {
+          setMessages(result.messages);
+          setPublicNo(result.conversation.publicNo);
+          setError(null);
+        }
+        void utils.support.thread.invalidate();
+      } catch (err: any) {
+        setError(readableSupportError(err));
+      }
+    },
+    [claimMutation, claimableToken, strategyId, utils, visitorToken],
+  );
 
   useEffect(() => {
     if (!messages.length) return;
@@ -138,6 +234,8 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
   }, [messages.length]);
 
   const qqLine = entry.data?.qqLine || "";
+  const attendanceNote =
+    entry.data?.attendanceNote ?? "留言会存下来，顾问看到后在这里回你。";
   const remaining = SUPPORT_MESSAGE_MAX_LENGTH - draft.length;
 
   const intro = useMemo(() => {
@@ -152,9 +250,35 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
       <View style={styles.noticeBox}>
         <MaterialIcons name="smart-toy" size={15} color={V2.blue} />
         <Text style={styles.noticeText}>
-          {`先由${SUPPORT_AUTO_DISCLOSURE.zh}接待，真人顾问看到后会在同一个会话里接手。双方的消息都留在这里，刷新或换天再来都读得到。`}
+          {/* 值守说法跟着服务端的真实开关走：提醒通道没开就只说「留言」，不说「有人看着」。 */}
+          {`先由${SUPPORT_AUTO_DISCLOSURE.zh}接待。${attendanceNote}双方的消息都留在这里，刷新或换天再来都读得到。`}
         </Text>
       </View>
+
+      {claimableToken ? (
+        <View style={styles.claimBox}>
+          <Text style={styles.claimText}>
+            这台设备上有一段以访客身份留下的咨询记录。要并入你现在登录的账号吗？
+            不并入的话它会留在原处，你这边从一条新会话开始。
+          </Text>
+          <View style={styles.claimActions}>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void handleClaim(true)}
+              style={({ pressed }) => [styles.claimPrimary, pressed && styles.pressed]}
+            >
+              <Text style={styles.claimPrimaryText}>并入我的账号</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => void handleClaim(false)}
+              style={({ pressed }) => [styles.claimGhost, pressed && styles.pressed]}
+            >
+              <Text style={styles.claimGhostText}>不用，开新会话</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
 
       <View style={styles.metaRow}>
         <Text style={styles.metaText} numberOfLines={1}>
@@ -232,6 +356,16 @@ export function SupportChat({ active, strategyId, strategyTitle, pageUrl }: Supp
           multiline
           style={styles.input}
           editable={!sendMutation.isPending}
+          // multiline 的 onSubmitEditing 在 RN-Web 上不会触发（渲染成 textarea），
+          // 所以网页端自己接 keydown：Enter 发送，Shift+Enter 换行。
+          onKeyPress={(event: any) => {
+            if (Platform.OS !== "web") return;
+            const native = event?.nativeEvent;
+            if (native?.key === "Enter" && !native?.shiftKey) {
+              event.preventDefault?.();
+              void handleSend();
+            }
+          }}
           onSubmitEditing={() => void handleSend()}
         />
         <Pressable
@@ -280,6 +414,31 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(88,150,220,0.08)",
   },
   noticeText: { flex: 1, color: V2.textMuted, fontSize: 11, lineHeight: 17 },
+  claimBox: {
+    gap: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.42)",
+    borderRadius: 5,
+    backgroundColor: "rgba(216,188,131,0.08)",
+  },
+  claimText: { color: V2.text, fontSize: 11, lineHeight: 17 },
+  claimActions: { flexDirection: "row", gap: 8 },
+  claimPrimary: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 4,
+    backgroundColor: V2.gold,
+  },
+  claimPrimaryText: { color: V2.background, fontSize: 11, fontWeight: "800" },
+  claimGhost: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: V2.border,
+  },
+  claimGhostText: { color: V2.textMuted, fontSize: 11, fontWeight: "700" },
   metaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   metaText: { flex: 1, color: V2.text, fontSize: 11, fontWeight: "700" },
   metaNo: { color: V2.textMuted, fontSize: 10, fontWeight: "700" },

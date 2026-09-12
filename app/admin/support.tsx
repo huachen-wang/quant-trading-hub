@@ -8,7 +8,7 @@
  * 以及查看 Telegram 提醒的真实投递状态（held / pending / failed 都直接显示，不静默）。
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -24,6 +24,10 @@ import { AdminPageChrome, AdminSection } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { adminMutation, adminQuery } from "@/lib/admin-api";
 import { SUPPORT_MESSAGE_MAX_LENGTH } from "@/shared/support/contracts";
+import { newClientMsgId } from "@/lib/support-visitor";
+
+/** 后台看会话详情的自动刷新间隔；客户端是 5 秒，运营这边不用那么密。 */
+const ADMIN_THREAD_POLL_MS = 10_000;
 
 type ConversationItem = {
   id: number;
@@ -92,6 +96,8 @@ export default function AdminSupportScreen() {
   const [notify, setNotify] = useState<{ mode: string; hasToken: boolean; hasChatId: boolean } | null>(
     null,
   );
+  /** 运营这条回复的幂等键：发送失败后再点，是重试同一条，不会变成两条。 */
+  const pendingReplyId = useRef<string | null>(null);
 
   const loadList = useCallback(async () => {
     setIsLoading(true);
@@ -114,6 +120,7 @@ export default function AdminSupportScreen() {
       const data = await adminQuery("supportAdmin.thread", { publicNo });
       setMessages(Array.isArray(data?.messages) ? data.messages : []);
       setSelected(publicNo);
+      pendingReplyId.current = null;
       setError(null);
     } catch (err: any) {
       setError(err?.message || "加载会话内容失败");
@@ -126,6 +133,21 @@ export default function AdminSupportScreen() {
   useEffect(() => {
     void loadList();
   }, [loadList]);
+
+  // 会话详情自动刷新：客户在运营看着页面时发来的新消息，不用手点一下才出现。
+  useEffect(() => {
+    if (!selected) return;
+    const timer = setInterval(() => {
+      void adminQuery("supportAdmin.thread", { publicNo: selected })
+        .then((data) => {
+          if (Array.isArray(data?.messages)) setMessages(data.messages);
+        })
+        .catch(() => {
+          // 轮询失败不打断运营正在写的回复，下一轮再说
+        });
+    }, ADMIN_THREAD_POLL_MS);
+    return () => clearInterval(timer);
+  }, [selected]);
 
   useEffect(() => {
     void adminQuery("supportAdmin.notifyStatus")
@@ -145,14 +167,20 @@ export default function AdminSupportScreen() {
     const body = draft.trim();
     if (!body || !selected || isSending) return;
     setIsSending(true);
+    if (!pendingReplyId.current) pendingReplyId.current = newClientMsgId();
     try {
-      const data = await adminMutation("supportAdmin.reply", { publicNo: selected, body });
+      const data = await adminMutation("supportAdmin.reply", {
+        publicNo: selected,
+        body,
+        clientMsgId: pendingReplyId.current,
+      });
       setMessages(Array.isArray(data?.messages) ? data.messages : messages);
+      pendingReplyId.current = null;
       setDraft("");
       setError(null);
       void loadList();
     } catch (err: any) {
-      // 失败时保留草稿，别让运营刚写的一段回复消失
+      // 失败时保留草稿和幂等键：运营再点一次是重试同一条，不会重复发给客户。
       setError(err?.message || "回复失败，请重试");
     } finally {
       setIsSending(false);

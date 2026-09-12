@@ -1030,6 +1030,9 @@ export const supportConversations = mysqlTable("support_conversations", {
   // 客户真实发言条数。为 0 的会话不存在（首条才建），保留计数便于后台排序与过滤。
   customerMessageCount: int("customerMessageCount").default(0).notNull(),
   operatorMessageCount: int("operatorMessageCount").default(0).notNull(),
+  // 提醒代数。同一代只排一条待发提醒，客户在提醒发出前追问只更新摘要（不重复轰炸）；
+  // 提醒一旦终结（sent / failed）代数 +1，之后的新消息进入新一代，**不会被去重键吞掉**。
+  notifyGeneration: int("notifyGeneration").default(0).notNull(),
   lastMessageAt: timestamp("lastMessageAt").defaultNow().notNull(),
   lastCustomerMessageAt: timestamp("lastCustomerMessageAt"),
   lastOperatorMessageAt: timestamp("lastOperatorMessageAt"),
@@ -1079,6 +1082,8 @@ export const supportNotifications = mysqlTable("support_notifications", {
   // 去重键：同一会话在一个节流窗口内只排一条待发。
   dedupeKey: varchar("dedupeKey", { length: 120 }).notNull().unique(),
   conversationId: int("conversationId").notNull(),
+  // 这条提醒属于哪一代；终结时把会话的 notifyGeneration 推到 generation + 1。
+  generation: int("generation").default(0).notNull(),
   // 只放摘要（编号 / 商品 / 条数 / 后台链接），永远不含消息正文与联系方式。
   summary: text("summary").notNull(),
   status: mysqlEnum("status", ["pending", "sending", "sent", "held", "failed"])

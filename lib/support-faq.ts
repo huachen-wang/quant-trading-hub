@@ -18,6 +18,11 @@ export type SupportFaqContext = {
   strategyId?: number | string | null;
   /** 站点设置里的 QQ（群号或号码），用于把客户往 QQ 引。 */
   qq?: string | null;
+  /**
+   * 经营者的提醒通道是否真的开着（Telegram live + 凭据齐全）。
+   * 关着的时候不许说「有人看着」——只说这是留言。默认按关着算，宁可少承诺。
+   */
+  attended?: boolean;
 };
 
 export type SupportFaqRule = {
@@ -53,7 +58,7 @@ export const SUPPORT_QQ_FALLBACK = "1226426670 / 3832001817";
 export function buildQqLine(context: SupportFaqContext) {
   const qq = typeof context.qq === "string" ? context.qq.trim() : "";
   if (!qq) return "";
-  return `想聊得更细、发截图或传文件，加 QQ ${qq} 最方便；这里的对话不会丢，两边都能继续。`;
+  return `想聊得更细、发截图或传文件，加 QQ ${qq} 最方便，也最容易当场找到人；这里的留言同样留档，两边都能继续。`;
 }
 
 export const SUPPORT_FAQ_RULES: SupportFaqRule[] = [
@@ -63,7 +68,7 @@ export const SUPPORT_FAQ_RULES: SupportFaqRule[] = [
     build: (c) =>
       [
         `${productLabel(c)} 的价格按授权范围（账户数 / 有效期）定，不是一口价，所以这里不给你一个可能不准的数字。`,
-        "把你的账户数、要用的时长、MT4 还是 MT5 告诉我，真人顾问会直接在这个会话里报到具体价。",
+        "把你的账户数、要用的时长、MT4 还是 MT5 告诉我，顾问会在这个会话里给你具体价。",
       ].join("\n"),
   },
   {
@@ -72,7 +77,7 @@ export const SUPPORT_FAQ_RULES: SupportFaqRule[] = [
     build: (c) =>
       [
         `${productLabel(c)} 是按账户授权的：一份授权对应约定数量的交易账号，换券商或换账号需要重新绑定。`,
-        "具体能绑几个、到期怎么续、换机器要多久，真人顾问会按你的实际情况确认。",
+        "具体能绑几个、到期怎么续、换机器要多久，由顾问按你的实际情况确认。",
       ].join("\n"),
   },
   {
@@ -99,7 +104,7 @@ export const SUPPORT_FAQ_RULES: SupportFaqRule[] = [
     build: (c) =>
       [
         `${productLabel(c)} 能不能试、怎么试，各商品不一样：有的有模拟账号体验版，有的只提供回测与实盘记录核对。`,
-        "真人顾问会按这个商品的实际情况告诉你可核验的材料有哪些。",
+        "顾问会按这个商品的实际情况告诉你可核验的材料有哪些。",
       ].join("\n"),
   },
   {
@@ -116,7 +121,7 @@ export const SUPPORT_FAQ_RULES: SupportFaqRule[] = [
     keywords: ["售后", "报错", "不开单", "没反应", "退款", "坏了", "bug", "error", "refund", "support"],
     build: () =>
       [
-        "售后走这同一个会话，不用另开窗口：把 MT4/MT5 的「智能交易」日志截图发过来，真人顾问按日志定位。",
+        "售后走这同一个会话，不用另开窗口：把 MT4/MT5 的「智能交易」日志截图发过来，顾问按日志定位。",
         "常见的三类是：自动交易没开、图表周期/品种不对、账号授权没绑上。",
       ].join("\n"),
   },
@@ -126,7 +131,7 @@ export const SUPPORT_FAQ_RULES: SupportFaqRule[] = [
     build: (c) => {
       const qq = typeof c.qq === "string" ? c.qq.trim() : "";
       return qq
-        ? `QQ ${qq} 是我们最常用的入口，加上之后发截图、传文件都方便。这个网页会话同样有人看，你在哪边说都行。`
+        ? `QQ ${qq} 是我们最常用的入口，加上之后发截图、传文件都方便，也最容易当场找到人。网页这边的留言同样会留档。`
         : "这个网页会话有人看，你直接在这里说就行；需要其他联系方式的话，真人顾问会在会话里给你。";
     },
   },
@@ -160,7 +165,7 @@ export function matchSupportFaq(
 export function buildSupportFallback(context: SupportFaqContext = {}) {
   return [
     `这条我答不了——${productLabel(context)} 的具体情况得真人确认，我不猜。`,
-    "你可以先补一句：用哪个平台（MT4/MT5）、几个账户、打算什么时候上。真人顾问看到会直接在这里回你。",
+    "你可以先补一句：用哪个平台（MT4/MT5）、几个账户、打算什么时候上，顾问看到后在这里回你。",
   ].join("\n");
 }
 
@@ -176,7 +181,10 @@ export function buildAutoReply(
   const match = matchSupportFaq(message, context);
   const ruleKey = match?.key ?? "fallback";
   const core = match?.body ?? buildSupportFallback(context);
-  const lines = [`【${SUPPORT_AUTO_DISCLOSURE.zh}】`, core, SUPPORT_HUMAN_HANDOFF.zh];
+  const handoff = context.attended
+    ? SUPPORT_HUMAN_HANDOFF.attended.zh
+    : SUPPORT_HUMAN_HANDOFF.unattended.zh;
+  const lines = [`【${SUPPORT_AUTO_DISCLOSURE.zh}】`, core, handoff];
   const qqLine = buildQqLine(context);
   if (qqLine && ruleKey !== "contact") lines.push(qqLine);
   return { body: lines.join("\n"), ruleKey };

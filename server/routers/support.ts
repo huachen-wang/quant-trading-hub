@@ -14,6 +14,7 @@ import { adminProcedure } from "./_admin";
 import { requestIp } from "../_core/admin-security-throttle";
 import {
   SupportError,
+  claimAnonymousConversation,
   fetchVisitorThread,
   getAdminThread,
   listAdminConversations,
@@ -26,14 +27,28 @@ import { processDueSupportNotifications, resolveTelegramConfig } from "../suppor
 import { buildQqLine } from "../../lib/support-faq";
 import {
   SUPPORT_AUTO_DISCLOSURE,
+  SUPPORT_HUMAN_HANDOFF,
   SUPPORT_MESSAGE_MAX_LENGTH,
 } from "../../shared/support/contracts";
 
+/** 只有这些前缀的文案允许回给客户端 —— 全部来自 `SupportError`，由我们自己写死。 */
+const GENERIC_FAILURE = "咨询服务暂时不可用，请稍后再试";
+
+/**
+ * 错误出口。**任何非 SupportError 的异常都不许原样回给客户端。**
+ *
+ * 复核 B2 实测：撞键失败时 drizzle 的错误信息是
+ * `Failed query: insert into support_messages ... params: 15,customer,<客户刚打的那句话>,...`，
+ * 经 tRPC 原样回到前端并直接渲染在聊天气泡上方 —— 表结构、字段名和客户正文一起泄露。
+ * 这里统一兜住：真实错误只打服务端日志，客户端拿到的永远是一句固定文案。
+ */
 function toTrpcError(error: unknown): never {
   if (error instanceof SupportError) {
     throw new TRPCError({ code: error.code, message: error.message });
   }
-  throw error;
+  if (error instanceof TRPCError) throw error;
+  console.error("[support] unexpected error:", error);
+  throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: GENERIC_FAILURE });
 }
 
 const visitorTokenSchema = z.string().min(16).max(200);
@@ -46,8 +61,15 @@ export const supportRouter = router({
    */
   entry: publicProcedure.query(async () => {
     const qq = await resolveQq();
+    // attended = 经营者的提醒通道真的开着。关着的时候前端和机器人都只能说「留言」，
+    // 不许说「有人看着」。见 shared/support/contracts.ts 的 SUPPORT_HUMAN_HANDOFF。
+    const attended = resolveTelegramConfig().mode === "live";
     return {
       autoDisclosure: SUPPORT_AUTO_DISCLOSURE.zh,
+      attended,
+      attendanceNote: attended
+        ? SUPPORT_HUMAN_HANDOFF.attended.zh
+        : SUPPORT_HUMAN_HANDOFF.unattended.zh,
       qq,
       qqLine: buildQqLine({ qq }),
       maxLength: SUPPORT_MESSAGE_MAX_LENGTH,
@@ -98,6 +120,35 @@ export const supportRouter = router({
           strategyId: input.strategyId ?? null,
           afterId: input.afterId ?? 0,
           userId: ctx.user && ctx.user.role !== "admin" ? ctx.user.id : null,
+        });
+      } catch (error) {
+        toTrpcError(error);
+      }
+    }),
+
+  /**
+   * 登录后把这台设备上的匿名咨询记录**显式**并入自己的账号。
+   * 必须登录、必须拿得出换新之前那枚令牌、目标会话必须还没归属，三条缺一不可。
+   */
+  claim: publicProcedure
+    .input(
+      z.object({
+        previousVisitorToken: visitorTokenSchema,
+        visitorToken: visitorTokenSchema,
+        strategyId: strategyIdSchema,
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.user && ctx.user.role !== "admin" ? ctx.user.id : null;
+      if (!userId) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "请先登录再认领咨询记录" });
+      }
+      try {
+        return await claimAnonymousConversation({
+          previousVisitorToken: input.previousVisitorToken,
+          visitorToken: input.visitorToken,
+          strategyId: input.strategyId ?? null,
+          userId,
         });
       } catch (error) {
         toTrpcError(error);
@@ -170,9 +221,13 @@ export const supportAdminRouter = router({
 
   /** 后台手动催一次外发箱，并回显当前提醒开关状态（live / dry_run）。 */
   drain: adminProcedure.mutation(async () => {
-    const config = resolveTelegramConfig();
-    const result = await processDueSupportNotifications();
-    return { ...result, configured: config.mode === "live" };
+    try {
+      const config = resolveTelegramConfig();
+      const result = await processDueSupportNotifications();
+      return { ...result, configured: config.mode === "live" };
+    } catch (error) {
+      toTrpcError(error);
+    }
   }),
 
   notifyStatus: adminProcedure.query(() => {
