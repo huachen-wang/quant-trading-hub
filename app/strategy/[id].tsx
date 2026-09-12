@@ -260,7 +260,16 @@ export default function StrategyDetailScreen() {
         </View>
       </ScrollView>
 
-      <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
+      <ContactModal
+        visible={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        context={{
+          productId: strategy.id,
+          productTitle: strategy.title,
+          platform: strategy.platform,
+          productTypeLabel,
+        }}
+      />
       <BrokerRecommendationModal visible={showBrokerModal} colors={colors} onClose={() => setShowBrokerModal(false)} />
       <VpsRecommendationModal visible={showVpsModal} colors={colors} onClose={() => setShowVpsModal(false)} />
     </ScreenContainer>

@@ -5,7 +5,10 @@
  */
 import mysql from "mysql2/promise";
 import { pathToFileURL } from "node:url";
-import { syncCuratedStrategyCatalog } from "./strategy-catalog";
+import {
+  syncCuratedStrategyCatalog,
+  syncUnevidencedTitleClaims,
+} from "./strategy-catalog";
 import { isProductionRuntime } from "./_core/runtime-env";
 
 type DatabaseEnvironment = {
@@ -1357,6 +1360,20 @@ async function runMigrations(options: { strict?: boolean } = {}) {
     } catch (error) {
       // 内容升级失败不阻断服务启动；下一次部署会安全重试。
       console.error("[migrate] Curated strategy catalog sync failed:", error);
+    }
+
+    // 独立于上面的 catalog sync：那个迁移键一旦写入就整块跳过，而摘除标题里的
+    // 绝对化说法必须照常执行。单独的键、单独的 try，互不影响。
+    try {
+      const titleClaimChanges = await syncUnevidencedTitleClaims(connection);
+      if (titleClaimChanges > 0) {
+        console.log(
+          `[migrate] Unevidenced title claims removed (${titleClaimChanges} record(s))`,
+        );
+        migrationsRun++;
+      }
+    } catch (error) {
+      console.error("[migrate] Unevidenced title claim cleanup failed:", error);
     }
 
     if (migrationsRun > 0) {
