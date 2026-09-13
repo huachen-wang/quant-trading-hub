@@ -450,6 +450,10 @@ export const orders = mysqlTable("orders", {
   productId: int("productId").notNull(), // 关联 strategies.id 或 promo_products.id
   productTitle: varchar("productTitle", { length: 255 }).notNull(),
   productCover: text("productCover"),
+  // 下单当时商品的发包地址快照。交付读这一列而不是读 strategies.downloadUrl 的当前值，
+  // 否则商品换包之后，老订单会被发到客户没有买过的版本上。
+  // 为空 = 本次修复之前建的老订单，交付时回落到商品当前地址。
+  deliveryUrl: text("deliveryUrl"),
 
   // 金额
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // 实付金额

@@ -17,7 +17,7 @@ import { Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { URL } from "node:url";
 import type { Request, Response } from "express";
-import { getStrategyById, hasUserPurchased, recordDownload } from "../db";
+import { getPaidStrategyOrderForDelivery, getStrategyById, recordDownload } from "../db";
 
 const TOKEN_TTL_MS = 30 * 60 * 1000;
 const TOKEN_CLOCK_SKEW_MS = 60 * 1000;
@@ -478,17 +478,21 @@ async function handleSecureDownload(
 
   try {
     // Token possession is not enough: purchase permission is checked every time.
-    const purchased = await hasUserPurchased(
+    const paidOrder = await getPaidStrategyOrderForDelivery(
       verified.userId,
       verified.productId,
     );
-    if (!purchased) {
+    if (!paidOrder) {
       res.status(403).send("Forbidden");
       return;
     }
 
-    const strategy = await getStrategyById(verified.productId);
-    if (!strategy?.downloadUrl) {
+    // Serve the build the buyer paid for. Orders created before delivery
+    // snapshots exist fall back to whatever the product points at today.
+    const pinnedUrl = paidOrder.deliveryUrl;
+    const downloadUrl =
+      pinnedUrl || (await getStrategyById(verified.productId))?.downloadUrl;
+    if (!downloadUrl) {
       res.status(404).send("Download not found");
       return;
     }
@@ -501,7 +505,7 @@ async function handleSecureDownload(
 
     try {
       const { response, finalUrl } = await fetchDownload(
-        strategy.downloadUrl,
+        downloadUrl,
         controller.signal,
         networkPolicy,
       );

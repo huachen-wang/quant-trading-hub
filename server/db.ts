@@ -1950,11 +1950,21 @@ export async function consumeAdminTotpStep(input: {
 // ==================== Bundle B: 购买权限 / 下载记录 / Profile 编辑 ====================
 
 export async function hasUserPurchased(userId: number, strategyId: number): Promise<boolean> {
+  return (await getPaidStrategyOrderForDelivery(userId, strategyId)) !== null;
+}
+
+/**
+ * 交付授权的唯一事实源：拿这个用户这件商品**最近一笔已支付订单**。
+ *
+ * 返回订单本身而不是一个 boolean，是因为交付还要读订单上锁定的 `deliveryUrl`——
+ * 商品换包之后，老订单必须继续发客户当初付款买到的那一版。
+ */
+export async function getPaidStrategyOrderForDelivery(userId: number, strategyId: number) {
   const db = await getDb();
-  if (!db) return false;
+  if (!db) return null;
   // 只信任完成支付的订单。旧 purchases 表曾允许客户端直接写入，不能作为
   // EA 私有文件的授权来源；历史记录需另行人工核验后迁移为 paid order。
-  const paidOrders = await db
+  const rows = await db
     .select()
     .from(orders)
     .where(
@@ -1965,8 +1975,9 @@ export async function hasUserPurchased(userId: number, strategyId: number): Prom
         eq(orders.status, "paid")
       )
     )
+    .orderBy(desc(orders.paidAt))
     .limit(1);
-  return paidOrders.length > 0;
+  return rows[0] || null;
 }
 
 export async function recordDownload(userId: number, strategyId: number) {

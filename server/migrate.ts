@@ -825,6 +825,7 @@ async function runMigrations(options: { strict?: boolean } = {}): Promise<boolea
         \`productId\` int NOT NULL,
         \`productTitle\` varchar(255) NOT NULL,
         \`productCover\` text DEFAULT NULL,
+        \`deliveryUrl\` text DEFAULT NULL,
         \`amount\` decimal(10,2) NOT NULL,
         \`originalAmount\` decimal(10,2) DEFAULT NULL,
         \`currency\` varchar(10) NOT NULL DEFAULT 'CNY',
@@ -846,6 +847,26 @@ async function runMigrations(options: { strict?: boolean } = {}): Promise<boolea
     `;
     console.log("[migrate] Ensuring orders table exists...");
     await connection.query(createOrders);
+    // `CREATE TABLE IF NOT EXISTS` 对已存在的表是 no-op，升级路径要单独补列。
+    const [orderCols] = (await connection.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'",
+    )) as any[];
+    const orderColumnNames = new Set(
+      orderCols.map((column: any) => column.COLUMN_NAME),
+    );
+    const orderDeliveryMigrations: [string, string][] = [
+      [
+        "deliveryUrl",
+        "ALTER TABLE `orders` ADD COLUMN `deliveryUrl` text DEFAULT NULL",
+      ],
+    ];
+    for (const [column, statement] of orderDeliveryMigrations) {
+      if (!orderColumnNames.has(column)) {
+        await connection.query(statement);
+        migrationsRun++;
+        console.log(`[migrate] added orders.${column}`);
+      }
+    }
 
     // ─── 新表：payments ───
     const createPayments = `

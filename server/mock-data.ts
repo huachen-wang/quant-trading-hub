@@ -528,6 +528,7 @@ export function createMockOrder(data: OrderRecord) {
     id: nextOrderId++,
     currency: "CNY",
     status: "pending",
+    deliveryUrl: null,
     paymentMethod: null,
     paymentGateway: null,
     paidAt: null,

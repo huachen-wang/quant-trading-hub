@@ -4,12 +4,16 @@ import express from "express";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../db", () => ({
+  getPaidStrategyOrderForDelivery: vi.fn(),
   getStrategyById: vi.fn(),
-  hasUserPurchased: vi.fn(),
   recordDownload: vi.fn(),
 }));
 
-import { getStrategyById, hasUserPurchased, recordDownload } from "../db";
+import {
+  getPaidStrategyOrderForDelivery,
+  getStrategyById,
+  recordDownload,
+} from "../db";
 import {
   createSecureDownloadHandlerForTests,
   secureDownloadHandler,
@@ -92,7 +96,7 @@ describe("secure downloads", () => {
   beforeEach(() => {
     process.env.DOWNLOAD_SIGNING_SECRET = TEST_SECRET;
     vi.mocked(getStrategyById).mockReset();
-    vi.mocked(hasUserPurchased).mockReset();
+    vi.mocked(getPaidStrategyOrderForDelivery).mockReset();
     vi.mocked(recordDownload).mockReset();
     vi.mocked(recordDownload).mockResolvedValue(undefined as never);
   });
@@ -174,7 +178,9 @@ describe("secure downloads", () => {
     });
     const upstreamUrl = await listen(upstream);
 
-    vi.mocked(hasUserPurchased).mockResolvedValue(true);
+    vi.mocked(getPaidStrategyOrderForDelivery).mockResolvedValue({
+      deliveryUrl: null,
+    } as never);
     vi.mocked(getStrategyById).mockResolvedValue({
       title: "Gold EA",
       downloadUrl: `${upstreamUrl}/entry`,
@@ -207,8 +213,47 @@ describe("secure downloads", () => {
     }
   });
 
+  it("serves the build the order was paid for, not the product's current one", async () => {
+    const paidBuild = Buffer.from("EA-BUILD-THE-CUSTOMER-PAID-FOR");
+    const upstream = createServer((req, res) => {
+      if (req.url !== "/builds/v1.ex5") {
+        res.writeHead(404).end("wrong build");
+        return;
+      }
+      res.writeHead(200, {
+        "Content-Type": "application/octet-stream",
+        "Content-Length": paidBuild.length,
+      });
+      res.end(paidBuild);
+    });
+    const upstreamUrl = await listen(upstream);
+
+    vi.mocked(getPaidStrategyOrderForDelivery).mockResolvedValue({
+      deliveryUrl: `${upstreamUrl}/builds/v1.ex5`,
+    } as never);
+    // 商品已经换到 v2；已成交的订单不能跟着漂。
+    vi.mocked(getStrategyById).mockResolvedValue({
+      title: "Gold EA",
+      downloadUrl: `${upstreamUrl}/builds/v2.ex5`,
+    } as never);
+
+    const app = await createDownloadApp({ isAddressAllowed: () => true });
+    try {
+      const response = await fetch(
+        `${app.baseUrl}/api/download/secure?token=${encodeURIComponent(strategyToken())}`,
+      );
+
+      expect(response.status).toBe(200);
+      expect(Buffer.from(await response.arrayBuffer())).toEqual(paidBuild);
+      expect(getStrategyById).not.toHaveBeenCalled();
+    } finally {
+      await close(app.server);
+      await close(upstream);
+    }
+  });
+
   it("checks purchase permission again before resolving the storage URL", async () => {
-    vi.mocked(hasUserPurchased).mockResolvedValue(false);
+    vi.mocked(getPaidStrategyOrderForDelivery).mockResolvedValue(null as never);
     const app = await createDownloadApp();
     try {
       const response = await fetch(
@@ -224,7 +269,9 @@ describe("secure downloads", () => {
   });
 
   it("rejects non-HTTP storage URLs", async () => {
-    vi.mocked(hasUserPurchased).mockResolvedValue(true);
+    vi.mocked(getPaidStrategyOrderForDelivery).mockResolvedValue({
+      deliveryUrl: null,
+    } as never);
     vi.mocked(getStrategyById).mockResolvedValue({
       title: "Unsafe EA",
       downloadUrl: "file:///etc/passwd",
@@ -247,7 +294,9 @@ describe("secure downloads", () => {
     "http://localhost/private-ea.zip",
     "http://169.254.169.254/latest/meta-data",
   ])("blocks private or metadata SSRF target %s", async (downloadUrl) => {
-    vi.mocked(hasUserPurchased).mockResolvedValue(true);
+    vi.mocked(getPaidStrategyOrderForDelivery).mockResolvedValue({
+      deliveryUrl: null,
+    } as never);
     vi.mocked(getStrategyById).mockResolvedValue({
       title: "Blocked EA",
       downloadUrl,
@@ -266,7 +315,9 @@ describe("secure downloads", () => {
   });
 
   it("blocks a public-looking hostname when DNS resolves it privately", async () => {
-    vi.mocked(hasUserPurchased).mockResolvedValue(true);
+    vi.mocked(getPaidStrategyOrderForDelivery).mockResolvedValue({
+      deliveryUrl: null,
+    } as never);
     vi.mocked(getStrategyById).mockResolvedValue({
       title: "DNS Rebinding EA",
       downloadUrl: "https://files.eaxau.example/private-ea.zip",
@@ -297,7 +348,9 @@ describe("secure downloads", () => {
     });
     const upstreamUrl = new URL(await listen(upstream));
 
-    vi.mocked(hasUserPurchased).mockResolvedValue(true);
+    vi.mocked(getPaidStrategyOrderForDelivery).mockResolvedValue({
+      deliveryUrl: null,
+    } as never);
     vi.mocked(getStrategyById).mockResolvedValue({
       title: "Redirecting EA",
       downloadUrl: `http://downloads.eaxau.example:${upstreamUrl.port}/entry`,
@@ -330,7 +383,9 @@ describe("secure downloads", () => {
     });
     const upstreamUrl = await listen(upstream);
 
-    vi.mocked(hasUserPurchased).mockResolvedValue(true);
+    vi.mocked(getPaidStrategyOrderForDelivery).mockResolvedValue({
+      deliveryUrl: null,
+    } as never);
     vi.mocked(getStrategyById).mockResolvedValue({
       title: "Huge EA",
       downloadUrl: `${upstreamUrl}/huge.zip`,

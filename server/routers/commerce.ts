@@ -132,6 +132,8 @@ export const ordersRouter = router({
       let productCover: string | null = null;
       let amount = "0.00";
       let originalAmount: string | null = null;
+      // 下单当时的发包地址。交付按这一份快照发，商品之后换包不影响已成交订单。
+      let deliveryUrl: string | null = null;
       if (input.productKind === "strategy") {
         product = await db.getStrategyById(input.productId);
         if (!product || product.status !== "published") throw new Error("商品不存在或已下架");
@@ -140,6 +142,7 @@ export const ordersRouter = router({
         if (!product.downloadUrl) throw new Error("此 EA 文件尚未完成受控交付配置");
         productTitle = product.title;
         productCover = product.coverImage;
+        deliveryUrl = product.downloadUrl;
         amount = String(product.price || "0.00");
         originalAmount = product.originalPrice ? String(product.originalPrice) : null;
       } else {
@@ -169,6 +172,7 @@ export const ordersRouter = router({
         productId: input.productId,
         productTitle,
         productCover,
+        deliveryUrl,
         amount,
         originalAmount,
         status: "pending",
@@ -191,7 +195,8 @@ export const ordersRouter = router({
       let downloadUrl: string | null = null;
       if (order.status === "paid" && order.productKind === "strategy") {
         const product = await db.getStrategyById(order.productId);
-        if (product?.downloadUrl) {
+        // 已成交订单优先认下单时锁定的发包地址；商品后来改地址或清空都不该收回交付入口。
+        if (order.deliveryUrl || product?.downloadUrl) {
           const token = signDownloadToken({
             userId: order.userId,
             productKind: "strategy",
