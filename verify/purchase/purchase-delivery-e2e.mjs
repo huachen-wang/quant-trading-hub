@@ -338,7 +338,10 @@ try {
   check("B 未付款拿不到同商品的下载授权", bobDetail?.downloadUrl === null, `downloadUrl=${bobDetail?.downloadUrl}`);
 
   // ── 12. 付款商品与发包版本一致性 ──
-  group("12. 付款商品与发包版本一致性");
+  // 注意口径：这一组验的是**发包地址**跟着订单走。地址锁不住字节——同一个地址的内容
+  // 可以被就地换掉。按内容摘要校验、退款订单越权、同商品多笔订单各发各的版本，
+  // 在 verify/purchase/delivery-binding-e2e.mjs 里单独验。
+  group("12. 付款商品与发包地址一致性");
   await conn.query("UPDATE strategies SET downloadUrl=? WHERE id=?", [`${ORIGIN}/v2.ex5`, product.id]);
   const afterBump = await download(DELIVERY, token);
   check(
@@ -349,6 +352,20 @@ try {
       : `HTTP ${afterBump.status}`,
   );
   await conn.query("UPDATE strategies SET downloadUrl=? WHERE id=?", [`${ORIGIN}/v1.ex5`, product.id]);
+
+  // 交付响应要如实报出这一笔订单锁到了什么程度，不能让「地址锁定」被当成「版本锁定」。
+  const integrityMarked = await download(DELIVERY, token);
+  check(
+    "交付响应如实标注版本身份锁定程度",
+    ["pinned", "unpinned"].includes(integrityMarked.headers.get("x-delivery-integrity")),
+    `x-delivery-integrity=${integrityMarked.headers.get("x-delivery-integrity")}`,
+  );
+  const integrityDetail = await trpcQuery("orders.detail", { orderNo }, alice.session);
+  check(
+    "订单详情如实报出交付锁定程度",
+    ["pinned", "url-only", "none"].includes(integrityDetail?.deliveryIntegrity),
+    `deliveryIntegrity=${integrityDetail?.deliveryIntegrity}`,
+  );
 
   // 修复之前建的老订单没有快照列，必须回落到商品当前地址而不是 404。
   await conn.query("UPDATE orders SET deliveryUrl=NULL WHERE orderNo=?", [orderNo]);

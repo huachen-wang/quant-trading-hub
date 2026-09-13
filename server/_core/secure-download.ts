@@ -13,12 +13,20 @@ import { request as httpRequest, type IncomingMessage } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { BlockList, isIP, type LookupFunction } from "node:net";
 import path from "node:path";
-import { Transform } from "node:stream";
+import { PassThrough, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { URL } from "node:url";
 import type { Request, Response } from "express";
-import { getPaidStrategyOrderForDelivery, getStrategyById, recordDownload } from "../db";
+import {
+  getLatestPaidStrategyOrder,
+  getPaidOrderForDelivery,
+  getStrategyById,
+  pinOrderDeliveryDigest,
+  pinStrategyPackageDigest,
+  recordDownload,
+} from "../db";
 
+const TOKEN_VERSION = "v2";
 const TOKEN_TTL_MS = 30 * 60 * 1000;
 const TOKEN_CLOCK_SKEW_MS = 60 * 1000;
 const MAX_TOKEN_LENGTH = 512;
@@ -86,6 +94,13 @@ interface VerifiedDownloadToken {
   userId: number;
   productKind: DownloadProductKind;
   productId: number;
+  /**
+   * 这张令牌绑定的订单。
+   *
+   * `null` = 本次修复之前签发的旧格式令牌（没有订单号）。旧令牌 TTL 只有 30 分钟，
+   * 所以这个回落窗口最多存在到「上线 + 30 分钟」，之后不会再有任何旧令牌能通过验签。
+   */
+  orderId: number | null;
 }
 
 interface InvalidDownloadToken {
@@ -101,6 +116,19 @@ class DownloadTooLargeError extends Error {
   constructor() {
     super("Download exceeds the maximum allowed size");
     this.name = "DownloadTooLargeError";
+  }
+}
+
+/**
+ * 取回来的字节跟订单锁定的那一份对不上。
+ *
+ * 这是「停发 + 待补发」，不是「发一份差不多的」：发包地址没变但内容被换过，
+ * 客户拿到的就不是他付款买到的那一版。
+ */
+class DeliveryIntegrityError extends Error {
+  constructor(readonly detail: string) {
+    super(`Delivered bytes do not match the pinned package: ${detail}`);
+    this.name = "DeliveryIntegrityError";
   }
 }
 
@@ -148,28 +176,44 @@ function signaturesMatch(actual: string, expected: string): boolean {
   );
 }
 
-/** Generate a short-lived, HMAC-signed download token. */
+/**
+ * Generate a short-lived, HMAC-signed download token bound to one paid order.
+ *
+ * 令牌必须带订单号。只带 user+product 的话，同一个用户同一件商品的多笔已付订单
+ * 共用一张令牌语义，交付侧只能去猜「哪一笔」——猜错就发错版本，而且退款的那一笔
+ * 还能借另一笔 paid 订单继续下载。
+ */
 export function signDownloadToken(opts: {
   userId: number;
   productKind: DownloadProductKind;
   productId: number;
+  orderId: number;
 }): string {
   if (
     !isPositiveSafeInteger(opts.userId) ||
     !isPositiveSafeInteger(opts.productId) ||
+    !isPositiveSafeInteger(opts.orderId) ||
     !isProductKind(opts.productKind)
   ) {
     throw new TypeError("Invalid download token claims");
   }
 
   const expiresAt = Date.now() + TOKEN_TTL_MS;
-  const payload = `${opts.userId}.${opts.productKind}.${opts.productId}.${expiresAt}`;
+  const payload = `${TOKEN_VERSION}.${opts.userId}.${opts.productKind}.${opts.productId}.${opts.orderId}.${expiresAt}`;
   return Buffer.from(`${payload}.${hmac(payload)}`, "utf8").toString(
     "base64url",
   );
 }
 
-/** Verify format, claims, lifetime and signature without trusting decoded data. */
+/**
+ * Verify format, claims, lifetime and signature without trusting decoded data.
+ *
+ * 认两种格式：
+ *  - `v2.<user>.<kind>.<product>.<order>.<exp>.<sig>` —— 当前格式，绑定到具体订单。
+ *  - `<user>.<kind>.<product>.<exp>.<sig>` —— 本次修复之前签发的旧格式，没有订单号。
+ *    旧格式只可能来自修复上线前签发的令牌，TTL 30 分钟，上线半小时后自然绝迹；
+ *    保留它只是为了不打断在途客户的下载，交付侧会按旧口径（最近一笔已付订单）回落。
+ */
 export function verifyDownloadToken(token: string): DownloadTokenVerification {
   try {
     if (
@@ -186,19 +230,28 @@ export function verifyDownloadToken(token: string): DownloadTokenVerification {
     }
 
     const parts = tokenBytes.toString("utf8").split(".");
-    if (parts.length !== 5) {
+    const isCurrentFormat = parts.length === 7 && parts[0] === TOKEN_VERSION;
+    const isLegacyFormat = parts.length === 5;
+    if (!isCurrentFormat && !isLegacyFormat) {
       return { ok: false, error: "Invalid token" };
     }
 
-    const [userIdClaim, productKindClaim, productIdClaim, expiresAtClaim, sig] =
-      parts;
+    const claims = isCurrentFormat ? parts.slice(1, -1) : parts.slice(0, -1);
+    const sig = parts[parts.length - 1];
+    const [userIdClaim, productKindClaim, productIdClaim] = claims;
+    const orderIdClaim = isCurrentFormat ? claims[3] : null;
+    const expiresAtClaim = isCurrentFormat ? claims[4] : claims[3];
+
     const userId = parseCanonicalPositiveInteger(userIdClaim);
     const productId = parseCanonicalPositiveInteger(productIdClaim);
     const expiresAt = parseCanonicalPositiveInteger(expiresAtClaim);
+    const orderId =
+      orderIdClaim === null ? null : parseCanonicalPositiveInteger(orderIdClaim);
     if (
       userId === null ||
       productId === null ||
       expiresAt === null ||
+      (isCurrentFormat && orderId === null) ||
       !isProductKind(productKindClaim)
     ) {
       return { ok: false, error: "Invalid token" };
@@ -212,7 +265,7 @@ export function verifyDownloadToken(token: string): DownloadTokenVerification {
       return { ok: false, error: "Invalid token" };
     }
 
-    const payload = `${userIdClaim}.${productKindClaim}.${productIdClaim}.${expiresAtClaim}`;
+    const payload = parts.slice(0, -1).join(".");
     if (!signaturesMatch(sig, hmac(payload))) {
       return { ok: false, error: "Invalid token" };
     }
@@ -222,6 +275,7 @@ export function verifyDownloadToken(token: string): DownloadTokenVerification {
       userId,
       productKind: productKindClaim,
       productId,
+      orderId,
     };
   } catch {
     // A missing production secret must fail closed, never fall back to a known key.
@@ -409,18 +463,79 @@ function readContentLength(response: IncomingMessage): number | null {
   return length;
 }
 
-function createSizeLimiter(maxBytes: number): Transform {
+interface PinnedPackage {
+  sha256: string;
+  bytes: number;
+}
+
+interface DeliveryGuard {
+  stream: Transform;
+  /** 流完之后才有值：这次实际取到的字节身份。 */
+  measured(): PinnedPackage | null;
+}
+
+/**
+ * 限流 + 量内容身份，同时保证「校验不过就发不出完整文件」。
+ *
+ * 摘要要读到最后一个字节才算得出来，所以这里**压着最后一块不转发**：
+ * flush 时摘要对得上才把它放出去，对不上就直接报错、连接被掐断，
+ * 客户端拿到的是残缺传输，而不是一份看起来完整、其实不是所购版本的文件。
+ *
+ * 内存占用是「一块」，不是「一整包」——大文件不会被读进内存。
+ */
+function createDeliveryGuard(
+  maxBytes: number,
+  pinned: PinnedPackage | null,
+): DeliveryGuard {
+  const hash = crypto.createHash("sha256");
   let receivedBytes = 0;
-  return new Transform({
+  let heldChunk: Buffer | null = null;
+  let measured: PinnedPackage | null = null;
+
+  const stream = new Transform({
     transform(chunk: Buffer, _encoding, callback) {
       receivedBytes += chunk.length;
       if (receivedBytes > maxBytes) {
         callback(new DownloadTooLargeError());
         return;
       }
-      callback(null, chunk);
+      hash.update(chunk);
+      const previous = heldChunk;
+      heldChunk = chunk;
+      callback(null, previous ?? undefined);
+    },
+    flush(callback) {
+      measured = { sha256: hash.digest("hex"), bytes: receivedBytes };
+      if (
+        pinned &&
+        (measured.sha256 !== pinned.sha256 || measured.bytes !== pinned.bytes)
+      ) {
+        callback(
+          new DeliveryIntegrityError(
+            `sha256 ${measured.sha256.slice(0, 12)}…/${measured.bytes}B vs pinned ${pinned.sha256.slice(0, 12)}…/${pinned.bytes}B`,
+          ),
+        );
+        return;
+      }
+      callback(null, heldChunk ?? undefined);
     },
   });
+
+  return { stream, measured: () => measured };
+}
+
+/** 订单上锁定的内容身份；两列都齐了才算数。 */
+function pinnedPackageOf(order: {
+  deliverySha256?: string | null;
+  deliveryBytes?: number | null;
+}): PinnedPackage | null {
+  const sha256 = order.deliverySha256;
+  const bytes = order.deliveryBytes;
+  if (!sha256 || !SHA256_HEX_RE.test(sha256)) return null;
+  if (typeof bytes !== "number" || !Number.isSafeInteger(bytes) || bytes < 0) {
+    return null;
+  }
+  return { sha256, bytes };
 }
 
 function safeContentType(response: IncomingMessage): string {
@@ -439,7 +554,28 @@ function safeDownloadFilename(productId: number, finalUrl: URL): string {
   return `eaxau-strategy-${productId}${safeExtension}`;
 }
 
+/**
+ * 停发说明。给的是「等补发」，不是一句 502——客户付过款，得知道这不是他的问题。
+ * 前缀是稳定的机器码，方便客服/工单按它检索。
+ */
+const PACKAGE_MISMATCH_MESSAGE =
+  "DELIVERY_PACKAGE_MISMATCH 交付包与本笔订单锁定的版本不一致，已暂停发放以免发错版本。请联系客服并附上订单号，我们会核对后补发。";
+
 function sendProxyError(res: Response, error: unknown): void {
+  if (error instanceof DeliveryIntegrityError) {
+    if (!res.headersSent) {
+      // 还没写出任何字节：给一个能读懂的停发回执，而不是半截文件。
+      res.removeHeader("Content-Disposition");
+      res.removeHeader("Content-Type");
+      res.setHeader("X-Delivery-Integrity", "mismatch");
+      res.status(409).type("text/plain; charset=utf-8").send(PACKAGE_MISMATCH_MESSAGE);
+      return;
+    }
+    // 已经在流了：掐断连接。客户端拿到的是残缺传输，不是完整的错版本。
+    res.destroy(error);
+    return;
+  }
+
   if (res.headersSent) {
     res.destroy(error instanceof Error ? error : undefined);
     return;
@@ -477,11 +613,17 @@ async function handleSecureDownload(
   }
 
   try {
-    // Token possession is not enough: purchase permission is checked every time.
-    const paidOrder = await getPaidStrategyOrderForDelivery(
-      verified.userId,
-      verified.productId,
-    );
+    // Token possession is not enough: the order is re-checked every time.
+    // 令牌带订单号时就按那一笔订单判，不去猜「最近一笔」——猜错就会发错版本，
+    // 而且退款的那一笔还能借另一笔 paid 订单继续下载。
+    const paidOrder = verified.orderId
+      ? await getPaidOrderForDelivery({
+          orderId: verified.orderId,
+          userId: verified.userId,
+          strategyId: verified.productId,
+        })
+      : // 修复上线前签发的旧格式令牌（无订单号）：按旧口径回落，TTL 30 分钟后绝迹。
+        await getLatestPaidStrategyOrder(verified.userId, verified.productId);
     if (!paidOrder) {
       res.status(403).send("Forbidden");
       return;
@@ -496,6 +638,10 @@ async function handleSecureDownload(
       res.status(404).send("Download not found");
       return;
     }
+
+    // 地址锁不住字节：同一个 URL 的内容可以被就地换掉。有内容身份就按它核对，
+    // 没有（老订单 / 这个发包地址还没量过）就如实标 unpinned，并在本次交付中量出来。
+    const pinnedPackage = pinnedPackageOf(paidOrder);
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
@@ -514,6 +660,13 @@ async function handleSecureDownload(
         response.destroy();
         throw new DownloadTooLargeError();
       }
+      // 长度就对不上的，一个字节都不用发：直接给可解释的停发回执。
+      if (pinnedPackage && contentLength !== null && contentLength !== pinnedPackage.bytes) {
+        response.destroy();
+        throw new DeliveryIntegrityError(
+          `content-length ${contentLength}B vs pinned ${pinnedPackage.bytes}B`,
+        );
+      }
 
       res.status(200);
       res.setHeader("Cache-Control", "private, no-store, max-age=0");
@@ -523,14 +676,42 @@ async function handleSecureDownload(
         `attachment; filename="${safeDownloadFilename(verified.productId, finalUrl)}"`,
       );
       res.setHeader("X-Content-Type-Options", "nosniff");
+      // 如实标：pinned = 这次交付按订单锁定的内容身份核对过；
+      // unpinned = 这笔订单还没有内容身份，本次只是把它量下来，不算校验过。
+      res.setHeader("X-Delivery-Integrity", pinnedPackage ? "pinned" : "unpinned");
 
-      await pipeline(response, createSizeLimiter(MAX_DOWNLOAD_BYTES), res);
+      const guard = createDeliveryGuard(MAX_DOWNLOAD_BYTES, pinnedPackage);
+      // `pipeline` 出错会把目的流一起销毁。中间垫一层 `.pipe()`（经典管道不传播错误、
+      // 不销毁目的流），这样「一个字节都还没发出去」时 res 还活着，能回一个能读懂的
+      // 停发回执，而不是让客户端看到一次莫名其妙的连接重置。
+      const relay = new PassThrough();
+      relay.pipe(res);
+      await pipeline(response, guard.stream, relay);
 
       // Count only downloads that finished streaming successfully.
       try {
         await recordDownload(verified.userId, verified.productId);
       } catch {
         // Download statistics must not make a paid file unavailable.
+      }
+      // 把量到的内容身份补上：订单只补空值（不覆盖已锁定的身份），商品只在
+      // 「现在挂的还是这个地址」时记录。都失败也不能让已付款的文件发不出去。
+      const measured = guard.measured();
+      if (measured) {
+        try {
+          // 只给「下单时确实锁过发包地址」的订单补内容身份。修复前建的老订单本来就
+          // 没有版本约定，交付一直是跟着商品当前地址走的；给它们钉上「第一次下到的
+          // 那份字节」，只会在商品正常换包时把老客户挡在 409 外面。
+          if (!pinnedPackage && paidOrder.deliveryUrl) {
+            await pinOrderDeliveryDigest(paidOrder.id, measured);
+          }
+          await pinStrategyPackageDigest(verified.productId, {
+            downloadUrl,
+            ...measured,
+          });
+        } catch {
+          // Pinning is bookkeeping; a paid file must stay deliverable without it.
+        }
       }
     } catch (error) {
       sendProxyError(res, error);

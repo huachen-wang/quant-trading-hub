@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, index, uniqueIndex, boolean, date } from "drizzle-orm/mysql-core";
+import { int, bigint, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, index, uniqueIndex, boolean, date } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -51,6 +51,12 @@ export const strategies = mysqlTable("strategies", {
   
   // 下载和付费
   downloadUrl: text("downloadUrl"), // 下载链接
+  // 发包的**内容身份**（不是地址）。存储代理是按 path 覆盖写的，同一个 URL 的字节可以
+  // 被就地替换，所以光锁地址锁不住版本。这三列记的是「packageDigestUrl 这个地址上，
+  // 当时量到的字节是 packageSha256 / packageBytes」——地址一改，摘要立刻作废重学。
+  packageDigestUrl: text("packageDigestUrl"),
+  packageSha256: varchar("packageSha256", { length: 64 }),
+  packageBytes: bigint("packageBytes", { mode: "number" }),
   price: decimal("price", { precision: 10, scale: 2 }).default("0.00"), // 价格,0为免费
   originalPrice: decimal("originalPrice", { precision: 10, scale: 2 }), // 原价（用于划线价展示）
   isFree: boolean("isFree").default(true).notNull(), // 是否免费
@@ -454,6 +460,12 @@ export const orders = mysqlTable("orders", {
   // 否则商品换包之后，老订单会被发到客户没有买过的版本上。
   // 为空 = 本次修复之前建的老订单，交付时回落到商品当前地址。
   deliveryUrl: text("deliveryUrl"),
+  // 这笔订单约定交付的那一份字节。只锁地址锁不住内容（同 URL 可以被换包），
+  // 所以交付时要按摘要核对：对不上就停发并给待补发，而不是把别的字节当已购版本发出去。
+  // 为空 = 这笔订单还没有内容身份（老订单，或商品发包摘要尚未量过），
+  // 此时交付按「首次成功交付学习摘要」补齐，对外不得宣称版本已完整锁定。
+  deliverySha256: varchar("deliverySha256", { length: 64 }),
+  deliveryBytes: bigint("deliveryBytes", { mode: "number" }),
 
   // 金额
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // 实付金额
