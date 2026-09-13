@@ -11,7 +11,11 @@
  */
 
 import * as db from "../db";
-import { SUPPORT_QQ_FALLBACK, buildAutoReply } from "../../lib/support-faq";
+import {
+  SUPPORT_QQ_FALLBACK,
+  buildAutoReply,
+  normalizeQqContacts,
+} from "../../lib/support-faq";
 import {
   buildDedupeKey,
   buildNotificationSummary,
@@ -28,6 +32,7 @@ import {
 import {
   SUPPORT_HISTORY_LIMIT,
   SUPPORT_MESSAGE_MAX_LENGTH,
+  isOperatorTakeover,
   type SupportConversationView,
   type SupportMessageView,
   type SupportStatus,
@@ -97,6 +102,8 @@ export function toConversationView(row: ConversationRow): SupportConversationVie
     strategyTitle: row.strategyTitle,
     customerMessageCount: row.customerMessageCount,
     operatorMessageCount: row.operatorMessageCount,
+    // 接管态由服务端算好下发。客户端只负责显示「运营回复中」，不自己推。
+    operatorTakeover: isOperatorTakeover(row),
     lastMessageAt: row.lastMessageAt.toISOString(),
   };
 }
@@ -214,12 +221,17 @@ async function resolveStrategy(strategyId: number | null) {
   }
 }
 
-/** 站点设置里的 QQ；没配就用公开兜底号，别让 QQ 入口在页面上消失。 */
+/**
+ * 站点设置里的 QQ；没配就用公开兜底号，别让 QQ 入口在页面上消失。
+ *
+ * 出口统一过一遍 `normalizeQqContacts`：线上设置填的是 `QQ1226426670 QQ3832001817`，
+ * 而每个展示位自己还会拼一次 `QQ `。**号码一个都不改**，只是把重复的前缀收掉。
+ */
 export async function resolveQq() {
   try {
     const contact: any = await db.getContactSettings();
-    const qq = contact?.contact_qq;
-    if (typeof qq === "string" && qq.trim()) return qq.trim();
+    const qq = normalizeQqContacts(contact?.contact_qq);
+    if (qq) return qq;
   } catch {
     // 读设置失败不该让咨询面板少一个入口
   }
@@ -308,6 +320,10 @@ export async function sendCustomerMessage(input: SendMessageInput) {
 
   // 客户消息 + 计数 + 机器人回复 + 提醒排队：一个事务，要么全成要么全不成。
   // 这样不会出现「消息在库里、机器人回复丢了、客户重试又命中幂等直接返回」的死角。
+  //
+  // `auto` 只是**备好的**候选。写不写由存储层在持会话行锁的事务里判定：运营已经接管的会话
+  // 整条丢掉，只留客户消息 + 提醒。判定不放在这里，是因为这里读到的状态和事务里写下去的
+  // 那一刻之间隔着一个网络往返，运营的回复正好可以插在中间。
   const turn = await store.appendCustomerTurn({
     conversationId: conversation.id,
     body,
@@ -323,6 +339,8 @@ export async function sendCustomerMessage(input: SendMessageInput) {
         customerMessageCount: fresh.customerMessageCount,
         status: fresh.status,
         identity: fresh.userId ? "member" : "guest",
+        // 接管期间机器人不兜底了，这条提醒就是唯一会动的东西，摘要里必须说清楚。
+        operatorTakeover: isOperatorTakeover(fresh),
       }),
     }),
   });
@@ -335,6 +353,11 @@ export async function sendCustomerMessage(input: SendMessageInput) {
   const messages = await store.listRecentMessages(conversation.id, SUPPORT_HISTORY_LIMIT);
   return {
     duplicate: !turn.created,
+    /**
+     * 这一轮**没有**机器人回复，因为运营已经手动接管。客户端据此把「运营回复中」说清楚，
+     * 而不是让客户对着一条孤零零的自己发的消息猜是不是没发出去。
+     */
+    autoSuppressed: turn.autoSuppressed,
     // 幂等命中但正文对不上：这次的内容**没有**落库。客户端据此保住草稿、如实告知客户，
     // 不许当成「发送成功」清空输入框（复核回合 2 的 P2）。
     bodyMismatch: turn.bodyMismatch,
@@ -534,6 +557,28 @@ export async function replyAsOperator(input: {
     conversation: toConversationView(fresh),
     messages: messages.map(toMessageView),
   };
+}
+
+/**
+ * 后台显式切换自动接待。
+ *
+ * 只有这一个入口能把自动接待**交还**给机器人；反过来关掉它（人工接管）平时不用手点，
+ * 运营在这条会话里发一条回复就自动进入接管态。留着 `enabled=false` 是给
+ * 「先把机器人停掉、回头再慢慢写」这种用法，语义和运营回复完全一致，不是第二套状态。
+ */
+export async function setAutoAssist(input: {
+  publicNo: string;
+  enabled: boolean;
+  store?: SupportStore;
+}) {
+  const store = input.store ?? getSupportStore();
+  const conversation = await store.findConversationByPublicNo(String(input.publicNo ?? "").trim());
+  if (!conversation) throw new SupportError("NOT_FOUND", "会话不存在");
+  const fresh = await store.setAutoAssist({
+    conversationId: conversation.id,
+    enabled: input.enabled,
+  });
+  return { conversation: toConversationView(fresh) };
 }
 
 export async function setConversationStatus(input: {

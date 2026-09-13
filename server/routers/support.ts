@@ -21,6 +21,7 @@ import {
   replyAsOperator,
   resolveQq,
   sendCustomerMessage,
+  setAutoAssist,
   setConversationStatus,
 } from "../support/service";
 import { processDueSupportNotifications, resolveTelegramConfig } from "../support/notify";
@@ -209,6 +210,25 @@ export const supportAdminRouter = router({
           clientMsgId: input.clientMsgId ?? null,
           operatorId: ctx.user.id,
         });
+      } catch (error) {
+        toTrpcError(error);
+      }
+    }),
+
+  /**
+   * 自动接待开关。`enabled=true` 是「交还自动接待」，`enabled=false` 是「人工接管」。
+   * 和 reply 一样只有管理员能调——接管状态直接决定客户看不看得到机器人回复，不能开给访客。
+   */
+  setAutoAssist: adminProcedure
+    .input(
+      z.object({
+        publicNo: z.string().min(3).max(32),
+        enabled: z.boolean(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      try {
+        return await setAutoAssist(input);
       } catch (error) {
         toTrpcError(error);
       }

@@ -1030,6 +1030,11 @@ export const supportConversations = mysqlTable("support_conversations", {
   // 客户真实发言条数。为 0 的会话不存在（首条才建），保留计数便于后台排序与过滤。
   customerMessageCount: int("customerMessageCount").default(0).notNull(),
   operatorMessageCount: int("operatorMessageCount").default(0).notNull(),
+  // 自动接待开关的**显式覆盖**，可空：null = 没人表过态，按 operatorMessageCount 推导
+  // （运营回过话就算手动接管）；false = 后台显式停自动接待；true = 后台显式交还自动接待。
+  // 刻意留空而不是 default true：存量会话不用回填，升级后运营回过的那些立刻就是接管态。
+  // 判定只有一份，见 shared/support/contracts.ts 的 isAutoAssistEnabled。
+  autoAssistEnabled: boolean("autoAssistEnabled"),
   // 提醒代数。同一代只排一条待发提醒，客户在提醒发出前追问只更新摘要（不重复轰炸）；
   // 提醒一旦终结（sent / failed）代数 +1，之后的新消息进入新一代，**不会被去重键吞掉**。
   notifyGeneration: int("notifyGeneration").default(0).notNull(),

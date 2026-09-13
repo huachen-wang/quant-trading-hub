@@ -22,7 +22,7 @@ import {
   SUPPORT_AUTO_DISCLOSURE,
   SUPPORT_MESSAGE_MAX_LENGTH,
 } from "../shared/support/contracts";
-import { buildAutoReply, matchSupportFaq } from "../lib/support-faq";
+import { buildAutoReply, buildQqLine, matchSupportFaq, normalizeQqContacts } from "../lib/support-faq";
 import {
   readableSupportError,
   SUPPORT_ERROR_TEXT,
@@ -42,6 +42,7 @@ import {
   listAdminConversations,
   replyAsOperator,
   sendCustomerMessage,
+  setAutoAssist,
   setConversationStatus,
 } from "../server/support/service";
 import {
@@ -872,5 +873,221 @@ describe("Telegram 提醒", () => {
     const notifications = await store.listNotifications(1);
     expect(notifications).toHaveLength(1);
     expect(notifications[0].summary).toContain("客户消息 2 条");
+  });
+});
+
+/**
+ * 真人手动接管（内存层语义）。
+ *
+ * 这一批就是线上那条 EAX-XRY3JF4 打出来的问题：运营已经在会话里回过话，客户再问一句，
+ * `appendCustomerTurn` 照样在客户消息后面追加一条自动回复，等于机器人当着运营的面抢答。
+ *
+ * 口径：**运营一开口，这条会话就归人管**。之后访客发的每一条只做两件事——落库、提醒运营；
+ * 一个字都不自动答，直到后台显式把自动接待交还回去。
+ *
+ * 同一批断言在 `tests/support-mysql.test.ts` 里对真库再跑一遍（含并发）。内存层只证语义，
+ * 不证并发：这里的"事务"是整段同步执行，撞不出真库那种交错。
+ */
+describe("真人手动接管", () => {
+  const reply = (store: SupportStore, publicNo: string, body: string) =>
+    replyAsOperator({ publicNo, body, operatorId: 7, store });
+
+  it("运营回过话之后，访客的后续提问只落库 + 提醒，不再自动答", async () => {
+    const store = createMemorySupportStore();
+    const sent = await send(store, { strategyId: 1, body: "这个能绑几个账户" });
+    // 接管之前：机器人正常先答一句。
+    expect(sent.conversation.operatorTakeover).toBe(false);
+    expect(sent.autoSuppressed).toBe(false);
+    expect(sent.messages.map((m) => m.role)).toEqual(["customer", "auto"]);
+
+    await reply(store, sent.conversation.publicNo, "默认 3 个账户，可加购。");
+
+    const follow = await send(store, {
+      strategyId: 1,
+      body: "那加购一个多少钱",
+      clientMsgId: "takeover-follow-1",
+    });
+    expect(follow.autoSuppressed).toBe(true);
+    expect(follow.conversation.operatorTakeover).toBe(true);
+    // 客户这条照样进库（计数 +1），只是后面没有跟机器人回复。
+    expect(follow.conversation.customerMessageCount).toBe(2);
+    expect(follow.messages.map((m) => m.role)).toEqual([
+      "customer",
+      "auto",
+      "operator",
+      "customer",
+    ]);
+    expect(follow.messages[follow.messages.length - 1].role).toBe("customer");
+  });
+
+  it("接管期间照样给运营排提醒，而且摘要里写明「没人回就真没人回」", async () => {
+    const store = createMemorySupportStore();
+    const sent = await send(store, { strategyId: 1, body: "价格" });
+    await reply(store, sent.conversation.publicNo, "报价发你了");
+    // 第一条提醒排干净，让下一条进入新的一代（不然会被去重键吞掉，和接管无关的既有语义）。
+    await processDueSupportNotifications({ store, sender: async () => ({ ok: true, retryable: false }) });
+
+    await send(store, { strategyId: 1, body: "还有别的版本吗", clientMsgId: "takeover-notify-1" });
+    const conversation = await store.findConversationByPublicNo(sent.conversation.publicNo);
+    const notifications = await store.listNotifications(conversation!.id);
+    const latest = notifications[notifications.length - 1];
+    expect(latest.summary).toContain("人工接管中");
+    // 正文依然一个字都不进摘要。
+    expect(latest.summary).not.toContain("还有别的版本吗");
+  });
+
+  it("后台交还自动接待之后，机器人重新先答", async () => {
+    const store = createMemorySupportStore();
+    const sent = await send(store, { strategyId: 1, body: "价格" });
+    await reply(store, sent.conversation.publicNo, "报价发你了");
+
+    const handedBack = await setAutoAssist({
+      publicNo: sent.conversation.publicNo,
+      enabled: true,
+      store,
+    });
+    expect(handedBack.conversation.operatorTakeover).toBe(false);
+
+    const after = await send(store, {
+      strategyId: 1,
+      body: "装不上怎么办",
+      clientMsgId: "handback-1",
+    });
+    expect(after.autoSuppressed).toBe(false);
+    expect(after.messages[after.messages.length - 1].role).toBe("auto");
+  });
+
+  it("交还之后运营又回了一条，重新进入接管（不会停在旧状态）", async () => {
+    const store = createMemorySupportStore();
+    const sent = await send(store, { strategyId: 1, body: "价格" });
+    await reply(store, sent.conversation.publicNo, "报价发你了");
+    await setAutoAssist({ publicNo: sent.conversation.publicNo, enabled: true, store });
+    await reply(store, sent.conversation.publicNo, "我再补一句：本周有活动。");
+
+    const after = await send(store, {
+      strategyId: 1,
+      body: "活动到什么时候",
+      clientMsgId: "retakeover-1",
+    });
+    expect(after.autoSuppressed).toBe(true);
+    expect(after.messages[after.messages.length - 1].role).toBe("customer");
+  });
+
+  it("后台可以在一条回复都没发之前就先把自动接待停掉", async () => {
+    const store = createMemorySupportStore();
+    const sent = await send(store, { strategyId: 1, body: "价格" });
+    const off = await setAutoAssist({
+      publicNo: sent.conversation.publicNo,
+      enabled: false,
+      store,
+    });
+    expect(off.conversation.operatorTakeover).toBe(true);
+
+    const after = await send(store, {
+      strategyId: 1,
+      body: "在吗",
+      clientMsgId: "preemptive-1",
+    });
+    expect(after.autoSuppressed).toBe(true);
+    expect(after.conversation.customerMessageCount).toBe(2);
+  });
+
+  it("接管中重复提交同一个 clientMsgId 仍然只落一条，且不会被当成「被接管压掉」", async () => {
+    const store = createMemorySupportStore();
+    const sent = await send(store, { strategyId: 1, body: "价格" });
+    await reply(store, sent.conversation.publicNo, "报价发你了");
+
+    const first = await send(store, { strategyId: 1, body: "再问一句", clientMsgId: "dup-takeover" });
+    const second = await send(store, { strategyId: 1, body: "再问一句", clientMsgId: "dup-takeover" });
+    expect(first.duplicate).toBe(false);
+    expect(second.duplicate).toBe(true);
+    expect(second.bodyMismatch).toBe(false);
+    // 重复提交这一轮压根没发生，不是「接管把机器人压掉了」，两者要分得清。
+    expect(second.autoSuppressed).toBe(false);
+    expect(second.conversation.customerMessageCount).toBe(2);
+  });
+
+  it("接管不影响关闭状态：关掉的会话仍然不被新消息自动重开", async () => {
+    const store = createMemorySupportStore();
+    const sent = await send(store, { strategyId: 1, body: "价格" });
+    await reply(store, sent.conversation.publicNo, "报价发你了");
+    await setConversationStatus({ publicNo: sent.conversation.publicNo, status: "closed", store });
+
+    const after = await send(store, { strategyId: 1, body: "补充一句", clientMsgId: "closed-takeover" });
+    expect(after.conversation.status).toBe("closed");
+    expect(after.autoSuppressed).toBe(true);
+    expect(after.conversation.customerMessageCount).toBe(2);
+  });
+
+  it("接管状态跟着会话走，不会溢到同一台设备的另一条商品会话", async () => {
+    const store = createMemorySupportStore();
+    const one = await send(store, { strategyId: 1, body: "商品一的价格" });
+    await reply(store, one.conversation.publicNo, "商品一报价发你了");
+
+    const two = await send(store, {
+      strategyId: 2,
+      body: "商品二能试用吗",
+      clientMsgId: "other-thread-1",
+    });
+    expect(two.conversation.publicNo).not.toBe(one.conversation.publicNo);
+    expect(two.autoSuppressed).toBe(false);
+    expect(two.conversation.operatorTakeover).toBe(false);
+  });
+
+  it("后台列表和会话详情都把接管状态如实报给运营", async () => {
+    const store = createMemorySupportStore();
+    const sent = await send(store, { strategyId: 1, body: "价格" });
+    const before = await listAdminConversations({ store });
+    expect(before.items[0].operatorTakeover).toBe(false);
+
+    await reply(store, sent.conversation.publicNo, "报价发你了");
+    const after = await listAdminConversations({ store });
+    expect(after.items[0].operatorTakeover).toBe(true);
+    const thread = await getAdminThread({ publicNo: sent.conversation.publicNo, store });
+    expect(thread.conversation.operatorTakeover).toBe(true);
+  });
+
+  it("不存在的会话编号切自动接待报 NOT_FOUND", async () => {
+    const store = createMemorySupportStore();
+    await expect(
+      setAutoAssist({ publicNo: "EAX-NOPE", enabled: true, store }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+});
+
+/**
+ * QQ 展示规范化。
+ *
+ * 线上那条联系设置填的是 `QQ1226426670 QQ3832001817`，而每个展示位自己还要拼一次 `QQ `，
+ * 客户看到的是 `QQ QQ1226426670 QQ3832001817`。号码没错，但读起来像坏了。
+ *
+ * 这里的红线是**不许改动运营真正填的联系方式**：只收重复前缀、统一分隔符，
+ * 一旦出现看不懂的写法就原样返回。
+ */
+describe("QQ 联系方式展示规范化", () => {
+  it("收掉重复的 QQ 前缀，号码一位都不改", () => {
+    expect(normalizeQqContacts("QQ1226426670 QQ3832001817")).toBe("1226426670 / 3832001817");
+    expect(normalizeQqContacts("qq1226426670")).toBe("1226426670");
+    expect(normalizeQqContacts("1226426670 / 3832001817")).toBe("1226426670 / 3832001817");
+    expect(normalizeQqContacts("1226426670、3832001817")).toBe("1226426670 / 3832001817");
+  });
+
+  it("不是纯号码列表的写法一个字都不动", () => {
+    expect(normalizeQqContacts("QQ群 123456789")).toBe("QQ群 123456789");
+    expect(normalizeQqContacts("加群请备注 EAXAU")).toBe("加群请备注 EAXAU");
+    expect(normalizeQqContacts("https://qm.qq.com/abc")).toBe("https://qm.qq.com/abc");
+  });
+
+  it("空配置仍然返回空，由调用方回落到公开兜底号", () => {
+    expect(normalizeQqContacts("")).toBe("");
+    expect(normalizeQqContacts(null)).toBe("");
+    expect(normalizeQqContacts(undefined)).toBe("");
+  });
+
+  it("自动回复里的 QQ 入口不再出现 QQ QQ", () => {
+    const line = buildQqLine({ qq: "QQ1226426670 QQ3832001817", language: "zh" });
+    expect(line).toContain("QQ 1226426670 / 3832001817");
+    expect(line).not.toContain("QQ QQ");
+    expect(line).not.toContain("QQQQ");
   });
 });
