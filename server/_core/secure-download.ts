@@ -679,6 +679,13 @@ async function handleSecureDownload(
       // 如实标：pinned = 这次交付按订单锁定的内容身份核对过；
       // unpinned = 这笔订单还没有内容身份，本次只是把它量下来，不算校验过。
       res.setHeader("X-Delivery-Integrity", pinnedPackage ? "pinned" : "unpinned");
+      // 知道该发多少字节就明着声明。摘要要到最后一块才算得出来，多块文件校验不过时
+      // 只能「压住尾块 + 掐断连接」——不声明长度的话那是一次 chunked 传输，客户端只能
+      // 从连接被重置去推断出了问题；声明了长度，短收就是 HTTP 层面的硬错误，
+      // 任何客户端都会当成下载失败，而不是一份少了一截的「已购版本」。
+      if (pinnedPackage) {
+        res.setHeader("Content-Length", String(pinnedPackage.bytes));
+      }
 
       const guard = createDeliveryGuard(MAX_DOWNLOAD_BYTES, pinnedPackage);
       // `pipeline` 出错会把目的流一起销毁。中间垫一层 `.pipe()`（经典管道不传播错误、

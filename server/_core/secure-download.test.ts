@@ -592,6 +592,8 @@ describe("secure downloads", () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get("x-delivery-integrity")).toBe("pinned");
+      // 锁定过的包明着声明长度：客户端短收一截就是 HTTP 层面的错误，不用靠连接重置去猜。
+      expect(response.headers.get("content-length")).toBe(String(file.length));
       expect(Buffer.from(await response.arrayBuffer())).toEqual(file);
       // 身份没变就不要反复改写订单上锁定的那一份。
       expect(pinOrderDeliveryDigest).not.toHaveBeenCalled();
@@ -684,6 +686,12 @@ describe("secure downloads", () => {
       // 要么停发，要么传输被掐断——绝不能是一份完整的、客户没买过的包。
       expect(aborted || response.status === 409).toBe(true);
       if (received) expect(received.equals(replaced)).toBe(false);
+      // 走到流式这一步时，响应已经声明了订单锁定的长度：压住尾块之后客户端拿到的是
+      // 「声明 N 字节、实收不足 N」的短收，而不是一次看起来正常收完的 chunked 传输。
+      if (response.status === 200) {
+        expect(response.headers.get("content-length")).toBe(String(original.length));
+        expect(response.headers.get("transfer-encoding")).toBeNull();
+      }
       expect(recordDownload).not.toHaveBeenCalled();
       expect(pinOrderDeliveryDigest).not.toHaveBeenCalled();
     } finally {
