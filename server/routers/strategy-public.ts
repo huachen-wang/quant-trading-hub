@@ -1,12 +1,18 @@
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
+import { shouldUseContactForDownload } from "../../lib/download-links";
 
 export function toPublicStrategy(strategy: Record<string, any>): any {
   const { downloadUrl: _privateAssetUrl, ...publicFields } = strategy;
+  // "有一行 downloadUrl" 不等于"这行是可交付的文件"。开户推荐链接
+  // （kaibb.co / *.co/register/trader?link_id=&referrer_id=）配在这个字段里时，
+  // 交付要走人工确认，不能在详情页显示成"付款后解锁"。
+  // 详情页的 downloadRequiresContact 直接取 !downloadAvailable，所以判定要在这里做完。
   return {
     ...publicFields,
-    downloadAvailable: Boolean(_privateAssetUrl),
+    downloadAvailable:
+      Boolean(_privateAssetUrl) && !shouldUseContactForDownload(_privateAssetUrl),
   };
 }
 
