@@ -314,8 +314,15 @@ Sitemap: https://www.eaxau.com/sitemap.xml
          不做 UA 分支，也不因此改变购买、下载或交互权限（React/Expo 应用照常挂载）。 */
       if (cachedIndexHtml) {
         try {
-          const strategyMatch = req.path.match(/^\/strategy\/(\d+)\/?$/);
-          if (strategyMatch) {
+          /* /strategy 命名空间整体归这里管：只有「单段、纯正整数、无前导 0」才是可能存在的商品；
+             /strategy/abc、/strategy/-1、/strategy/30/extra 这类地址永远不会有商品，
+             直接真 404，不去查库、也不落到 SPA 壳返回 200。 */
+          if (req.path === '/strategy' || req.path === '/strategy/' || req.path.startsWith('/strategy/')) {
+            const strategyMatch = req.path.match(/^\/strategy\/(0|[1-9]\d{0,9})\/?$/);
+            if (!strategyMatch) {
+              res.header('Content-Type', 'text/html; charset=utf-8');
+              return res.status(404).send(renderNotFoundHtml(cachedIndexHtml, req.path));
+            }
             const strategyId = Number.parseInt(strategyMatch[1], 10);
             const lookup = await lookupStrategy(strategyId);
             res.header('Content-Type', 'text/html; charset=utf-8');

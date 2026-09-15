@@ -110,11 +110,35 @@ describe("没有真实数据库时的 HTTP 行为", () => {
     expect(got.status).toBe(503);
   });
 
-  it("不含数字 id 的地址仍然是 SPA 路由，交给应用，不伪造商品页", async () => {
-    const got = await fetchAs(server.base, "/strategy/abc", UA_HUMAN);
-    expect(got.status).toBe(200);
-    expect(got.body).not.toContain('"@type":"Product"');
-    expect(got.body).toContain('id="root"');
+  it("/strategy 命名空间里不可能存在的地址一律真 404，且不查库", async () => {
+    /* 这些 id 永远不会对应商品：不该返回 200 的 SPA 壳，也不该因为库读不到而变 503 */
+    for (const path of [
+      "/strategy/abc",
+      "/strategy/-1",
+      "/strategy/1.5",
+      "/strategy/01",
+      "/strategy/ 1",
+      "/strategy/30/extra",
+      "/strategy/",
+      "/strategy",
+      "/strategy/99999999999999999999",
+    ]) {
+      const got = await fetchAs(server.base, path, UA_HUMAN);
+      expect(got.status, `${path} 应为 404`).toBe(404);
+      expect(got.body).toContain("页面不存在");
+      expect(got.body).toContain('content="noindex,follow"');
+      expect(got.body).not.toContain('"@type":"Product"');
+      /* 关键：没查库，所以即便此刻数据库不可用也不会变成 503 */
+      expect(got.headers.get("retry-after")).toBeNull();
+    }
+  });
+
+  it("合法正整数 id 在库读不到时才是 503", async () => {
+    for (const path of ["/strategy/1", "/strategy/30", "/strategy/99999999"]) {
+      const got = await fetchAs(server.base, path, UA_HUMAN);
+      expect(got.status, `${path} 应为 503`).toBe(503);
+      expect(got.headers.get("retry-after")).toBe("120");
+    }
   });
 
   it("普通 UA 与 Googlebot 拿到同一份字节", async () => {
