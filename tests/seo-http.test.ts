@@ -150,6 +150,27 @@ describe("没有真实数据库时的 HTTP 行为", () => {
     }
   });
 
+  it("SSR 路径统一带 X-SEO-Revision 部署标记，且只由含 seo-catalog 的这一版输出", async () => {
+    /* 回读这个 header 就能确认线上跑的是哪一代 SSR，不必再去找 Railway 构建号。
+       首页、商品页、404、503 四种出口都要带。 */
+    for (const path of ["/", "/strategy/1", "/strategy/abc", "/strategy/99999999"]) {
+      const got = await fetchAs(server.base, path, UA_HUMAN);
+      expect(got.headers.get("x-seo-revision"), `${path} 缺部署标记`).toBe("public-catalog-v3");
+    }
+    /* 标记跟着 seo-catalog 模块走：改了数据通道不升版就会在这里红 */
+    const { SEO_REVISION } = await import("../server/_core/seo-catalog");
+    expect(SEO_REVISION).toBe("public-catalog-v3");
+  });
+
+  it("部署标记不泄露环境、路径或凭据", async () => {
+    const got = await fetchAs(server.base, "/", UA_HUMAN);
+    const value = got.headers.get("x-seo-revision") ?? "";
+    expect(value).toMatch(/^[a-z0-9-]+$/);
+    for (const leak of ["/", "mysql", "vercel", "railway", "DATABASE"]) {
+      expect(value.toLowerCase()).not.toContain(leak.toLowerCase());
+    }
+  });
+
   it("静态资源与 API 前缀不受 SEO 渲染影响，购买/下载路由仍归应用", async () => {
     const asset = await fetchAs(server.base, "/_expo/static/js/web/entry-local.js", UA_HUMAN);
     expect(asset.status).toBe(200);

@@ -19,6 +19,7 @@ import { safeJsonLd } from "./seo-json";
 import { buildContentSecurityPolicy } from "./http-security";
 import { legacyRouteRedirect } from "./legacy-route-redirect";
 import { seoPublishedList, seoStrategyById } from "./seo-catalog";
+import { SEO_REVISION } from "./seo-catalog";
 import {
   renderHomeHtml,
   renderNotFoundHtml,
@@ -314,6 +315,10 @@ Sitemap: https://www.eaxau.com/sitemap.xml
          不做 UA 分支，也不因此改变购买、下载或交互权限（React/Expo 应用照常挂载）。 */
       if (cachedIndexHtml) {
         try {
+          /* 部署标记：只有包含 seo-catalog（真实 DB + published 过滤）的这一版才会输出。
+             回读这个 header 就能确认线上跑的是哪一代 SSR，不必再去找 Railway 构建号。
+             固定值、非敏感、不含任何环境或凭据信息。 */
+          res.setHeader('X-SEO-Revision', SEO_REVISION);
           /* /strategy 命名空间整体归这里管：只有「单段、纯正整数、无前导 0」才是可能存在的商品；
              /strategy/abc、/strategy/-1、/strategy/30/extra 这类地址永远不会有商品，
              直接真 404，不去查库、也不落到 SPA 壳返回 200。 */
