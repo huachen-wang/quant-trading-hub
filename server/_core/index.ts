@@ -18,6 +18,7 @@ import { isAdminTotpConfigured } from "./admin-totp";
 import { safeJsonLd } from "./seo-json";
 import { buildContentSecurityPolicy } from "./http-security";
 import { legacyRouteRedirect } from "./legacy-route-redirect";
+import { seoPublishedList, seoStrategyById } from "./seo-catalog";
 import {
   renderHomeHtml,
   renderNotFoundHtml,
@@ -32,28 +33,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * SEO: 商品查询三态。不存在 → missing（真 404）；读不到 → unavailable（503）。
- * 两者绝不能混成同一个回答，也不允许用过期缓存冒充当前数据。
+ * SEO 查询三态，全部走 ./seo-catalog 的专用只读适配器：
+ * - 没有真实数据库连接 / 查询失败 → unavailable（503），绝不退回 db.ts 的 mock 兜底；
+ * - 真实缺失或 status 不是 published → missing（404）；
+ * - published → ok（200）。
  */
 async function lookupStrategy(strategyId: number): Promise<StrategyLookup> {
-  try {
-    const strategy = await db.getStrategyById(strategyId);
-    if (!strategy) return { kind: "missing" };
-    return { kind: "ok", strategy: strategy as any };
-  } catch (error: any) {
-    console.error(`[SEO] strategy ${strategyId} lookup failed:`, error?.message || error);
-    return { kind: "unavailable", reason: "数据源暂时不可用" };
-  }
+  return seoStrategyById(strategyId);
 }
 
 async function lookupHomeList(): Promise<ListLookup> {
-  try {
-    const strategies = await db.getStrategies({ limit: 24, offset: 0 });
-    return { kind: "ok", strategies: (strategies || []) as any };
-  } catch (error: any) {
-    console.error("[SEO] home list lookup failed:", error?.message || error);
-    return { kind: "unavailable", reason: "数据源暂时不可用" };
-  }
+  return seoPublishedList(24);
 }
 
 function collectRequiredWebAssets(indexHtml: string): string[] {
@@ -344,8 +334,12 @@ Sitemap: https://www.eaxau.com/sitemap.xml
           if (req.path === '/' || req.path === '') {
             const lookup = await lookupHomeList();
             res.header('Content-Type', 'text/html; charset=utf-8');
-            if (lookup.kind === 'unavailable') res.setHeader('Retry-After', '120');
-            /* 首页本身正常，商品清单读不到时如实说明，不补旧数据、不编造商品。 */
+            if (lookup.kind === 'unavailable') {
+              /* 真实商品库读不到就给 503，不返回 200 空清单——200 会让搜索引擎
+                 把「这个站没有商品」当成当前事实收走。 */
+              res.setHeader('Retry-After', '120');
+              return res.status(503).send(renderUnavailableHtml(cachedIndexHtml));
+            }
             return res.status(200).send(renderHomeHtml(cachedIndexHtml, lookup));
           }
         } catch (error) {

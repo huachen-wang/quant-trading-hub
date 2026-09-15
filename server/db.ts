@@ -103,6 +103,14 @@ function getPool() {
   return pool;
 }
 
+/**
+ * SEO 初始 HTML 需要「真的连上库了吗」这个事实，而不是业务读取常用的 mock 兜底。
+ * 只导出这一个只读访问器，不改任何业务函数的行为。见 server/_core/seo-catalog.ts。
+ */
+export async function getDbForSeo() {
+  return getDb();
+}
+
 async function getDb() {
   try {
     if (!process.env.DATABASE_URL) {
