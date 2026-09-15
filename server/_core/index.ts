@@ -18,129 +18,42 @@ import { isAdminTotpConfigured } from "./admin-totp";
 import { safeJsonLd } from "./seo-json";
 import { buildContentSecurityPolicy } from "./http-security";
 import { legacyRouteRedirect } from "./legacy-route-redirect";
+import {
+  renderHomeHtml,
+  renderNotFoundHtml,
+  renderStrategyHtml,
+  renderUnavailableHtml,
+  type ListLookup,
+  type StrategyLookup,
+} from "./seo-render";
 
 // ES模块中获取__dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * SEO: 检测搜索引擎爬虫 User-Agent
+ * SEO: 商品查询三态。不存在 → missing（真 404）；读不到 → unavailable（503）。
+ * 两者绝不能混成同一个回答，也不允许用过期缓存冒充当前数据。
  */
-function isSearchBot(userAgent: string): boolean {
-  const botPatterns = [
-    'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
-    'yandexbot', 'sogou', 'facebookexternalhit', 'twitterbot',
-    'linkedinbot', 'whatsapp', 'telegrambot', 'applebot',
-  ];
-  const ua = userAgent.toLowerCase();
-  return botPatterns.some(bot => ua.includes(bot));
-}
-
-/**
- * SEO: 为策略详情页生成带有动态 meta 标签的 HTML
- * 当搜索引擎爬虫访问 /strategy/:id 时，返回包含策略信息的完整 HTML
- */
-async function generateStrategyMetaHtml(strategyId: number, indexHtml: string): Promise<string | null> {
+async function lookupStrategy(strategyId: number): Promise<StrategyLookup> {
   try {
     const strategy = await db.getStrategyById(strategyId);
-    if (!strategy) return null;
-
-    const title = `${strategy.title} - AI量化联盟 | EAXAU`;
-    const description = strategy.description
-      ? strategy.description.substring(0, 160)
-      : `${strategy.title} - AI量化联盟的 ${strategy.platform} EA 策略资料与风险边界展示。历史数据不代表未来结果。`;
-    const url = `https://www.eaxau.com/strategy/${strategyId}`;
-    const pairs = strategy.pairs || '';
-
-    // 替换 <title> 标签
-    let html = indexHtml.replace(
-      /<title>[^<]*<\/title>/,
-      `<title>${escapeHtml(title)}</title>`
-    );
-
-    // 替换 description meta
-    html = html.replace(
-      /<meta name="description" content="[^"]*"\s*\/?>/,
-      `<meta name="description" content="${escapeHtml(description)}" />`
-    );
-
-    // 在 </head> 前插入动态 meta 标签
-    const dynamicMeta = `
-    <!-- SEO: Dynamic meta for strategy ${strategyId} -->
-    <meta property="og:title" content="${escapeHtml(title)}" />
-    <meta property="og:description" content="${escapeHtml(description)}" />
-    <meta property="og:url" content="${url}" />
-    <meta property="og:type" content="article" />
-    ${strategy.coverImage ? `<meta property="og:image" content="${escapeHtml(strategy.coverImage)}" />` : ''}
-    <meta name="twitter:title" content="${escapeHtml(title)}" />
-    <meta name="twitter:description" content="${escapeHtml(description)}" />
-    ${strategy.coverImage ? `<meta name="twitter:image" content="${escapeHtml(strategy.coverImage)}" />` : ''}
-    <link rel="canonical" href="${url}" />
-    <meta name="keywords" content="${escapeHtml(strategy.title)},${escapeHtml(strategy.platform)},${escapeHtml(pairs)},EA策略,AI量化联盟,EAXAU" />
-    <script type="application/ld+json">${safeJsonLd({
-      "@context": "https://schema.org",
-      "@type": "Product",
-      "name": strategy.title,
-      "description": description,
-      "url": url,
-      ...(strategy.coverImage ? { "image": strategy.coverImage } : {}),
-      "brand": { "@type": "Brand", "name": "AI量化联盟" },
-      "offers": {
-        "@type": "Offer",
-        "price": strategy.isFree ? "0" : (strategy.price || "0"),
-        "priceCurrency": "CNY",
-        "availability": "https://schema.org/InStock"
-      }
-    })}</script>
-    `;
-
-    html = html.replace('</head>', `${dynamicMeta}\n</head>`);
-
-    return html;
-  } catch (error) {
-    console.error(`[SEO] Error generating meta for strategy ${strategyId}:`, error);
-    return null;
+    if (!strategy) return { kind: "missing" };
+    return { kind: "ok", strategy: strategy as any };
+  } catch (error: any) {
+    console.error(`[SEO] strategy ${strategyId} lookup failed:`, error?.message || error);
+    return { kind: "unavailable", reason: "数据源暂时不可用" };
   }
 }
 
-/**
- * SEO: 为首页生成带有策略列表结构化数据的 HTML
- */
-async function generateHomeMetaHtml(indexHtml: string): Promise<string> {
+async function lookupHomeList(): Promise<ListLookup> {
   try {
-    const strategies = await db.getStrategies({ limit: 20, offset: 0 });
-    if (!strategies || strategies.length === 0) return indexHtml;
-
-    const itemList = {
-      "@context": "https://schema.org",
-      "@type": "ItemList",
-      "name": "EAXAU EA商城商品目录",
-      "description": "MT4、MT5 EA、指标与量化交易工具目录；商品页区分直接购买和咨询授权。",
-      "numberOfItems": strategies.length,
-      "itemListElement": strategies.map((s: any, i: number) => ({
-        "@type": "ListItem",
-        "position": i + 1,
-        "url": `https://www.eaxau.com/strategy/${s.id}`,
-        "name": s.title,
-      })),
-    };
-
-    return indexHtml.replace(
-      '</head>',
-      `<script type="application/ld+json">${safeJsonLd(itemList)}</script>\n</head>`
-    );
-  } catch (error) {
-    console.error('[SEO] Error generating home meta:', error);
-    return indexHtml;
+    const strategies = await db.getStrategies({ limit: 24, offset: 0 });
+    return { kind: "ok", strategies: (strategies || []) as any };
+  } catch (error: any) {
+    console.error("[SEO] home list lookup failed:", error?.message || error);
+    return { kind: "unavailable", reason: "数据源暂时不可用" };
   }
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
 
 function collectRequiredWebAssets(indexHtml: string): string[] {
@@ -364,6 +277,9 @@ Sitemap: https://www.eaxau.com/sitemap.xml
       }));
     }
     app.use(express.static(webBuildPath, {
+      /* index:false —— 根路径交给下面的 SPA/SEO 处理器渲染首页正文；
+         静态中间件如果先把 index.html 直接吐出来，首页就永远拿不到 canonical/h1/商品清单。 */
+      index: false,
       setHeaders: (res, filePath) => {
         if (filePath.endsWith('.html')) {
           res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -404,36 +320,41 @@ Sitemap: https://www.eaxau.com/sitemap.xml
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
 
-      const userAgent = req.headers['user-agent'] || '';
-      const isCrawler = isSearchBot(userAgent);
-
-      // 如果是搜索引擎爬虫，注入动态 SEO meta 标签
-      if (isCrawler && cachedIndexHtml) {
+      /* 初始 HTML 对所有 User-Agent 一致：普通访客和搜索引擎拿到同一份正文，
+         不做 UA 分支，也不因此改变购买、下载或交互权限（React/Expo 应用照常挂载）。 */
+      if (cachedIndexHtml) {
         try {
-          // 策略详情页: /strategy/:id
-          const strategyMatch = req.path.match(/^\/strategy\/(\d+)/);
+          const strategyMatch = req.path.match(/^\/strategy\/(\d+)\/?$/);
           if (strategyMatch) {
-            const strategyId = parseInt(strategyMatch[1]);
-            const html = await generateStrategyMetaHtml(strategyId, cachedIndexHtml);
-            if (html) {
-              res.header('Content-Type', 'text/html');
-              return res.send(html);
+            const strategyId = Number.parseInt(strategyMatch[1], 10);
+            const lookup = await lookupStrategy(strategyId);
+            res.header('Content-Type', 'text/html; charset=utf-8');
+            if (lookup.kind === 'ok') {
+              return res.status(200).send(renderStrategyHtml(cachedIndexHtml, lookup.strategy));
             }
+            if (lookup.kind === 'missing') {
+              /* 真的不存在就真 404，不用 200 的 SPA 壳冒充。 */
+              return res.status(404).send(renderNotFoundHtml(cachedIndexHtml, req.path));
+            }
+            /* 数据源故障 = 503 + Retry-After，明确区别于「已下架」。 */
+            res.setHeader('Retry-After', '120');
+            return res.status(503).send(renderUnavailableHtml(cachedIndexHtml));
           }
 
-          // 首页
           if (req.path === '/' || req.path === '') {
-            const html = await generateHomeMetaHtml(cachedIndexHtml);
-            res.header('Content-Type', 'text/html');
-            return res.send(html);
+            const lookup = await lookupHomeList();
+            res.header('Content-Type', 'text/html; charset=utf-8');
+            if (lookup.kind === 'unavailable') res.setHeader('Retry-After', '120');
+            /* 首页本身正常，商品清单读不到时如实说明，不补旧数据、不编造商品。 */
+            return res.status(200).send(renderHomeHtml(cachedIndexHtml, lookup));
           }
         } catch (error) {
-          console.error('[SEO] Error in crawler middleware:', error);
-          // 出错时回退到普通 index.html
+          console.error('[SEO] Error rendering initial HTML:', error);
+          // 渲染本身出错时回退到原始 index.html，交互不受影响
         }
       }
 
-      // 普通用户或爬虫回退：返回原始 index.html
+      // 其余前端路由：返回原始 index.html，由应用接管
       res.sendFile(indexPath, (err) => {
         if (err) {
           console.error(`[static] error serving index.html:`, err);

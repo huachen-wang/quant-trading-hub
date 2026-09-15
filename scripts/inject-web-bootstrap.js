@@ -58,6 +58,18 @@ ${strategyPreloadLinks}
         font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
       }
       #eaxau-boot[hidden] { display: none; }
+      /* 服务端渲染的初始正文（#eaxau-seo）：给无 JS 访客和纯文本抓取用。
+         有 JS 时被启动遮罩盖住，应用挂载后由下面的脚本整块移除，不会出现双内容。 */
+      .eaxau-seo { max-width: 860px; margin: 0 auto; padding: 24px 20px 48px; color: #e2e8f0; font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.7; }
+      .eaxau-seo h1 { font-size: 24px; margin: 0 0 12px; }
+      .eaxau-seo h2 { font-size: 17px; margin: 24px 0 8px; }
+      .eaxau-seo a { color: #d8bc83; }
+      .eaxau-seo__lead { color: #cbd5f5; }
+      .eaxau-seo__facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
+      .eaxau-seo__facts dt { color: #94a3b8; }
+      .eaxau-seo__facts dd { margin: 0; }
+      .eaxau-seo__list, .eaxau-seo__contacts { padding-left: 20px; }
+      .eaxau-seo__note { color: #94a3b8; font-size: 13px; }
       .eaxau-boot__brand { font-size: 28px; line-height: 1; font-weight: 900; letter-spacing: 0; }
       .eaxau-boot__track { width: 104px; height: 2px; overflow: hidden; background: rgba(148, 163, 184, 0.22); }
       .eaxau-boot__track::after {
@@ -161,6 +173,9 @@ ${strategyPreloadLinks}
           function dismissWhenReady() {
             if (!boot || !rootHasVisibleContent()) return false;
             boot.hidden = true;
+            /* 应用已经挂载：移走服务端渲染的初始正文，避免同页出现两份内容。 */
+            var seo = document.getElementById("eaxau-seo");
+            if (seo && seo.parentNode) seo.parentNode.removeChild(seo);
             if (observer) observer.disconnect();
             try { window.sessionStorage.removeItem(retryKey); } catch (_) {}
             return true;
@@ -208,6 +223,7 @@ const bodyInjection = `
 
 /** 替换 Expo 导出的出厂 noscript（"You need to enable JavaScript to run this app."）。 */
 const noscriptInjection = `<noscript ${marker}>
+    <style>#eaxau-boot { display: none !important; } body { overflow: auto !important; }</style>
     <div class="eaxau-noscript">
       <div class="eaxau-fallback">
         <p class="eaxau-fallback__title">${FALLBACK_HEADLINE}</p>
