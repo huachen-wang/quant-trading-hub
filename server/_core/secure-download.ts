@@ -1,9 +1,10 @@
 /**
  * Secure EA downloads.
  *
- * The signed URL only identifies an already-purchased product. The route checks
- * the purchase again and proxies the file so the storage URL never reaches the
- * browser.
+ * The signed URL only identifies a product the user is entitled to: a paid
+ * order, or a published free product backed by a real file. The route re-checks
+ * the entitlement and the file nature every time (see delivery-gate.ts), then
+ * proxies the file so the storage URL never reaches the browser.
  */
 
 import crypto from "node:crypto";
@@ -25,9 +26,20 @@ import {
   pinStrategyPackageDigest,
   recordDownload,
 } from "../db";
+import {
+  classifyStrategyDelivery,
+  isFreeStrategyClaimable,
+} from "./delivery-gate";
 
 const TOKEN_VERSION = "v2";
 const TOKEN_TTL_MS = 30 * 60 * 1000;
+/** Lifetime of a signed link; orders.detail / downloads.claimFree report it to the UI. */
+export const DOWNLOAD_TOKEN_TTL_MS = TOKEN_TTL_MS;
+
+/** Relative path the clients turn into a real URL (lib/download-href.ts). */
+export function secureDownloadPath(token: string): string {
+  return `/api/download/secure?token=${encodeURIComponent(token)}`;
+}
 const TOKEN_CLOCK_SKEW_MS = 60 * 1000;
 const MAX_TOKEN_LENGTH = 512;
 const MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024;
@@ -101,6 +113,8 @@ interface VerifiedDownloadToken {
    * 所以这个回落窗口最多存在到「上线 + 30 分钟」，之后不会再有任何旧令牌能通过验签。
    */
   orderId: number | null;
+  /** 免费商品领取签发的令牌：不对应任何订单，交付侧只按免费商品规则放行。 */
+  freeClaim: boolean;
 }
 
 interface InvalidDownloadToken {
@@ -187,12 +201,13 @@ export function signDownloadToken(opts: {
   userId: number;
   productKind: DownloadProductKind;
   productId: number;
-  orderId: number;
+  /** 付费交付绑定到具体订单；免费领取没有订单，显式写 "free"。 */
+  orderId: number | "free";
 }): string {
   if (
     !isPositiveSafeInteger(opts.userId) ||
     !isPositiveSafeInteger(opts.productId) ||
-    !isPositiveSafeInteger(opts.orderId) ||
+    (opts.orderId !== "free" && !isPositiveSafeInteger(opts.orderId)) ||
     !isProductKind(opts.productKind)
   ) {
     throw new TypeError("Invalid download token claims");
@@ -209,7 +224,8 @@ export function signDownloadToken(opts: {
  * Verify format, claims, lifetime and signature without trusting decoded data.
  *
  * 认两种格式：
- *  - `v2.<user>.<kind>.<product>.<order>.<exp>.<sig>` —— 当前格式，绑定到具体订单。
+ *  - `v2.<user>.<kind>.<product>.<order>.<exp>.<sig>` —— 当前格式，绑定到具体订单；
+ *    免费领取的 `<order>` 位是字面量 `free`。
  *  - `<user>.<kind>.<product>.<exp>.<sig>` —— 本次修复之前签发的旧格式，没有订单号。
  *    旧格式只可能来自修复上线前签发的令牌，TTL 30 分钟，上线半小时后自然绝迹；
  *    保留它只是为了不打断在途客户的下载，交付侧会按旧口径（最近一笔已付订单）回落。
@@ -245,13 +261,16 @@ export function verifyDownloadToken(token: string): DownloadTokenVerification {
     const userId = parseCanonicalPositiveInteger(userIdClaim);
     const productId = parseCanonicalPositiveInteger(productIdClaim);
     const expiresAt = parseCanonicalPositiveInteger(expiresAtClaim);
+    const freeClaim = orderIdClaim === "free";
     const orderId =
-      orderIdClaim === null ? null : parseCanonicalPositiveInteger(orderIdClaim);
+      orderIdClaim === null || freeClaim
+        ? null
+        : parseCanonicalPositiveInteger(orderIdClaim);
     if (
       userId === null ||
       productId === null ||
       expiresAt === null ||
-      (isCurrentFormat && orderId === null) ||
+      (isCurrentFormat && orderId === null && !freeClaim) ||
       !isProductKind(productKindClaim)
     ) {
       return { ok: false, error: "Invalid token" };
@@ -276,6 +295,7 @@ export function verifyDownloadToken(token: string): DownloadTokenVerification {
       productKind: productKindClaim,
       productId,
       orderId,
+      freeClaim,
     };
   } catch {
     // A missing production secret must fail closed, never fall back to a known key.
@@ -568,7 +588,10 @@ function sendProxyError(res: Response, error: unknown): void {
       res.removeHeader("Content-Disposition");
       res.removeHeader("Content-Type");
       res.setHeader("X-Delivery-Integrity", "mismatch");
-      res.status(409).type("text/plain; charset=utf-8").send(PACKAGE_MISMATCH_MESSAGE);
+      res
+        .status(409)
+        .type("text/plain; charset=utf-8")
+        .send(PACKAGE_MISMATCH_MESSAGE);
       return;
     }
     // 已经在流了：掐断连接。客户端拿到的是残缺传输，不是完整的错版本。
@@ -613,35 +636,51 @@ async function handleSecureDownload(
   }
 
   try {
-    // Token possession is not enough: the order is re-checked every time.
-    // 令牌带订单号时就按那一笔订单判，不去猜「最近一笔」——猜错就会发错版本，
-    // 而且退款的那一笔还能借另一笔 paid 订单继续下载。
-    const paidOrder = verified.orderId
-      ? await getPaidOrderForDelivery({
-          orderId: verified.orderId,
-          userId: verified.userId,
-          strategyId: verified.productId,
-        })
-      : // 修复上线前签发的旧格式令牌（无订单号）：按旧口径回落，TTL 30 分钟后绝迹。
-        await getLatestPaidStrategyOrder(verified.userId, verified.productId);
-    if (!paidOrder) {
-      res.status(403).send("Forbidden");
-      return;
+    // Token possession is not enough: entitlement is checked every time.
+    let paidOrder: Awaited<ReturnType<typeof getPaidOrderForDelivery>> = null;
+    let sourceUrl: string | null | undefined;
+    if (verified.freeClaim) {
+      // 免费领取没有订单：商品必须仍是已发布 + 直购 + 免费 + 真文件（delivery-gate）。
+      const strategy = await getStrategyById(verified.productId);
+      if (!isFreeStrategyClaimable(strategy)) {
+        res.status(403).send("Forbidden");
+        return;
+      }
+      sourceUrl = strategy?.downloadUrl;
+    } else {
+      // 令牌带订单号时就按那一笔订单判，不去猜「最近一笔」——猜错就会发错版本，
+      // 而且退款的那一笔还能借另一笔 paid 订单继续下载。
+      paidOrder = verified.orderId
+        ? await getPaidOrderForDelivery({
+            orderId: verified.orderId,
+            userId: verified.userId,
+            strategyId: verified.productId,
+          })
+        : // 修复上线前签发的旧格式令牌（无订单号）：按旧口径回落，TTL 30 分钟后绝迹。
+          await getLatestPaidStrategyOrder(verified.userId, verified.productId);
+      if (!paidOrder) {
+        res.status(403).send("Forbidden");
+        return;
+      }
+      // Serve the build the buyer paid for. Orders created before delivery
+      // snapshots exist fall back to whatever the product points at today.
+      sourceUrl =
+        paidOrder.deliveryUrl ||
+        (await getStrategyById(verified.productId))?.downloadUrl;
     }
 
-    // Serve the build the buyer paid for. Orders created before delivery
-    // snapshots exist fall back to whatever the product points at today.
-    const pinnedUrl = paidOrder.deliveryUrl;
-    const downloadUrl =
-      pinnedUrl || (await getStrategyById(verified.productId))?.downloadUrl;
-    if (!downloadUrl) {
+    // Last hop re-checks that the URL really is a file: a broker registration
+    // link must never be proxied to a buyer as if it were the EA.
+    const delivery = classifyStrategyDelivery({ downloadUrl: sourceUrl });
+    if (delivery.mode !== "file") {
       res.status(404).send("Download not found");
       return;
     }
+    const downloadUrl = delivery.downloadUrl;
 
     // 地址锁不住字节：同一个 URL 的内容可以被就地换掉。有内容身份就按它核对，
     // 没有（老订单 / 这个发包地址还没量过）就如实标 unpinned，并在本次交付中量出来。
-    const pinnedPackage = pinnedPackageOf(paidOrder);
+    const pinnedPackage = paidOrder ? pinnedPackageOf(paidOrder) : null;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
@@ -661,7 +700,11 @@ async function handleSecureDownload(
         throw new DownloadTooLargeError();
       }
       // 长度就对不上的，一个字节都不用发：直接给可解释的停发回执。
-      if (pinnedPackage && contentLength !== null && contentLength !== pinnedPackage.bytes) {
+      if (
+        pinnedPackage &&
+        contentLength !== null &&
+        contentLength !== pinnedPackage.bytes
+      ) {
         response.destroy();
         throw new DeliveryIntegrityError(
           `content-length ${contentLength}B vs pinned ${pinnedPackage.bytes}B`,
@@ -678,7 +721,10 @@ async function handleSecureDownload(
       res.setHeader("X-Content-Type-Options", "nosniff");
       // 如实标：pinned = 这次交付按订单锁定的内容身份核对过；
       // unpinned = 这笔订单还没有内容身份，本次只是把它量下来，不算校验过。
-      res.setHeader("X-Delivery-Integrity", pinnedPackage ? "pinned" : "unpinned");
+      res.setHeader(
+        "X-Delivery-Integrity",
+        pinnedPackage ? "pinned" : "unpinned",
+      );
       // 知道该发多少字节就明着声明。摘要要到最后一块才算得出来，多块文件校验不过时
       // 只能「压住尾块 + 掐断连接」——不声明长度的话那是一次 chunked 传输，客户端只能
       // 从连接被重置去推断出了问题；声明了长度，短收就是 HTTP 层面的硬错误，
@@ -709,7 +755,7 @@ async function handleSecureDownload(
           // 只给「下单时确实锁过发包地址」的订单补内容身份。修复前建的老订单本来就
           // 没有版本约定，交付一直是跟着商品当前地址走的；给它们钉上「第一次下到的
           // 那份字节」，只会在商品正常换包时把老客户挡在 409 外面。
-          if (!pinnedPackage && paidOrder.deliveryUrl) {
+          if (!pinnedPackage && paidOrder?.deliveryUrl) {
             await pinOrderDeliveryDigest(paidOrder.id, measured);
           }
           await pinStrategyPackageDigest(verified.productId, {

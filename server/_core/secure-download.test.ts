@@ -101,6 +101,16 @@ function strategyToken(orderId = ORDER_ID): string {
   });
 }
 
+/** 免费领取（downloads.claimFree）签发的令牌：不对应订单。 */
+function freeToken(): string {
+  return signDownloadToken({
+    userId: 17,
+    productKind: "strategy",
+    productId: 6,
+    orderId: "free",
+  });
+}
+
 /** 本次修复之前签发的旧格式令牌：没有订单号。 */
 function legacyStrategyToken(): string {
   return makeRawSignedToken(`17.strategy.6.${Date.now() + 10 * 60 * 1000}`);
@@ -318,14 +328,28 @@ describe("secure downloads", () => {
 
   it("checks purchase permission again before resolving the storage URL", async () => {
     vi.mocked(getPaidOrderForDelivery).mockResolvedValue(null as never);
-    const app = await createDownloadApp();
+    // A paid product: without a paid order the token holder gets nothing and the
+    // storage URL is never fetched. The product row is read once so the route
+    // can tell a paid product from a free one (see the free-product cases below);
+    // that read is a local DB lookup, not a request to the storage host.
+    vi.mocked(getStrategyById).mockResolvedValue({
+      title: "Paid EA",
+      status: "published",
+      saleMode: "direct",
+      isFree: false,
+      downloadUrl: "https://files.eaxau.example/paid-ea.zip",
+    } as never);
+    const app = await createDownloadApp({
+      resolveHostname: async () => {
+        throw new Error("storage host must not be resolved for an unauthorized caller");
+      },
+    });
     try {
       const response = await fetch(
         `${app.baseUrl}/api/download/secure?token=${encodeURIComponent(strategyToken())}`,
       );
 
       expect(response.status).toBe(403);
-      expect(getStrategyById).not.toHaveBeenCalled();
       expect(recordDownload).not.toHaveBeenCalled();
     } finally {
       await close(app.server);
@@ -729,6 +753,189 @@ describe("secure downloads", () => {
     } finally {
       await close(app.server);
       await close(upstream);
+    }
+  });
+});
+
+describe("free product downloads (delivery gate at the last hop)", () => {
+  const freeStrategy = {
+    title: "Free EA",
+    status: "published",
+    saleMode: "direct",
+    isFree: true,
+    downloadUrl: "https://files.eaxau.example/free-ea.ex4",
+  };
+
+  function refuseUpstream(): SecureDownloadTestNetworkPolicy {
+    return {
+      resolveHostname: async () => {
+        throw new Error("storage host must not be resolved");
+      },
+    };
+  }
+
+  beforeEach(() => {
+    process.env.DOWNLOAD_SIGNING_SECRET = TEST_SECRET;
+    vi.mocked(getStrategyById).mockReset();
+    vi.mocked(getPaidOrderForDelivery).mockReset();
+    vi.mocked(getLatestPaidStrategyOrder).mockReset();
+    vi.mocked(recordDownload).mockReset();
+    vi.mocked(recordDownload).mockResolvedValue(undefined as never);
+  });
+
+  afterAll(() => {
+    if (originalSigningSecret === undefined) {
+      delete process.env.DOWNLOAD_SIGNING_SECRET;
+    } else {
+      process.env.DOWNLOAD_SIGNING_SECRET = originalSigningSecret;
+    }
+  });
+
+  it("streams a published free EA to a logged-in user who never purchased it", async () => {
+    const file = Buffer.from("FREE-EA-CONTENT");
+    const upstream = createServer((_req, res) => {
+      res.writeHead(200, {
+        "Content-Type": "application/octet-stream",
+        "Content-Length": file.length,
+      });
+      res.end(file);
+    });
+    const upstreamUrl = await listen(upstream);
+
+    vi.mocked(getStrategyById).mockResolvedValue({
+      ...freeStrategy,
+      downloadUrl: `${upstreamUrl}/free-ea.ex4`,
+    } as never);
+
+    const app = await createDownloadApp({ isAddressAllowed: () => true });
+    try {
+      const response = await fetch(
+        `${app.baseUrl}/api/download/secure?token=${encodeURIComponent(freeToken())}`,
+      );
+
+      expect(response.status).toBe(200);
+      expect(Buffer.from(await response.arrayBuffer())).toEqual(file);
+      expect(response.headers.get("content-disposition")).toBe(
+        'attachment; filename="eaxau-strategy-6.ex4"',
+      );
+      // 可审计：免费下载完成后同样落 downloads 表（用户 17 / 商品 6）。
+      await vi.waitFor(() => {
+        expect(recordDownload).toHaveBeenCalledWith(17, 6);
+      });
+    } finally {
+      await close(app.server);
+      await close(upstream);
+    }
+  });
+
+  it.each([
+    ["draft", { status: "draft" }],
+    ["archived", { status: "archived" }],
+    ["inquiry-only", { saleMode: "inquiry" }],
+    ["not actually free", { isFree: false }],
+  ])("refuses a %s product to a token holder without a purchase", async (_label, patch) => {
+    vi.mocked(getStrategyById).mockResolvedValue({ ...freeStrategy, ...patch } as never);
+    const app = await createDownloadApp(refuseUpstream());
+    try {
+      const response = await fetch(
+        `${app.baseUrl}/api/download/secure?token=${encodeURIComponent(freeToken())}`,
+      );
+
+      expect(response.status).toBe(403);
+      expect(recordDownload).not.toHaveBeenCalled();
+    } finally {
+      await close(app.server);
+    }
+  });
+
+  it("never proxies a broker registration link as a free EA", async () => {
+    vi.mocked(getStrategyById).mockResolvedValue({
+      ...freeStrategy,
+      downloadUrl: "https://kaibb.co/register/trader?link_id=a&referrer_id=b",
+    } as never);
+    const app = await createDownloadApp(refuseUpstream());
+    try {
+      const response = await fetch(
+        `${app.baseUrl}/api/download/secure?token=${encodeURIComponent(freeToken())}`,
+      );
+
+      expect(response.status).toBe(403);
+      expect(recordDownload).not.toHaveBeenCalled();
+    } finally {
+      await close(app.server);
+    }
+  });
+
+  it("never proxies a broker registration link even to a paying buyer", async () => {
+    // 修复前的老订单：没有发包快照，交付回落到商品当前地址。
+    vi.mocked(getPaidOrderForDelivery).mockResolvedValue({
+      id: ORDER_ID,
+      deliveryUrl: null,
+      deliverySha256: null,
+      deliveryBytes: null,
+    } as never);
+    vi.mocked(getStrategyById).mockResolvedValue({
+      ...freeStrategy,
+      isFree: false,
+      downloadUrl: "https://www.bluesyd-au.com/register/trader?link_id=a&referrer_id=b",
+    } as never);
+    const app = await createDownloadApp(refuseUpstream());
+    try {
+      const response = await fetch(
+        `${app.baseUrl}/api/download/secure?token=${encodeURIComponent(strategyToken())}`,
+      );
+
+      expect(response.status).toBe(404);
+      expect(recordDownload).not.toHaveBeenCalled();
+    } finally {
+      await close(app.server);
+    }
+  });
+
+  it("never proxies a broker registration link pinned on an order", async () => {
+    vi.mocked(getPaidOrderForDelivery).mockResolvedValue({
+      id: ORDER_ID,
+      deliveryUrl: "https://kaibb.co/register/trader?link_id=a&referrer_id=b",
+      deliverySha256: null,
+      deliveryBytes: null,
+    } as never);
+    vi.mocked(getStrategyById).mockResolvedValue({ ...freeStrategy, isFree: false } as never);
+    const app = await createDownloadApp(refuseUpstream());
+    try {
+      const response = await fetch(
+        `${app.baseUrl}/api/download/secure?token=${encodeURIComponent(strategyToken())}`,
+      );
+
+      expect(response.status).toBe(404);
+      expect(recordDownload).not.toHaveBeenCalled();
+    } finally {
+      await close(app.server);
+    }
+  });
+
+  it("returns 404 for a purchased product whose file was cleared", async () => {
+    // 修复前的老订单：没有发包快照，交付回落到商品当前地址。
+    vi.mocked(getPaidOrderForDelivery).mockResolvedValue({
+      id: ORDER_ID,
+      deliveryUrl: null,
+      deliverySha256: null,
+      deliveryBytes: null,
+    } as never);
+    vi.mocked(getStrategyById).mockResolvedValue({
+      ...freeStrategy,
+      isFree: false,
+      downloadUrl: null,
+    } as never);
+    const app = await createDownloadApp(refuseUpstream());
+    try {
+      const response = await fetch(
+        `${app.baseUrl}/api/download/secure?token=${encodeURIComponent(strategyToken())}`,
+      );
+
+      expect(response.status).toBe(404);
+      expect(recordDownload).not.toHaveBeenCalled();
+    } finally {
+      await close(app.server);
     }
   });
 });

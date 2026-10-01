@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Linking, Platform, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
+import { trpc } from "@/lib/trpc";
 import { getInternalStrategyRoute } from "@/lib/download-links";
 import { INQUIRY_CHECKLIST } from "@/lib/inquiry-message";
+import { describeDownloadHrefFailure, resolveDownloadHref } from "@/lib/download-href";
+import { API_BASE_URL, getApiBaseUrl } from "@/constants/oauth";
 
 interface PurchaseActionsProps {
   /** 商品 saleMode：direct=直购 | inquiry=私聊授权 */
@@ -27,7 +31,9 @@ interface PurchaseActionsProps {
  * 商品详情页核心 CTA 按钮组件
  *
  * saleMode === "direct"  → 显示「立即购买 ¥XXX」+ 跳转收银台 (/checkout/[orderNo]，A.3 实装)
- *                          免费产品 → 显示「立即下载」直接打开 downloadUrl
+ *                          免费产品 → 登录后调用 downloads.claimFree 领取签名下载链接：
+ *                            有真文件 → 打开受控下载路由（下载完成后记入「我的下载」）
+ *                            缺文件 / 开户链接 → 服务端返回 contact，转联系客服；不建单、不伪造付款
  *
  * saleMode === "inquiry" → 显示「商务咨询授权」按钮并打开统一联系方式弹窗
  *
@@ -47,10 +53,62 @@ export function PurchaseActions({
   const colors = useColors();
   const router = useRouter();
   const { isAuthenticated } = useAuth();
+  const claimFreeMutation = trpc.downloads.claimFree.useMutation();
+  const [claiming, setClaiming] = useState(false);
+  // 领取成功后的受控下载路径：Web 上 await 之后再 window.open 会被弹窗拦截，
+  // 所以改为同窗口导航到 attachment 路由，并保留一个显式"点击下载"按钮（用户手势内触发）。
+  const [readyDownload, setReadyDownload] = useState<{ downloadUrl: string; expiresInMinutes: number } | null>(null);
 
   const showMsg = (msg: string) => {
     if (Platform.OS === "web") alert(msg);
     else Alert.alert("提示", msg);
+  };
+
+  const openDownloadPath = async (downloadUrl: string) => {
+    // 原生端只有配置了可信 API base 才拼接相对下载地址；没配就明确失败。
+    const target = resolveDownloadHref(downloadUrl, {
+      platform: Platform.OS,
+      baseUrl: Platform.OS === "web" ? getApiBaseUrl() : API_BASE_URL,
+    });
+    if (!target.ok) {
+      showMsg(describeDownloadHrefFailure(target.reason));
+      return;
+    }
+    if (Platform.OS === "web") {
+      // 受控路由返回 Content-Disposition: attachment，同窗口导航只触发下载、不离开页面，
+      // 且不依赖弹窗权限。
+      window.location.assign(target.url);
+      return;
+    }
+    await Linking.openURL(target.url);
+  };
+
+  const claimFreeDownload = async () => {
+    if (productKind !== "strategy") {
+      onContact();
+      return;
+    }
+    if (!isAuthenticated) {
+      showMsg("请先登录后获取免费文件");
+      router.push("/auth/login" as any);
+      return;
+    }
+    if (claiming) return;
+    setClaiming(true);
+    try {
+      const result = await claimFreeMutation.mutateAsync({ strategyId: productId });
+      if (result.delivery === "contact") {
+        // 服务端判定没有可交付的真文件：明确转人工咨询，不假装已下载。
+        onContact();
+        return;
+      }
+      setReadyDownload({ downloadUrl: result.downloadUrl, expiresInMinutes: result.expiresInMinutes });
+      await openDownloadPath(result.downloadUrl);
+    } catch (e: any) {
+      showMsg(e?.message || "获取文件失败，请稍后重试或联系客服");
+    } finally {
+      setClaiming(false);
+    }
   };
 
   // 旗舰外链优先
@@ -74,21 +132,40 @@ export function PurchaseActions({
 
   // ─── 直购模式（saleMode = "direct"） ───
   if (saleMode === "direct") {
-    // 免费 → 立即下载
+    // 免费 → 登录后领取受控下载链接；没有真文件则转联系客服
     if (isFree) {
       return (
-        <TouchableOpacity
-          onPress={downloadRequiresContact ? onContact : () => showMsg("请使用下载按钮获取文件")}
-          style={styles.cta}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={downloadRequiresContact ? ["#A8895A", "#C9A96E"] : ["#10B981", "#34D399"]}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}
+        <View style={styles.priceBox}>
+          <TouchableOpacity
+            onPress={downloadRequiresContact ? onContact : claimFreeDownload}
+            disabled={claiming}
+            style={[styles.cta, claiming ? styles.ctaDisabled : null]}
+            activeOpacity={0.85}
           >
-            <Text style={styles.ctaText}>{downloadRequiresContact ? "联系获取 EA" : "免费下载"}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={downloadRequiresContact ? ["#A8895A", "#C9A96E"] : ["#10B981", "#34D399"]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}
+            >
+              <Text style={styles.ctaText}>
+                {downloadRequiresContact ? "联系获取 EA" : claiming ? "正在获取下载链接..." : "免费下载"}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          {readyDownload && !downloadRequiresContact ? (
+            <TouchableOpacity
+              onPress={() => openDownloadPath(readyDownload.downloadUrl).catch((e: any) => showMsg(e?.message || "无法打开下载链接"))}
+              style={[styles.cta, styles.readyBtn]}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.readyBtnText}>
+                下载未开始？点击这里下载（链接 {readyDownload.expiresInMinutes} 分钟内有效）
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+          <Text style={[styles.priceFootnote, { color: colors.muted }]}>
+            {downloadRequiresContact ? "客服确认文件版本与交付方式后提供" : "登录后免费获取 · 下载记录可在「我的下载」查看"}
+          </Text>
+        </View>
       );
     }
 
@@ -229,6 +306,20 @@ const styles = StyleSheet.create({
   cta: {
     borderRadius: 7,
     overflow: "hidden",
+  },
+  ctaDisabled: {
+    opacity: 0.7,
+  },
+  readyBtn: {
+    borderWidth: 1,
+    borderColor: "rgba(52,211,153,0.5)",
+    paddingVertical: 11,
+    alignItems: "center",
+  },
+  readyBtnText: {
+    color: "#34D399",
+    fontSize: 12,
+    fontWeight: "700",
   },
   ctaInner: {
     paddingVertical: 15,
