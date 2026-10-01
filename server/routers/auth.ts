@@ -5,6 +5,11 @@ import { sendVerificationCodeEmail } from "../_core/email";
 import { hashPassword } from "../_core/password";
 import { sdk } from "../_core/sdk";
 import { createVerificationCode, verifyCode } from "../_core/verification";
+import {
+  checkEmailCodeRequest,
+  needsRegistrationLookup,
+  type EmailCodePurpose,
+} from "../_core/email-code-gate";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 
@@ -12,6 +17,32 @@ const emailPurpose = z.enum(["register", "login", "reset_password", "bind_email"
 
 function getRequestIp(req: { headers: Record<string, unknown>; socket: { remoteAddress?: string } }) {
   return (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || undefined;
+}
+
+async function issueEmailCode(
+  input: { email: string; purpose: EmailCodePurpose },
+  ctx: { req: any; user?: unknown },
+  okMessage: string,
+) {
+  const email = input.email.trim().toLowerCase();
+  const ip = getRequestIp(ctx.req);
+
+  const emailIsRegistered = needsRegistrationLookup(input.purpose)
+    ? Boolean(await db.getUserByEmail(email))
+    : undefined;
+
+  const gate = checkEmailCodeRequest({
+    purpose: input.purpose,
+    emailIsRegistered,
+    requesterIsAuthenticated: Boolean(ctx.user),
+  });
+  if (!gate.ok) throw new Error(gate.error);
+
+  const result = await createVerificationCode({ target: email, targetType: "email", purpose: input.purpose, ip });
+  if (!result.ok) throw new Error(result.error || "验证码发送失败");
+  const sendResult = await sendVerificationCodeEmail(email, result.code!, input.purpose);
+  if (!sendResult.ok) throw new Error(`邮件发送失败：${sendResult.error || "请稍后再试"}`);
+  return { ok: true, message: okMessage };
 }
 
 export const authRouter = router({
@@ -27,41 +58,17 @@ export const authRouter = router({
       email: z.string().email("邮箱格式不正确"),
       purpose: emailPurpose,
     }))
-    .mutation(async ({ input, ctx }) => {
-      const email = input.email.trim().toLowerCase();
-      const ip = getRequestIp(ctx.req);
-      if (input.purpose === "register") {
-        const existing = await db.getUserByEmail(email);
-        if (existing) throw new Error("该邮箱已注册，请直接登录");
-      }
-      if (input.purpose === "reset_password" || input.purpose === "login") {
-        const existing = await db.getUserByEmail(email);
-        if (!existing) throw new Error("该邮箱未注册");
-      }
-      if (input.purpose === "verify_email" || input.purpose === "bind_email") {
-        if (!ctx.user) throw new Error("请先登录");
-      }
-      const result = await createVerificationCode({ target: email, targetType: "email", purpose: input.purpose, ip });
-      if (!result.ok) throw new Error(result.error || "验证码发送失败");
-      const sendResult = await sendVerificationCodeEmail(email, result.code!, input.purpose);
-      if (!sendResult.ok) throw new Error(`邮件发送失败：${sendResult.error || "请稍后再试"}`);
-      return { ok: true, message: "验证码已发送，5 分钟内有效" };
-    }),
+    .mutation(async ({ input, ctx }) => issueEmailCode(input, ctx, "验证码已发送，5 分钟内有效")),
 
+  // 与 sendEmailCode 同一条闸。这个名字曾经是未加闸的副本，
+  // 未登录调用方可以为任意邮箱申领 verify_email / bind_email 验证码；
+  // 保留名字是为了不打断可能存在的旧调用方，行为已对齐。
   sendVerificationCode: publicProcedure
     .input(z.object({
       email: z.string().email(),
       purpose: emailPurpose,
     }))
-    .mutation(async ({ input, ctx }) => {
-      const email = input.email.trim().toLowerCase();
-      const ip = getRequestIp(ctx.req);
-      const result = await createVerificationCode({ target: email, targetType: "email", purpose: input.purpose, ip });
-      if (!result.ok) throw new Error(result.error || "验证码发送失败");
-      const sendResult = await sendVerificationCodeEmail(email, result.code!, input.purpose);
-      if (!sendResult.ok) throw new Error(`邮件发送失败：${sendResult.error || "请稍后再试"}`);
-      return { ok: true, message: "验证码已发送" };
-    }),
+    .mutation(async ({ input, ctx }) => issueEmailCode(input, ctx, "验证码已发送")),
 
   verifyEmail: protectedProcedure
     .input(z.object({ code: z.string().min(4).max(10) }))

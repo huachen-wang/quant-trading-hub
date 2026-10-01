@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Linking, Platform } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Animated, Alert, Linking, Platform } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { trpc } from "@/lib/trpc";
 import { useColors } from "@/hooks/use-colors";
 import { glassStyle } from "@/lib/glass-styles";
-import { shouldUseContactForDownload } from "@/lib/download-links";
+import { describeDownloadHrefFailure, resolveDownloadHref } from "@/lib/download-href";
+import { API_BASE_URL, getApiBaseUrl } from "@/constants/oauth";
+import type { OrderDelivery } from "@/server/_core/delivery-gate";
 import { ContactModal } from "@/components/contact-modal";
 import { ScreenContainer } from "@/components/screen-container";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -17,9 +19,14 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
  *
  * 行为：
  *   - 拉取订单详情
- *   - 已支付 → 显示成功 + 下载链接
- *   - 还在 pending（ZPay 异步通知有延迟）→ 轮询 5 秒一次
- *   - 已取消/过期 → 显示对应状态
+ *   - 已支付 → 只按服务端 orders.detail 给出的真实交付状态出文案：
+ *       ready        文件可下载（签名链接，有效期由服务端告知）
+ *       contact      付款已记录，待客服人工交付（促销包 / 无文件 / 开户链接）
+ *       unavailable  付款已记录，但下载链接暂时无法生成
+ *     没有生成下载链接时绝不显示"立即下载"。
+ *   - 还在 pending（ZPay 异步通知有延迟）→ 轮询 3 秒一次
+ *   - 已取消 / 过期 / 退款 → 显示对应状态
+ *   - 原生端只在配置了可信 API base URL 时才拼接相对下载地址，否则明确提示
  */
 export default function CheckoutSuccessScreen() {
   const params = useLocalSearchParams<{
@@ -59,6 +66,11 @@ export default function CheckoutSuccessScreen() {
       }).start();
     }
   }, [order?.status, checkAnim]);
+
+  const showMsg = (msg: string) => {
+    if (Platform.OS === "web") alert(msg);
+    else Alert.alert("提示", msg);
+  };
 
   if (!orderNo) {
     return (
@@ -134,8 +146,48 @@ export default function CheckoutSuccessScreen() {
     );
   }
 
-  // ─── 已支付 ───
-  const downloadRequiresContact = shouldUseContactForDownload(order.downloadUrl);
+  // 已退款：不能再显示"支付成功 / 立即下载"
+  if (order.status === "refunded") {
+    return (
+      <ScreenContainer>
+        <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
+        <View style={styles.center}>
+          <View style={styles.emptyIcon}>
+            <IconSymbol name="exclamationmark.triangle.fill" size={25} color="#D8BC83" />
+          </View>
+          <Text style={[styles.title, { color: colors.foreground }]}>订单已退款</Text>
+          <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>该订单的款项已按退款流程处理，下载权限已关闭。如有疑问请联系客服并提供订单号 {order.orderNo}。</Text>
+          <TouchableOpacity onPress={() => setShowContactModal(true)} style={styles.cta}>
+            <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
+              <Text style={styles.ctaText}>联系客服</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  // ─── 已支付：交付文案只依据服务端给出的真实交付状态 ───
+  const delivery = order.delivery;
+  const copy = describeDelivery(delivery);
+
+  const openDownload = () => {
+    if (delivery.status !== "ready") {
+      setShowContactModal(true);
+      return;
+    }
+    // 原生端只有配置了可信 API base 才拼接相对下载地址；没配就明确失败，不静默丢给 Linking。
+    const target = resolveDownloadHref(delivery.downloadUrl, {
+      platform: Platform.OS,
+      baseUrl: Platform.OS === "web" ? getApiBaseUrl() : API_BASE_URL,
+    });
+    if (!target.ok) {
+      showMsg(describeDownloadHrefFailure(target.reason));
+      return;
+    }
+    if (Platform.OS === "web") window.open(target.url, "_blank");
+    else Linking.openURL(target.url).catch(() => showMsg("无法打开下载链接，请改用网页版登录后在「我的订单」下载。"));
+  };
 
   return (
     <ScreenContainer>
@@ -162,7 +214,7 @@ export default function CheckoutSuccessScreen() {
             <IconSymbol name="checkmark.circle.fill" size={44} color="#34D399" />
           </Animated.View>
           <Text style={[styles.title, { color: colors.foreground }]}>支付成功</Text>
-          <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>感谢您的购买。订单已生效。</Text>
+          <Text style={[styles.subtitle, { color: colors.muted, textAlign: "center" }]}>{copy.subtitle}</Text>
 
           {/* 订单信息 */}
           <View style={[styles.infoCard, { borderColor: colors.border }]}>
@@ -186,24 +238,18 @@ export default function CheckoutSuccessScreen() {
               <Text style={[styles.infoLabel, { color: colors.muted }]}>支付方式</Text>
               <Text style={[styles.infoValue, { color: colors.foreground }]}>{paymentMethodLabel(order.paymentMethod)}</Text>
             </View>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: colors.muted }]}>交付状态</Text>
+              <Text style={[styles.infoValue, { color: copy.statusColor, fontWeight: "700" }]}>{copy.statusLabel}</Text>
+            </View>
           </View>
 
-          <TouchableOpacity
-            onPress={() => {
-              if (downloadRequiresContact) {
-                setShowContactModal(true);
-                return;
-              }
-              if (Platform.OS === "web") window.open(order.downloadUrl!, "_blank");
-              else Linking.openURL(order.downloadUrl!);
-            }}
-            style={styles.cta}
-            activeOpacity={0.85}
-          >
-            <LinearGradient colors={downloadRequiresContact ? ["#A8895A", "#C9A96E"] : ["#10B981", "#34D399"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
-              <Text style={styles.ctaText}>{downloadRequiresContact ? "联系获取文件" : "立即下载"}</Text>
+          <TouchableOpacity onPress={openDownload} style={styles.cta} activeOpacity={0.85}>
+            <LinearGradient colors={copy.cta === "download" ? ["#10B981", "#34D399"] : ["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.ctaInner}>
+              <Text style={styles.ctaText}>{copy.ctaLabel}</Text>
             </LinearGradient>
           </TouchableOpacity>
+          {copy.note ? <Text style={[styles.note, { color: colors.muted }]}>{copy.note}</Text> : null}
 
           <View style={styles.btnRow}>
             <TouchableOpacity onPress={() => router.replace("/profile" as any)} style={[styles.secondaryBtn, { borderColor: colors.border }]}>
@@ -233,6 +279,75 @@ export default function CheckoutSuccessScreen() {
       </View>
     </ScreenContainer>
   );
+}
+
+type DeliveryCopy = {
+  subtitle: string;
+  note: string | null;
+  statusLabel: string;
+  statusColor: string;
+  cta: "download" | "contact";
+  ctaLabel: string;
+};
+
+/** 把服务端交付状态翻译成页面文案；没有真实下载链接就不会出现"立即下载"。 */
+export function describeDelivery(delivery: OrderDelivery): DeliveryCopy {
+  switch (delivery.status) {
+    case "ready":
+      return {
+        subtitle: "感谢您的购买，文件已可下载。",
+        note: `下载链接 ${delivery.expiresInMinutes} 分钟内有效；过期后可在「我的订单」重新获取。`,
+        statusLabel: "可下载",
+        statusColor: "#34D399",
+        cta: "download",
+        ctaLabel: "立即下载",
+      };
+    case "contact":
+      return {
+        subtitle:
+          delivery.reason === "promo"
+            ? "付款已记录。该商品由客服确认后交付，请联系客服并提供订单号。"
+            : delivery.reason === "no_file"
+              ? "付款已记录，但该 EA 的交付文件尚未配置完成。请联系客服并提供订单号，我们将人工交付。"
+              : "付款已记录。该 EA 需客服确认版本与交付方式后人工交付，请联系客服并提供订单号。",
+        note: null,
+        statusLabel: "待人工交付",
+        statusColor: "#D8BC83",
+        cta: "contact",
+        ctaLabel: "联系客服交付",
+      };
+    case "unavailable":
+      return {
+        subtitle:
+          delivery.reason === "signing_unavailable"
+            ? "付款已记录，但下载链接暂时无法生成。请稍后在「我的订单」重试，或联系客服。"
+            : "付款已记录，但商品信息暂不可用。请联系客服并提供订单号。",
+        note: null,
+        statusLabel: "暂不可用",
+        statusColor: "#F87171",
+        cta: "contact",
+        ctaLabel: "联系客服",
+      };
+    case "refunded":
+      return {
+        subtitle: "该订单已退款，下载权限已关闭。",
+        note: null,
+        statusLabel: "已退款",
+        statusColor: "#60A5FA",
+        cta: "contact",
+        ctaLabel: "联系客服",
+      };
+    case "awaiting_payment":
+    default:
+      return {
+        subtitle: "订单尚未完成支付，暂无下载。",
+        note: null,
+        statusLabel: "未支付",
+        statusColor: "#D8BC83",
+        cta: "contact",
+        ctaLabel: "联系客服",
+      };
+  }
 }
 
 function paymentMethodLabel(m?: string | null): string {
@@ -310,6 +425,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 8,
     lineHeight: 22,
+  },
+  note: {
+    fontSize: 11,
+    marginTop: 8,
+    lineHeight: 16,
+    textAlign: "center",
   },
   infoCard: {
     width: "100%",

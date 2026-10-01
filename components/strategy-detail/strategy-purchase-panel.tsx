@@ -33,7 +33,11 @@ export function StrategyPurchasePanel({
               交付服务
             </Text>
             <Text style={[styles.downloadValue, { color: colors.foreground }]}>
-              {isDirect && strategy.downloadAvailable ? "付款后解锁" : "版本确认"}
+              {isDirect && strategy.downloadAvailable
+                ? isFree
+                  ? "登录后免费下载"
+                  : "付款后解锁"
+                : "版本确认"}
             </Text>
           </View>
         </View>

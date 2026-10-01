@@ -18,6 +18,8 @@ import { AdminPageChrome } from "@/components/admin/page-chrome";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { glassStyle } from "@/lib/glass-styles";
+import { describeDownloadHrefFailure, resolveDownloadHref } from "@/lib/download-href";
+import { API_BASE_URL, getApiBaseUrl } from "@/constants/oauth";
 
 const STATUS_LABELS: Record<string, string> = {
   pending: "待支付",
@@ -643,8 +645,17 @@ export default function AdminOrderDetailScreen() {
         {order.downloadUrl && (
           <TouchableOpacity
             onPress={() => {
-              if (Platform.OS === "web") window.open(order.downloadUrl!, "_blank");
-              else Linking.openURL(order.downloadUrl!);
+              // 原生端只有配置了可信 API base 才拼接相对下载地址，否则明确提示。
+              const target = resolveDownloadHref(order.downloadUrl, {
+                platform: Platform.OS,
+                baseUrl: Platform.OS === "web" ? getApiBaseUrl() : API_BASE_URL,
+              });
+              if (!target.ok) {
+                showMsg(describeDownloadHrefFailure(target.reason));
+                return;
+              }
+              if (Platform.OS === "web") window.open(target.url, "_blank");
+              else Linking.openURL(target.url).catch(() => showMsg("无法打开下载链接，请改用网页版查看。"));
             }}
             style={[styles.actionBtn, { marginTop: 8 }]}
           >

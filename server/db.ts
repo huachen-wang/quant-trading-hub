@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, sql, or, like, isNull, isNotNull, inArray } from "drizzle-orm";
+import { eq, ne, and, desc, asc, sql, or, like, isNull, isNotNull, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import * as schema from "../drizzle/schema";
@@ -1950,11 +1950,24 @@ export async function consumeAdminTotpStep(input: {
 // ==================== Bundle B: 购买权限 / 下载记录 / Profile 编辑 ====================
 
 export async function hasUserPurchased(userId: number, strategyId: number): Promise<boolean> {
+  return (await getLatestPaidStrategyOrder(userId, strategyId)) !== null;
+}
+
+/**
+ * 「这个用户买过这件商品吗」——只回答有没有，不回答发哪一份包。
+ *
+ * 同一个用户同一件商品可以有多笔已付订单（换包后回购、买给不同账号）。
+ * 这个查询按 `paidAt` 取最近一笔，本身就无法区分它们：同一秒内付款的两笔订单
+ * 谁排前面是不确定的。所以它只能用来做「是否已购买」这类不涉及发包内容的判断
+ * （strategy-public 的 hasPurchased），**不能**用来决定交付。
+ * 交付走 `getPaidOrderForDelivery()`，按 token 里带的订单 ID 精确取单。
+ */
+export async function getLatestPaidStrategyOrder(userId: number, strategyId: number) {
   const db = await getDb();
-  if (!db) return false;
+  if (!db) return null;
   // 只信任完成支付的订单。旧 purchases 表曾允许客户端直接写入，不能作为
   // EA 私有文件的授权来源；历史记录需另行人工核验后迁移为 paid order。
-  const paidOrders = await db
+  const rows = await db
     .select()
     .from(orders)
     .where(
@@ -1965,8 +1978,82 @@ export async function hasUserPurchased(userId: number, strategyId: number): Prom
         eq(orders.status, "paid")
       )
     )
+    .orderBy(desc(orders.paidAt), desc(orders.id))
     .limit(1);
-  return paidOrders.length > 0;
+  return rows[0] || null;
+}
+
+/**
+ * 交付授权的唯一事实源：按**这一笔订单**取单。
+ *
+ * 交付令牌里带的是订单 ID，授权判定、发哪一份包、按哪一份摘要校验全部出自
+ * 这同一行订单。这样同一用户同一商品的两笔已付订单各发各的版本；其中一笔退款后，
+ * 那一笔的 token 立刻失效，不会因为另一笔还是 paid 就被放行。
+ *
+ * token 里的 userId / productId 必须与订单对得上——token 只是凭证，不是事实源。
+ */
+export async function getPaidOrderForDelivery(input: {
+  orderId: number;
+  userId: number;
+  strategyId: number;
+}) {
+  const order = await getOrderById(input.orderId);
+  if (!order) return null;
+  if (
+    order.userId !== input.userId ||
+    order.productKind !== "strategy" ||
+    order.productId !== input.strategyId ||
+    order.status !== "paid"
+  ) {
+    return null;
+  }
+  return order;
+}
+
+/**
+ * 首次成功交付之后，把量到的内容摘要补到订单上（只补空值，不覆盖已锁定的身份）。
+ * 摘要是流式算出来的，不额外读一遍文件，也不把整包读进内存。
+ */
+export async function pinOrderDeliveryDigest(
+  orderId: number,
+  digest: { sha256: string; bytes: number },
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(orders)
+    .set({ deliverySha256: digest.sha256, deliveryBytes: digest.bytes })
+    .where(and(eq(orders.id, orderId), isNull(orders.deliverySha256)));
+}
+
+/**
+ * 把量到的内容摘要记到商品上，标明它属于哪个发包地址。
+ * 只在「商品现在挂的还是这个地址、且这个地址还没量过」时写入——
+ * 运营换了发包地址，摘要就跟着作废，不会拿旧包的摘要去卡新包。
+ */
+export async function pinStrategyPackageDigest(
+  strategyId: number,
+  input: { downloadUrl: string; sha256: string; bytes: number },
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(strategies)
+    .set({
+      packageDigestUrl: input.downloadUrl,
+      packageSha256: input.sha256,
+      packageBytes: input.bytes,
+    })
+    .where(
+      and(
+        eq(strategies.id, strategyId),
+        eq(strategies.downloadUrl, input.downloadUrl),
+        or(
+          isNull(strategies.packageSha256),
+          ne(strategies.packageDigestUrl, input.downloadUrl),
+        ),
+      ),
+    );
 }
 
 export async function recordDownload(userId: number, strategyId: number) {

@@ -720,6 +720,20 @@ async function runMigrations(options: { strict?: boolean } = {}): Promise<boolea
         "richDescription",
         "ALTER TABLE `strategies` ADD COLUMN `richDescription` text DEFAULT NULL",
       ],
+      // 发包的内容身份：packageDigestUrl 这个地址上量到的字节摘要。
+      // 地址一改，摘要作废重学；下单时把它快照到订单上，交付按摘要核对。
+      [
+        "packageDigestUrl",
+        "ALTER TABLE `strategies` ADD COLUMN `packageDigestUrl` text DEFAULT NULL",
+      ],
+      [
+        "packageSha256",
+        "ALTER TABLE `strategies` ADD COLUMN `packageSha256` varchar(64) DEFAULT NULL",
+      ],
+      [
+        "packageBytes",
+        "ALTER TABLE `strategies` ADD COLUMN `packageBytes` bigint DEFAULT NULL",
+      ],
     ];
     for (const [colName, sql] of strategyPhase1Migrations) {
       if (!strategyColumnNames.has(colName)) {
@@ -825,6 +839,9 @@ async function runMigrations(options: { strict?: boolean } = {}): Promise<boolea
         \`productId\` int NOT NULL,
         \`productTitle\` varchar(255) NOT NULL,
         \`productCover\` text DEFAULT NULL,
+        \`deliveryUrl\` text DEFAULT NULL,
+        \`deliverySha256\` varchar(64) DEFAULT NULL,
+        \`deliveryBytes\` bigint DEFAULT NULL,
         \`amount\` decimal(10,2) NOT NULL,
         \`originalAmount\` decimal(10,2) DEFAULT NULL,
         \`currency\` varchar(10) NOT NULL DEFAULT 'CNY',
@@ -846,6 +863,35 @@ async function runMigrations(options: { strict?: boolean } = {}): Promise<boolea
     `;
     console.log("[migrate] Ensuring orders table exists...");
     await connection.query(createOrders);
+    // `CREATE TABLE IF NOT EXISTS` 对已存在的表是 no-op，升级路径要单独补列。
+    const [orderCols] = (await connection.query(
+      "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders'",
+    )) as any[];
+    const orderColumnNames = new Set(
+      orderCols.map((column: any) => column.COLUMN_NAME),
+    );
+    const orderDeliveryMigrations: [string, string][] = [
+      [
+        "deliveryUrl",
+        "ALTER TABLE `orders` ADD COLUMN `deliveryUrl` text DEFAULT NULL",
+      ],
+      // 只锁地址锁不住字节：同一个 URL 的内容可以被就地替换。
+      [
+        "deliverySha256",
+        "ALTER TABLE `orders` ADD COLUMN `deliverySha256` varchar(64) DEFAULT NULL",
+      ],
+      [
+        "deliveryBytes",
+        "ALTER TABLE `orders` ADD COLUMN `deliveryBytes` bigint DEFAULT NULL",
+      ],
+    ];
+    for (const [column, statement] of orderDeliveryMigrations) {
+      if (!orderColumnNames.has(column)) {
+        await connection.query(statement);
+        migrationsRun++;
+        console.log(`[migrate] added orders.${column}`);
+      }
+    }
 
     // ─── 新表：payments ───
     const createPayments = `

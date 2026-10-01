@@ -5,7 +5,12 @@ import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { generateOrderNo, getOrderExpiresAt, isOrderExpired } from "../_core/order-utils";
 import { getGatewayForMethod, getPublicPaymentMethods } from "../_core/payments";
 import type { InitiateResult } from "../_core/payments/gateway";
-import { signDownloadToken } from "../_core/secure-download";
+import {
+  DOWNLOAD_TOKEN_TTL_MS,
+  secureDownloadPath,
+  signDownloadToken,
+} from "../_core/secure-download";
+import { assessStrategyPurchase, describeOrderDelivery } from "../_core/delivery-gate";
 import * as db from "../db";
 import { adminProcedure } from "./_admin";
 import { matchAdminTotpStep } from "../_core/admin-totp";
@@ -123,6 +128,25 @@ function storedUsdtQuote(payment: any) {
   return quote;
 }
 
+/**
+ * 订单行发给客户端之前，先把交付内部字段摘掉。
+ *
+ * `/api/download/secure` 存在的全部意义就是私有发包地址不进浏览器；订单详情/列表
+ * 把整行订单摊平返回，会把 `deliveryUrl` 快照一起带出去——连付款都不用，
+ * 下一单 pending 就能读到 EA 的直链。内容摘要同理，不是客户需要的信息。
+ *
+ * 交付锁到什么程度用 `deliveryIntegrity` 单独表达（是状态，不是地址）。
+ */
+export function toClientOrder(order: Record<string, any>): any {
+  const {
+    deliveryUrl: _privateAssetUrl,
+    deliverySha256: _privateDigest,
+    deliveryBytes: _privateDigestBytes,
+    ...clientFields
+  } = order;
+  return clientFields;
+}
+
 export const ordersRouter = router({
   create: protectedProcedure
     .input(z.object({ productKind: z.enum(["strategy", "promo"]), productId: z.number() }))
@@ -132,14 +156,28 @@ export const ordersRouter = router({
       let productCover: string | null = null;
       let amount = "0.00";
       let originalAmount: string | null = null;
+      // 下单当时的发包地址。交付按这一份快照发，商品之后换包不影响已成交订单。
+      let deliveryUrl: string | null = null;
+      // 下单当时那份包的**内容身份**。只锁地址锁不住字节（同一个 URL 可以被换包），
+      // 交付时按这一份摘要核对。商品这个地址还没量过时为空，交付会在首次成功发包时补上。
+      let deliverySha256: string | null = null;
+      let deliveryBytes: number | null = null;
       if (input.productKind === "strategy") {
         product = await db.getStrategyById(input.productId);
-        if (!product || product.status !== "published") throw new Error("商品不存在或已下架");
-        if (product.saleMode !== "direct") throw new Error("此商品仅支持商务咨询授权，无法下单");
-        if (product.isFree) throw new Error("免费商品无需下单，可直接下载");
-        if (!product.downloadUrl) throw new Error("此 EA 文件尚未完成受控交付配置");
+        // 服务端重复核验真实可交付性，不依赖详情页 DTO 的 downloadAvailable：
+        // 绕过前端的脚本、缓存的旧页面、将来不读 DTO 的 UI 都会在这里被拦下。
+        // 规则与 toPublicStrategy / payments.initiate / 下载路由共用 delivery-gate。
+        const gate = assessStrategyPurchase(product);
+        if (!gate.ok) throw new TRPCError({ code: gate.code, message: gate.message });
         productTitle = product.title;
         productCover = product.coverImage;
+        deliveryUrl = product.downloadUrl;
+        // 摘要只在它确实是量的这个地址时才认；运营换过发包地址，旧摘要作废。
+        if (product.packageSha256 && product.packageDigestUrl === product.downloadUrl) {
+          deliverySha256 = product.packageSha256;
+          deliveryBytes =
+            typeof product.packageBytes === "number" ? product.packageBytes : null;
+        }
         amount = String(product.price || "0.00");
         originalAmount = product.originalPrice ? String(product.originalPrice) : null;
       } else {
@@ -169,6 +207,10 @@ export const ordersRouter = router({
         productId: input.productId,
         productTitle,
         productCover,
+        deliveryUrl,
+        // 摘要和字节数要么一起有，要么一起没有——只有一半是没法校验的。
+        deliverySha256: deliveryBytes === null ? null : deliverySha256,
+        deliveryBytes: deliverySha256 === null ? null : deliveryBytes,
         amount,
         originalAmount,
         status: "pending",
@@ -188,24 +230,54 @@ export const ordersRouter = router({
         (order as any).status = "expired";
       }
       const paymentsList = await db.getPaymentsByOrderId(order.id);
-      let downloadUrl: string | null = null;
-      if (order.status === "paid" && order.productKind === "strategy") {
-        const product = await db.getStrategyById(order.productId);
-        if (product?.downloadUrl) {
-          const token = signDownloadToken({
-            userId: order.userId,
-            productKind: "strategy",
-            productId: order.productId,
-          });
-          downloadUrl = `/api/download/secure?token=${encodeURIComponent(token)}`;
-        }
-      }
-      return { ...order, payments: paymentsList, downloadUrl };
+      // success 页面的交付文案只依据这里给出的真实状态：
+      // 只有"已付款 + 交付地址是真文件 + 签名成功"才是 ready，其余状态都不承诺下载。
+      const isPaidStrategy = order.status === "paid" && order.productKind === "strategy";
+      const product = isPaidStrategy ? await db.getStrategyById(order.productId) : null;
+      // 已成交订单优先认下单时锁定的发包地址；商品后来改地址或清空都不该收回交付入口。
+      const deliverySource = order.deliveryUrl ? { downloadUrl: order.deliveryUrl } : product;
+      const delivery = describeOrderDelivery({
+        order,
+        product: deliverySource,
+        signDownloadPath: () =>
+          secureDownloadPath(
+            signDownloadToken({
+              userId: order.userId,
+              productKind: "strategy",
+              productId: order.productId,
+              // 令牌绑定到这一笔订单：同商品的另一笔订单（哪怕更晚付款）不能用这张票。
+              orderId: order.id,
+            }),
+          ),
+        tokenTtlMinutes: DOWNLOAD_TOKEN_TTL_MS / 60_000,
+      });
+      // downloadUrl 保留给既有调用方（admin/order-detail），只在 ready 时非空。
+      const downloadUrl = delivery.status === "ready" ? delivery.downloadUrl : null;
+      // 如实说明这笔订单的交付版本锁到什么程度：
+      //   pinned   = 地址 + 内容摘要都锁定，交付时按字节核对
+      //   url-only = 只锁了发包地址；同一个地址的内容仍可能被换掉，不能宣称版本已锁定
+      //   none     = 老订单，连地址快照都没有，回落到商品当前地址
+      const deliveryIntegrity: "pinned" | "url-only" | "none" | null = isPaidStrategy
+        ? order.deliverySha256
+          ? "pinned"
+          : order.deliveryUrl
+            ? "url-only"
+            : "none"
+        : null;
+      return {
+        ...toClientOrder(order),
+        payments: paymentsList,
+        downloadUrl,
+        delivery,
+        deliveryIntegrity,
+      };
     }),
 
   myList: protectedProcedure
     .input(z.object({ status: z.enum(["pending", "paid", "cancelled", "refunded", "expired"]).optional(), limit: z.number().optional() }).optional())
-    .query(async ({ ctx, input }) => db.getUserOrders(ctx.user.id, { status: input?.status, limit: input?.limit || 50 })),
+    .query(async ({ ctx, input }) =>
+      (await db.getUserOrders(ctx.user.id, { status: input?.status, limit: input?.limit || 50 })).map(toClientOrder),
+    ),
 
   cancel: protectedProcedure
     .input(z.object({ orderNo: z.string() }))
@@ -221,7 +293,8 @@ export const ordersRouter = router({
   adminList: adminProcedure
     .input(z.object({ status: z.enum(["pending", "paid", "cancelled", "refunded", "expired"]).optional(), limit: z.number().optional() }).optional())
     .query(async ({ input }) => {
-      return db.listAllOrders({ status: input?.status, limit: input?.limit });
+      // 后台也不需要直链：改发包地址走商品表单，订单列表只是对账视图。
+      return (await db.listAllOrders({ status: input?.status, limit: input?.limit })).map(toClientOrder);
     }),
 
   adminConfirmUsdt: adminProcedure
@@ -675,10 +748,19 @@ export const paymentsRouter = router({
       if (!order) throw new Error("订单不存在");
       if (order.userId !== ctx.user.id) throw new Error("无权访问此订单");
       if (order.status === "paid") throw new Error("订单已支付");
+      if (order.status === "refunded") {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "订单已退款，不能再次发起支付，请重新下单" });
+      }
       if (order.status === "cancelled" || order.status === "expired") throw new Error("订单已失效");
       if (isOrderExpired(order.expiresAt)) {
         await db.cancelOrder(order.id);
         throw new Error("订单已过期，请重新下单");
+      }
+      if (order.productKind === "strategy") {
+        // 收款前用与 orders.create 完全相同的闸再核一次：建单后商品被下架、改成仅咨询、
+        // 改成免费、清空文件或改成开户链接的，都不能收款。已付订单的权利不受影响。
+        const gate = assessStrategyPurchase(await db.getStrategyById(order.productId));
+        if (!gate.ok) throw new TRPCError({ code: gate.code, message: gate.message });
       }
       const gateway = getGatewayForMethod(input.method);
       if (!gateway) {

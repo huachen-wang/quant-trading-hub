@@ -5,6 +5,10 @@ import * as db from "../db";
 
 const TOTP_SECRET = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ";
 let appRouter: typeof import("../routers").appRouter;
+// payments.initiate 现在在收款前重复核验商品可交付性（delivery-gate）；
+// 旧 fixture 的 productId 9001 在 mock store 里不存在，会被正确拒绝。
+// 这里改为真实种一个已发布、直购、付费、有真文件的商品。
+let deliverableStrategyId = 0;
 
 function context(id: number, role: "user" | "admin"): TrpcContext {
   const now = new Date();
@@ -39,7 +43,7 @@ async function createTestOrder(orderNo: string, userId: number) {
     orderNo,
     userId,
     productKind: "strategy",
-    productId: 9001,
+    productId: deliverableStrategyId,
     productTitle: "EA test artifact",
     amount: "700.00",
     currency: "CNY",
@@ -57,6 +61,20 @@ beforeAll(async () => {
   delete process.env.USDT_ERC20_ADDRESS;
   process.env.USDT_CNY_PER_USDT = "7";
   process.env.ADMIN_TOTP_SECRET_BASE32 = TOTP_SECRET;
+  const created = await db.createStrategy({
+    title: "EA test artifact",
+    platform: "MT4",
+    pairs: "XAUUSD",
+    status: "published",
+  } as any);
+  // createMockStrategy 强制 isFree=false / saleMode=inquiry，先建再改。
+  const deliverable = await db.updateStrategy(created!.id, {
+    saleMode: "direct",
+    isFree: false,
+    price: "700.00",
+    downloadUrl: "https://files.eaxau.example/ea/test-artifact.ex5",
+  } as any);
+  deliverableStrategyId = deliverable!.id;
   ({ appRouter } = await import("../routers"));
 });
 
