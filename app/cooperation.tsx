@@ -10,6 +10,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { PcTopNav } from "@/components/pc-top-nav";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
+import { normalizeQqContacts, SUPPORT_QQ_FALLBACK } from "@/lib/support-faq";
 
 const { width: SW } = Dimensions.get("window");
 const isDesktop = SW >= 1024;
@@ -88,8 +89,8 @@ export default function CooperationPage() {
   const { data: contactSettings } = trpc.siteSettings.getContact.useQuery();
 
   const telegram = contactSettings?.telegram || "@xau6000";
-  const qq1 = "1226426670";
-  const qq2 = contactSettings?.qq || "3832001817";
+  // 2026-10-11 Nathan：「qq就先只保留3832001817」。读站点设置 contact_qq（接口返回的键是 contact_qq，不是 qq）。
+  const qq = normalizeQqContacts(contactSettings?.contact_qq) || SUPPORT_QQ_FALLBACK;
   const wechat1 = "oooiniooo0624";
   const wechat2 = "xau6000";
   const sourceCards = (backendCards && backendCards.length > 0) ? backendCards : DEFAULT_CARDS;
@@ -519,8 +520,7 @@ export default function CooperationPage() {
                 <Ionicons name="chatbox" size={20} color="#fff" />
                 <View style={{ flex: 1 }}>
                   <Text style={s.contactBtnLabel}>QQ</Text>
-                  <Text style={s.contactBtnValue}>1号: {qq1}</Text>
-                  <Text style={[s.contactBtnValue, { fontSize: 14, marginTop: 2 }]}>2号: {qq2}</Text>
+                  <Text style={s.contactBtnValue}>{qq}</Text>
                 </View>
               </View>
 

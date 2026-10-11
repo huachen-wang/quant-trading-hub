@@ -19,7 +19,7 @@ export const SEO_CONTACTS = {
   telegram: "@xau6000",
   telegramLink: "https://t.me/xau6000",
   wechat: "oooiniooo0624 / xau6000",
-  qq: "1226426670 / 3832001817",
+  qq: "3832001817",
 };
 
 export type SeoStrategy = {

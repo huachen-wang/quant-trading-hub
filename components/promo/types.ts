@@ -36,8 +36,7 @@ export type PromoProduct = {
 
 export type PromoContactInfo = {
   telegram: string;
-  qq1: string;
-  qq2: string;
+  qq: string;
   wechat1: string;
   wechat2: string;
 };

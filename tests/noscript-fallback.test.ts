@@ -52,7 +52,8 @@ describe("no-JavaScript contact fallback", () => {
     expect(noscript).toContain("MT4 / MT5 EA、指标与交易工具");
     expect(noscript).toContain("https://t.me/xau6000");
     expect(noscript).toContain("@xau6000");
-    expect(noscript).toContain("1226426670 / 3832001817");
+    expect(noscript).toContain("3832001817");
+    expect(noscript).not.toContain("1226426670");
     expect(noscript).toContain("oooiniooo0624 / xau6000");
   });
 

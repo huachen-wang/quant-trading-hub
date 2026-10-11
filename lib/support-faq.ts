@@ -75,7 +75,7 @@ function productLabel(context: SupportFaqContext): SupportText {
  * 站点设置没配 QQ 时的兜底号码，与联系方式弹窗共用同一份，避免两处漂移。
  * 这是对外公开的客服号，不是凭据。
  */
-export const SUPPORT_QQ_FALLBACK = "1226426670 / 3832001817";
+export const SUPPORT_QQ_FALLBACK = "3832001817"; // 2026-10-11 起客服 QQ 只留这一个
 
 /**
  * 把站点设置里的 QQ 配置整成「只有号码」的展示形式。

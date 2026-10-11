@@ -16,6 +16,7 @@ import { PromoProductDetailModal } from "@/components/promo/product-detail-modal
 import { createPromoStyles } from "@/components/promo/styles";
 import type { PromoCategoryKey, PromoContactInfo, PromoProduct } from "@/components/promo/types";
 import { trpc } from "@/lib/trpc";
+import { normalizeQqContacts, SUPPORT_QQ_FALLBACK } from "@/lib/support-faq";
 
 export default function PromoPage() {
   const router = useRouter();
@@ -73,13 +74,13 @@ export default function PromoPage() {
   const { data: contactSettings } = trpc.siteSettings.getContact.useQuery();
 
   const telegram = contactSettings?.telegram || "@xau6000";
-  const qq1 = "1226426670";
-  const qq2 = contactSettings?.qq || "3832001817";
+  // 2026-10-11 Nathan：「qq就先只保留3832001817」。读站点设置 contact_qq（接口返回的键是 contact_qq，不是 qq）。
+  const qq = normalizeQqContacts(contactSettings?.contact_qq) || SUPPORT_QQ_FALLBACK;
   const wechat1 = "oooiniooo0624";
   const wechat2 = "xau6000";
   const contactInfo = useMemo<PromoContactInfo>(
-    () => ({ telegram, qq1, qq2, wechat1, wechat2 }),
-    [qq1, qq2, telegram, wechat1, wechat2],
+    () => ({ telegram, qq, wechat1, wechat2 }),
+    [qq, telegram, wechat1, wechat2],
   );
 
   const products = useMemo<PromoProduct[]>(
