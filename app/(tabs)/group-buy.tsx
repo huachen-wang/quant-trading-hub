@@ -226,8 +226,7 @@ export default function GroupBuyScreen() {
     if (!contacts.find(c => c.type === "Telegram")) {
       contacts.push({ type: "Telegram", value: "@xau6000", link: "https://t.me/xau6000" });
     }
-    contacts.push({ type: "QQ1号", value: "1226426670" });
-    contacts.push({ type: "QQ2号", value: "3832001817" });
+    contacts.push({ type: "QQ", value: "3832001817" });
     contacts.push({ type: "微信1号", value: "oooiniooo0624" });
     contacts.push({ type: "微信2号", value: "xau6000" });
     return contacts;

@@ -53,8 +53,7 @@ export function PromoContactModal({
                 <Ionicons name="chatbox" size={22} color="#fff" />
                 <View style={{ flex: 1 }}>
                   <Text style={s.contactMethodLabel}>QQ</Text>
-                  <Text style={s.contactMethodValue}>{`1号: ${contact.qq1}`}</Text>
-                  <Text style={[s.contactMethodValue, { fontSize: 13, marginTop: 2 }]}>{`2号: ${contact.qq2}`}</Text>
+                  <Text style={s.contactMethodValue}>{contact.qq}</Text>
                 </View>
               </View>
 

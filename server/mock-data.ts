@@ -775,7 +775,7 @@ export function getMockSiteSettings() {
     { id: 2, settingKey: "contact_subtitle", settingValue: "上架EA策略 | 代挂合作服务", description: "联系方式弹窗副标题", createdAt: new Date(now), updatedAt: new Date(now) },
     { id: 3, settingKey: "contact_telegram", settingValue: "@xau6000", description: "Telegram", createdAt: new Date(now), updatedAt: new Date(now) },
     { id: 4, settingKey: "contact_telegram_link", settingValue: "https://t.me/xau6000", description: "Telegram链接", createdAt: new Date(now), updatedAt: new Date(now) },
-    { id: 5, settingKey: "contact_qq", settingValue: "1226426670", description: "QQ群", createdAt: new Date(now), updatedAt: new Date(now) },
+    { id: 5, settingKey: "contact_qq", settingValue: "3832001817", description: "QQ群", createdAt: new Date(now), updatedAt: new Date(now) },
     { id: 6, settingKey: "contact_wechat", settingValue: "xau6000", description: "微信", createdAt: new Date(now), updatedAt: new Date(now) },
     { id: 7, settingKey: "contact_description", settingValue: "本地预览使用样例联系方式，线上会读取真实数据库配置。", description: "说明文字", createdAt: new Date(now), updatedAt: new Date(now) },
     { id: 8, settingKey: "virtual_subscriber_count", settingValue: "128", description: "本地样例虚拟订阅数", createdAt: new Date(now), updatedAt: new Date(now) },
