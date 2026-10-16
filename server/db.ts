@@ -226,7 +226,9 @@ export async function getStrategies(params: {
       .select()
       .from(strategies)
       .where(whereConditions)
-      .orderBy(desc(strategies.isFeatured), desc(strategies.isCurated), orderByColumn)
+      // 最后加 id 作为稳定的次序：热度等字段有大量并列值时，MySQL 每次分页的并列顺序可能不同，
+      // 「加载更多」会重复出现一部分、漏掉另一部分（2026-10-17 实测 101 个只翻到 97 个）。
+      .orderBy(desc(strategies.isFeatured), desc(strategies.isCurated), orderByColumn, desc(strategies.id))
       .limit(params.limit || 20)
       .offset(params.offset || 0);
 
@@ -273,7 +275,7 @@ export async function getStrategies(params: {
       })
       .from(strategies)
       .where(whereConditions)
-      .orderBy(orderByColumn)
+      .orderBy(orderByColumn, desc(strategies.id))
       .limit(params.limit || 20)
       .offset(params.offset || 0);
 
