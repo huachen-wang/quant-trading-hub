@@ -11,7 +11,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "../_core/trpc";
 import { adminProcedure } from "./_admin";
-import { requestIp } from "../_core/admin-security-throttle";
+import { clientIp } from "../_core/client-ip";
 import {
   SupportError,
   claimAnonymousConversation,
@@ -107,7 +107,7 @@ export const supportRouter = router({
           expectedIdentity: input.expectedIdentity ?? null,
           // 管理员账号不占用访客身份；只有真实登录用户才绑定会话。
           userId: ctx.user && ctx.user.role !== "admin" ? ctx.user.id : null,
-          ip: requestIp(ctx.req as any),
+          ip: clientIp(ctx.req as any), // 2026-10-17：与登录限流同一个取 IP 函数（Railway 代理后面 socket 对端不是访客）
         });
       } catch (error) {
         toTrpcError(error);

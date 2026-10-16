@@ -6,17 +6,43 @@ import { hashPassword } from "../_core/password";
 import { sdk } from "../_core/sdk";
 import { createVerificationCode, verifyCode } from "../_core/verification";
 import {
+  EMAIL_CODE_UNIFORM_MESSAGE,
   checkEmailCodeRequest,
+  hidesRegistrationStatus,
   needsRegistrationLookup,
   type EmailCodePurpose,
 } from "../_core/email-code-gate";
+import { clientIp } from "../_core/client-ip";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 
 const emailPurpose = z.enum(["register", "login", "reset_password", "bind_email", "verify_email"]);
 
-function getRequestIp(req: { headers: Record<string, unknown>; socket: { remoteAddress?: string } }) {
-  return (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || undefined;
+/**
+ * 登录、找回密码发码的最短响应时间（2026-10-17）：未注册的邮箱不发信，会比真发信快很多；
+ * 两条路都垫到同一个下限（再加一点随机抖动），不能从快慢看出邮箱有没有注册。
+ * 正常发信（Postmark）远低于这个下限。测试里可以调小。
+ */
+const uniformTiming = { minMs: 1500, jitterMs: 300 };
+export function setEmailCodeTimingForTests(next: { minMs: number; jitterMs: number }) {
+  uniformTiming.minMs = next.minMs;
+  uniformTiming.jitterMs = next.jitterMs;
+}
+
+async function withMinimumDuration<T>(task: () => Promise<T>, minMs: number): Promise<T> {
+  const startedAt = Date.now();
+  const pad = async () => {
+    const remaining = minMs - (Date.now() - startedAt);
+    if (remaining > 0) await new Promise((resolveWait) => setTimeout(resolveWait, remaining));
+  };
+  try {
+    const value = await task();
+    await pad();
+    return value;
+  } catch (error) {
+    await pad();
+    throw error;
+  }
 }
 
 async function issueEmailCode(
@@ -25,24 +51,38 @@ async function issueEmailCode(
   okMessage: string,
 ) {
   const email = input.email.trim().toLowerCase();
-  const ip = getRequestIp(ctx.req);
+  const ip = clientIp(ctx.req);
+  const uniform = hidesRegistrationStatus(input.purpose);
 
-  const emailIsRegistered = needsRegistrationLookup(input.purpose)
-    ? Boolean(await db.getUserByEmail(email))
-    : undefined;
+  const run = async () => {
+    const emailIsRegistered = needsRegistrationLookup(input.purpose)
+      ? Boolean(await db.getUserByEmail(email))
+      : undefined;
 
-  const gate = checkEmailCodeRequest({
-    purpose: input.purpose,
-    emailIsRegistered,
-    requesterIsAuthenticated: Boolean(ctx.user),
-  });
-  if (!gate.ok) throw new Error(gate.error);
+    const gate = checkEmailCodeRequest({
+      purpose: input.purpose,
+      emailIsRegistered,
+      requesterIsAuthenticated: Boolean(ctx.user),
+    });
+    if (!gate.ok) throw new Error(gate.error);
 
-  const result = await createVerificationCode({ target: email, targetType: "email", purpose: input.purpose, ip });
-  if (!result.ok) throw new Error(result.error || "验证码发送失败");
-  const sendResult = await sendVerificationCodeEmail(email, result.code!, input.purpose);
-  if (!sendResult.ok) throw new Error(`邮件发送失败：${sendResult.error || "请稍后再试"}`);
-  return { ok: true, message: okMessage };
+    /* 登录 / 找回密码：未注册也照样建一条码记录（不发信）。这样 60 秒冷却「请等待 N 秒」
+       对注册和未注册的邮箱一样出现，不会变成探测手段；这条码从没发出去，没人能用。 */
+    const result = await createVerificationCode({ target: email, targetType: "email", purpose: input.purpose, ip });
+    if (!result.ok) throw new Error(result.error || "验证码发送失败");
+    if (gate.deliver) {
+      const sendResult = await sendVerificationCodeEmail(email, result.code!, input.purpose);
+      if (!sendResult.ok) {
+        // 统一回复的用途不把发信失败告诉调用方（否则「发信失败」本身就说明邮箱注册过），只记日志。
+        if (uniform) console.error("[auth] verification email failed:", sendResult.error || "unknown");
+        else throw new Error(`邮件发送失败：${sendResult.error || "请稍后再试"}`);
+      }
+    }
+    return { ok: true, message: uniform ? EMAIL_CODE_UNIFORM_MESSAGE : okMessage };
+  };
+
+  if (!uniform) return run();
+  return withMinimumDuration(run, uniformTiming.minMs + Math.floor(Math.random() * uniformTiming.jitterMs));
 }
 
 export const authRouter = router({
@@ -156,7 +196,7 @@ export const authRouter = router({
       const verifyResult = await verifyCode({ target: email, purpose: "login", code: input.code });
       if (!verifyResult.ok) throw new Error(verifyResult.error || "验证码错误");
       const user = await db.getUserByEmail(email);
-      if (!user) throw new Error("该邮箱未注册");
+      if (!user) throw new Error("验证码错误或已过期"); // 不透露邮箱是否注册（2026-10-17）
       await db.updateUser(user.id, { lastSignedIn: new Date() });
       const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name || email, expiresInMs: ONE_YEAR_MS });
       const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -171,7 +211,7 @@ export const authRouter = router({
       const verifyResult = await verifyCode({ target: email, purpose: "reset_password", code: input.code });
       if (!verifyResult.ok) throw new Error(verifyResult.error || "验证码错误");
       const user = await db.getUserByEmail(email);
-      if (!user) throw new Error("该邮箱未注册");
+      if (!user) throw new Error("验证码错误或已过期"); // 不透露邮箱是否注册（2026-10-17）
       await db.updateUser(user.id, { passwordHash: hashPassword(input.newPassword) });
       return { ok: true, message: "密码已重置，请重新登录" };
     }),

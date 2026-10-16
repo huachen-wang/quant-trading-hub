@@ -24,11 +24,11 @@ describe("email verification code gate", () => {
         emailIsRegistered: false,
         requesterIsAuthenticated: false,
       }),
-    ).toEqual({ ok: true });
+    ).toEqual({ ok: true, deliver: true });
   });
 
   it.each(["login", "reset_password"] as const)(
-    "blocks %s for an email with no account",
+    "does not reveal whether %s targets a registered email: ok either way, only delivers to real accounts",
     (purpose) => {
       expect(
         checkEmailCodeRequest({
@@ -36,7 +36,14 @@ describe("email verification code gate", () => {
           emailIsRegistered: false,
           requesterIsAuthenticated: false,
         }),
-      ).toEqual({ ok: false, error: "该邮箱未注册" });
+      ).toEqual({ ok: true, deliver: false });
+      expect(
+        checkEmailCodeRequest({
+          purpose,
+          emailIsRegistered: true,
+          requesterIsAuthenticated: false,
+        }),
+      ).toEqual({ ok: true, deliver: true });
     },
   );
 
@@ -54,7 +61,7 @@ describe("email verification code gate", () => {
     (purpose) => {
       expect(
         checkEmailCodeRequest({ purpose, requesterIsAuthenticated: true }),
-      ).toEqual({ ok: true });
+      ).toEqual({ ok: true, deliver: true });
     },
   );
 
