@@ -111,6 +111,17 @@ export async function getDbForSeo() {
   return getDb();
 }
 
+/**
+ * 登录限流（server/_core/login-throttle.ts）用的原始 SQL 通道：需要单条
+ * INSERT ... ON DUPLICATE KEY UPDATE 原子累加，drizzle 的 upsert 表达不了按旧值分支。
+ * 没配 DATABASE_URL 返回 null，调用方退回进程内计数。
+ */
+export async function loginThrottleQuery<T = unknown>(statement: string, params: unknown[]): Promise<T | null> {
+  if (!process.env.DATABASE_URL) return null;
+  const [rows] = await getPool().query(statement, params as any[]);
+  return rows as T;
+}
+
 async function getDb() {
   try {
     if (!process.env.DATABASE_URL) {
@@ -641,10 +652,18 @@ export async function getAnonymousComments(strategyId: number, limit = 50, offse
   return db
     .select()
     .from(anonymousComments)
-    .where(eq(anonymousComments.strategyId, strategyId))
+    .where(publicAnonymousCommentsWhere(strategyId))
     .orderBy(desc(anonymousComments.createdAt))
     .limit(limit)
     .offset(offset);
+}
+
+/**
+ * 公开评论只给审核通过的（2026-10-17）。新评论默认 isApproved=false，
+ * 原来公开接口不看这一列，后台的「通过」形同虚设。后台的 getAllAnonymousComments 不受影响。
+ */
+export function publicAnonymousCommentsWhere(strategyId: number) {
+  return and(eq(anonymousComments.strategyId, strategyId), eq(anonymousComments.isApproved, true));
 }
 
 export async function getAllAnonymousComments(limit = 200, offset = 0) {

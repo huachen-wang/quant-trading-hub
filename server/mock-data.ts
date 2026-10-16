@@ -787,7 +787,12 @@ export function getMockSiteSetting(key: string) {
 }
 
 export function getMockContactSettings() {
-  return Object.fromEntries(getMockSiteSettings().map((setting) => [setting.settingKey, setting.settingValue]));
+  // 与真库查询（settingKey LIKE 'contact_%'）一致：公开接口只给联系方式这几项。
+  return Object.fromEntries(
+    getMockSiteSettings()
+      .filter((setting) => setting.settingKey.startsWith("contact_"))
+      .map((setting) => [setting.settingKey, setting.settingValue]),
+  );
 }
 
 export function getMockGroupBuys() {

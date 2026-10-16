@@ -9,12 +9,14 @@ import "../_core/ensure-webcrypto";
 import { SignJWT, jwtVerify } from "jose";
 import { isProductionRuntime } from "../_core/runtime-env";
 import crypto from "node:crypto";
+import { clientIp } from "../_core/client-ip";
 import {
-  assertSecurityAttemptAllowed,
-  clearSecurityFailures,
-  recordSecurityFailure,
-  requestIp,
-} from "../_core/admin-security-throttle";
+  ADMIN_LOGIN_RULE,
+  LOGIN_LOCKED_MESSAGE,
+  checkLoginAllowed,
+  clearLoginFailures,
+  recordLoginFailure,
+} from "../_core/login-throttle";
 
 export function resolveAdminConfig(
   name: "ADMIN_EMAIL" | "ADMIN_PASSWORD" | "JWT_SECRET",
@@ -137,26 +139,23 @@ export const adminAuthRouter = router({
     .mutation(async ({ ctx, input }) => {
       const account = ADMIN_ACCOUNT;
       const principal = input.email.toLowerCase();
-      const ip = requestIp(ctx.req);
-      try {
-        assertSecurityAttemptAllowed("ADMIN_LOGIN", principal, ip);
-      } catch (error) {
-        throw new TRPCError({
-          code: "TOO_MANY_REQUESTS",
-          message: error instanceof Error ? error.message : "登录尝试过多",
-        });
+      // 2026-10-17：计数存库、按「IP + 邮箱」，锁 15 分钟到时自动解开；同一邮箱换个 IP 不受影响。
+      const throttleParts = [clientIp(ctx.req as any), principal];
+      const check = await checkLoginAllowed(ADMIN_LOGIN_RULE, throttleParts);
+      if (!check.allowed) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: LOGIN_LOCKED_MESSAGE });
       }
       if (
         !timingSafeTextEqual(principal, account.email) ||
         !timingSafeTextEqual(input.password, account.password)
       ) {
-        recordSecurityFailure("ADMIN_LOGIN", principal, ip);
+        await recordLoginFailure(ADMIN_LOGIN_RULE, throttleParts);
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "邮箱或密码错误",
         });
       }
-      clearSecurityFailures("ADMIN_LOGIN", principal, ip);
+      await clearLoginFailures(ADMIN_LOGIN_RULE, throttleParts);
 
       // 签发JWT token
       const token = await signAdminToken(account);

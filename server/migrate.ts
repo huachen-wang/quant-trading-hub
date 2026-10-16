@@ -60,6 +60,32 @@ const SUPPORT_ADDED_COLUMNS: Array<{ table: string; column: string; definition: 
 ];
 
 /**
+ * 登录失败限流计数（server/_core/login-throttle.ts，2026-10-17）。
+ * 时间用毫秒整数存（bigint），不受库时区影响；只存 sha256 摘要，不存明文 IP / 邮箱。
+ * 和站内咨询表一样放在迁移链最前面：后台登录不能依赖历史表迁移成功。
+ */
+export async function ensureLoginThrottleSchema(connection: mysql.Connection): Promise<number> {
+  const [existing] = (await connection.query(
+    "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'login_throttle' LIMIT 1",
+  )) as any[];
+  if (existing.length) return 0;
+  await connection.query(`
+    CREATE TABLE IF NOT EXISTS \`login_throttle\` (
+      \`id\` int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      \`scope\` varchar(32) NOT NULL,
+      \`keyHash\` char(64) NOT NULL,
+      \`failures\` int NOT NULL DEFAULT 0,
+      \`windowStartedAt\` bigint NOT NULL,
+      \`lockedUntil\` bigint NOT NULL DEFAULT 0,
+      \`updatedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE INDEX \`login_throttle_scope_key_unique_idx\` (\`scope\`, \`keyHash\`),
+      INDEX \`login_throttle_updated_idx\` (\`updatedAt\`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  return 1;
+}
+
+/**
  * 站内咨询的四张表 + 索引 + 增量列。
  *
  * 单独抽成导出函数有三个理由：
@@ -295,6 +321,8 @@ async function runMigrations(options: { strict?: boolean } = {}): Promise<boolea
     // 站内咨询的四张表：见 ensureSupportChatSchema 的说明，它必须先于历史表迁移跑完。
     console.log("[migrate] Ensuring support chat tables exist...");
     migrationsRun += await ensureSupportChatSchema(connection);
+    console.log("[migrate] Ensuring login throttle table exists...");
+    migrationsRun += await ensureLoginThrottleSchema(connection);
 
     // strategies 表新增字段
     const strategyMigrations: [string, string][] = [

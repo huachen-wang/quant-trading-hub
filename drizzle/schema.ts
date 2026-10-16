@@ -1,4 +1,4 @@
-import { int, bigint, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, index, uniqueIndex, boolean, date } from "drizzle-orm/mysql-core";
+import { int, bigint, char, mysqlEnum, mysqlTable, text, timestamp, varchar, decimal, index, uniqueIndex, boolean, date } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1125,6 +1125,20 @@ export const supportNotifications = mysqlTable("support_notifications", {
 
 export type SupportNotification = typeof supportNotifications.$inferSelect;
 export type InsertSupportNotification = typeof supportNotifications.$inferInsert;
+
+// 登录失败限流（server/_core/login-throttle.ts）。真正建表在 server/migrate.ts 的 ensureLoginThrottleSchema。
+export const loginThrottle = mysqlTable("login_throttle", {
+  id: int("id").autoincrement().primaryKey(),
+  scope: varchar("scope", { length: 32 }).notNull(),
+  keyHash: char("keyHash", { length: 64 }).notNull(),
+  failures: int("failures").default(0).notNull(),
+  windowStartedAt: bigint("windowStartedAt", { mode: "number" }).notNull(),
+  lockedUntil: bigint("lockedUntil", { mode: "number" }).default(0).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  scopeKeyUnique: uniqueIndex("login_throttle_scope_key_unique_idx").on(table.scope, table.keyHash),
+  updatedIdx: index("login_throttle_updated_idx").on(table.updatedAt),
+}));
 
 // 限流计数。自增走单条 SQL（INSERT ... ON DUPLICATE KEY UPDATE），
 // 不用「先 count 再 insert」那种并发下会被整片绕过的写法。
