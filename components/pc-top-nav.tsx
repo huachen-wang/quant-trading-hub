@@ -10,6 +10,7 @@ import {
 import { useRouter, usePathname } from "expo-router";
 import { useAuth } from "@/hooks/use-auth";
 import { BrandWordmark } from "@/components/brand-wordmark";
+import { CommunityHeaderButton } from "@/components/community/community-entry-points";
 
 /**
  * 全端统一顶部导航 - 响应式 + 用户状态
@@ -167,8 +168,13 @@ export function PcTopNav() {
             </View>
           )}
 
+          {/* 手机端：交流群入口紧跟字标，右侧留给导航 / 咨询 / 登录 */}
+          {isMobile && <CommunityHeaderButton compact iconOnly={windowWidth < 372} />}
+
           {/* 手机端 spacer */}
           {isMobile && <View style={{ flex: 1 }} />}
+
+          {isDesktop && <CommunityHeaderButton />}
 
           {isDesktop && (
             <View style={styles.marketStatus}>

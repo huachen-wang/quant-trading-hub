@@ -19,6 +19,7 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import { ContactModal } from "@/components/contact-modal";
 import { QuickNav } from "@/components/quick-nav";
+import { CommunityFooter } from "@/components/community/community-entry-points";
 import { GlassCard } from "@/components/glass-card";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
@@ -558,6 +559,7 @@ export default function SubscribeScreen() {
 
           {/* 常驻快捷导航 */}
           <QuickNav />
+          <CommunityFooter />
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>

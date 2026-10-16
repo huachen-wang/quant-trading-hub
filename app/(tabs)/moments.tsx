@@ -20,6 +20,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { ContactModal } from "@/components/contact-modal";
 import { QuickNav } from "@/components/quick-nav";
+import { CommunityFooter } from "@/components/community/community-entry-points";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useResponsive } from "@/hooks/use-responsive";
 import { trpc } from "@/lib/trpc";
@@ -422,6 +423,7 @@ export default function CooperationScreen() {
 
           {/* 常驻快捷导航 */}
           <QuickNav />
+          <CommunityFooter />
         </ScrollView>
       </SafeAreaView>
     </View>

@@ -153,7 +153,7 @@ export default function AdminSiteEntries() {
             value={newHref}
             onChangeText={setNewHref}
             style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background }]}
-            placeholder="/tutorials/mt4 或 https://t.me/eaxau"
+            placeholder="/tutorials/mt4 或 https://t.me/nbmarketchat"
             placeholderTextColor={colors.muted}
           />
 

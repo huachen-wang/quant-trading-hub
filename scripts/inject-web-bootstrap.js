@@ -10,13 +10,15 @@ const strategyPreloads = [
   "/strategy-art-v2/adaptive-signal.jpg",
 ];
 /**
- * 与 components/contact-modal.tsx 的 CONTACT_FALLBACKS 保持一致的真实联系方式。
- * 这里不能 import TS 模块，所以由 tests/noscript-fallback.test.ts 断言两边不漂移。
- * 只使用站点现有联系方式，不新增渠道。
+ * 交流群与客服，与 shared/community-contacts.ts 保持一致。
+ * 这里不能 import TS 模块，所以由 tests/community-contacts.test.ts 断言两边不漂移。
+ * 2026-10-17：Telegram 客服原来用的 xau6000 没有公开资料页（死链），换成 hypermatch123。
  */
 const FALLBACK_CONTACTS = {
-  telegram: "@xau6000",
-  telegramLink: "https://t.me/xau6000",
+  telegramGroupLink: "https://t.me/nbmarketchat",
+  qqGroup: "951703741",
+  telegram: "@hypermatch123",
+  telegramLink: "https://t.me/hypermatch123",
   wechat: "oooiniooo0624 / xau6000",
   qq: "3832001817",
 };
@@ -27,9 +29,13 @@ const FALLBACK_BLURB =
 
 function contactRows(idPrefix) {
   return [
-    `<a class="eaxau-fallback__row" href="${FALLBACK_CONTACTS.telegramLink}" rel="noopener noreferrer" target="_blank" id="${idPrefix}-tg"><span class="eaxau-fallback__label">Telegram</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.telegram}</span></a>`,
-    `<div class="eaxau-fallback__row"><span class="eaxau-fallback__label">WeChat</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.wechat}</span></div>`,
-    `<div class="eaxau-fallback__row"><span class="eaxau-fallback__label">QQ</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.qq}</span></div>`,
+    `<p class="eaxau-fallback__group">交流群</p>`,
+    `<a class="eaxau-fallback__row" href="${FALLBACK_CONTACTS.telegramGroupLink}" rel="noopener noreferrer" target="_blank" id="${idPrefix}-tg-group"><span class="eaxau-fallback__label">Telegram 交流群</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.telegramGroupLink.replace("https://", "")}</span></a>`,
+    `<div class="eaxau-fallback__row"><span class="eaxau-fallback__label">QQ 群</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.qqGroup}</span></div>`,
+    `<p class="eaxau-fallback__group">客服</p>`,
+    `<div class="eaxau-fallback__row"><span class="eaxau-fallback__label">客服 QQ</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.qq}</span></div>`,
+    `<div class="eaxau-fallback__row"><span class="eaxau-fallback__label">微信</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.wechat}</span></div>`,
+    `<a class="eaxau-fallback__row" href="${FALLBACK_CONTACTS.telegramLink}" rel="noopener noreferrer" target="_blank" id="${idPrefix}-tg"><span class="eaxau-fallback__label">Telegram 客服</span><span class="eaxau-fallback__value">${FALLBACK_CONTACTS.telegram}</span></a>`,
   ].join("\n      ");
 }
 
@@ -63,6 +69,7 @@ ${strategyPreloadLinks}
       .eaxau-seo { max-width: 860px; margin: 0 auto; padding: 24px 20px 48px; color: #e2e8f0; font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif; line-height: 1.7; }
       .eaxau-seo h1 { font-size: 24px; margin: 0 0 12px; }
       .eaxau-seo h2 { font-size: 17px; margin: 24px 0 8px; }
+      .eaxau-seo h3 { font-size: 15px; margin: 16px 0 4px; }
       .eaxau-seo a { color: #d8bc83; }
       .eaxau-seo__lead { color: #cbd5f5; }
       .eaxau-seo__facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
@@ -116,6 +123,7 @@ ${strategyPreloadLinks}
         color: #f4f7fb;
         text-decoration: none;
       }
+      .eaxau-fallback__group { margin: 12px 0 6px; font-size: 11px; font-weight: 800; color: #d8bc83; }
       .eaxau-fallback__label { font-size: 10px; font-weight: 800; color: rgba(148, 163, 184, 0.9); }
       .eaxau-fallback__value { font-size: 13px; font-weight: 800; word-break: break-all; }
       .eaxau-fallback__note { margin: 10px 0 0; font-size: 10px; line-height: 16px; color: rgba(148, 163, 184, 0.78); }

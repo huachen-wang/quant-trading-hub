@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
+import { CommunityInlineCard } from "@/components/community/community-entry-points";
 import { PurchaseActions } from "@/components/purchase-actions";
 import type { AppColors, StrategyDetailData } from "./types";
 
@@ -53,6 +54,7 @@ export function StrategyPurchasePanel({
           downloadRequiresContact={!strategy.downloadAvailable}
           onContact={onContact}
         />
+        <CommunityInlineCard />
       </View>
     </View>
   );

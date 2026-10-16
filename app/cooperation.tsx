@@ -8,9 +8,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenContainer } from "@/components/screen-container";
 import { PcTopNav } from "@/components/pc-top-nav";
+import { CommunityFooter } from "@/components/community/community-entry-points";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { normalizeQqContacts, SUPPORT_QQ_FALLBACK } from "@/lib/support-faq";
+import { buildCommunityEntries, SUPPORT_TELEGRAM_HANDLE } from "@/shared/community-contacts";
 
 const { width: SW } = Dimensions.get("window");
 const isDesktop = SW >= 1024;
@@ -88,7 +90,10 @@ export default function CooperationPage() {
   const { data: plans } = trpc.cooperation.plans.useQuery();
   const { data: contactSettings } = trpc.siteSettings.getContact.useQuery();
 
-  const telegram = contactSettings?.telegram || "@xau6000";
+  // Telegram 客服读站点设置 contact_telegram / contact_telegram_link（接口没有 telegram 这个键），兜底 @hypermatch123。
+  const telegram =
+    buildCommunityEntries(contactSettings).find((entry) => entry.id === "support-telegram")?.value ||
+    SUPPORT_TELEGRAM_HANDLE;
   // 2026-10-11 Nathan：「qq就先只保留3832001817」。读站点设置 contact_qq（接口返回的键是 contact_qq，不是 qq）。
   const qq = normalizeQqContacts(contactSettings?.contact_qq) || SUPPORT_QQ_FALLBACK;
   const wechat1 = "oooiniooo0624";
@@ -421,6 +426,7 @@ export default function CooperationPage() {
           <Text style={s.footerSlogan}>授权可核验 · 证据可复核 · 技术服务以合同为准</Text>
           <Text style={s.footerDisclaimer}>免责声明：不同平台行情、点差、延迟存在差异，策略表现因此可能不同。我们不作收益保证，不做本金承诺，仅展示工具、证据状态与技术服务信息。</Text>
         </View>
+        <CommunityFooter />
       </ScrollView>
 
       {/* ═══════════════════ 策略详情弹窗 ═══════════════════ */}

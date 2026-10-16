@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { ContactModal } from "@/components/contact-modal";
 import { PcTopNav } from "@/components/pc-top-nav";
+import { CommunityFooter } from "@/components/community/community-entry-points";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useAuth } from "@/hooks/use-auth";
@@ -256,6 +257,7 @@ export default function StrategyDetailScreen() {
             </>
           )}
 
+          <CommunityFooter />
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>

@@ -59,7 +59,7 @@ export function BrokerRecommendationModal({ visible, colors, onClose }: Recommen
 
           <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
             <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>开户咨询</Text>
-            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>{"微信1号：oooiniooo0624\n微信2号：xau6000\nQQ：3832001817\nTelegram：@xau6000\n\n添加客服即可获取专属开户链接与返佣方案"}</Text>
+            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>{"微信1号：oooiniooo0624\n微信2号：xau6000\nQQ：3832001817\nTelegram：@hypermatch123\n\n添加客服即可获取专属开户链接与返佣方案"}</Text>
           </View>
 
           <TouchableOpacity
@@ -109,7 +109,7 @@ export function VpsRecommendationModal({ visible, colors, onClose }: Recommendat
 
           <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20 }}>
             <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: "600", marginBottom: 8 }}>联系方式</Text>
-            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>微信1号：oooiniooo0624{"\n"}微信2号：xau6000{"\n"}QQ：3832001817{"\n"}Telegram：@xau6000{"\n"}添加客服咨询可靠 VPS 推荐及申请方案</Text>
+            <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 22 }}>微信1号：oooiniooo0624{"\n"}微信2号：xau6000{"\n"}QQ：3832001817{"\n"}Telegram：@hypermatch123{"\n"}添加客服咨询可靠 VPS 推荐及申请方案</Text>
           </View>
 
           <TouchableOpacity

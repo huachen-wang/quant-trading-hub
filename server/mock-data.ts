@@ -36,8 +36,8 @@ let mockStrategies: StrategyRecord[] = [
     ]),
     isFeatured: true,
     featuredLink: null,
-    telegramGroup: "@GoldTradingEA",
-    qqGroup: "123456789",
+    telegramGroup: "https://t.me/nbmarketchat",
+    qqGroup: "951703741",
     virtualSubscribers: 128,
     virtualDownloads: 320,
     viewCount: 3200,
@@ -69,8 +69,8 @@ let mockStrategies: StrategyRecord[] = [
     galleryImages: null,
     isFeatured: false,
     featuredLink: null,
-    telegramGroup: "@EURUSDScalper",
-    qqGroup: "987654321",
+    telegramGroup: "https://t.me/nbmarketchat",
+    qqGroup: "951703741",
     virtualSubscribers: 42,
     virtualDownloads: 120,
     viewCount: 2100,
@@ -102,8 +102,8 @@ let mockStrategies: StrategyRecord[] = [
     galleryImages: null,
     isFeatured: false,
     featuredLink: null,
-    telegramGroup: "@GridTradingBot",
-    qqGroup: "456789123",
+    telegramGroup: "https://t.me/nbmarketchat",
+    qqGroup: "951703741",
     virtualSubscribers: 75,
     virtualDownloads: 96,
     viewCount: 1850,
@@ -135,8 +135,8 @@ let mockStrategies: StrategyRecord[] = [
     galleryImages: null,
     isFeatured: false,
     featuredLink: null,
-    telegramGroup: "@AITradingPro",
-    qqGroup: "321654987",
+    telegramGroup: "https://t.me/nbmarketchat",
+    qqGroup: "951703741",
     virtualSubscribers: 31,
     virtualDownloads: 77,
     viewCount: 1250,
@@ -773,8 +773,8 @@ export function getMockSiteSettings() {
   return [
     { id: 1, settingKey: "contact_title", settingValue: "联系我们", description: "联系方式弹窗标题", createdAt: new Date(now), updatedAt: new Date(now) },
     { id: 2, settingKey: "contact_subtitle", settingValue: "上架EA策略 | 代挂合作服务", description: "联系方式弹窗副标题", createdAt: new Date(now), updatedAt: new Date(now) },
-    { id: 3, settingKey: "contact_telegram", settingValue: "@xau6000", description: "Telegram", createdAt: new Date(now), updatedAt: new Date(now) },
-    { id: 4, settingKey: "contact_telegram_link", settingValue: "https://t.me/xau6000", description: "Telegram链接", createdAt: new Date(now), updatedAt: new Date(now) },
+    { id: 3, settingKey: "contact_telegram", settingValue: "@hypermatch123", description: "Telegram", createdAt: new Date(now), updatedAt: new Date(now) },
+    { id: 4, settingKey: "contact_telegram_link", settingValue: "https://t.me/hypermatch123", description: "Telegram链接", createdAt: new Date(now), updatedAt: new Date(now) },
     { id: 5, settingKey: "contact_qq", settingValue: "3832001817", description: "QQ群", createdAt: new Date(now), updatedAt: new Date(now) },
     { id: 6, settingKey: "contact_wechat", settingValue: "xau6000", description: "微信", createdAt: new Date(now), updatedAt: new Date(now) },
     { id: 7, settingKey: "contact_description", settingValue: "本地预览使用样例联系方式，线上会读取真实数据库配置。", description: "说明文字", createdAt: new Date(now), updatedAt: new Date(now) },
@@ -792,7 +792,7 @@ export function getMockContactSettings() {
 
 export function getMockGroupBuys() {
   return [
-    { id: 1, title: "AI深度学习系统合购", eaName: "AI深度学习交易系统", description: "本地预览样例合购", targetPrice: "899.00", currentParticipants: 7, targetParticipants: 10, pricePerPerson: "90.00", contactInfo: "Telegram: @xau6000", status: "active", createdAt: new Date(now), updatedAt: new Date(now) },
+    { id: 1, title: "AI深度学习系统合购", eaName: "AI深度学习交易系统", description: "本地预览样例合购", targetPrice: "899.00", currentParticipants: 7, targetParticipants: 10, pricePerPerson: "90.00", contactInfo: "Telegram: @hypermatch123", status: "active", createdAt: new Date(now), updatedAt: new Date(now) },
   ];
 }
 

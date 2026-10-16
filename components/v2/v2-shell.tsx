@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { CommunityHeaderButton } from "@/components/community/community-entry-points";
 import { ContactModal } from "@/components/contact-modal";
 import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
@@ -205,6 +206,7 @@ export function V2Shell({ children }: V2ShellProps) {
                 <Text style={styles.providerText}>{providerLabel}</Text>
               </View>
             ) : null}
+            <CommunityHeaderButton compact={isMobile} />
             <LanguageMenu compact={isMobile} />
             {!isMobile ? (
               <Pressable
