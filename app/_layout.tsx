@@ -20,6 +20,7 @@ import {
 import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
 import { trpc, createTRPCClient } from "@/lib/trpc";
+import { CommunityFab } from "@/components/community/community-entry-points";
 import {
   initManusRuntime,
   subscribeSafeAreaInsets,
@@ -106,6 +107,8 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="oauth/callback" />
           </Stack>
+          {/* 手机端（窄屏 Web）右下角「交流群」悬浮按钮；后台、登录、结账页内部自行隐藏 */}
+          <CommunityFab />
           {Platform.OS !== "web" ? <StatusBar style="auto" /> : null}
         </QueryClientProvider>
       </trpc.Provider>

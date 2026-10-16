@@ -28,6 +28,8 @@ import {
   type ListLookup,
   type StrategyLookup,
 } from "./seo-render";
+import { renderLlmsTxt, renderRobotsTxt } from "./site-text";
+import { isKnownSpaRoute } from "./spa-routes";
 
 // ES模块中获取__dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -228,17 +230,24 @@ async function startServer() {
     }
   });
 
-  // SEO: robots.txt
+  // SEO: robots.txt（* 组 + 每个 AI 爬虫单独一组，禁止规则相同）
   app.get("/robots.txt", (_req, res) => {
-    res.header('Content-Type', 'text/plain');
-    res.send(`User-agent: *
-Allow: /
-Disallow: /admin
-Disallow: /api/
-Disallow: /oauth/
+    res.header('Content-Type', 'text/plain; charset=utf-8');
+    res.send(renderRobotsTxt());
+  });
 
-Sitemap: https://www.eaxau.com/sitemap.xml
-`);
+  // GEO: /llms.txt —— 站点定位、主要页面、交流群与客服、风险声明；商品清单与首页预渲染同源。
+  app.get("/llms.txt", async (_req, res) => {
+    let lookup: ListLookup;
+    try {
+      lookup = await lookupHomeList();
+    } catch (error) {
+      console.error('[SEO] llms.txt product list unavailable:', error);
+      lookup = { kind: 'unavailable', reason: 'error' };
+    }
+    res.header('Content-Type', 'text/plain; charset=utf-8');
+    res.header('Cache-Control', 'public, max-age=3600');
+    res.send(renderLlmsTxt(lookup));
   });
 
   app.use(
@@ -353,6 +362,13 @@ Sitemap: https://www.eaxau.com/sitemap.xml
               return res.status(503).send(renderUnavailableHtml(cachedIndexHtml));
             }
             return res.status(200).send(renderHomeHtml(cachedIndexHtml, lookup));
+          }
+
+          /* 其余地址：只有 app/ 里真实存在的页面才给 200 应用壳；不存在的给真 404（noindex），
+             不再让任意路径都返回 200（软 404）。页面清单见 ./spa-routes.ts，有测试对着 app/ 目录核对。 */
+          if (!isKnownSpaRoute(req.path)) {
+            res.header('Content-Type', 'text/html; charset=utf-8');
+            return res.status(404).send(renderNotFoundHtml(cachedIndexHtml, req.path));
           }
         } catch (error) {
           console.error('[SEO] Error rendering initial HTML:', error);

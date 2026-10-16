@@ -30,7 +30,7 @@ INSERT INTO strategies (
   379.62, 39.08, 2.15, 72.50,
   'https://www.mql5.com/en/market/product/103540',
   799.99, FALSE, 0,
-  'https://t.me/quanttradingea', '123456789',
+  'https://t.me/nbmarketchat', '951703741',
   2847, 17122,
   'published'
 ),
@@ -44,7 +44,7 @@ INSERT INTO strategies (
   3088.00, 14.40, 3.20, 74.20,
   'https://www.mql5.com/en/market/product/66317',
   2800.00, FALSE, 0,
-  'https://t.me/quanttradingea', '123456789',
+  'https://t.me/nbmarketchat', '951703741',
   3156, 13321,
   'published'
 ),
@@ -58,7 +58,7 @@ INSERT INTO strategies (
   285.40, 18.60, 2.45, 68.30,
   'https://www.mql5.com/en/market/product/111357',
   849.00, FALSE, 0,
-  'https://t.me/quanttradingea', '123456789',
+  'https://t.me/nbmarketchat', '951703741',
   2534, 19521,
   'published'
 ),
@@ -72,7 +72,7 @@ INSERT INTO strategies (
   245.80, 15.20, 2.68, 76.50,
   'https://www.mql5.com/en/market/product/92404',
   399.00, FALSE, 0,
-  'https://t.me/quanttradingea', '123456789',
+  'https://t.me/nbmarketchat', '951703741',
   1892, 5830,
   'published'
 ),
@@ -86,7 +86,7 @@ INSERT INTO strategies (
   186.50, 9.80, 2.85, 81.20,
   'https://www.mql5.com/en/market/product/54851',
   1499.00, FALSE, 0,
-  'https://t.me/quanttradingea', '123456789',
+  'https://t.me/nbmarketchat', '951703741',
   2103, 8945,
   'published'
 ),
@@ -100,7 +100,7 @@ INSERT INTO strategies (
   198.30, 16.50, 2.35, 69.80,
   'https://www.mql5.com/en/market/product/79577',
   1999.00, FALSE, 0,
-  'https://t.me/quanttradingea', '123456789',
+  'https://t.me/nbmarketchat', '951703741',
   1567, 6234,
   'published'
 ),
@@ -114,7 +114,7 @@ INSERT INTO strategies (
   156.70, 13.40, 2.52, 71.60,
   'https://www.mql5.com/en/market/product/106015',
   0.00, TRUE, 0,
-  'https://t.me/quanttradingea', '123456789',
+  'https://t.me/nbmarketchat', '951703741',
   3421, 24567,
   'published'
 ),
@@ -128,7 +128,7 @@ INSERT INTO strategies (
   312.50, 12.80, 2.92, 77.40,
   'https://www.mql5.com/en/market/product/109470',
   499.00, FALSE, 0,
-  'https://t.me/quanttradingea', '123456789',
+  'https://t.me/nbmarketchat', '951703741',
   2678, 11234,
   'published'
 ),
@@ -142,7 +142,7 @@ INSERT INTO strategies (
   167.90, 19.50, 2.18, 66.80,
   'https://www.mql5.com/en/market',
   699.00, FALSE, 0,
-  'https://t.me/quanttradingea', '123456789',
+  'https://t.me/nbmarketchat', '951703741',
   1234, 4567,
   'published'
 ),
@@ -156,7 +156,7 @@ INSERT INTO strategies (
   234.60, 21.30, 2.08, 70.50,
   'https://www.mql5.com/en/market',
   599.00, FALSE, 0,
-  'https://t.me/quanttradingea', '123456789',
+  'https://t.me/nbmarketchat', '951703741',
   1789, 7890,
   'published'
 );

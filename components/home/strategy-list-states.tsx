@@ -7,6 +7,7 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { QuickNav } from "@/components/quick-nav";
+import { CommunityFooter } from "@/components/community/community-entry-points";
 import type { ThemeColorPalette } from "@/constants/theme";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useLanguage } from "@/lib/language";
@@ -147,6 +148,7 @@ export function StrategyListFooter({
         </View>
       )}
       <QuickNav />
+      <CommunityFooter />
     </View>
   );
 }

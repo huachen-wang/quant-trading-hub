@@ -24,10 +24,10 @@ describe("buildStrategyPageUrl", () => {
 
 describe("buildTelegramChatLink", () => {
   it("normalises the handle shapes stored in site settings", () => {
-    expect(buildTelegramChatLink("@xau6000")).toBe("https://t.me/xau6000");
-    expect(buildTelegramChatLink("xau6000")).toBe("https://t.me/xau6000");
-    expect(buildTelegramChatLink("t.me/xau6000")).toBe("https://t.me/xau6000");
-    expect(buildTelegramChatLink("https://t.me/xau6000")).toBe("https://t.me/xau6000");
+    expect(buildTelegramChatLink("@hypermatch123")).toBe("https://t.me/hypermatch123");
+    expect(buildTelegramChatLink("hypermatch123")).toBe("https://t.me/hypermatch123");
+    expect(buildTelegramChatLink("t.me/hypermatch123")).toBe("https://t.me/hypermatch123");
+    expect(buildTelegramChatLink("https://t.me/hypermatch123")).toBe("https://t.me/hypermatch123");
   });
 
   it("returns empty for unusable values instead of a dead link", () => {

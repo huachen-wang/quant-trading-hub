@@ -7,12 +7,15 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
+import { CommunityContactList } from "@/components/community/community-contacts";
 import { SupportChat } from "@/components/support-chat";
 import { V2 } from "@/components/v2/tokens";
 import {
@@ -21,9 +24,9 @@ import {
   buildTelegramChatLink,
   type InquiryContext,
 } from "@/lib/inquiry-message";
-import { SUPPORT_QQ_FALLBACK, normalizeQqContacts } from "@/lib/support-faq";
 import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
+import { buildCommunityEntries } from "@/shared/community-contacts";
 
 interface ContactModalProps {
   visible: boolean;
@@ -33,31 +36,40 @@ interface ContactModalProps {
    * 客户不用自己组织语言，顾问也不用重新问一遍版本和授权范围。
    */
   context?: InquiryContext;
+  /**
+   * advisor（默认）：先停在「在线咨询」。
+   * community：顶栏「加入交流群」和手机悬浮按钮用，直接停在「交流群 · 客服」页签。
+   */
+  variant?: "advisor" | "community";
 }
 
+/** 交流群与客服号码统一在 shared/community-contacts.ts，这里只留说明文字的兜底。 */
 const CONTACT_FALLBACKS = {
-  telegram: "@xau6000",
-  telegramLink: "https://t.me/xau6000",
-  qq: SUPPORT_QQ_FALLBACK,
-  wechat: "oooiniooo0624 / xau6000",
   description: "咨询时请备注策略名称，客服会确认文件版本、部署要求与交付方式。",
 };
 
-export function ContactModal({ visible, onClose, context }: ContactModalProps) {
+export function ContactModal({
+  visible,
+  onClose,
+  context,
+  variant = "advisor",
+}: ContactModalProps) {
+  const isCommunity = variant === "community";
   const { language, text } = useLanguage();
+  const { height: windowHeight } = useWindowDimensions();
   const scaleAnim = useRef(new Animated.Value(0.96)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
-  const [copiedMethod, setCopiedMethod] = useState("");
   const [inquiryCopied, setInquiryCopied] = useState(false);
   // 默认停在「在线咨询」：这是唯一能把双方对话留存下来的入口。
   // 但停在这个页签本身不写任何库——会话要等客户真的发出第一条消息才建。
-  const [tab, setTab] = useState<"chat" | "contact">("chat");
+  const [tab, setTab] = useState<"chat" | "contact">(
+    isCommunity ? "contact" : "chat",
+  );
 
   useEffect(() => {
     if (!visible) return;
-    setCopiedMethod("");
     setInquiryCopied(false);
-    setTab("chat");
+    setTab(isCommunity ? "contact" : "chat");
     scaleAnim.setValue(0.96);
     opacityAnim.setValue(0);
     Animated.parallel([
@@ -72,25 +84,22 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
         useNativeDriver: Platform.OS !== "web",
       }),
     ]).start();
-  }, [opacityAnim, scaleAnim, visible]);
+  }, [isCommunity, opacityAnim, scaleAnim, visible]);
 
   const { data: contactData, isLoading } =
     trpc.siteSettings.getContact.useQuery(undefined, {
       enabled: visible,
     });
 
-  const telegram =
-    contactData?.contact_telegram?.trim() || CONTACT_FALLBACKS.telegram;
-  const telegramLink =
-    contactData?.contact_telegram_link?.trim() ||
-    CONTACT_FALLBACKS.telegramLink;
-  // 卡片本身已经有「QQ / QQ 群」这个标签，值里再带一遍 `QQ` 前缀就成了 QQ QQ123456。
-  // 只收前缀、统一分隔符，号码原样保留；看不懂的写法直接照原文显示（见 normalizeQqContacts）。
-  const qq = normalizeQqContacts(contactData?.contact_qq) || CONTACT_FALLBACKS.qq;
-  const wechat =
-    contactData?.contact_wechat?.trim() || CONTACT_FALLBACKS.wechat;
+  // 交流群固定；客服三项优先读后台联系设置，QQ / 微信的重复前缀在 buildCommunityEntries 里收掉。
+  const entries = buildCommunityEntries(
+    contactData as Record<string, string> | undefined,
+  );
+  const supportTelegram = entries.find(
+    (entry) => entry.id === "support-telegram",
+  );
   const inquiryMessage = context ? buildInquiryMessage(context) : "";
-  const telegramChatLink = buildTelegramChatLink(telegramLink) || buildTelegramChatLink(telegram);
+  const telegramChatLink = buildTelegramChatLink(supportTelegram?.href);
 
   const handleCopyInquiry = async () => {
     if (!inquiryMessage) return;
@@ -138,68 +147,20 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
     "Include the strategy or EA name in your message so the advisor can confirm the version, environment and delivery terms.",
     "اذكر اسم الاستراتيجية أو نظام EA في رسالتك لتأكيد الإصدار وبيئة التشغيل وشروط التسليم.",
   );
-  const title =
-    language === "zh"
+  const title = isCommunity
+    ? text("加入交流群", "Join the group", "انضم إلى المجموعة")
+    : language === "zh"
       ? contactData?.contact_title?.trim() || localizedTitle
       : localizedTitle;
-  const subtitle =
-    language === "zh"
+  const subtitle = isCommunity
+    ? text("交流群 · 客服", "Groups · Support", "المجموعات · الدعم")
+    : language === "zh"
       ? contactData?.contact_subtitle?.trim() || localizedSubtitle
       : localizedSubtitle;
   const description =
     language === "zh"
       ? contactData?.contact_description?.trim() || localizedDescription
       : localizedDescription;
-
-  const contactMethods = [
-    ...(telegram
-      ? [
-          {
-            id: "telegram",
-            icon: "send" as const,
-            label: "Telegram",
-            value: telegram,
-            link: telegramLink || null,
-          },
-        ]
-      : []),
-    ...(wechat
-      ? [
-          {
-            id: "wechat",
-            icon: "chat" as const,
-            label: "WeChat",
-            value: wechat,
-            link: null,
-          },
-        ]
-      : []),
-    ...(qq
-      ? [
-          {
-            id: "qq",
-            icon: "forum" as const,
-            label: text("QQ / QQ 群", "QQ / QQ Group", "QQ / مجموعة QQ"),
-            value: qq,
-            link: null,
-          },
-        ]
-      : []),
-  ];
-
-  const handleMethodPress = async (method: (typeof contactMethods)[number]) => {
-    if (method.link) {
-      await Linking.openURL(method.link);
-      return;
-    }
-    try {
-      await globalThis.navigator?.clipboard?.writeText(method.value);
-      setCopiedMethod(method.id);
-      setTimeout(() => setCopiedMethod(""), 1600);
-    } catch {
-      setCopiedMethod("");
-    }
-  };
 
   if (!visible) return null;
 
@@ -251,23 +212,37 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
             </View>
 
             <Text style={styles.modalSubtitle}>{subtitle}</Text>
-            <View style={styles.scopeRow}>
-              {[
-                text("策略选配", "Strategy mix", "مزيج الاستراتيجيات"),
-                text("EA 商城", "EA market", "سوق EA"),
-                text("部署支持", "Deployment", "دعم النشر"),
-              ].map((scope) => (
-                <View key={scope} style={styles.scopeItem}>
-                  <Text style={styles.scopeText}>{scope}</Text>
-                </View>
-              ))}
-            </View>
+            {isCommunity ? (
+              <View style={styles.scopeSpacer} />
+            ) : (
+              <View style={styles.scopeRow}>
+                {[
+                  text("策略选配", "Strategy mix", "مزيج الاستراتيجيات"),
+                  text("EA 商城", "EA market", "سوق EA"),
+                  text("部署支持", "Deployment", "دعم النشر"),
+                ].map((scope) => (
+                  <View key={scope} style={styles.scopeItem}>
+                    <Text style={styles.scopeText}>{scope}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
             <View style={styles.tabRow}>
-              {([
-                { key: "chat" as const, label: text("在线咨询", "Live chat", "دردشة") },
-                { key: "contact" as const, label: text("联系方式", "Contacts", "جهات الاتصال") },
-              ]).map((item) => {
+              {[
+                {
+                  key: "chat" as const,
+                  label: text("在线咨询", "Live chat", "دردشة"),
+                },
+                {
+                  key: "contact" as const,
+                  label: text(
+                    "交流群 · 客服",
+                    "Groups · Support",
+                    "المجموعات · الدعم",
+                  ),
+                },
+              ].map((item) => {
                 const activeTab = tab === item.key;
                 return (
                   <Pressable
@@ -281,7 +256,12 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
                       pressed && styles.pressed,
                     ]}
                   >
-                    <Text style={[styles.tabText, activeTab && styles.tabTextActive]}>
+                    <Text
+                      style={[
+                        styles.tabText,
+                        activeTab && styles.tabTextActive,
+                      ]}
+                    >
                       {item.label}
                     </Text>
                   </Pressable>
@@ -295,158 +275,124 @@ export function ContactModal({ visible, onClose, context }: ContactModalProps) {
                 strategyId={
                   typeof context?.productId === "number"
                     ? context.productId
-                    : Number.parseInt(String(context?.productId ?? ""), 10) || null
+                    : Number.parseInt(String(context?.productId ?? ""), 10) ||
+                      null
                 }
                 strategyTitle={context?.productTitle ?? null}
                 pageUrl={context?.pageUrl ?? null}
               />
             ) : null}
 
-            {tab === "contact" && inquiryMessage ? (
-              <View style={styles.inquiryBox}>
-                <View style={styles.inquiryHead}>
-                  <MaterialIcons name="assignment" size={15} color={V2.gold} />
-                  <Text style={styles.inquiryEyebrow}>
-                    {text(
-                      "已为你写好咨询内容",
-                      "Inquiry drafted for you",
-                      "نص الاستفسار جاهز",
-                    )}
-                  </Text>
-                </View>
-                <Text style={styles.inquiryText} selectable>
-                  {inquiryMessage}
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={text(
-                    "复制咨询内容并打开 Telegram",
-                    "Copy the inquiry and open Telegram",
-                    "انسخ الاستفسار وافتح تيليجرام",
-                  )}
-                  onPress={() => void handleCopyInquiry()}
-                  style={({ pressed }) => [
-                    styles.inquiryAction,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <MaterialIcons
-                    name={
-                      inquiryCopied
-                        ? "check"
-                        : Platform.OS !== "web"
-                          ? "ios-share"
-                          : "content-copy"
-                    }
-                    size={16}
-                    color={V2.background}
-                  />
-                  <Text style={styles.inquiryActionText}>
-                    {inquiryCopied
-                      ? text("已复制", "Copied", "تم النسخ")
-                      : Platform.OS !== "web"
-                        ? text("发送咨询内容", "Send inquiry", "إرسال الاستفسار")
-                        : telegramChatLink
-                          ? text(
-                              "复制并打开 Telegram",
-                              "Copy & open Telegram",
-                              "انسخ وافتح تيليجرام",
-                            )
-                          : text("复制咨询内容", "Copy inquiry", "انسخ الاستفسار")}
-                  </Text>
-                </Pressable>
-                <View style={styles.flowRow}>
-                  {INQUIRY_FLOW_STEPS.map((step, index) => (
-                    <View key={step.key} style={styles.flowItem}>
-                      <Text style={styles.flowIndex}>{index + 1}</Text>
-                      <Text style={styles.flowText}>
-                        {text(step.zh, step.en, step.ar)}
+            {tab === "contact" ? (
+              <ScrollView
+                style={{ maxHeight: Math.max(260, windowHeight - 250) }}
+                contentContainerStyle={styles.contactScroll}
+                showsVerticalScrollIndicator={false}
+              >
+                {inquiryMessage ? (
+                  <View style={styles.inquiryBox}>
+                    <View style={styles.inquiryHead}>
+                      <MaterialIcons
+                        name="assignment"
+                        size={15}
+                        color={V2.gold}
+                      />
+                      <Text style={styles.inquiryEyebrow}>
+                        {text(
+                          "已为你写好咨询内容",
+                          "Inquiry drafted for you",
+                          "نص الاستفسار جاهز",
+                        )}
                       </Text>
                     </View>
-                  ))}
-                </View>
-                <Text style={styles.flowNote}>
-                  {text(
-                    "报价、授权范围与交付清单由顾问在会话内确认。安装问题与后续版本仍走这条会话，不必重新找入口。",
-                    "Pricing, licence scope and the delivery list are confirmed by the advisor in that thread. Installation issues and later versions stay in the same thread.",
-                    "يؤكد المستشار السعر ونطاق الترخيص وقائمة التسليم داخل المحادثة نفسها، وتبقى مشكلات التثبيت والإصدارات اللاحقة فيها.",
-                  )}
-                </Text>
-              </View>
-            ) : null}
-
-            {tab === "contact" && isLoading ? (
-              <View style={styles.loadingBox}>
-                <ActivityIndicator size="large" color={V2.gold} />
-              </View>
-            ) : tab === "contact" ? (
-              <View style={styles.contactList}>
-                {contactMethods.map((method) => {
-                  const copied = copiedMethod === method.id;
-                  return (
+                    <Text style={styles.inquiryText} selectable>
+                      {inquiryMessage}
+                    </Text>
                     <Pressable
-                      key={method.id}
-                      accessibilityRole={method.link ? "link" : "button"}
+                      accessibilityRole="button"
                       accessibilityLabel={text(
-                        `${method.label} 联系方式 ${method.value}`,
-                        `${method.label} contact ${method.value}`,
-                        `بيانات ${method.label}: ${method.value}`,
+                        "复制咨询内容并打开 Telegram",
+                        "Copy the inquiry and open Telegram",
+                        "انسخ الاستفسار وافتح تيليجرام",
                       )}
-                      onPress={() => void handleMethodPress(method)}
+                      onPress={() => void handleCopyInquiry()}
                       style={({ pressed }) => [
-                        styles.contactItem,
-                        pressed && styles.contactItemPressed,
+                        styles.inquiryAction,
+                        pressed && styles.pressed,
                       ]}
                     >
-                      <View style={styles.contactIcon}>
-                        <MaterialIcons
-                          name={method.icon}
-                          size={21}
-                          color={V2.gold}
-                        />
-                      </View>
-                      <View style={styles.contactInfo}>
-                        <Text style={styles.contactLabel}>{method.label}</Text>
-                        <Text style={styles.contactValue} numberOfLines={1}>
-                          {method.value}
-                        </Text>
-                      </View>
-                      <View style={styles.contactAction}>
-                        <Text
-                          style={[
-                            styles.contactActionText,
-                            copied && styles.contactActionTextSuccess,
-                          ]}
-                        >
-                          {copied
-                            ? text("已复制", "Copied", "تم النسخ")
-                            : method.link
-                              ? text("打开", "Open", "فتح")
-                              : text("复制", "Copy", "نسخ")}
-                        </Text>
-                        <MaterialIcons
-                          name={
-                            copied
-                              ? "check"
-                              : method.link
-                                ? "open-in-new"
-                                : "content-copy"
-                          }
-                          size={15}
-                          color={copied ? V2.green : V2.textMuted}
-                        />
-                      </View>
+                      <MaterialIcons
+                        name={
+                          inquiryCopied
+                            ? "check"
+                            : Platform.OS !== "web"
+                              ? "ios-share"
+                              : "content-copy"
+                        }
+                        size={16}
+                        color={V2.background}
+                      />
+                      <Text style={styles.inquiryActionText}>
+                        {inquiryCopied
+                          ? text("已复制", "Copied", "تم النسخ")
+                          : Platform.OS !== "web"
+                            ? text(
+                                "发送咨询内容",
+                                "Send inquiry",
+                                "إرسال الاستفسار",
+                              )
+                            : telegramChatLink
+                              ? text(
+                                  "复制并打开 Telegram",
+                                  "Copy & open Telegram",
+                                  "انسخ وافتح تيليجرام",
+                                )
+                              : text(
+                                  "复制咨询内容",
+                                  "Copy inquiry",
+                                  "انسخ الاستفسار",
+                                )}
+                      </Text>
                     </Pressable>
-                  );
-                })}
-              </View>
-            ) : null}
+                    <View style={styles.flowRow}>
+                      {INQUIRY_FLOW_STEPS.map((step, index) => (
+                        <View key={step.key} style={styles.flowItem}>
+                          <Text style={styles.flowIndex}>{index + 1}</Text>
+                          <Text style={styles.flowText}>
+                            {text(step.zh, step.en, step.ar)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                    <Text style={styles.flowNote}>
+                      {text(
+                        "报价、授权范围与交付清单由顾问在会话内确认。安装问题与后续版本仍走这条会话，不必重新找入口。",
+                        "Pricing, licence scope and the delivery list are confirmed by the advisor in that thread. Installation issues and later versions stay in the same thread.",
+                        "يؤكد المستشار السعر ونطاق الترخيص وقائمة التسليم داخل المحادثة نفسها، وتبقى مشكلات التثبيت والإصدارات اللاحقة فيها.",
+                      )}
+                    </Text>
+                  </View>
+                ) : null}
 
-            {tab === "contact" && description ? (
-              <View style={styles.descBox}>
-                <MaterialIcons name="info-outline" size={17} color={V2.blue} />
-                <Text style={styles.descText}>{description}</Text>
-              </View>
+                {tab === "contact" && isLoading ? (
+                  <View style={styles.loadingBox}>
+                    <ActivityIndicator size="large" color={V2.gold} />
+                  </View>
+                ) : tab === "contact" ? (
+                  <CommunityContactList entries={entries} />
+                ) : null}
+
+                {tab === "contact" && description && !isCommunity ? (
+                  <View style={styles.descBox}>
+                    <MaterialIcons
+                      name="info-outline"
+                      size={17}
+                      color={V2.blue}
+                    />
+                    <Text style={styles.descText}>{description}</Text>
+                  </View>
+                ) : null}
+              </ScrollView>
             ) : null}
           </TouchableOpacity>
         </Animated.View>
@@ -591,42 +537,8 @@ const styles = StyleSheet.create({
   flowText: { color: V2.textMuted, fontSize: 9, fontWeight: "800" },
   flowNote: { color: V2.textMuted, fontSize: 10, lineHeight: 16 },
   loadingBox: { paddingVertical: 48 },
-  contactList: { gap: 8 },
-  contactItem: {
-    minHeight: 64,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: V2.border,
-    borderRadius: 5,
-    backgroundColor: V2.surfaceMuted,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  contactItemPressed: {
-    borderColor: "rgba(216,188,131,0.64)",
-    backgroundColor: "rgba(216,188,131,0.07)",
-  },
-  contactIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 4,
-    backgroundColor: "rgba(216,188,131,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  contactInfo: { flex: 1, minWidth: 0, gap: 3 },
-  contactLabel: { color: V2.textMuted, fontSize: 9, fontWeight: "800" },
-  contactValue: { color: V2.text, fontSize: 13, fontWeight: "900" },
-  contactAction: {
-    minWidth: 54,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: 4,
-  },
-  contactActionText: { color: V2.textMuted, fontSize: 9, fontWeight: "900" },
-  contactActionTextSuccess: { color: V2.green },
+  contactScroll: { gap: 0, paddingTop: 14 },
+  scopeSpacer: { height: 4 },
   descBox: {
     marginTop: 14,
     padding: 11,

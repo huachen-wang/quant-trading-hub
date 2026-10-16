@@ -8,6 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenContainer } from "@/components/screen-container";
 import { PcTopNav } from "@/components/pc-top-nav";
+import { CommunityFooter } from "@/components/community/community-entry-points";
 import { PromoContactModal } from "@/components/promo/contact-modal";
 import { PLACEHOLDER_PROMO_PRODUCTS, PROMO_ANNOUNCEMENTS, PROMO_CATEGORIES } from "@/components/promo/data";
 import { PromoGalleryModal } from "@/components/promo/gallery-modal";
@@ -17,6 +18,7 @@ import { createPromoStyles } from "@/components/promo/styles";
 import type { PromoCategoryKey, PromoContactInfo, PromoProduct } from "@/components/promo/types";
 import { trpc } from "@/lib/trpc";
 import { normalizeQqContacts, SUPPORT_QQ_FALLBACK } from "@/lib/support-faq";
+import { buildCommunityEntries, SUPPORT_TELEGRAM_HANDLE } from "@/shared/community-contacts";
 
 export default function PromoPage() {
   const router = useRouter();
@@ -73,7 +75,10 @@ export default function PromoPage() {
   const { data: backendProducts, isLoading } = trpc.promo.list.useQuery({ category: activeCategory || undefined });
   const { data: contactSettings } = trpc.siteSettings.getContact.useQuery();
 
-  const telegram = contactSettings?.telegram || "@xau6000";
+  // Telegram 客服读站点设置 contact_telegram / contact_telegram_link（接口没有 telegram 这个键），兜底 @hypermatch123。
+  const telegram =
+    buildCommunityEntries(contactSettings).find((entry) => entry.id === "support-telegram")?.value ||
+    SUPPORT_TELEGRAM_HANDLE;
   // 2026-10-11 Nathan：「qq就先只保留3832001817」。读站点设置 contact_qq（接口返回的键是 contact_qq，不是 qq）。
   const qq = normalizeQqContacts(contactSettings?.contact_qq) || SUPPORT_QQ_FALLBACK;
   const wechat1 = "oooiniooo0624";
@@ -290,6 +295,7 @@ export default function PromoPage() {
           </LinearGradient>
         </View>
 
+        <CommunityFooter />
         <View style={{ height: 40 }} />
       </ScrollView>
 

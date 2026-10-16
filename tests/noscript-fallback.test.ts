@@ -4,6 +4,8 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
+import * as community from "../shared/community-contacts";
+
 const repoRoot = resolve(__dirname, "..");
 const injector = join(repoRoot, "scripts", "inject-web-bootstrap.js");
 
@@ -50,11 +52,18 @@ describe("no-JavaScript contact fallback", () => {
     const noscript = html.match(/<noscript[\s\S]*?<\/noscript>/)![0];
     expect(noscript).toContain("EAXAU");
     expect(noscript).toContain("MT4 / MT5 EA、指标与交易工具");
-    expect(noscript).toContain("https://t.me/xau6000");
-    expect(noscript).toContain("@xau6000");
+    // 交流群
+    expect(noscript).toContain("https://t.me/nbmarketchat");
+    expect(noscript).toContain("951703741");
+    // 客服
+    expect(noscript).toContain("https://t.me/hypermatch123");
+    expect(noscript).toContain("@hypermatch123");
     expect(noscript).toContain("3832001817");
-    expect(noscript).not.toContain("1226426670");
     expect(noscript).toContain("oooiniooo0624 / xau6000");
+    // 死链和停用号码不回来
+    expect(noscript).not.toContain("t.me/xau6000");
+    expect(noscript).not.toContain("@xau6000");
+    expect(noscript).not.toContain("1226426670");
   });
 
   it("keeps the boot fallback hidden until the app actually fails to mount", () => {
@@ -88,23 +97,16 @@ describe("no-JavaScript contact fallback", () => {
   });
 
   it("does not drift from the contact values the app itself uses", () => {
-    const modal = readFileSync(join(repoRoot, "components", "contact-modal.tsx"), "utf-8");
-    const block = modal.match(/const CONTACT_FALLBACKS = \{[\s\S]*?\};/)![0];
-    // 有的兜底值已经提到共用常量里（在线咨询面板和弹窗要用同一个号码），
-    // 所以这里既认字面量，也认指向 lib/ 下导出常量的标识符——两种写法都得对得上 noscript。
-    const shared = readFileSync(join(repoRoot, "lib", "support-faq.ts"), "utf-8");
-    const resolve = (key: string) => {
-      const entry = block.match(new RegExp(`${key}:\\s*(?:"([^"]+)"|([A-Za-z_][A-Za-z0-9_]*))`));
-      expect(entry, `${key} must exist in CONTACT_FALLBACKS`).not.toBeNull();
-      if (entry![1] !== undefined) return entry![1];
-      const constant = shared.match(
-        new RegExp(`export const ${entry![2]}\\s*=\\s*"([^"]+)"`),
-      );
-      expect(constant, `${entry![2]} must be a string constant in lib/support-faq.ts`).not.toBeNull();
-      return constant![1];
-    };
-    for (const key of ["telegram", "telegramLink", "qq", "wechat"]) {
-      expect(html, `${key} must match components/contact-modal.tsx`).toContain(resolve(key));
+    // 页面、服务端预渲染、/llms.txt 都从 shared/community-contacts.ts 取；这个脚本是 CommonJS 不能 import，只能对值。
+    for (const value of [
+      community.TELEGRAM_GROUP_URL,
+      community.QQ_GROUP_NUMBER,
+      community.SUPPORT_QQ,
+      community.SUPPORT_WECHAT,
+      community.SUPPORT_TELEGRAM_HANDLE,
+      community.SUPPORT_TELEGRAM_URL,
+    ]) {
+      expect(html, `${value} must match shared/community-contacts.ts`).toContain(value);
     }
   });
 });

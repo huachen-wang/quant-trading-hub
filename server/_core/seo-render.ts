@@ -1,4 +1,13 @@
 import { safeJsonLd } from "./seo-json";
+import {
+  QQ_GROUP_JOIN_URL,
+  QQ_GROUP_NUMBER,
+  SUPPORT_QQ,
+  SUPPORT_TELEGRAM_HANDLE,
+  SUPPORT_TELEGRAM_URL,
+  SUPPORT_WECHAT,
+  TELEGRAM_GROUP_URL,
+} from "../../shared/community-contacts";
 
 /**
  * 面向所有访客（不区分 User-Agent）的初始 HTML 正文渲染。
@@ -14,13 +23,39 @@ import { safeJsonLd } from "./seo-json";
 export const SITE_ORIGIN = "https://www.eaxau.com";
 export const SEO_BLOCK_ID = "eaxau-seo";
 
-/** 与 components/contact-modal.tsx / scripts/inject-web-bootstrap.js 同一批现有联系方式，不新增渠道。 */
+/**
+ * 交流群与客服，统一来自 shared/community-contacts.ts（页面、/llms.txt、无 JS 兜底同一份）。
+ * 2026-10-17：Telegram 客服原来用的 xau6000 没有公开资料页（死链），换成 hypermatch123。
+ */
 export const SEO_CONTACTS = {
-  telegram: "@xau6000",
-  telegramLink: "https://t.me/xau6000",
-  wechat: "oooiniooo0624 / xau6000",
-  qq: "3832001817",
+  telegramGroupLink: TELEGRAM_GROUP_URL,
+  qqGroup: QQ_GROUP_NUMBER,
+  qqGroupLink: QQ_GROUP_JOIN_URL,
+  qq: SUPPORT_QQ,
+  wechat: SUPPORT_WECHAT,
+  telegram: SUPPORT_TELEGRAM_HANDLE,
+  telegramLink: SUPPORT_TELEGRAM_URL,
 };
+
+/** 首页结构化数据里的客服入口：客服链接写 Telegram，QQ 和微信写在 description 里。 */
+export function organizationJsonLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "EAXAU",
+    alternateName: "AI量化联盟",
+    url: `${SITE_ORIGIN}/`,
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        url: SEO_CONTACTS.telegramLink,
+        availableLanguage: ["zh-CN", "en"],
+        description: `客服 QQ ${SEO_CONTACTS.qq} · 微信 ${SEO_CONTACTS.wechat} · Telegram ${SEO_CONTACTS.telegram}；交流群：Telegram ${SEO_CONTACTS.telegramGroupLink} · QQ 群 ${SEO_CONTACTS.qqGroup}`,
+      },
+    ],
+  };
+}
 
 export type SeoStrategy = {
   id: number;
@@ -127,12 +162,21 @@ function absolute(url?: string | null): string | null {
 }
 
 function contactHtml(): string {
+  const qqGroup = SEO_CONTACTS.qqGroupLink
+    ? `<a href="${escapeHtml(SEO_CONTACTS.qqGroupLink)}" rel="noopener noreferrer">${escapeHtml(SEO_CONTACTS.qqGroup)}</a>`
+    : escapeHtml(SEO_CONTACTS.qqGroup);
   return `      <h2>交付与支持</h2>
       <p>下单或授权确认后提供安装包与授权信息，并按版本提供安装、参数说明与后续更新支持。具体版本、参数、适用环境与授权范围以顾问确认为准。</p>
+      <h3>交流群</h3>
       <ul class="eaxau-seo__contacts">
-        <li>Telegram：<a href="${SEO_CONTACTS.telegramLink}" rel="noopener noreferrer">${escapeHtml(SEO_CONTACTS.telegram)}</a></li>
-        <li>WeChat：${escapeHtml(SEO_CONTACTS.wechat)}</li>
-        <li>QQ：${escapeHtml(SEO_CONTACTS.qq)}</li>
+        <li>Telegram 交流群：<a href="${SEO_CONTACTS.telegramGroupLink}" rel="noopener noreferrer">${escapeHtml(SEO_CONTACTS.telegramGroupLink)}</a></li>
+        <li>QQ 群：${qqGroup}</li>
+      </ul>
+      <h3>客服</h3>
+      <ul class="eaxau-seo__contacts">
+        <li>客服 QQ：${escapeHtml(SEO_CONTACTS.qq)}</li>
+        <li>微信：${escapeHtml(SEO_CONTACTS.wechat)}</li>
+        <li>Telegram 客服：<a href="${SEO_CONTACTS.telegramLink}" rel="noopener noreferrer">${escapeHtml(SEO_CONTACTS.telegram)}</a></li>
       </ul>
       <p class="eaxau-seo__note">咨询时请附上商品名称或商品页地址。本页不展示收益、回撤或胜率数字；历史数据不代表未来结果。</p>`;
 }
@@ -280,7 +324,8 @@ export function renderHomeHtml(indexHtml: string, lookup: ListLookup): string {
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="${escapeHtml(title)}" />
     <meta name="twitter:description" content="${escapeHtml(description)}" />
-    <script type="application/ld+json">${safeJsonLd(siteLd)}</script>${
+    <script type="application/ld+json">${safeJsonLd(siteLd)}</script>
+    <script type="application/ld+json">${safeJsonLd(organizationJsonLd())}</script>${
       itemLd ? `\n    <script type="application/ld+json">${safeJsonLd(itemLd)}</script>` : ""
     }`;
 

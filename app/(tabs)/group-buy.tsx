@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Linking, StyleSheet, Platform, Animated, Easing } from "react-native";
 import { Image } from "expo-image";
 import { QuickNav } from "@/components/quick-nav";
+import { CommunityFooter } from "@/components/community/community-entry-points";
+import { SUPPORT_TELEGRAM_HANDLE, SUPPORT_TELEGRAM_URL } from "@/shared/community-contacts";
 
 // 卡片入场动画组件
 function AnimatedListItem({ children, index, style }: { children: React.ReactNode; index: number; style?: any }) {
@@ -224,7 +226,7 @@ export default function GroupBuyScreen() {
     }
     // 始终添加默认联系方式
     if (!contacts.find(c => c.type === "Telegram")) {
-      contacts.push({ type: "Telegram", value: "@xau6000", link: "https://t.me/xau6000" });
+      contacts.push({ type: "Telegram", value: SUPPORT_TELEGRAM_HANDLE, link: SUPPORT_TELEGRAM_URL });
     }
     contacts.push({ type: "QQ", value: "3832001817" });
     contacts.push({ type: "微信1号", value: "oooiniooo0624" });
@@ -602,7 +604,12 @@ export default function GroupBuyScreen() {
         renderItem={renderListItem}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
-        ListFooterComponent={() => <QuickNav />}
+        ListFooterComponent={() => (
+          <>
+            <QuickNav />
+            <CommunityFooter />
+          </>
+        )}
         columnWrapperStyle={cardColumns > 1 ? { justifyContent: "flex-start" } : undefined}
         contentContainerStyle={[styles.listContent, isDesktop && styles.listContentDesktop]}
         showsVerticalScrollIndicator={false}
