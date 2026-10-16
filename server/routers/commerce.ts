@@ -18,8 +18,8 @@ import {
   assertSecurityAttemptAllowed,
   clearSecurityFailures,
   recordSecurityFailure,
-  requestIp,
 } from "../_core/admin-security-throttle";
+import { clientIp } from "../_core/client-ip";
 
 export function canonicalizeTxHash(value: string) {
   return value.replace(/^0x/i, "").toLowerCase();
@@ -359,7 +359,7 @@ export const ordersRouter = router({
         ctx.user.id,
         input.totpCode,
         "CONFIRM_COMMERCE_USDT",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       const receivedAmount = input.receivedAmount;
       const observedNetwork = input.observedNetwork;
@@ -487,7 +487,7 @@ export const ordersRouter = router({
         ctx.user.id,
         input.totpCode,
         "RECONCILE_COMMERCE_USDT",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       await db.reconcileCommerceUsdtAtomically({
         paymentId: payment.id,
@@ -612,7 +612,7 @@ export const ordersRouter = router({
         ctx.user.id,
         input.totpCode,
         "VERIFY_COMMERCE_USDT_REFUND_ADDRESS",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       const verificationHash = crypto
         .createHash("sha256")
@@ -694,7 +694,7 @@ export const ordersRouter = router({
         ctx.user.id,
         input.totpCode,
         "RECORD_COMMERCE_USDT_REFUND",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       const fullRefund =
         toMicroUsdt(input.refundAmount) === toMicroUsdt(payment.receivedAmount);

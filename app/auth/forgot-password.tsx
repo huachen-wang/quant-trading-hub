@@ -42,7 +42,7 @@ export default function ForgotPasswordScreen() {
     if (cooldown > 0) return;
     setBusy(true);
     try {
-      await sendCodeMutation.mutateAsync({
+      const sent = await sendCodeMutation.mutateAsync({
         email: email.trim(),
         purpose: "reset_password",
       });
@@ -57,7 +57,8 @@ export default function ForgotPasswordScreen() {
         });
       }, 1000);
       setStep("reset");
-      showMsg("验证码已发送至您的邮箱");
+      // 服务端对注册与否回同一句话（2026-10-17）
+      showMsg(sent?.message || "如果这个邮箱已注册，验证码已发送");
     } catch (e: any) {
       showMsg(e.message || "发送失败");
     } finally {

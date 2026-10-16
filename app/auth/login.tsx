@@ -113,7 +113,7 @@ export default function UserLoginScreen() {
     if (!email.trim()) return showError("请先输入邮箱");
     if (cooldown > 0) return;
     try {
-      await sendCodeMutation.mutateAsync({
+      const sent = await sendCodeMutation.mutateAsync({
         email: email.trim(),
         purpose: "login",
       });
@@ -128,7 +128,8 @@ export default function UserLoginScreen() {
           return s - 1;
         });
       }, 1000);
-      showError("验证码已发送至您的邮箱");
+      // 服务端对注册与否回同一句话（2026-10-17）
+      showError(sent?.message || "如果这个邮箱已注册，验证码已发送");
     } catch (e: any) {
       showError(e.message || "发送失败");
     }

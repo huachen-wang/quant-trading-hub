@@ -44,8 +44,8 @@ import {
   assertSecurityAttemptAllowed,
   clearSecurityFailures,
   recordSecurityFailure,
-  requestIp,
 } from "../_core/admin-security-throttle";
+import { clientIp } from "../_core/client-ip";
 
 const sessionRefSchema = z.object({
   sessionNo: z.string().min(1).max(64),
@@ -1123,7 +1123,7 @@ export const managedSessionsRouter = router({
           ctx.user.id,
           input.totpCode,
           "REVIEW_BROKER_TRADE_AUTHORIZATION",
-          requestIp(ctx.req),
+          clientIp(ctx.req as any),
         );
       }
       if (
@@ -1246,7 +1246,7 @@ export const managedSessionsRouter = router({
           ctx.user.id,
           input.totpCode,
           "ACTIVATE_MANAGED_SESSION",
-          requestIp(ctx.req),
+          clientIp(ctx.req as any),
         );
       }
       const tradeAuthorizationStatus =
@@ -1341,7 +1341,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "SET_DIRECT_BROKER_FUNDING_INSTRUCTIONS",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       const updated = await db.transitionBrokerFundingIntent(
         funding.intentNo,
@@ -1384,7 +1384,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "CREATE_COLLECTION_ADDRESS",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       try {
         const { totpCode: _totpCode, ...addressInput } = input;
@@ -1460,7 +1460,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "ASSIGN_COLLECTION_ADDRESS",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       try {
         const updated = await db.assignCollectionAddress(
@@ -1572,7 +1572,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "UPDATE_WALLET_SCREENING",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       const updated = await db.appendBrokerFundingAuditEvent(
         funding.intentNo,
@@ -1650,7 +1650,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "RECONCILE_COLLECTION_RECEIPT",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       const updated = await db.transitionBrokerFundingIntent(
         funding.intentNo,
@@ -1719,7 +1719,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "REQUEST_COLLECTION_PAYOUT",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       const updated = await db.transitionBrokerFundingIntent(
         funding.intentNo,
@@ -1767,7 +1767,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "APPROVE_COLLECTION_PAYOUT",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       const updated = await db.appendBrokerFundingAuditEvent(
         funding.intentNo,
@@ -1811,7 +1811,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "RECORD_COLLECTION_PAYOUT_TX",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       if (!funding.payoutNetwork || !isFundingTxHashValid(input.payoutTxHash, funding.payoutNetwork)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "转出 Tx Hash 与转出网络格式不匹配。" });
@@ -1938,7 +1938,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "CONFIRM_BROKER_CREDIT",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       await requireFundingTransition(funding, "CREDITED");
       const updated = await db.transitionBrokerFundingIntent(
@@ -2024,7 +2024,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "RESOLVE_FUNDING_EXCEPTION",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       await requireFundingTransition(funding, input.nextStatus);
       const resetsSensitiveWorkflow =
@@ -2106,7 +2106,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "VERIFY_REFUND_ADDRESS",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       const updated = await db.appendBrokerFundingAuditEvent(
         funding.intentNo,
@@ -2159,7 +2159,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "RECORD_COLLECTION_REFUND_TX",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       const refundTxHash = normalizeFundingTxHash(
         input.refundTxHash,
@@ -2272,7 +2272,7 @@ export const managedSessionsRouter = router({
         ctx.user.id,
         input.totpCode,
         "SET_COLLECTION_APPROVAL",
-        requestIp(ctx.req),
+        clientIp(ctx.req as any),
       );
       return db.upsertBrokerCollectionApproval({
         brokerId: input.brokerId,
