@@ -1,5 +1,15 @@
 import { safeJsonLd } from "./seo-json";
 import {
+  NOT_FOUND_TITLE,
+  SECTION_PAGE_META,
+  SITE_ORIGIN,
+  isPlaceholderDescription,
+  plainText,
+  platformShort,
+  productTypeLabel,
+  strategyPageMeta,
+} from "../../shared/seo-meta";
+import {
   QQ_GROUP_JOIN_URL,
   QQ_GROUP_NUMBER,
   SUPPORT_QQ,
@@ -20,7 +30,7 @@ import {
  * 3. 正文块放在 #root 之外的 `#eaxau-seo`，应用挂载后由 bootstrap 脚本移除，不产生双内容。
  */
 
-export const SITE_ORIGIN = "https://www.eaxau.com";
+export { SITE_ORIGIN, isPlaceholderDescription, plainText, platformShort, productTypeLabel };
 export const SEO_BLOCK_ID = "eaxau-seo";
 
 /**
@@ -92,16 +102,6 @@ export function escapeHtml(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-/** 富文本只用于取纯文本摘要，绝不把未经清洗的 HTML 放进初始正文。 */
-export function plainText(value: unknown, limit = 320): string {
-  const text = String(value ?? "")
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  return text.length > limit ? text.slice(0, limit - 1) + "…" : text;
-}
-
 /** 版本只从标题里已经写明的版本号取，取不到就不写，不推断。 */
 export function versionFromTitle(title: string): string | null {
   const match = String(title || "").match(/\b[vV]\s?(\d+(?:\.\d+){0,3})\b/);
@@ -114,35 +114,6 @@ export function platformLabel(platform?: string | null): string {
   if (value === "MT4") return "MetaTrader 4（MT4）";
   if (value === "MT5") return "MetaTrader 5（MT5）";
   return "未提供";
-}
-
-export function platformShort(platform?: string | null): string {
-  const value = String(platform ?? "").trim().toUpperCase();
-  return value === "MT4" || value === "MT5" ? value : "平台未提供";
-}
-
-/**
- * 旧种子目录（server/user-strategy-catalog.ts）把「联系我们了解详情」之类的占位文案写进了
- * description。占位不是产品事实，不能当摘要或结构化数据的 description 用。
- */
-const PLACEHOLDER_DESCRIPTIONS = [
-  "联系我们了解详情",
-  "待补充",
-  "暂无描述",
-  "暂无介绍",
-  "待校准",
-];
-
-export function isPlaceholderDescription(text: string): boolean {
-  const value = text.trim();
-  if (value.length < 12) return true;
-  return PLACEHOLDER_DESCRIPTIONS.some((p) => value === p || value.replace(/[。.\s]/g, "") === p);
-}
-
-export function productTypeLabel(productType?: string | null): string {
-  if (productType === "indicator") return "指标";
-  if (productType === "tool") return "交易工具";
-  return "EA 自动交易程序";
 }
 
 /** 只有 direct + 正价才算可直接购买；其余一律「联系咨询授权」，不写 0 元。
@@ -185,15 +156,18 @@ function wrap(inner: string): string {
   return `\n  <div id="${SEO_BLOCK_ID}" class="eaxau-seo">\n    <main class="eaxau-seo__main">\n${inner}\n    </main>\n  </div>\n`;
 }
 
+/**
+ * description 带 data-rh：前端 <Head>（expo-router 的 react-helmet）挂载后会接管并替换这一条，
+ * 页面上不会出现两条 description。title 由 <Head> 直接改 document.title。
+ * canonical、robots、og 不带 data-rh，JS 渲染后原样保留。
+ */
 function replaceHead(indexHtml: string, title: string, description: string, extra: string): string {
+  const descriptionTag = `<meta name="description" content="${escapeHtml(description)}" data-rh="true" />`;
   let html = indexHtml.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(title)}</title>`);
-  if (/<meta name="description" content="[^"]*"\s*\/?>/.test(html)) {
-    html = html.replace(
-      /<meta name="description" content="[^"]*"\s*\/?>/,
-      `<meta name="description" content="${escapeHtml(description)}" />`,
-    );
+  if (/<meta name="description" content="[^"]*"[^>]*>/.test(html)) {
+    html = html.replace(/<meta name="description" content="[^"]*"[^>]*>/, descriptionTag);
   } else {
-    html = html.replace("</head>", `<meta name="description" content="${escapeHtml(description)}" />\n</head>`);
+    html = html.replace("</head>", `${descriptionTag}\n</head>`);
   }
   return html.replace("</head>", `${extra}\n</head>`);
 }
@@ -210,15 +184,9 @@ export function renderStrategyHtml(indexHtml: string, strategy: SeoStrategy): st
   const platformText = platformLabel(strategy.platform);
   const platformKnown = platformText !== "未提供";
 
-  /* 占位描述（如「联系我们了解详情」）不是产品事实：不当摘要、也不写进结构化数据。 */
-  const rawSummary = plainText(strategy.description) || plainText(strategy.richDescription);
-  const hasRealSummary = !!rawSummary && !isPlaceholderDescription(rawSummary);
-  const fallbackSummary = platformKnown
-    ? `${strategy.title}：${platformShort(strategy.platform)} ${productTypeLabel(strategy.productType)}的商品资料、运行环境与授权交付说明。`
-    : `${strategy.title}：${productTypeLabel(strategy.productType)}的商品资料与授权交付说明；运行平台待确认。`;
-  const summary = hasRealSummary ? rawSummary : fallbackSummary;
-  const title = `${strategy.title} - ${productTypeLabel(strategy.productType)} | EAXAU`;
-  const description = plainText(summary, 160);
+  /* 占位描述（如「联系我们了解详情」）不是产品事实：不当摘要、也不写进结构化数据。
+     title / description 与前端 <Head> 同源（shared/seo-meta.ts），JS 渲染后不变。 */
+  const { title, description, summary, hasRealSummary } = strategyPageMeta(strategy);
   const price = pricing(strategy);
   const image = absolute(strategy.coverImage);
 
@@ -284,9 +252,7 @@ ${contactHtml()}`);
 
 /** 首页：站点说明 + 真实在售商品清单。列表读不到时不编造商品，也不拿旧缓存充数。 */
 export function renderHomeHtml(indexHtml: string, lookup: ListLookup): string {
-  const title = "EAXAU · MT4 / MT5 EA、指标与量化交易工具商城";
-  const description =
-    "EAXAU（AI量化联盟）提供 MT4 / MT5 的 EA 自动交易程序、指标与量化交易工具。每个商品页写明运行平台、交易品种、常用周期、运行依赖与授权交付方式；价格与授权范围按订单确认。";
+  const { title, description } = SECTION_PAGE_META["/"];
   const url = `${SITE_ORIGIN}/`;
 
   const list = lookup.kind === "ok" ? lookup.strategies : [];
@@ -329,23 +295,9 @@ export function renderHomeHtml(indexHtml: string, lookup: ListLookup): string {
       itemLd ? `\n    <script type="application/ld+json">${safeJsonLd(itemLd)}</script>` : ""
     }`;
 
-  const listHtml =
-    lookup.kind === "unavailable"
-      ? `      <p class="eaxau-seo__note">商品清单这次没能读出来。这是临时故障，不代表商品下架；请稍后重试或直接联系顾问。</p>`
-      : list.length === 0
-        ? `      <p class="eaxau-seo__note">当前没有已发布的商品记录。</p>`
-        : `      <ul class="eaxau-seo__list">
-${list
-  .map(
-    (s) =>
-      `        <li><a href="/strategy/${s.id}">${escapeHtml(s.title)}</a> · ${escapeHtml(platformShort(s.platform))}${
-        s.pairs ? " · " + escapeHtml(String(s.pairs)) : ""
-      }${s.timeframe ? " · " + escapeHtml(String(s.timeframe)) : ""} · ${escapeHtml(pricing(s).label)}</li>`,
-  )
-  .join("\n")}
-      </ul>`;
+  const listHtml = productListHtml(lookup);
 
-  const body = wrap(`      <h1>EAXAU · MT4 / MT5 EA、指标与量化交易工具</h1>
+  const body = wrap(`      <h1>${escapeHtml(SECTION_PAGE_META["/"].h1)}</h1>
       <p class="eaxau-seo__lead">${escapeHtml(description)}</p>
       <h2>在售商品</h2>
 ${listHtml}
@@ -355,13 +307,66 @@ ${contactHtml()}`);
 }
 
 /** 不存在的地址：真 404 正文，noindex,follow，不做全站静态快照。 */
+/** 商品清单（首页、策略广场共用）：读不到就写临时故障，不编造、不拿旧缓存充数。 */
+function productListHtml(lookup: ListLookup): string {
+  if (lookup.kind === "unavailable") {
+    return `      <p class="eaxau-seo__note">商品清单这次没能读出来。这是临时故障，不代表商品下架；请稍后重试或直接联系顾问。</p>`;
+  }
+  if (lookup.strategies.length === 0) {
+    return `      <p class="eaxau-seo__note">当前没有已发布的商品记录。</p>`;
+  }
+  return `      <ul class="eaxau-seo__list">
+${lookup.strategies
+  .map(
+    (s) =>
+      `        <li><a href="/strategy/${s.id}">${escapeHtml(s.title)}</a> · ${escapeHtml(platformShort(s.platform))}${
+        s.pairs ? " · " + escapeHtml(String(s.pairs)) : ""
+      }${s.timeframe ? " · " + escapeHtml(String(s.timeframe)) : ""} · ${escapeHtml(pricing(s).label)}</li>`,
+  )
+  .join("\n")}
+      </ul>`;
+}
+
+/**
+ * 栏目页（/market、/cooperation、/promo、/group-buy、/subscribe）：
+ * 自己的 title、description、canonical、H1 和交流群 / 客服。/market 额外列出全部已发布商品，
+ * 让不跑 JS 的爬虫也能从这一页走到每个商品页。不写促销价格、合购人数等页面数字。
+ */
+export function renderSectionHtml(indexHtml: string, path: string, lookup?: ListLookup): string | null {
+  const meta = SECTION_PAGE_META[path];
+  if (!meta || path === "/") return null;
+  const url = `${SITE_ORIGIN}${path}`;
+  const head = `    <link rel="canonical" href="${url}" />
+    <meta name="robots" content="index,follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="${escapeHtml(meta.title)}" />
+    <meta property="og:description" content="${escapeHtml(meta.description)}" />
+    <meta property="og:url" content="${url}" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="${escapeHtml(meta.title)}" />
+    <meta name="twitter:description" content="${escapeHtml(meta.description)}" />`;
+  const list = lookup ? `      <h2>全部商品</h2>\n${productListHtml(lookup)}\n` : "";
+  const body = wrap(`      <nav class="eaxau-seo__crumb"><a href="/">EAXAU 首页</a> › ${escapeHtml(meta.h1)}</nav>
+      <h1>${escapeHtml(meta.h1)}</h1>
+      <p class="eaxau-seo__lead">${escapeHtml(meta.description)}</p>
+${list}${contactHtml()}`);
+  return insertBody(replaceHead(indexHtml, meta.title, meta.description, head), body);
+}
+
+/** 不收录的页面（登录、注册、找回密码、V2 预览）：标题 + noindex，不放正文。 */
+export function renderNoindexHtml(indexHtml: string, title: string): string {
+  const head = `    <meta name="robots" content="noindex,follow" />`;
+  return replaceHead(indexHtml, title, "EAXAU 账户与预览页面。", head);
+}
+
 export function renderNotFoundHtml(indexHtml: string, pathname: string): string {
-  const title = "页面不存在 - EAXAU";
+  const title = NOT_FOUND_TITLE;
   const description = "这个地址在 EAXAU 上没有对应内容。";
   const head = `    <meta name="robots" content="noindex,follow" />`;
   const body = wrap(`      <h1>页面不存在</h1>
       <p class="eaxau-seo__lead">地址 <code>${escapeHtml(pathname)}</code> 没有对应的商品或页面。它可能从未存在，或者已经下架。</p>
-      <p><a href="/">回到 EAXAU 首页查看在售商品</a></p>`);
+      <p><a href="/">回商城</a></p>
+${contactHtml()}`);
   return insertBody(replaceHead(indexHtml, title, description, head), body);
 }
 

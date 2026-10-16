@@ -120,6 +120,11 @@ type StrategyListFooterProps = {
   isLoadingMore: boolean;
   hasMore: boolean;
   itemCount: number;
+  /**
+   * 「加载更多」按钮。滚动到底也会自动加载，但页面不够长（大屏）或用户不滚动时
+   * 原来只露出前 12 个商品，后面约 90 个看不到（2026-10-17）。
+   */
+  onLoadMore?: () => void;
 };
 
 export function StrategyListFooter({
@@ -127,6 +132,7 @@ export function StrategyListFooter({
   isLoadingMore,
   hasMore,
   itemCount,
+  onLoadMore,
 }: StrategyListFooterProps) {
   const { text } = useLanguage();
   return (
@@ -136,6 +142,27 @@ export function StrategyListFooter({
           <ActivityIndicator size="small" color="#A8895A" />
         </View>
       )}
+      {hasMore && !isLoadingMore && itemCount > 0 && onLoadMore ? (
+        <View style={styles.footerMore}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={onLoadMore}
+            activeOpacity={0.8}
+            style={styles.loadMoreButton}
+          >
+            <Text style={styles.loadMoreText}>
+              {text("加载更多商品", "Load more products", "تحميل المزيد من المنتجات")}
+            </Text>
+          </TouchableOpacity>
+          <Text style={{ color: colors.muted, fontSize: 11 }}>
+            {text(
+              `已显示 ${itemCount} 个`,
+              `${itemCount} shown`,
+              `تم عرض ${itemCount}`,
+            )}
+          </Text>
+        </View>
+      ) : null}
       {!hasMore && itemCount > 0 && (
         <View style={styles.footerDone}>
           <Text style={{ color: colors.muted, fontSize: 12 }}>
@@ -284,4 +311,22 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
+  footerMore: {
+    paddingTop: 8,
+    paddingBottom: 16,
+    alignItems: "center",
+    gap: 8,
+  },
+  loadMoreButton: {
+    minWidth: 200,
+    height: 42,
+    paddingHorizontal: 22,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: "rgba(216,188,131,0.66)",
+    backgroundColor: "rgba(216,188,131,0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadMoreText: { color: "#D8BC83", fontSize: 13, fontWeight: "900" },
 });

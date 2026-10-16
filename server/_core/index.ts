@@ -22,7 +22,9 @@ import { seoPublishedList, seoStrategyById } from "./seo-catalog";
 import { SEO_REVISION } from "./seo-catalog";
 import {
   renderHomeHtml,
+  renderNoindexHtml,
   renderNotFoundHtml,
+  renderSectionHtml,
   renderStrategyHtml,
   renderUnavailableHtml,
   type ListLookup,
@@ -30,6 +32,7 @@ import {
 } from "./seo-render";
 import { renderLlmsTxt, renderRobotsTxt } from "./site-text";
 import { isKnownSpaRoute } from "./spa-routes";
+import { SECTION_PAGE_META, noindexPageTitle } from "../../shared/seo-meta";
 
 // ES模块中获取__dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -192,7 +195,8 @@ async function startServer() {
   // SEO: 生成 sitemap.xml
   app.get("/sitemap.xml", async (_req, res) => {
     try {
-      const strategies = await db.getStrategies({ limit: 100, offset: 0 });
+      // 已发布商品约 100 个，原来 limit 100 会漏掉最后几个；放宽到 1000。
+      const strategies = await db.getStrategies({ limit: 1000, offset: 0 });
       const now = new Date().toISOString().split('T')[0];
 
       let xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -203,6 +207,18 @@ async function startServer() {
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>`;
+
+      // 栏目页（与 shared/seo-meta.ts 的可收录页面一致）
+      for (const path of Object.keys(SECTION_PAGE_META)) {
+        if (path === '/') continue;
+        xml += `
+  <url>
+    <loc>https://www.eaxau.com${path}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+      }
 
       if (strategies && strategies.length > 0) {
         for (const s of strategies) {
@@ -362,6 +378,25 @@ async function startServer() {
               return res.status(503).send(renderUnavailableHtml(cachedIndexHtml));
             }
             return res.status(200).send(renderHomeHtml(cachedIndexHtml, lookup));
+          }
+
+          /* 栏目页：自己的 title / description / canonical / H1；/market 带全部已发布商品清单。 */
+          const sectionPath = req.path.length > 1 ? req.path.replace(/\/+$/, '') : req.path;
+          if (SECTION_PAGE_META[sectionPath] && sectionPath !== '/') {
+            const lookup = sectionPath === '/market' ? await seoPublishedList(1000) : undefined;
+            const html = renderSectionHtml(cachedIndexHtml, sectionPath, lookup);
+            if (html) {
+              res.header('Content-Type', 'text/html; charset=utf-8');
+              return res.status(200).send(html);
+            }
+          }
+
+          /* 登录、注册、找回密码、V2 预览：照常返回页面，但不让收录（meta + X-Robots-Tag 双保险）。 */
+          const noindexTitle = noindexPageTitle(req.path);
+          if (noindexTitle && isKnownSpaRoute(req.path)) {
+            res.header('Content-Type', 'text/html; charset=utf-8');
+            res.setHeader('X-Robots-Tag', 'noindex, follow');
+            return res.status(200).send(renderNoindexHtml(cachedIndexHtml, noindexTitle));
           }
 
           /* 其余地址：只有 app/ 里真实存在的页面才给 200 应用壳；不存在的给真 404（noindex），

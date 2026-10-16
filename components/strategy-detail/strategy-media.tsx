@@ -13,9 +13,12 @@ type StrategyMediaProps = {
   isDesktop: boolean;
   width: number;
   mediaWidth: number;
+  /** 品牌方图（如金戈铁马 Logo）用 contain 铺在 coverBackground 渐变上，不裁、不放大。 */
+  coverFit?: "cover" | "contain";
+  coverBackground?: readonly [string, string, string];
 };
 
-export function StrategyMedia({ strategy, allImages, gradientColors, productTypeLabel, isFeatured, isDesktop, width, mediaWidth }: StrategyMediaProps) {
+export function StrategyMedia({ strategy, allImages, gradientColors, productTypeLabel, isFeatured, isDesktop, width, mediaWidth, coverFit = "cover", coverBackground }: StrategyMediaProps) {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [coverLoadFailed, setCoverLoadFailed] = useState(false);
@@ -102,8 +105,9 @@ export function StrategyMedia({ strategy, allImages, gradientColors, productType
         </View>
       ) : strategy.coverImage && !coverLoadFailed ? (
         <View style={[styles.coverGradient, isDesktop && styles.coverDesktop, { overflow: "hidden" }]}>
+          {coverBackground ? <LinearGradient colors={coverBackground} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} /> : null}
           <TouchableOpacity onPress={() => openGallery(0)} activeOpacity={0.9} style={{ width: "100%", height: "100%" }}>
-            <Image source={{ uri: strategy.coverImage }} style={{ width: "100%", height: "100%" }} placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }} contentFit="cover" transition={120} cachePolicy="memory-disk" priority="high" recyclingKey={strategy.coverImage} onError={() => setCoverLoadFailed(true)} />
+            <Image source={{ uri: strategy.coverImage }} style={{ width: "100%", height: "100%" }} placeholder={{ blurhash: "L6PZfSi_.AyE_3t7t7R**0o#DgR4" }} contentFit={coverFit} transition={120} cachePolicy="memory-disk" priority="high" recyclingKey={strategy.coverImage} onError={() => setCoverLoadFailed(true)} />
           </TouchableOpacity>
           <PlatformBadge label={`${strategy.platform} · ${productTypeLabel}`} color={gradientColors[1]} />
           {isFeatured && <FeaturedBadge />}

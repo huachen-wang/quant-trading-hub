@@ -8,6 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenContainer } from "@/components/screen-container";
 import { PcTopNav } from "@/components/pc-top-nav";
+import { SectionHead } from "@/components/page-head";
 import { CommunityFooter } from "@/components/community/community-entry-points";
 import { PromoContactModal } from "@/components/promo/contact-modal";
 import { PLACEHOLDER_PROMO_PRODUCTS, PROMO_ANNOUNCEMENTS, PROMO_CATEGORIES } from "@/components/promo/data";
@@ -123,6 +124,7 @@ export default function PromoPage() {
 
   return (
     <ScreenContainer>
+      <SectionHead path="/promo" />
       <PcTopNav />
       <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
         {/* 返回按钮 */}

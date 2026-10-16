@@ -4,6 +4,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { ContactModal } from "@/components/contact-modal";
 import { PcTopNav } from "@/components/pc-top-nav";
+import { PageHead } from "@/components/page-head";
+import { NOT_FOUND_TITLE, strategyPageMeta } from "@/shared/seo-meta";
 import { CommunityFooter } from "@/components/community/community-entry-points";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
@@ -140,6 +142,7 @@ export default function StrategyDetailScreen() {
   if (!strategy) {
     return (
       <ScreenContainer className="items-center justify-center p-6">
+        <PageHead title={NOT_FOUND_TITLE} />
         <Text className="text-lg text-muted">策略不存在</Text>
         <TouchableOpacity onPress={() => router.back()} className="mt-4 px-6 py-3 bg-primary rounded-full">
           <Text className="text-background font-semibold">返回</Text>
@@ -193,11 +196,14 @@ export default function StrategyDetailScreen() {
       : [];
 
   const productTypeLabel = productType === "indicator" ? "指标" : productType === "tool" ? "工具" : "EA";
+  /* 与服务端预渲染同一套标题和描述（shared/seo-meta.ts），JS 渲染后不再变成全站通用标题。 */
+  const seoMeta = strategyPageMeta(strategy);
   const reviews = (userReviews || []) as StrategyReview[];
   const displayReviews = reviews.slice(0, 3);
 
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
+      <PageHead title={seoMeta.title} description={seoMeta.description} />
       <PcTopNav />
       <SubscribeModal visible={showSubscribeModal} onClose={() => setShowSubscribeModal(false)} strategyTitle={strategy.title} />
       <ReviewComposerModal visible={showReviewModal} colors={colors} nickname={reviewNickname} content={reviewContent} isSubmitting={isSubmittingReview} showSuccess={showReviewSuccess} onClose={() => setShowReviewModal(false)} onChangeNickname={setReviewNickname} onChangeContent={setReviewContent} onSubmit={handleSubmitReview} />
@@ -218,7 +224,7 @@ export default function StrategyDetailScreen() {
           {isDesktop ? (
             <View style={styles.desktopHeroGrid}>
               <View style={styles.desktopHeroMain}>
-                <StrategyMedia strategy={mediaStrategy} allImages={allImages} gradientColors={gradientColors} productTypeLabel={productTypeLabel} isFeatured={isFeatured} isDesktop={isDesktop} width={width} mediaWidth={mediaWidth} />
+                <StrategyMedia strategy={mediaStrategy} allImages={allImages} gradientColors={gradientColors} productTypeLabel={productTypeLabel} isFeatured={isFeatured} isDesktop={isDesktop} width={width} mediaWidth={mediaWidth} coverFit={Platform.OS === "web" ? artwork.imageFit : undefined} coverBackground={Platform.OS === "web" && artwork.imageFit === "contain" ? artwork.fallback : undefined} />
                 <StrategyHeader strategy={strategy} colors={colors} isFeatured={isFeatured} tagList={tagList} />
                 <StrategyProfileSection profile={profile} colors={colors} accent={artwork.accent} isDesktop />
                 <StrategyMetrics strategy={strategy} colors={colors} isPositive={isPositive} />
@@ -231,7 +237,7 @@ export default function StrategyDetailScreen() {
             </View>
           ) : (
             <>
-              <StrategyMedia strategy={mediaStrategy} allImages={allImages} gradientColors={gradientColors} productTypeLabel={productTypeLabel} isFeatured={isFeatured} isDesktop={isDesktop} width={width} mediaWidth={mediaWidth} />
+              <StrategyMedia strategy={mediaStrategy} allImages={allImages} gradientColors={gradientColors} productTypeLabel={productTypeLabel} isFeatured={isFeatured} isDesktop={isDesktop} width={width} mediaWidth={mediaWidth} coverFit={Platform.OS === "web" ? artwork.imageFit : undefined} coverBackground={Platform.OS === "web" && artwork.imageFit === "contain" ? artwork.fallback : undefined} />
               <StrategyHeader strategy={strategy} colors={colors} isFeatured={isFeatured} tagList={tagList} />
               <StrategyProfileSection profile={profile} colors={colors} accent={artwork.accent} isDesktop={false} />
               <StrategyMetrics strategy={strategy} colors={colors} isPositive={isPositive} />

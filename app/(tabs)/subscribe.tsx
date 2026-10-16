@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { ContactModal } from "@/components/contact-modal";
+import { SectionHead } from "@/components/page-head";
 import { QuickNav } from "@/components/quick-nav";
 import { CommunityFooter } from "@/components/community/community-entry-points";
 import { GlassCard } from "@/components/glass-card";
@@ -292,6 +293,7 @@ export default function SubscribeScreen() {
 
   return (
     <ScreenContainer>
+      <SectionHead path="/subscribe" />
       <ContactModal visible={showContactModal} onClose={() => setShowContactModal(false)} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}

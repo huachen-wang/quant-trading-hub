@@ -27,7 +27,7 @@ export const PUBLIC_STATUS = "published";
  * 固定字符串，不含环境、版本号以外的任何信息，也不暴露内部路径或凭据。
  * 改动 SSR 数据通道时请一并升版，方便线上回读确认跑的是哪一代。
  */
-export const SEO_REVISION = "public-catalog-v3";
+export const SEO_REVISION = "public-catalog-v4"; // v4（2026-10-17）：栏目页预渲染、noindex 页、真 404
 
 /** 只挑初始 HTML 真正用得到的列，不把 downloadUrl 之类的东西带进渲染层。 */
 const PUBLIC_COLUMNS = {
