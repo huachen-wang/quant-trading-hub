@@ -4,6 +4,16 @@ import { createUser, getUserByEmail, getUserByOpenId, getUserByPhone, updateUser
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 import { hashPassword, verifyPassword } from "./password";
+import { clientIp } from "./client-ip";
+import {
+  LOGIN_LOCKED_MESSAGE,
+  USER_LOGIN_IP_RULE,
+  checkLoginAllowed,
+  recordLoginFailure,
+} from "./login-throttle";
+
+/** 密码登录失败统一提示（2026-10-17）：不区分「邮箱未注册」「没设密码」「密码错」。 */
+export const LOGIN_FAILED_MESSAGE = "邮箱或密码错误";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -160,18 +170,27 @@ export function registerOAuthRoutes(app: Express) {
       return;
     }
 
+    // 2026-10-17：按 IP 限流（计数存库，锁 15 分钟到时自动解开）。
+    const throttleParts = [clientIp(req)];
+    try {
+      const check = await checkLoginAllowed(USER_LOGIN_IP_RULE, throttleParts);
+      if (!check.allowed) {
+        res.setHeader("Retry-After", String(check.retryAfterSeconds));
+        res.status(429).json({ error: LOGIN_LOCKED_MESSAGE });
+        return;
+      }
+    } catch (error) {
+      console.error("[Auth] Login throttle check failed:", error);
+    }
+
     try {
       const user = await getUserByEmail(email);
-      if (!user) {
-        res.status(404).json({ error: "Email not registered" });
-        return;
-      }
-      if (!user.passwordHash) {
-        res.status(400).json({ error: "Account has no password set yet" });
-        return;
-      }
-      if (!verifyPassword(password, user.passwordHash)) {
-        res.status(401).json({ error: "Invalid email or password" });
+      /* 未注册、没设密码、密码错：一律同一句话、同一个状态码，不再透露邮箱是否注册过。 */
+      if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
+        await recordLoginFailure(USER_LOGIN_IP_RULE, throttleParts).catch((error) =>
+          console.error("[Auth] Login throttle record failed:", error),
+        );
+        res.status(401).json({ error: LOGIN_FAILED_MESSAGE });
         return;
       }
 

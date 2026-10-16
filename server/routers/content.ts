@@ -82,7 +82,8 @@ export const notificationsRouter = router({
 });
 
 export const siteSettingsRouter = router({
-  getAll: publicProcedure.query(() => db.getSiteSettings()),
+  // 整张站点设置表（含 virtual_subscriber_count、测试键等）只给后台；前台联系方式走下面的 getContact（只返回 contact_*）。
+  getAll: adminProcedure.query(() => db.getSiteSettings()),
   getContact: publicProcedure.query(() => db.getContactSettings()),
 
   update: adminProcedure
