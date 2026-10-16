@@ -1,6 +1,8 @@
 export type StrategyArtwork = {
   kind: StrategyArtworkKind;
   image: string;
+  /** 品牌图（方形 Logo）用 contain，铺在 fallback 渐变上，不裁、不放大糊掉；其余插画用 cover。 */
+  imageFit?: "cover" | "contain";
   label: string;
   shortName: string;
   detail: string;
@@ -225,7 +227,23 @@ function compactDetail(tags: string | null | undefined, pairs: string | null | u
   return `${compactPairs(pairs)} · ${tagList.join(" / ")}`;
 }
 
-export function resolveStrategyArtwork({ title, tags, pairs, productType }: StrategyArtworkInput): StrategyArtwork {
+/**
+ * 自家产品用自己的品牌图（2026-10-17）：金戈铁马原来套的是别家 EA 的图（49_Quantum_Dark_Gold.jpg）。
+ * 图放在 fx.nb.market，CSP 的 img-src 已允许 https:。版本名不在这里改。
+ */
+export const JGTM_BRAND_IMAGE = "https://fx.nb.market/avatars/jgtm-brand.webp";
+
+const BRAND_ARTWORK: ReadonlyArray<{ match: RegExp; image: string; fallback: readonly [string, string, string] }> = [
+  { match: /金戈铁马/i, image: JGTM_BRAND_IMAGE, fallback: ["#3A0507", "#8F1418", "#4A080B"] },
+];
+
+export function resolveStrategyArtwork(input: StrategyArtworkInput): StrategyArtwork {
+  const base = resolveGenericArtwork(input);
+  const brand = BRAND_ARTWORK.find((entry) => entry.match.test(input.title));
+  return brand ? { ...base, image: brand.image, imageFit: "contain", fallback: brand.fallback } : base;
+}
+
+function resolveGenericArtwork({ title, tags, pairs, productType }: StrategyArtworkInput): StrategyArtwork {
   const source = `${title} ${tags || ""} ${pairs || ""}`.normalize("NFKC").toLowerCase();
   const shortName = getStrategyShortName(title);
 

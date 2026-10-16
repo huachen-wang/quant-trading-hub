@@ -8,6 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenContainer } from "@/components/screen-container";
 import { PcTopNav } from "@/components/pc-top-nav";
+import { SectionHead } from "@/components/page-head";
 import { CommunityFooter } from "@/components/community/community-entry-points";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
@@ -121,6 +122,7 @@ export default function CooperationPage() {
 
   return (
     <ScreenContainer>
+      <SectionHead path="/cooperation" />
       <PcTopNav />
       <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
         {/* 返回按钮 */}

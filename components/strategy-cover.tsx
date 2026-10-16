@@ -45,7 +45,7 @@ export function StrategyCover({
       <Image
         source={{ uri: artwork.image }}
         style={StyleSheet.absoluteFillObject}
-        contentFit="cover"
+        contentFit={artwork.imageFit ?? "cover"}
         transition={120}
         cachePolicy="memory-disk"
         priority={imagePriority}

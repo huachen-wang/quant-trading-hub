@@ -260,7 +260,8 @@ type ExistingCuratedReference = {
 const EXISTING_CURATED_REFERENCES: ExistingCuratedReference[] = [
   {
     titleLike: "%金戈铁马%V5.1%",
-    coverImage: "/ea-covers-v2/49_Quantum_Dark_Gold.jpg",
+    // 2026-10-17：自家品牌图（线上库 id 30 已同步改），不再用别家 EA 的 49_Quantum_Dark_Gold.jpg。
+    coverImage: "https://fx.nb.market/avatars/jgtm-brand.webp",
     isFeatured: true,
     sourceUrl: "https://www.eahub.cn/thread-201119-1-1.html",
   },

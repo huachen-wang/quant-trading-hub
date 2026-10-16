@@ -22,7 +22,8 @@ type CoverRule = {
 };
 
 const COVER_RULES: CoverRule[] = [
-  { keywords: ["金戈铁马"], file: "49_Quantum_Dark_Gold.jpg" },
+  // 2026-10-17：金戈铁马用自家品牌图，不再套别家 EA 的 49_Quantum_Dark_Gold.jpg。
+  { keywords: ["金戈铁马"], file: "https://fx.nb.market/avatars/jgtm-brand.webp" },
   { keywords: ["wakawaka"], file: "02_Waka_Waka_EA.jpg" },
   { keywords: ["ai外汇机器人"], file: "36_AI_Forex_Robot.jpg" },
   { keywords: ["goldhouse", "黄金屋"], file: "34_Gold_Atlas.jpg" },
@@ -78,7 +79,8 @@ export function getLocalStrategyCover(title: string): string | null {
     ),
   );
 
-  return match ? `${COVER_ROOT}/${match.file}` : null;
+  if (!match) return null;
+  return /^https:\/\//.test(match.file) ? match.file : `${COVER_ROOT}/${match.file}`;
 }
 
 export function resolveStrategyCover(

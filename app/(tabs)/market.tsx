@@ -35,6 +35,7 @@ import { useColors } from "@/hooks/use-colors";
 import { useResponsive } from "@/hooks/use-responsive";
 import { useLanguage } from "@/lib/language";
 import { trpc } from "@/lib/trpc";
+import { SectionHead } from "@/components/page-head";
 
 const PAGE_SIZE = 12;
 const PRODUCT_TYPE_OPTIONS = [
@@ -54,7 +55,12 @@ export default function HomeScreen() {
   const isFocused = useIsFocused();
   const pathname = usePathname();
   if (!isFocused || pathname !== "/market") return null;
-  return <EaLibraryScreen />;
+  return (
+    <>
+      <SectionHead path="/market" />
+      <EaLibraryScreen />
+    </>
+  );
 }
 
 export function EaLibraryScreen({ variant = "legacy" }: EaLibraryScreenProps) {
@@ -310,11 +316,13 @@ export function EaLibraryScreen({ variant = "legacy" }: EaLibraryScreenProps) {
         isLoadingMore={isLoadingMore}
         hasMore={isShowingPreviewCatalog ? false : hasMore}
         itemCount={displayStrategies.length}
+        onLoadMore={() => void handleLoadMore()}
       />
     ),
     [
       colors,
       displayStrategies.length,
+      handleLoadMore,
       hasMore,
       isLoadingMore,
       isShowingPreviewCatalog,

@@ -155,11 +155,11 @@ describe("没有真实数据库时的 HTTP 行为", () => {
        首页、商品页、404、503 四种出口都要带。 */
     for (const path of ["/", "/strategy/1", "/strategy/abc", "/strategy/99999999"]) {
       const got = await fetchAs(server.base, path, UA_HUMAN);
-      expect(got.headers.get("x-seo-revision"), `${path} 缺部署标记`).toBe("public-catalog-v3");
+      expect(got.headers.get("x-seo-revision"), `${path} 缺部署标记`).toBe("public-catalog-v4");
     }
     /* 标记跟着 seo-catalog 模块走：改了数据通道不升版就会在这里红 */
     const { SEO_REVISION } = await import("../server/_core/seo-catalog");
-    expect(SEO_REVISION).toBe("public-catalog-v3");
+    expect(SEO_REVISION).toBe("public-catalog-v4");
   });
 
   it("部署标记不泄露环境、路径或凭据", async () => {
@@ -168,6 +168,45 @@ describe("没有真实数据库时的 HTTP 行为", () => {
     expect(value).toMatch(/^[a-z0-9-]+$/);
     for (const leak of ["/", "mysql", "vercel", "railway", "DATABASE"]) {
       expect(value.toLowerCase()).not.toContain(leak.toLowerCase());
+    }
+  });
+
+  it("栏目页各自带 title / description / canonical，不再是通用标题（2026-10-17）", async () => {
+    const expected: Record<string, string> = {
+      "/market": "策略广场 · MT4 / MT5 EA、指标与工具目录 | EAXAU",
+      "/cooperation": "工作室合作与授权 | EAXAU",
+      "/promo": "限时促销 | EAXAU",
+      "/group-buy": "合购撮合台 | EAXAU",
+      "/subscribe": "订阅 · 新策略上架通知 | EAXAU",
+    };
+    for (const [path, title] of Object.entries(expected)) {
+      const got = await fetchAs(server.base, path, UA_HUMAN);
+      expect(got.status, path).toBe(200);
+      expect(got.body).toContain(`<title>${title}</title>`);
+      expect(got.body).toContain(`<link rel="canonical" href="https://www.eaxau.com${path}" />`);
+      expect(got.body).toMatch(/<meta name="description" content="[^"]{10,}" data-rh="true" \/>/);
+      expect(got.body.match(/<meta name="description"/g)).toHaveLength(1);
+      expect(got.body).toContain("<h1>");
+      expect(got.headers.get("x-robots-tag")).toBeNull();
+    }
+  });
+
+  it("登录、注册、V2 预览不收录：meta + X-Robots-Tag", async () => {
+    for (const path of ["/auth/login", "/auth/register", "/auth/forgot-password", "/v2-preview", "/v2-preview/accounts"]) {
+      const got = await fetchAs(server.base, path, UA_HUMAN);
+      expect(got.status, path).toBe(200);
+      expect(got.body).toContain('<meta name="robots" content="noindex,follow" />');
+      expect(got.headers.get("x-robots-tag")).toBe("noindex, follow");
+    }
+  });
+
+  it("不存在的路径和 /_sitemap 是 404 品牌页", async () => {
+    for (const path of ["/this-page-does-not-exist-xyz", "/_sitemap", "/tutorials/mt4"]) {
+      const got = await fetchAs(server.base, path, UA_HUMAN);
+      expect(got.status, path).toBe(404);
+      expect(got.body).toContain("页面不存在");
+      expect(got.body).toContain(">回商城</a>");
+      expect(got.body).toContain('<meta name="robots" content="noindex,follow" />');
     }
   });
 

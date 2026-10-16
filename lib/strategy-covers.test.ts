@@ -3,8 +3,8 @@ import { getLocalStrategyCover, resolveStrategyCover } from "./strategy-covers";
 
 describe("strategy cover resolver", () => {
   it("maps known Chinese and English strategy names to local optimized covers", () => {
-    expect(getLocalStrategyCover("金戈铁马 正版云控 V4.3")).toContain(
-      "49_Quantum_Dark_Gold.jpg",
+    expect(getLocalStrategyCover("金戈铁马 正版云控 V4.3")).toBe(
+      "https://fx.nb.market/avatars/jgtm-brand.webp",
     );
     expect(getLocalStrategyCover("Quantum Queen X MT5")).toContain(
       "11_Quantum_Queen.jpg",

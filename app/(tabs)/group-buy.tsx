@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Modal, Linking, StyleSheet, Platform, Animated, Easing } from "react-native";
 import { Image } from "expo-image";
 import { QuickNav } from "@/components/quick-nav";
+import { SectionHead } from "@/components/page-head";
 import { CommunityFooter } from "@/components/community/community-entry-points";
 import { SUPPORT_TELEGRAM_HANDLE, SUPPORT_TELEGRAM_URL } from "@/shared/community-contacts";
 
@@ -595,6 +596,7 @@ export default function GroupBuyScreen() {
 
   return (
     <ScreenContainer>
+      <SectionHead path="/group-buy" />
       {renderContactModal()}
       <FlatList
         data={listItems}

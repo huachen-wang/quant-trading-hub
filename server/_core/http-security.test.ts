@@ -11,4 +11,12 @@ describe("HTTP content security policy", () => {
     expect(policy).toContain("form-action 'self'");
     expect(policy).not.toContain("'unsafe-eval'");
   });
+
+  it("lets Cloudflare Web Analytics load its beacon and report back", () => {
+    const policy = buildContentSecurityPolicy(true);
+    const script = policy.split("; ").find((d) => d.startsWith("script-src "))!;
+    const connect = policy.split("; ").find((d) => d.startsWith("connect-src "))!;
+    expect(script.split(" ")).toContain("https://static.cloudflareinsights.com");
+    expect(connect.split(" ")).toContain("https://cloudflareinsights.com");
+  });
 });
