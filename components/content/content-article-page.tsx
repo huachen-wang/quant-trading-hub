@@ -14,6 +14,7 @@ import {
   requireContentPage,
   type ContentPage,
 } from "@/shared/content-pages";
+import { contentPageHeadTags } from "@/shared/seo-head";
 import { ContentBlocks } from "./content-blocks";
 
 /** 面包屑 + 另一种语言的链接（指向同一篇内容的翻译，不是英文首页）。 */
@@ -60,7 +61,7 @@ export function ContentArticlePage({ path }: { path: string }) {
   const desktop = width >= 1024;
   return (
     <ScreenContainer>
-      <PageHead title={page.title} description={page.description} />
+      <PageHead title={page.title} description={page.description} tags={contentPageHeadTags(page)} />
       <PcTopNav />
       <ContentLanguageFrame page={page}>
         <ScrollView style={styles.page} contentContainerStyle={styles.pageContent} showsVerticalScrollIndicator={false}>

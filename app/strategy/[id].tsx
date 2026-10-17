@@ -6,6 +6,7 @@ import { ContactModal } from "@/components/contact-modal";
 import { PcTopNav } from "@/components/pc-top-nav";
 import { PageHead } from "@/components/page-head";
 import { NOT_FOUND_TITLE, strategyPageMeta } from "@/shared/seo-meta";
+import { noindexHeadTags, strategyHeadTags } from "@/shared/seo-head";
 import { CommunityFooter } from "@/components/community/community-entry-points";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
@@ -142,7 +143,7 @@ export default function StrategyDetailScreen() {
   if (!strategy) {
     return (
       <ScreenContainer className="items-center justify-center p-6">
-        <PageHead title={NOT_FOUND_TITLE} />
+        <PageHead title={NOT_FOUND_TITLE} tags={noindexHeadTags()} />
         <Text className="text-lg text-muted">策略不存在</Text>
         <TouchableOpacity onPress={() => router.back()} className="mt-4 px-6 py-3 bg-primary rounded-full">
           <Text className="text-background font-semibold">返回</Text>
@@ -203,7 +204,7 @@ export default function StrategyDetailScreen() {
 
   return (
     <ScreenContainer edges={["top", "left", "right"]}>
-      <PageHead title={seoMeta.title} description={seoMeta.description} />
+      <PageHead title={seoMeta.title} description={seoMeta.description} tags={strategyHeadTags(strategy)} />
       <PcTopNav />
       <SubscribeModal visible={showSubscribeModal} onClose={() => setShowSubscribeModal(false)} strategyTitle={strategy.title} />
       <ReviewComposerModal visible={showReviewModal} colors={colors} nickname={reviewNickname} content={reviewContent} isSubmitting={isSubmittingReview} showSuccess={showReviewSuccess} onClose={() => setShowReviewModal(false)} onChangeNickname={setReviewNickname} onChangeContent={setReviewContent} onSubmit={handleSubmitReview} />

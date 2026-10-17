@@ -1,14 +1,15 @@
 import { COOPERATION_EN_MARKDOWN, COOPERATION_ZH_MARKDOWN } from "./cooperation";
 import { GUIDE_EN_MARKDOWN, GUIDE_ZH_MARKDOWN } from "./ea-requirements-guide";
-import { parseContentMarkdown, type ContentBlock } from "./markdown";
-import { COOPERATION_EN_PATH, COOPERATION_ZH_PATH, GUIDE_EN_PATH, GUIDE_ZH_PATH } from "./paths";
+import { FAQ_EN_MARKDOWN, FAQ_ZH_MARKDOWN } from "./faq";
+import { inlineText, parseContentMarkdown, type ContentBlock } from "./markdown";
+import { COOPERATION_EN_PATH, COOPERATION_ZH_PATH, FAQ_EN_PATH, FAQ_ZH_PATH, GUIDE_EN_PATH, GUIDE_ZH_PATH } from "./paths";
 
 export * from "./paths";
 export type { ContentBlock, ContentLink, InlineNode } from "./markdown";
 export { inlineText, parseContentMarkdown } from "./markdown";
 
 /**
- * 中英双语内容页（2026-10-18：C03 合作页、C04 需求与验收指南）。
+ * 中英双语内容页（2026-10-18：C03 合作页、C04 需求与验收指南；同日晚：常见问题）。
  *
  * 一处定义，三处使用：
  * - 前端页面（app/cooperation.tsx、app/en/…、app/guides/…）渲染可见正文；
@@ -24,8 +25,9 @@ export type ContentPage = {
   lang: ContentLang;
   title: string;
   description: string;
-  /** 结构化数据类型：合作页是普通网页，指南是说明文章。都不写 Product / 价格 / 评价。 */
-  schemaType: "WebPage" | "Article";
+  /** 结构化数据类型：合作页是普通网页，指南是说明文章，常见问题是 FAQPage（只含页面上看得到的问答）。
+   *  都不写 Product / 价格 / 评价。 */
+  schemaType: "WebPage" | "Article" | "FAQPage";
   /** 正文真实更新日期（YYYY-MM-DD），sitemap 的 lastmod 用它，不随每次请求变化。 */
   lastmod: string;
   /** 同一篇内容在各语言下的地址，用于 hreflang 与页面上的语言切换。 */
@@ -43,6 +45,11 @@ const COOPERATION_ALTERNATES: Record<ContentLang, string> = {
 const GUIDE_ALTERNATES: Record<ContentLang, string> = {
   "zh-CN": GUIDE_ZH_PATH,
   en: GUIDE_EN_PATH,
+};
+
+const FAQ_ALTERNATES: Record<ContentLang, string> = {
+  "zh-CN": FAQ_ZH_PATH,
+  en: FAQ_EN_PATH,
 };
 
 const PAGES: ContentPage[] = [
@@ -102,6 +109,30 @@ const PAGES: ContentPage[] = [
     ],
     markdown: GUIDE_EN_MARKDOWN,
   },
+  {
+    path: FAQ_ZH_PATH,
+    lang: "zh-CN",
+    title: "常见问题｜EA 选购、源码授权、交付与验收｜EAXAU",
+    description:
+      "EAXAU 常见问题：商品页写明哪些信息、第一次买 EA 先核对什么、MT4 与 MT5 能否通用、成品是否含源码、交付什么、怎么验收、怎么联系客服。",
+    schemaType: "FAQPage",
+    lastmod: "2026-10-18",
+    alternates: FAQ_ALTERNATES,
+    breadcrumb: [{ label: "EAXAU 首页", href: "/" }, { label: "常见问题" }],
+    markdown: FAQ_ZH_MARKDOWN,
+  },
+  {
+    path: FAQ_EN_PATH,
+    lang: "en",
+    title: "FAQ | EA Licensing, Source Code, Delivery & Acceptance | EAXAU",
+    description:
+      "Answers to common EAXAU questions: what product pages state, what to check before buying an EA, MT4 vs MT5, source code, deliverables, acceptance and how to contact support.",
+    schemaType: "FAQPage",
+    lastmod: "2026-10-18",
+    alternates: FAQ_ALTERNATES,
+    breadcrumb: [{ label: "EAXAU home", href: "/" }, { label: "FAQ" }],
+    markdown: FAQ_EN_MARKDOWN,
+  },
 ];
 
 export const CONTENT_PAGES: readonly ContentPage[] = PAGES;
@@ -149,4 +180,30 @@ export function splitHero(blocks: ContentBlock[]): { hero: ContentBlock[]; body:
 export function otherLanguage(page: ContentPage): { lang: ContentLang; path: string; label: string } {
   const lang: ContentLang = page.lang === "en" ? "zh-CN" : "en";
   return { lang, path: page.alternates[lang], label: lang === "en" ? "English" : "中文" };
+}
+
+/**
+ * 常见问题页的问答（FAQPage 结构化数据用）：每个 H2 是一个问题，到下一个标题之前的段落 / 列表是答案。
+ * 答案取页面上同一份正文的纯文本（链接只留文字），保证结构化数据只含页面上看得到的内容。
+ */
+export function faqEntries(page: ContentPage): { question: string; answer: string }[] {
+  if (page.schemaType !== "FAQPage") return [];
+  const entries: { question: string; answer: string }[] = [];
+  let current: { question: string; parts: string[] } | null = null;
+  const flush = () => {
+    if (current && current.parts.length > 0) entries.push({ question: current.question, answer: current.parts.join("\n") });
+  };
+  for (const block of contentBlocks(page)) {
+    if (block.type === "heading") {
+      flush();
+      current = block.level === 2 ? { question: block.text, parts: [] } : null;
+      continue;
+    }
+    if (!current) continue;
+    if (block.type === "paragraph") current.parts.push(inlineText(block.inlines));
+    else if (block.type === "list") current.parts.push(...block.items.map((item) => inlineText(item)));
+    else if (block.type === "cta") current.parts.push(block.links.map((link) => link.text).join(" · "));
+  }
+  flush();
+  return entries;
 }

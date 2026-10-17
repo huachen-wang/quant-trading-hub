@@ -67,6 +67,8 @@ describe("isKnownSpaRoute：只有真实页面给 200", () => {
     "/en/cooperation",
     "/guides/ea-requirements-and-acceptance",
     "/en/guides/ea-requirements-and-acceptance",
+    "/faq",
+    "/en/faq",
   ])("%s 是真实页面", (path) => {
     expect(isKnownSpaRoute(path)).toBe(true);
   });
@@ -76,7 +78,7 @@ describe("isKnownSpaRoute：只有真实页面给 200", () => {
     "/market/extra",
     "/wp-login.php",
     "/tutorials/mt4",
-    "/faq",
+    "/faq/extra", // 2026-10-18 起 /faq 是真实页面（常见问题），这里换成它下面不存在的地址
     "/tools",
     "/admin/does-not-exist",
     "/checkout",

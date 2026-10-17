@@ -85,11 +85,52 @@ const MAIN_PAGES: Array<{ path: string; title: string; description: string }> = 
       "English version of the guide: environment, features, rights, deliverables and acceptance checks for EA development or source licensing.",
   },
   {
+    path: "/faq",
+    title: "常见问题 / FAQ",
+    description:
+      "商品页写明哪些信息、第一次买 EA 先核对什么、MT4 与 MT5 能否通用、成品是否含源码、交付什么、怎么验收、怎么联系客服。 What product pages state, what to check before buying an EA, MT4 vs MT5, source code, deliverables, acceptance and support contacts.",
+  },
+  {
+    path: "/en/faq",
+    title: "FAQ (English)",
+    description: "English version of the FAQ page.",
+  },
+  {
     path: "/promo",
     title: "限时促销 / Promotions",
     description: "当前促销商品，联系客服确认后购买。 Current promotions; contact support to confirm before buying.",
   },
 ];
+
+/**
+ * 咨询到交付的四步与交付说明（2026-10-18，Part B：收件/gpt/shared/GPT-14/eaxau/llms.txt 草稿里能逐句对上站内原文的部分）。
+ * 中文四步逐字取自合作页（shared/content-pages/cooperation.ts），英文取自英文合作页；交付说明取自商品页预渲染
+ * （server/_core/seo-render.ts 的「交付与支持」）。tests/part-b-merge.test.ts 核对它们和原文一致。
+ * 草稿里的价格口径、退款、权属核验结论没有收（待站主确认）。
+ */
+export const LLMS_PROCESS_STEPS: ReadonlyArray<{ zh: string; en: string }> = [
+  {
+    zh: "说明需求。提供产品链接或简短说明，写明平台、用途和希望得到的交付物。",
+    en: "Describe the requirement. Share a product link or short brief, the platform, intended use and desired deliverables.",
+  },
+  {
+    zh: "核对来源与可行性。确认授权方、已有材料、技术环境及缺少的信息。",
+    en: "Check rights and feasibility. Establish the licensing party, available materials, technical environment and missing information.",
+  },
+  {
+    zh: "确认书面报价。把范围、费用、付款安排、验收和支持写清楚，再启动约定工作。",
+    en: "Agree a written quote. Specify scope, fees, payment arrangements, acceptance and support before starting the agreed work.",
+  },
+  {
+    zh: "按清单交付与验收。核对文件、功能和许可范围，记录需要修订的事项及处理结果。",
+    en: "Deliver and review against the list. Check files, functionality and licensing scope; record revisions and their resolution.",
+  },
+];
+
+export const LLMS_DELIVERY_NOTE = {
+  zh: "下单或授权确认后提供安装包与授权信息，并按版本提供安装、参数说明与后续更新支持。具体版本、参数、适用环境与授权范围以顾问确认为准。",
+  en: "Once an order or license is confirmed, EAXAU provides the installation package and license information, with installation, parameter notes and update support according to the version. The exact version, parameters, environment and license scope are as confirmed by the adviser.",
+};
 
 /**
  * /llms.txt：写给 AI 看的站点概述（格式参照 niubang.ai/llms.txt）。
@@ -117,6 +158,12 @@ export function renderLlmsTxt(lookup: ListLookup): string {
     `- [Telegram 客服 ${SUPPORT_TELEGRAM_HANDLE} / Telegram support](${SUPPORT_TELEGRAM_URL})`,
     "",
     "咨询时请附上商品名称或商品页地址。 Please include the product name or page URL when you ask.",
+    "",
+    "## 咨询到交付 / From enquiry to delivery",
+    "",
+    ...LLMS_PROCESS_STEPS.map((step, index) => `${index + 1}. ${step.zh} ${step.en}`),
+    "",
+    `${LLMS_DELIVERY_NOTE.zh} ${LLMS_DELIVERY_NOTE.en}`,
     "",
     "## 主要页面 / Main pages",
     "",

@@ -10,6 +10,15 @@ import {
   strategyPageMeta,
 } from "../../shared/seo-meta";
 import {
+  homeHeadTags,
+  noindexHeadTags,
+  organizationJsonLd,
+  pricing,
+  sectionHeadTags,
+  strategyHeadTags,
+  type HeadTag,
+} from "../../shared/seo-head";
+import {
   QQ_GROUP_JOIN_URL,
   QQ_GROUP_NUMBER,
   SUPPORT_QQ,
@@ -30,7 +39,7 @@ import {
  * 3. 正文块放在 #root 之外的 `#eaxau-seo`，应用挂载后由 bootstrap 脚本移除，不产生双内容。
  */
 
-export { SITE_ORIGIN, isPlaceholderDescription, plainText, platformShort, productTypeLabel };
+export { SITE_ORIGIN, isPlaceholderDescription, organizationJsonLd, plainText, platformShort, pricing, productTypeLabel };
 export const SEO_BLOCK_ID = "eaxau-seo";
 
 /**
@@ -46,26 +55,6 @@ export const SEO_CONTACTS = {
   telegram: SUPPORT_TELEGRAM_HANDLE,
   telegramLink: SUPPORT_TELEGRAM_URL,
 };
-
-/** 首页结构化数据里的客服入口：客服链接写 Telegram，QQ 和微信写在 description 里。 */
-export function organizationJsonLd(): Record<string, unknown> {
-  return {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: "EAXAU",
-    alternateName: "AI量化联盟",
-    url: `${SITE_ORIGIN}/`,
-    contactPoint: [
-      {
-        "@type": "ContactPoint",
-        contactType: "customer support",
-        url: SEO_CONTACTS.telegramLink,
-        availableLanguage: ["zh-CN", "en"],
-        description: `客服 QQ ${SEO_CONTACTS.qq} · 微信 ${SEO_CONTACTS.wechat} · Telegram ${SEO_CONTACTS.telegram}；交流群：Telegram ${SEO_CONTACTS.telegramGroupLink} · QQ 群 ${SEO_CONTACTS.qqGroup}`,
-      },
-    ],
-  };
-}
 
 export type SeoStrategy = {
   id: number;
@@ -93,6 +82,27 @@ export type ListLookup =
   | { kind: "ok"; strategies: SeoStrategy[] }
   | { kind: "unavailable"; reason: string };
 
+/** 促销栏目初始 HTML 用到的字段（server/_core/seo-catalog.ts 只取这几列）。不含价格、库存、已售。 */
+export type SeoPromo = {
+  id: number;
+  title: string;
+  description?: string | null;
+  platform?: string | null;
+  category?: string | null;
+  promoEndTime?: Date | string | null;
+};
+
+/** 合购栏目初始 HTML 用到的字段。不含简介（后台简介里写着价格和人数）、价格、人数、联系方式。 */
+export type SeoGroupBuy = {
+  id: number;
+  title: string;
+  eaName?: string | null;
+  expiresAt?: Date | string | null;
+};
+
+export type PromoLookup = { kind: "ok"; items: SeoPromo[] } | { kind: "unavailable"; reason: string };
+export type GroupBuyLookup = { kind: "ok"; items: SeoGroupBuy[] } | { kind: "unavailable"; reason: string };
+
 export function escapeHtml(value: unknown): string {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -100,6 +110,27 @@ export function escapeHtml(value: unknown): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+/**
+ * 头部标签（shared/seo-head.ts 生成的数据）→ 首屏 HTML。前端 <Head>（components/page-head.tsx）渲染同一份数据；
+ * 站内跳转离开首屏这一页时，lib/route-head.ts 按同样的标签种类把这批服务端标签移除，由当前路由接管。
+ */
+export function renderHeadTagsHtml(tags: HeadTag[]): string {
+  return tags
+    .map((tag) => {
+      switch (tag.kind) {
+        case "link":
+          return `    <link rel="${escapeHtml(tag.rel)}"${tag.hreflang ? ` hreflang="${escapeHtml(tag.hreflang)}"` : ""} href="${escapeHtml(tag.href)}" />`;
+        case "meta":
+          return `    <meta name="${escapeHtml(tag.name)}" content="${escapeHtml(tag.content)}" />`;
+        case "property":
+          return `    <meta property="${escapeHtml(tag.property)}" content="${escapeHtml(tag.content)}" />`;
+        case "jsonld":
+          return `    <script type="application/ld+json">${tag.json}</script>`;
+      }
+    })
+    .join("\n");
 }
 
 /** 版本只从标题里已经写明的版本号取，取不到就不写，不推断。 */
@@ -114,22 +145,6 @@ export function platformLabel(platform?: string | null): string {
   if (value === "MT4") return "MetaTrader 4（MT4）";
   if (value === "MT5") return "MetaTrader 5（MT5）";
   return "未提供";
-}
-
-/** 只有 direct + 正价才算可直接购买；其余一律「联系咨询授权」，不写 0 元。
- *  库里没有库存字段，所以任何情况下都不断言 availability。 */
-export function pricing(strategy: SeoStrategy): { label: string; directPrice: number | null } {
-  const raw = strategy.price;
-  const value = raw === null || raw === undefined ? NaN : Number(raw);
-  const direct = strategy.saleMode === "direct" && Number.isFinite(value) && value > 0;
-  if (direct) return { label: `直接购买 ¥${value.toFixed(2)} CNY`, directPrice: value };
-  return { label: "联系咨询授权（价格与授权范围按订单确认）", directPrice: null };
-}
-
-function absolute(url?: string | null): string | null {
-  if (!url) return null;
-  if (/^https?:\/\//i.test(url)) return url;
-  return SITE_ORIGIN + (url.startsWith("/") ? url : "/" + url);
 }
 
 function contactHtml(): string {
@@ -159,7 +174,8 @@ export function wrap(inner: string): string {
 /**
  * description 带 data-rh：前端 <Head>（expo-router 的 react-helmet）挂载后会接管并替换这一条，
  * 页面上不会出现两条 description。title 由 <Head> 直接改 document.title。
- * canonical、robots、og 不带 data-rh，JS 渲染后原样保留。
+ * canonical、robots、hreflang、og、twitter、JSON-LD 不带 data-rh：首屏这一页 JS 渲染后原样保留；
+ * 站内跳到别的地址时由 lib/route-head.ts 移除，改由当前路由的 <Head> 渲染（2026-10-18，R3 ⑦）。
  */
 export function replaceHead(indexHtml: string, title: string, description: string, extra: string): string {
   const descriptionTag = `<meta name="description" content="${escapeHtml(description)}" data-rh="true" />`;
@@ -177,18 +193,16 @@ export function insertBody(indexHtml: string, block: string): string {
   return indexHtml + block;
 }
 
-/** 商品详情页：真实字段 + 自指 canonical + 与可见内容一致的结构化数据。 */
+/** 商品详情页：真实字段 + 自指 canonical + 与可见内容一致的结构化数据（shared/seo-head.ts）。 */
 export function renderStrategyHtml(indexHtml: string, strategy: SeoStrategy): string {
-  const url = `${SITE_ORIGIN}/strategy/${strategy.id}`;
   const version = versionFromTitle(strategy.title);
   const platformText = platformLabel(strategy.platform);
   const platformKnown = platformText !== "未提供";
 
   /* 占位描述（如「联系我们了解详情」）不是产品事实：不当摘要、也不写进结构化数据。
      title / description 与前端 <Head> 同源（shared/seo-meta.ts），JS 渲染后不变。 */
-  const { title, description, summary, hasRealSummary } = strategyPageMeta(strategy);
+  const { title, description, summary } = strategyPageMeta(strategy);
   const price = pricing(strategy);
-  const image = absolute(strategy.coverImage);
 
   const facts: Array<[string, string]> = [["商品名称", strategy.title]];
   if (version) facts.push(["版本", version]);
@@ -204,39 +218,7 @@ export function renderStrategyHtml(indexHtml: string, strategy: SeoStrategy): st
   ]);
   facts.push(["授权与购买", price.label]);
 
-  const productLd: Record<string, unknown> = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: strategy.title,
-    url,
-    category: productTypeLabel(strategy.productType),
-  };
-  /* 目录里混有第三方来源条目（MQL5 Market / EAHub 公开参考），
-     无法逐条证明品牌归属，所以不写 brand，不把第三方产品冒称自有品牌。 */
-  if (hasRealSummary) productLd.description = description;
-  if (image) productLd.image = image;
-  /* 只有真实直购正价才写 offers；咨询制不写 0 元。
-     库里没有库存字段，所以任何情况下都不写 availability。EAXAU 是销售方，这一点是真的。 */
-  if (price.directPrice !== null) {
-    productLd.offers = {
-      "@type": "Offer",
-      url,
-      price: price.directPrice.toFixed(2),
-      priceCurrency: "CNY",
-      seller: { "@type": "Organization", name: "EAXAU" },
-    };
-  }
-
-  const head = `    <link rel="canonical" href="${url}" />
-    <meta name="robots" content="index,follow" />
-    <meta property="og:type" content="product" />
-    <meta property="og:title" content="${escapeHtml(title)}" />
-    <meta property="og:description" content="${escapeHtml(description)}" />
-    <meta property="og:url" content="${url}" />${image ? `\n    <meta property="og:image" content="${escapeHtml(image)}" />` : ""}
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${escapeHtml(title)}" />
-    <meta name="twitter:description" content="${escapeHtml(description)}" />
-    <script type="application/ld+json">${safeJsonLd(productLd)}</script>`;
+  const head = renderHeadTagsHtml(strategyHeadTags(strategy));
 
   const body = wrap(`      <nav class="eaxau-seo__crumb"><a href="/">EAXAU 首页</a> › ${escapeHtml(strategy.title)}</nav>
       <h1>${escapeHtml(strategy.title)}</h1>
@@ -253,7 +235,6 @@ ${contactHtml()}`);
 /** 首页：站点说明 + 真实在售商品清单。列表读不到时不编造商品，也不拿旧缓存充数。 */
 export function renderHomeHtml(indexHtml: string, lookup: ListLookup): string {
   const { title, description } = SECTION_PAGE_META["/"];
-  const url = `${SITE_ORIGIN}/`;
 
   const list = lookup.kind === "ok" ? lookup.strategies : [];
   const itemLd =
@@ -272,28 +253,10 @@ export function renderHomeHtml(indexHtml: string, lookup: ListLookup): string {
         }
       : null;
 
-  const siteLd = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: "EAXAU",
-    alternateName: "AI量化联盟",
-    url,
-    description,
-  };
-
-  const head = `    <link rel="canonical" href="${url}" />
-    <meta name="robots" content="index,follow" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="${escapeHtml(title)}" />
-    <meta property="og:description" content="${escapeHtml(description)}" />
-    <meta property="og:url" content="${url}" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="${escapeHtml(title)}" />
-    <meta name="twitter:description" content="${escapeHtml(description)}" />
-    <script type="application/ld+json">${safeJsonLd(siteLd)}</script>
-    <script type="application/ld+json">${safeJsonLd(organizationJsonLd())}</script>${
-      itemLd ? `\n    <script type="application/ld+json">${safeJsonLd(itemLd)}</script>` : ""
-    }`;
+  /* 通用部分（canonical、OG、WebSite、Organization）与前端 <Head> 同源；ItemList 依赖读库，只在首屏 HTML 里有。 */
+  const head =
+    renderHeadTagsHtml(homeHeadTags()) +
+    (itemLd ? `\n    <script type="application/ld+json">${safeJsonLd(itemLd)}</script>` : "");
 
   const listHtml = productListHtml(lookup);
 
@@ -327,42 +290,131 @@ ${lookup.strategies
       </ul>`;
 }
 
+function toDate(value: Date | string | null | undefined): Date | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function ymd(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+const PROMO_CATEGORY_LABEL: Record<string, string> = {
+  ea: "EA",
+  indicator: "指标",
+  tool: "辅助工具",
+  course: "教程",
+};
+
 /**
- * 栏目页（/market、/cooperation、/promo、/group-buy、/subscribe）：
- * 自己的 title、description、canonical、H1 和交流群 / 客服。/market 额外列出全部已发布商品，
- * 让不跑 JS 的爬虫也能从这一页走到每个商品页。不写促销价格、合购人数等页面数字。
+ * 促销栏目正文（2026-10-18，代码体检 R3 ⑧）：后台真实促销商品的名称、平台、分类、活动状态和简介。
+ * - 状态和页面倒计时同一口径：截止时间已过就写「活动已结束」，不把过期活动写成进行中；
+ * - 不写原价、促销价、库存、已售——价格与授权范围按当次订单确认；
+ * - 促销商品没有单独的详情地址（页面上是弹窗），所以条目不带链接，不编造地址；
+ * - 读不到就说临时故障；确实没有就说没有。都不拿写死的演示商品顶替。
  */
-export function renderSectionHtml(indexHtml: string, path: string, lookup?: ListLookup): string | null {
+export function promoSectionHtml(lookup: PromoLookup, now: Date = new Date()): string {
+  if (lookup.kind === "unavailable") {
+    return `      <h2>促销商品</h2>
+      <p class="eaxau-seo__note">促销清单这次没能读出来。这是临时故障，不代表没有促销；请稍后重试或直接联系客服。</p>\n`;
+  }
+  if (lookup.items.length === 0) {
+    return `      <h2>促销商品</h2>
+      <p class="eaxau-seo__note">当前没有进行中的促销商品。需要某款 EA，可以联系客服说明名称和版本。</p>\n`;
+  }
+  const items = lookup.items.map((item) => {
+    const parts = [`<strong>${escapeHtml(item.title)}</strong>`];
+    const platform = String(item.platform ?? "").trim().toUpperCase();
+    if (platform === "MT4" || platform === "MT5") parts.push(platform);
+    const category = PROMO_CATEGORY_LABEL[String(item.category ?? "")];
+    if (category) parts.push(category);
+    const end = toDate(item.promoEndTime);
+    if (end) parts.push(end.getTime() <= now.getTime() ? "活动已结束" : `活动截止 ${ymd(end)}`);
+    const summary = plainText(item.description, 160);
+    return `        <li>${parts.join(" · ")}${summary ? `：${escapeHtml(summary)}` : ""}</li>`;
+  });
+  return `      <h2>促销商品</h2>
+      <ul class="eaxau-seo__list">
+${items.join("\n")}
+      </ul>
+      <p class="eaxau-seo__note">价格、库存、授权范围与交付内容以当次订单确认为准；下单前请联系客服确认版本。</p>\n`;
+}
+
+/**
+ * 合购栏目正文（2026-10-18，R3 ⑧）：状态为进行中的合购的标题和 EA 名称。
+ * - 截止时间已过的照实写「截止时间已过」，请先找客服确认还能不能参加，不写成正在拼团；
+ * - 不写简介、价格、人数和联系方式（后台简介里混着价格和人数）；
+ * - 合购没有单独的详情地址，条目不带链接；发起合购需求的页面是 /group-buy/create。
+ */
+export function groupBuySectionHtml(lookup: GroupBuyLookup, now: Date = new Date()): string {
+  const create = `      <p><a href="/group-buy/create">发起合购需求</a></p>\n`;
+  if (lookup.kind === "unavailable") {
+    return `      <h2>进行中的合购</h2>
+      <p class="eaxau-seo__note">合购清单这次没能读出来。这是临时故障，不代表没有合购；请稍后重试或直接联系客服。</p>
+${create}`;
+  }
+  if (lookup.items.length === 0) {
+    return `      <h2>进行中的合购</h2>
+      <p class="eaxau-seo__note">当前没有进行中的合购。</p>
+${create}`;
+  }
+  const items = lookup.items.map((item) => {
+    const parts = [`<strong>${escapeHtml(item.title)}</strong>`];
+    if (item.eaName && item.eaName.trim() && item.eaName.trim() !== item.title.trim()) {
+      parts.push(`EA：${escapeHtml(item.eaName.trim())}`);
+    }
+    const expires = toDate(item.expiresAt);
+    if (expires) {
+      parts.push(
+        expires.getTime() <= now.getTime()
+          ? `截止时间已过（${ymd(expires)}），能否参加请先联系客服确认`
+          : `截止 ${ymd(expires)}`,
+      );
+    }
+    return `        <li>${parts.join(" · ")}</li>`;
+  });
+  return `      <h2>进行中的合购</h2>
+      <ul class="eaxau-seo__list">
+${items.join("\n")}
+      </ul>
+      <p class="eaxau-seo__note">价格、人数与授权范围按合购规则和订单确认。</p>
+${create}`;
+}
+
+/**
+ * 栏目页（/market、/promo、/group-buy、/subscribe；/cooperation 走中英内容页）：
+ * 自己的 title、description、canonical、H1 和交流群 / 客服。/market 额外列出全部已发布商品，
+ * 让不跑 JS 的爬虫也能从这一页走到每个商品页；/promo、/group-buy 列出后台真实清单（extraBody，
+ * 见 promoSectionHtml / groupBuySectionHtml）。不写促销价格、合购人数等页面数字。
+ */
+export function renderSectionHtml(
+  indexHtml: string,
+  path: string,
+  lookup?: ListLookup,
+  extraBody = "",
+): string | null {
   const meta = SECTION_PAGE_META[path];
   if (!meta || path === "/") return null;
-  const url = `${SITE_ORIGIN}${path}`;
-  const head = `    <link rel="canonical" href="${url}" />
-    <meta name="robots" content="index,follow" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="${escapeHtml(meta.title)}" />
-    <meta property="og:description" content="${escapeHtml(meta.description)}" />
-    <meta property="og:url" content="${url}" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="${escapeHtml(meta.title)}" />
-    <meta name="twitter:description" content="${escapeHtml(meta.description)}" />`;
+  const head = renderHeadTagsHtml(sectionHeadTags(path));
   const list = lookup ? `      <h2>全部商品</h2>\n${productListHtml(lookup)}\n` : "";
   const body = wrap(`      <nav class="eaxau-seo__crumb"><a href="/">EAXAU 首页</a> › ${escapeHtml(meta.h1)}</nav>
       <h1>${escapeHtml(meta.h1)}</h1>
       <p class="eaxau-seo__lead">${escapeHtml(meta.description)}</p>
-${list}${contactHtml()}`);
+${list}${extraBody}${contactHtml()}`);
   return insertBody(replaceHead(indexHtml, meta.title, meta.description, head), body);
 }
 
 /** 不收录的页面（登录、注册、找回密码、V2 预览）：标题 + noindex，不放正文。 */
 export function renderNoindexHtml(indexHtml: string, title: string): string {
-  const head = `    <meta name="robots" content="noindex,follow" />`;
+  const head = renderHeadTagsHtml(noindexHeadTags());
   return replaceHead(indexHtml, title, "EAXAU 账户与预览页面。", head);
 }
 
 export function renderNotFoundHtml(indexHtml: string, pathname: string): string {
   const title = NOT_FOUND_TITLE;
   const description = "这个地址在 EAXAU 上没有对应内容。";
-  const head = `    <meta name="robots" content="noindex,follow" />`;
+  const head = renderHeadTagsHtml(noindexHeadTags());
   const body = wrap(`      <h1>页面不存在</h1>
       <p class="eaxau-seo__lead">地址 <code>${escapeHtml(pathname)}</code> 没有对应的商品或页面。它可能从未存在，或者已经下架。</p>
       <p><a href="/">回商城</a></p>
@@ -374,7 +426,7 @@ ${contactHtml()}`);
 export function renderUnavailableHtml(indexHtml: string): string {
   const title = "内容暂时无法读取 - EAXAU";
   const description = "商品数据暂时读取失败，请稍后重试。";
-  const head = `    <meta name="robots" content="noindex,follow" />`;
+  const head = renderHeadTagsHtml(noindexHeadTags());
   const body = wrap(`      <h1>内容暂时无法读取</h1>
       <p class="eaxau-seo__lead">商品数据这次没能读出来。这是临时故障，不代表商品不存在或已下架；请稍后重试。</p>
       <p><a href="/">回到 EAXAU 首页</a></p>

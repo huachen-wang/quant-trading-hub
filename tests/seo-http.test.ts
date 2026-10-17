@@ -155,11 +155,11 @@ describe("没有真实数据库时的 HTTP 行为", () => {
        首页、商品页、404、503 四种出口都要带。 */
     for (const path of ["/", "/strategy/1", "/strategy/abc", "/strategy/99999999"]) {
       const got = await fetchAs(server.base, path, UA_HUMAN);
-      expect(got.headers.get("x-seo-revision"), `${path} 缺部署标记`).toBe("public-catalog-v5");
+      expect(got.headers.get("x-seo-revision"), `${path} 缺部署标记`).toBe("public-catalog-v6");
     }
     /* 标记跟着 seo-catalog 模块走：改了数据通道不升版就会在这里红 */
     const { SEO_REVISION } = await import("../server/_core/seo-catalog");
-    expect(SEO_REVISION).toBe("public-catalog-v5");
+    expect(SEO_REVISION).toBe("public-catalog-v6");
   });
 
   it("部署标记不泄露环境、路径或凭据", async () => {
@@ -189,6 +189,20 @@ describe("没有真实数据库时的 HTTP 行为", () => {
       expect(got.body).toContain("<h1>");
       expect(got.headers.get("x-robots-tag")).toBeNull();
     }
+  });
+
+  it("促销、合购栏目：读不到库时如实说临时故障，不拿 mock 或写死的演示商品充数（2026-10-18 R3 ⑧）", async () => {
+    const promo = await fetchAs(server.base, "/promo", UA_HUMAN);
+    expect(promo.status).toBe(200);
+    expect(promo.body).toContain("<h2>促销商品</h2>");
+    expect(promo.body).toContain("促销清单这次没能读出来");
+    // server/mock-data.ts 的本地样例商品不能出现在初始 HTML 里
+    expect(promo.body).not.toContain("黄金EA限时包");
+    const groupBuy = await fetchAs(server.base, "/group-buy", UA_HUMAN);
+    expect(groupBuy.status).toBe(200);
+    expect(groupBuy.body).toContain("<h2>进行中的合购</h2>");
+    expect(groupBuy.body).toContain("合购清单这次没能读出来");
+    expect(groupBuy.body).not.toContain("AI深度学习系统合购");
   });
 
   it("登录、注册、V2 预览不收录：meta + X-Robots-Tag", async () => {
@@ -236,6 +250,18 @@ describe("没有真实数据库时的 HTTP 行为", () => {
         alt: "/guides/ea-requirements-and-acceptance",
         text: "<th scope=\"col\">How to check</th>",
       },
+      "/faq": {
+        lang: "zh-CN",
+        h1: "EAXAU 常见问题",
+        alt: "/en/faq",
+        text: "<h2>买成品 EA 会包含源码吗？</h2>",
+      },
+      "/en/faq": {
+        lang: "en",
+        h1: "EAXAU frequently asked questions",
+        alt: "/faq",
+        text: "<h2>Does a compiled EA purchase include source code?</h2>",
+      },
     };
     for (const [path, want] of Object.entries(pages)) {
       const got = await fetchAs(server.base, path, UA_BOT);
@@ -256,7 +282,7 @@ describe("没有真实数据库时的 HTTP 行为", () => {
     }
   });
 
-  it("sitemap 带上四个内容页地址与 hreflang，日期是正文真实更新日期", async () => {
+  it("sitemap 带上六个内容页地址与 hreflang，日期是正文真实更新日期", async () => {
     const got = await fetchAs(server.base, "/sitemap.xml", UA_BOT);
     expect(got.status).toBe(200);
     expect(got.body).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
@@ -265,6 +291,8 @@ describe("没有真实数据库时的 HTTP 行为", () => {
       "/en/cooperation",
       "/guides/ea-requirements-and-acceptance",
       "/en/guides/ea-requirements-and-acceptance",
+      "/faq",
+      "/en/faq",
     ]) {
       expect(got.body.match(new RegExp(`<loc>https://www\\.eaxau\\.com${path.replace(/\//g, "\\/")}</loc>`, "g")), path).toHaveLength(1);
     }

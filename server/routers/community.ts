@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
+import { requirePublishedStrategy } from "./strategy-public";
 import { adminProcedure } from "./_admin";
 
 export const anonymousCommentsRouter = router({
@@ -12,7 +13,11 @@ export const anonymousCommentsRouter = router({
         offset: z.number().optional(),
       }),
     )
-    .query(({ input }) => db.getAnonymousComments(input.strategyId, input.limit, input.offset)),
+    .query(async ({ input }) => {
+      // 只给已发布商品的留言（2026-10-18）；草稿 / 归档商品和不存在的一样 NOT_FOUND。
+      await requirePublishedStrategy(input.strategyId);
+      return db.getAnonymousComments(input.strategyId, input.limit, input.offset);
+    }),
 
   listAll: adminProcedure
     .input(
@@ -31,7 +36,8 @@ export const anonymousCommentsRouter = router({
         content: z.string().min(1).max(1000),
       }),
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
+      await requirePublishedStrategy(input.strategyId);
       return db.createAnonymousComment({
         strategyId: input.strategyId,
         nickname: input.nickname || null,

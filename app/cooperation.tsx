@@ -14,6 +14,7 @@ import { ContentBlocks } from "@/components/content/content-blocks";
 import { ContentLanguageFrame, ContentTopBar } from "@/components/content/content-article-page";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
+import { listingItems, listingState } from "@/lib/listing-state";
 import { normalizeQqContacts, SUPPORT_QQ_FALLBACK } from "@/lib/support-faq";
 import { buildCommunityEntries, SUPPORT_TELEGRAM_HANDLE } from "@/shared/community-contacts";
 import { COOPERATION_ZH_PATH, contentBlocks, requireContentPage, splitHero } from "@/shared/content-pages";
@@ -42,44 +43,10 @@ const CARD_THEMES = [
   { gradient: ["#100D07", "#21190D", "#5A421A"] as const, accent: "#E7C978", glow: "rgba(231,201,120,0.12)" },
 ];
 
-// ─── 默认策略档案（后台无数据时展示） ───
-const DEFAULT_CARDS: any[] = [
-  {
-    id: -1, title: "极限黄金对冲 Pro", subtitle: "高频对冲结构 · 成本与滑点敏感",
-    description: "对冲与高频交易可能放大点差、滑点和执行风险；真实账户时长、回撤与极端行情证据待逐项核验。",
-    badge: "高频风险", badgeColor: "red", strategyType: "对冲策略", platform: "MT4",
-    observeNote: "联系获取可复核账户或报告（如有）",
-    coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/ZHsaMQOjNNmhOyDO.png", galleryImages: null,
-  },
-  {
-    id: -2, title: "一单一结（武汉小艺）", subtitle: "单笔结算结构 · 历史证据待核验",
-    description: "一次一单不等于低风险；需独立核验真实账户、时间区间、最大回撤、未平仓与入金变动，不作零爆仓承诺。",
-    badge: "待核验", badgeColor: "green", strategyType: "一次一单", platform: "MT5",
-    observeNote: "联系获取可复核账户或报告（如有）",
-    coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/UVwvYYtrcWTlJENF.png", galleryImages: null,
-  },
-  {
-    id: -3, title: "超级黄金调优 2026", subtitle: "网格策略 · 高收益目标伴随高回撤",
-    description: "网格和参数调优结果可能存在过拟合；演示、回测或短周期收益不代表真实长期表现。",
-    badge: "高风险", badgeColor: "gold", strategyType: "网格策略", platform: "MT4",
-    observeNote: "联系获取可复核账户或报告（如有）",
-    coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/LXzzcgHZcdfIghSr.png", galleryImages: null,
-  },
-  {
-    id: -4, title: "趋势刷单 · AI量化联盟筛选版", subtitle: "趋势马丁 · 极端单边风险",
-    description: "马丁加仓会在持续单边行情中快速放大保证金与爆仓风险；极端行情参数和真实账户证据待核验。",
-    badge: "马丁风险", badgeColor: "gold", strategyType: "趋势马丁", platform: "MT4",
-    observeNote: "联系获取可复核账户或报告（如有）",
-    coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/vNtkFswQtKnMDizI.png", galleryImages: null,
-  },
-  {
-    id: -5, title: "点金订单流", subtitle: "多维信号 · 执行效果待核验",
-    description: "订单流信号需结合数据源、延迟、执行与样本外结果评估；不使用‘机构级’或类似背书作为收益证明。",
-    badge: "证据待补", badgeColor: "gold", strategyType: "订单流", platform: "MT4/MT5",
-    observeNote: "联系获取可复核账户或报告（如有）",
-    coverImage: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663512759674/wjERAPAgIuvumwkn.png", galleryImages: null,
-  },
-];
+/* 2026-10-18（代码体检 R3 ⑥）：原来这里写死了五张「默认策略档案」（具体产品名、封面图），
+   后台没有数据时整组顶上，桌面端真实记录不足三条时还拿它们补位；「合作方案」也写死了三档
+   （含月费、年费、源码起价和授权、更新承诺）。
+   访客看不出哪些是演示，已全部删除：只展示后台真实记录；没有记录就不显示这一栏，读取失败就如实说。 */
 
 export default function CooperationPage() {
   const colors = useColors();
@@ -89,8 +56,8 @@ export default function CooperationPage() {
   const [showGallery, setShowGallery] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
-  const { data: backendCards, isLoading: cardsLoading } = trpc.cooperation.cards.useQuery();
-  const { data: plans } = trpc.cooperation.plans.useQuery();
+  const cardsQuery = trpc.cooperation.cards.useQuery();
+  const plansQuery = trpc.cooperation.plans.useQuery();
   const { data: contactSettings } = trpc.siteSettings.getContact.useQuery();
 
   // Telegram 客服读站点设置 contact_telegram / contact_telegram_link（接口没有 telegram 这个键），兜底 @hypermatch123。
@@ -101,10 +68,11 @@ export default function CooperationPage() {
   const qq = normalizeQqContacts(contactSettings?.contact_qq) || SUPPORT_QQ_FALLBACK;
   const wechat1 = "oooiniooo0624";
   const wechat2 = "xau6000";
-  const sourceCards = (backendCards && backendCards.length > 0) ? backendCards : DEFAULT_CARDS;
-  const cards = isDesktop && sourceCards.length < 3
-    ? [...sourceCards, ...DEFAULT_CARDS.slice(0, 3 - sourceCards.length)]
-    : sourceCards;
+  /* 只用后台真实记录，不补位、不顶替（见文件头注释）。 */
+  const cardsState = listingState<any>(cardsQuery);
+  const plansState = listingState<any>(plansQuery);
+  const cards = listingItems(cardsState);
+  const plans = listingItems(plansState);
 
   const parseGallery = (g?: string | null): string[] => {
     if (!g) return []; try { return JSON.parse(g); } catch { return []; }
@@ -147,7 +115,8 @@ export default function CooperationPage() {
           <ContentBlocks blocks={BODY_BLOCKS} lang={COOPERATION_PAGE.lang} />
         </View>
 
-        {/* ═══════════════════ 策略档案 ═══════════════════ */}
+        {/* ═══════════════════ 策略档案（后台没有记录时整栏不显示） ═══════════════════ */}
+        {cardsState.kind !== "empty" && (
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <View style={s.sectionLine} />
@@ -157,8 +126,10 @@ export default function CooperationPage() {
           </View>
 
           {/* ═══ 策略卡片 - 全新视觉设计 ═══ */}
-          {cardsLoading ? (
+          {cardsState.kind === "loading" ? (
             <View style={s.loadingWrap}><ActivityIndicator size="large" color="#A8895A" /></View>
+          ) : cardsState.kind === "error" ? (
+            <Text style={s.listingNote}>策略档案这次没能读出来。这是临时故障，请稍后刷新，或直接联系客服说明需要了解的产品。</Text>
           ) : (
           <View style={s.cardsGrid}>
             {cards.map((card: any, index: number) => {
@@ -265,8 +236,10 @@ export default function CooperationPage() {
           </View>
           )}
         </View>
+        )}
 
-        {/* ═══════════════════ 合作方案 ═══════════════════ */}
+        {/* ═══════════════════ 合作方案（后台没有记录时整栏不显示） ═══════════════════ */}
+        {plansState.kind !== "empty" && (
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <View style={s.sectionLine} />
@@ -275,12 +248,13 @@ export default function CooperationPage() {
             <Text style={s.sectionSubtitle}>从零门槛试用到源码买断 · 总有适合你的方案</Text>
           </View>
 
+          {plansState.kind === "loading" ? (
+            <View style={s.loadingWrap}><ActivityIndicator size="large" color="#A8895A" /></View>
+          ) : plansState.kind === "error" ? (
+            <Text style={s.listingNote}>合作方案这次没能读出来。这是临时故障，请稍后刷新，或直接联系客服确认合作方式与报价。</Text>
+          ) : (
           <View style={s.plansRow}>
-            {(plans && plans.length > 0 ? plans : [
-              { id: -1, title: "试用合作", badge: "低成本验证", price: "免费", priceNote: "体验", features: '["可选一款策略做模拟或小额验证","先确认数据口径与风险上限","不以截图作为到账或收益证明","券商账户只授予约定交易权"]' },
-              { id: -2, title: "策略授权", badge: "推荐", price: "¥1,000/月", priceNote: "¥2,500/年", features: '["有效期内无限开窗口/授权","永久免费更新迭代","不需要分成"]' },
-              { id: -3, title: "源码授权合作", badge: null, price: "¥9,800起", priceNote: null, features: '["仅交付来源可核验且拥有商业授权的源码","技术支持周期以签署合同为准","平台、账户与二次开发授权范围以合同为准"]' },
-            ]).map((plan: any, idx: number) => {
+            {plans.map((plan: any, idx: number) => {
               const isMain = idx === 1 || plan.badge === "推荐";
               return (
                 <View key={plan.id} style={[s.planCard, isMain && s.planCardMain]}
@@ -310,7 +284,9 @@ export default function CooperationPage() {
               );
             })}
           </View>
+          )}
         </View>
+        )}
 
         {/* 底部免责 */}
         <View style={s.footer}>
@@ -462,6 +438,7 @@ const COVER_SIZE = isDesktop ? 136 : 130;
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#0A1628" },
   loadingWrap: { minHeight: 160, justifyContent: "center", alignItems: "center" },
+  listingNote: { color: "#94A3B8", fontSize: 14, lineHeight: 22, textAlign: "center", paddingVertical: 24, paddingHorizontal: 16 },
   backBtn: {
     position: "absolute",
     top: 16,

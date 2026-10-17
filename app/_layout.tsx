@@ -21,6 +21,7 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { CommunityFab } from "@/components/community/community-entry-points";
+import { RouteHeadHandoff } from "@/components/page-head";
 import {
   initManusRuntime,
   subscribeSafeAreaInsets,
@@ -109,6 +110,8 @@ export default function RootLayout() {
           </Stack>
           {/* 手机端（窄屏 Web）右下角「交流群」悬浮按钮；后台、登录、结账页内部自行隐藏 */}
           <CommunityFab />
+          {/* 站内跳转离开首屏地址时，移除服务端写的 canonical / OG / JSON-LD / robots，由当前路由接管（R3 ⑦） */}
+          {Platform.OS === "web" ? <RouteHeadHandoff /> : null}
           {Platform.OS !== "web" ? <StatusBar style="auto" /> : null}
         </QueryClientProvider>
       </trpc.Provider>

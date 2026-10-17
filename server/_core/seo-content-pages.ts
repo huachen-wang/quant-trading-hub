@@ -1,5 +1,4 @@
-import { safeJsonLd } from "./seo-json";
-import { SEO_CONTACTS, SITE_ORIGIN, escapeHtml, insertBody, replaceHead, wrap } from "./seo-render";
+import { SEO_CONTACTS, SITE_ORIGIN, escapeHtml, insertBody, renderHeadTagsHtml, replaceHead, wrap } from "./seo-render";
 import {
   CONTENT_PAGES,
   contentBlocks,
@@ -10,6 +9,10 @@ import {
   type ContentPage,
   type InlineNode,
 } from "../../shared/content-pages";
+import { contentJsonLd, contentPageHeadTags } from "../../shared/seo-head";
+
+/* 结构化数据与头部标签的生成搬到 shared/seo-head.ts（前端 <Head> 用同一份，2026-10-18 R3 ⑦）。 */
+export { contentJsonLd };
 
 /**
  * 中英双语内容页（合作页、需求与验收指南）的初始 HTML（2026-10-18）。
@@ -106,26 +109,6 @@ function contactsHtml(lang: ContentLang): string {
       </ul>`;
 }
 
-/** 只写页面上真实存在的信息：类型、标题、描述、语言、地址、发布方。不写日期、作者、价格、评分。 */
-export function contentJsonLd(page: ContentPage): Record<string, unknown> {
-  const url = `${SITE_ORIGIN}${page.path}`;
-  const site = { "@type": "WebSite", name: "EAXAU", url: `${SITE_ORIGIN}/` };
-  const publisher = { "@type": "Organization", name: "EAXAU", url: `${SITE_ORIGIN}/` };
-  const base = {
-    "@context": "https://schema.org",
-    "@type": page.schemaType,
-    description: page.description,
-    url,
-    inLanguage: page.lang,
-    isPartOf: site,
-    publisher,
-  };
-  if (page.schemaType === "Article") {
-    return { ...base, headline: contentH1(page), mainEntityOfPage: url };
-  }
-  return { ...base, name: contentH1(page) };
-}
-
 /** 把 <html> 的 lang 改成本页语言（没有就加上）。 */
 export function setHtmlLang(html: string, lang: string): string {
   return html.replace(/<html(\s[^>]*)?>/i, (_tag, attrs: string | undefined) => {
@@ -200,31 +183,9 @@ const CONTENT_STYLE = `<style data-eaxau-content="v1">
       .eaxau-seo blockquote p { margin: 0; }
     </style>`;
 
-const OG_LOCALE: Record<ContentLang, string> = { "zh-CN": "zh_CN", en: "en_US" };
-
 export function renderContentPageHtml(indexHtml: string, page: ContentPage): string {
-  const url = `${SITE_ORIGIN}${page.path}`;
   const other = otherLanguage(page);
-  const alternates = [
-    ...(Object.entries(page.alternates) as [ContentLang, string][]).map(
-      ([lang, path]) => `    <link rel="alternate" hreflang="${lang}" href="${SITE_ORIGIN}${path}" />`,
-    ),
-    `    <link rel="alternate" hreflang="x-default" href="${SITE_ORIGIN}${page.alternates["zh-CN"]}" />`,
-  ].join("\n");
-
-  const head = `    <link rel="canonical" href="${url}" />
-${alternates}
-    <meta name="robots" content="index,follow" />
-    <meta property="og:type" content="${page.schemaType === "Article" ? "article" : "website"}" />
-    <meta property="og:locale" content="${OG_LOCALE[page.lang]}" />
-    <meta property="og:locale:alternate" content="${OG_LOCALE[other.lang]}" />
-    <meta property="og:title" content="${escapeHtml(page.title)}" />
-    <meta property="og:description" content="${escapeHtml(page.description)}" />
-    <meta property="og:url" content="${url}" />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="${escapeHtml(page.title)}" />
-    <meta name="twitter:description" content="${escapeHtml(page.description)}" />
-    <script type="application/ld+json">${safeJsonLd(contentJsonLd(page))}</script>
+  const head = `${renderHeadTagsHtml(contentPageHeadTags(page))}
     ${CONTENT_STYLE}`;
 
   const crumbs = page.breadcrumb

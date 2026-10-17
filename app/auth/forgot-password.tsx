@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { PageHead } from "@/components/page-head";
+import { noindexHeadTags } from "@/shared/seo-head";
 import { noindexPageTitle } from "@/shared/seo-meta";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -90,7 +91,7 @@ export default function ForgotPasswordScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <PageHead title={noindexPageTitle("/auth/forgot-password") ?? "EAXAU"} />
+      <PageHead title={noindexPageTitle("/auth/forgot-password") ?? "EAXAU"} tags={noindexHeadTags()} />
       <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         <UserAuthCard
           title="找回密码"

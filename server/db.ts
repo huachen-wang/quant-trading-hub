@@ -338,6 +338,22 @@ export async function getPublishedStrategyById(id: number) {
   return result[0] || null;
 }
 
+/**
+ * 商品是否已发布（2026-10-18）。公开的回测数据、交易记录、评论 / 留言接口按商品 id 查，
+ * 原来不看商品状态，草稿 / 已归档商品的这些数据凭 id 就能匿名读到。只查 id 一列。
+ */
+export async function isStrategyPublished(id: number): Promise<boolean> {
+  if (!Number.isInteger(id) || id <= 0) return false;
+  const db = await getDb();
+  if (!db) {
+    const mock = getMockStrategyById(id);
+    return !!mock && mock.status === "published";
+  }
+
+  const rows = await db.select({ id: strategies.id }).from(strategies).where(publishedStrategyByIdWhere(id)).limit(1);
+  return rows.length > 0;
+}
+
 export async function incrementStrategyViewCount(id: number) {
   const db = await getDb();
   if (!db) return;
@@ -2118,7 +2134,7 @@ export async function recordDownload(userId: number, strategyId: number) {
 
 export async function updateUserProfile(
   userId: number,
-  data: { name?: string; avatar?: string; bio?: string }
+  data: { name?: string; avatar?: string | null; bio?: string | null }
 ) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");

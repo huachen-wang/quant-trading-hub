@@ -64,12 +64,16 @@ function buildUserResponse(
       },
 ) {
   // 先过统一的用户白名单（server/_core/user-response.ts），再挑这几个 REST 接口一直返回的字段。
+  // 2026-10-18：加上 avatar、bio——前端 getMe() 的类型和「编辑资料」页一直按这两个字段回填，
+  // 原来没返回，保存后表单会被清空。两者都在白名单里。
   const safe = toUserResponse(user as any);
   return {
     id: safe?.id ?? null,
     openId: safe?.openId ?? null,
     name: safe?.name ?? null,
     email: safe?.email ?? null,
+    avatar: safe?.avatar ?? null,
+    bio: safe?.bio ?? null,
     loginMethod: safe?.loginMethod ?? null,
     lastSignedIn: (safe?.lastSignedIn ?? new Date()).toISOString(),
   };
