@@ -6,7 +6,11 @@
  * 只写页面上真实存在的内容，不写收益、胜率等数字。
  */
 
+import { COOPERATION_ZH_PATH, contentH1, requireContentPage } from "./content-pages";
+
 export const SITE_ORIGIN = "https://www.eaxau.com";
+
+const COOPERATION_PAGE = requireContentPage(COOPERATION_ZH_PATH);
 
 export type PageMeta = {
   title: string;
@@ -29,11 +33,11 @@ export const SECTION_PAGE_META: Readonly<Record<string, PageMeta>> = {
       "按平台、热度和上架时间浏览 EAXAU 全部 MT4 / MT5 EA、指标与交易工具；每个商品页写明运行平台、交易品种、常用周期与授权交付方式。",
     h1: "策略广场：MT4 / MT5 EA、指标与工具目录",
   },
+  /* 2026-10-18 C03：合作页正文、标题、描述、H1 统一来自 shared/content-pages（中英双语内容页）。 */
   "/cooperation": {
-    title: "工作室合作与授权 | EAXAU",
-    description:
-      "EAXAU 工作室合作与授权：策略筛选、技术适配与授权核验；正式合作以授权证明、可复核证据与签署合同为准。",
-    h1: "工作室合作与授权",
+    title: COOPERATION_PAGE.title,
+    description: COOPERATION_PAGE.description,
+    h1: contentH1(COOPERATION_PAGE),
   },
   "/promo": {
     title: "限时促销 | EAXAU",

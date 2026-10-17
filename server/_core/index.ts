@@ -31,6 +31,8 @@ import {
   type StrategyLookup,
 } from "./seo-render";
 import { renderLlmsTxt, renderRobotsTxt } from "./site-text";
+import { contentSitemapEntries, renderContentPageHtml } from "./seo-content-pages";
+import { findContentPage } from "../../shared/content-pages";
 import { isKnownSpaRoute } from "./spa-routes";
 import { SECTION_PAGE_META, noindexPageTitle } from "../../shared/seo-meta";
 
@@ -200,7 +202,7 @@ async function startServer() {
       const now = new Date().toISOString().split('T')[0];
 
       let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://www.eaxau.com/</loc>
     <lastmod>${now}</lastmod>
@@ -208,9 +210,9 @@ async function startServer() {
     <priority>1.0</priority>
   </url>`;
 
-      // 栏目页（与 shared/seo-meta.ts 的可收录页面一致）
+      // 栏目页（与 shared/seo-meta.ts 的可收录页面一致）；中英内容页单独写（真实更新日期 + hreflang）
       for (const path of Object.keys(SECTION_PAGE_META)) {
-        if (path === '/') continue;
+        if (path === '/' || findContentPage(path)) continue;
         xml += `
   <url>
     <loc>https://www.eaxau.com${path}</loc>
@@ -219,6 +221,9 @@ async function startServer() {
     <priority>0.7</priority>
   </url>`;
       }
+
+      // 2026-10-18：合作页、需求与验收指南（中英各一份）
+      xml += contentSitemapEntries();
 
       if (strategies && strategies.length > 0) {
         for (const s of strategies) {
@@ -382,6 +387,15 @@ async function startServer() {
 
           /* 栏目页：自己的 title / description / canonical / H1；/market 带全部已发布商品清单。 */
           const sectionPath = req.path.length > 1 ? req.path.replace(/\/+$/, '') : req.path;
+
+          /* 中英双语内容页（合作页、需求与验收指南，2026-10-18）：完整正文、本页 lang、
+             自指 canonical + hreflang；不查库，正文来自 shared/content-pages。 */
+          const contentPage = findContentPage(sectionPath);
+          if (contentPage) {
+            res.header('Content-Type', 'text/html; charset=utf-8');
+            return res.status(200).send(renderContentPageHtml(cachedIndexHtml, contentPage));
+          }
+
           if (SECTION_PAGE_META[sectionPath] && sectionPath !== '/') {
             const lookup = sectionPath === '/market' ? await seoPublishedList(1000) : undefined;
             const html = renderSectionHtml(cachedIndexHtml, sectionPath, lookup);

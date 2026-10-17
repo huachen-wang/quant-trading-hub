@@ -52,6 +52,10 @@ export const STATIC_SPA_ROUTES: readonly string[] = [
   // 其它页面
   "/cooperation",
   "/dev/theme-lab",
+  // 中英双语内容页（2026-10-18，正文见 shared/content-pages）
+  "/en/cooperation",
+  "/en/guides/ea-requirements-and-acceptance",
+  "/guides/ea-requirements-and-acceptance",
   "/group-buy/create",
   "/oauth/callback",
   "/profile/edit",

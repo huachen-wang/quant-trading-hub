@@ -62,9 +62,27 @@ const MAIN_PAGES: Array<{ path: string; title: string; description: string }> = 
   },
   {
     path: "/cooperation",
-    title: "合作授权 / Cooperation",
+    title: "工作室合作与授权 / Studio cooperation",
     description:
-      "工作室合作与授权说明；正式合作以授权证明、可复核证据与签署合同为准。 Studio cooperation and licensing; formal cooperation depends on licence proof, verifiable evidence and a signed contract.",
+      "核对 EA 来源与许可，明确成品、源码及定制项目的交付物、使用范围、验收和支持；正式合作以可核验的授权依据、书面范围和签署文件为准。 Confirm the source and licence, and define deliverables, permitted use, acceptance and support for compiled, source-code or custom work.",
+  },
+  {
+    path: "/en/cooperation",
+    title: "Studio cooperation (English)",
+    description:
+      "English version of the studio cooperation page: licensing scope, source-code and custom delivery, written quote and acceptance.",
+  },
+  {
+    path: "/guides/ea-requirements-and-acceptance",
+    title: "EA 需求与验收指南 / EA requirements and acceptance guide",
+    description:
+      "可复制的需求模板、示例表与交付清单；示例只是写法示范，不是已交付项目或报价。 A copyable brief template, an illustrative example and a delivery checklist; the example is not a delivered project or a quote.",
+  },
+  {
+    path: "/en/guides/ea-requirements-and-acceptance",
+    title: "EA requirements and acceptance guide (English)",
+    description:
+      "English version of the guide: environment, features, rights, deliverables and acceptance checks for EA development or source licensing.",
   },
   {
     path: "/promo",

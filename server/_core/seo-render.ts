@@ -152,7 +152,7 @@ function contactHtml(): string {
       <p class="eaxau-seo__note">咨询时请附上商品名称或商品页地址。本页不展示收益、回撤或胜率数字；历史数据不代表未来结果。</p>`;
 }
 
-function wrap(inner: string): string {
+export function wrap(inner: string): string {
   return `\n  <div id="${SEO_BLOCK_ID}" class="eaxau-seo">\n    <main class="eaxau-seo__main">\n${inner}\n    </main>\n  </div>\n`;
 }
 
@@ -161,7 +161,7 @@ function wrap(inner: string): string {
  * 页面上不会出现两条 description。title 由 <Head> 直接改 document.title。
  * canonical、robots、og 不带 data-rh，JS 渲染后原样保留。
  */
-function replaceHead(indexHtml: string, title: string, description: string, extra: string): string {
+export function replaceHead(indexHtml: string, title: string, description: string, extra: string): string {
   const descriptionTag = `<meta name="description" content="${escapeHtml(description)}" data-rh="true" />`;
   let html = indexHtml.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(title)}</title>`);
   if (/<meta name="description" content="[^"]*"[^>]*>/.test(html)) {
@@ -172,7 +172,7 @@ function replaceHead(indexHtml: string, title: string, description: string, extr
   return html.replace("</head>", `${extra}\n</head>`);
 }
 
-function insertBody(indexHtml: string, block: string): string {
+export function insertBody(indexHtml: string, block: string): string {
   if (indexHtml.includes("</body>")) return indexHtml.replace("</body>", `${block}</body>`);
   return indexHtml + block;
 }
