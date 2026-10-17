@@ -64,6 +64,9 @@ describe("isKnownSpaRoute：只有真实页面给 200", () => {
     "/v2-preview/accounts/12",
     "/v2-preview/strategies/gold-momentum",
     "/v2-preview/ea-library",
+    "/en/cooperation",
+    "/guides/ea-requirements-and-acceptance",
+    "/en/guides/ea-requirements-and-acceptance",
   ])("%s 是真实页面", (path) => {
     expect(isKnownSpaRoute(path)).toBe(true);
   });
@@ -83,6 +86,10 @@ describe("isKnownSpaRoute：只有真实页面给 200", () => {
     "/(tabs)",
     "/_sitemap",
     "/+not-found",
+    "/en",
+    "/guides",
+    "/en/guides",
+    "/en/market",
   ])("%s 不存在 → 404", (path) => {
     expect(isKnownSpaRoute(path)).toBe(false);
   });

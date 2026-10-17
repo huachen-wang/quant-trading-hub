@@ -155,11 +155,11 @@ describe("没有真实数据库时的 HTTP 行为", () => {
        首页、商品页、404、503 四种出口都要带。 */
     for (const path of ["/", "/strategy/1", "/strategy/abc", "/strategy/99999999"]) {
       const got = await fetchAs(server.base, path, UA_HUMAN);
-      expect(got.headers.get("x-seo-revision"), `${path} 缺部署标记`).toBe("public-catalog-v4");
+      expect(got.headers.get("x-seo-revision"), `${path} 缺部署标记`).toBe("public-catalog-v5");
     }
     /* 标记跟着 seo-catalog 模块走：改了数据通道不升版就会在这里红 */
     const { SEO_REVISION } = await import("../server/_core/seo-catalog");
-    expect(SEO_REVISION).toBe("public-catalog-v4");
+    expect(SEO_REVISION).toBe("public-catalog-v5");
   });
 
   it("部署标记不泄露环境、路径或凭据", async () => {
@@ -174,7 +174,7 @@ describe("没有真实数据库时的 HTTP 行为", () => {
   it("栏目页各自带 title / description / canonical，不再是通用标题（2026-10-17）", async () => {
     const expected: Record<string, string> = {
       "/market": "策略广场 · MT4 / MT5 EA、指标与工具目录 | EAXAU",
-      "/cooperation": "工作室合作与授权 | EAXAU",
+      "/cooperation": "EA 工作室合作｜授权范围、源码与定制交付｜EAXAU",
       "/promo": "限时促销 | EAXAU",
       "/group-buy": "合购撮合台 | EAXAU",
       "/subscribe": "订阅 · 新策略上架通知 | EAXAU",
@@ -208,6 +208,68 @@ describe("没有真实数据库时的 HTTP 行为", () => {
       expect(got.body).toContain(">回商城</a>");
       expect(got.body).toContain('<meta name="robots" content="noindex,follow" />');
     }
+  });
+
+  it("中英内容页（合作页、需求与验收指南）：完整正文、本页 lang、自指 canonical 与 hreflang（2026-10-18）", async () => {
+    const pages: Record<string, { lang: string; h1: string; alt: string; text: string }> = {
+      "/cooperation": {
+        lang: "zh-CN",
+        h1: "EA 工作室合作：先把授权和交付说清楚",
+        alt: "/en/cooperation",
+        text: "<th scope=\"col\">开始前要说清楚</th>",
+      },
+      "/en/cooperation": {
+        lang: "en",
+        h1: "EA studio cooperation: define the license and delivery",
+        alt: "/cooperation",
+        text: "<th scope=\"col\">What to clarify first</th>",
+      },
+      "/guides/ea-requirements-and-acceptance": {
+        lang: "zh-CN",
+        h1: "EA 定制与源码授权：把需求写成可以验收的清单",
+        alt: "/en/guides/ea-requirements-and-acceptance",
+        text: "<th scope=\"col\">检查方法</th>",
+      },
+      "/en/guides/ea-requirements-and-acceptance": {
+        lang: "en",
+        h1: "EA development and source licensing: write a checkable brief",
+        alt: "/guides/ea-requirements-and-acceptance",
+        text: "<th scope=\"col\">How to check</th>",
+      },
+    };
+    for (const [path, want] of Object.entries(pages)) {
+      const got = await fetchAs(server.base, path, UA_BOT);
+      expect(got.status, path).toBe(200);
+      expect(got.body).toMatch(new RegExp(`<html lang="${want.lang}"`));
+      expect(got.body).toContain(`<h1>${want.h1}</h1>`);
+      expect(got.body).toContain(want.text);
+      expect(got.body).toContain(`<link rel="canonical" href="https://www.eaxau.com${path}" />`);
+      expect(got.body).toContain(`href="https://www.eaxau.com${want.alt}"`);
+      expect(got.body).toContain('hreflang="x-default"');
+      expect(got.body.match(/rel="canonical"/g)).toHaveLength(1);
+      expect(got.body.match(/<meta name="description"/g)).toHaveLength(1);
+      expect(got.headers.get("x-robots-tag")).toBeNull();
+      expect(got.body).not.toContain("商品列表");
+      expect(got.body).not.toContain('"@type":"Product"');
+      /* 普通访客和爬虫同一份字节 */
+      expect((await fetchAs(server.base, path, UA_HUMAN)).body).toBe(got.body);
+    }
+  });
+
+  it("sitemap 带上四个内容页地址与 hreflang，日期是正文真实更新日期", async () => {
+    const got = await fetchAs(server.base, "/sitemap.xml", UA_BOT);
+    expect(got.status).toBe(200);
+    expect(got.body).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
+    for (const path of [
+      "/cooperation",
+      "/en/cooperation",
+      "/guides/ea-requirements-and-acceptance",
+      "/en/guides/ea-requirements-and-acceptance",
+    ]) {
+      expect(got.body.match(new RegExp(`<loc>https://www\\.eaxau\\.com${path.replace(/\//g, "\\/")}</loc>`, "g")), path).toHaveLength(1);
+    }
+    expect(got.body).toContain('<xhtml:link rel="alternate" hreflang="en" href="https://www.eaxau.com/en/cooperation" />');
+    expect(got.body).toContain("<lastmod>2026-10-18</lastmod>");
   });
 
   it("静态资源与 API 前缀不受 SEO 渲染影响，购买/下载路由仍归应用", async () => {

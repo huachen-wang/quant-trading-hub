@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import {
   View, Text, ScrollView, Image, TouchableOpacity, StyleSheet,
-  Dimensions, Modal, Linking, ActivityIndicator, Animated, Platform,
+  Dimensions, Modal, Linking, ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -10,10 +10,21 @@ import { ScreenContainer } from "@/components/screen-container";
 import { PcTopNav } from "@/components/pc-top-nav";
 import { SectionHead } from "@/components/page-head";
 import { CommunityFooter } from "@/components/community/community-entry-points";
+import { ContentBlocks } from "@/components/content/content-blocks";
+import { ContentLanguageFrame, ContentTopBar } from "@/components/content/content-article-page";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { normalizeQqContacts, SUPPORT_QQ_FALLBACK } from "@/lib/support-faq";
 import { buildCommunityEntries, SUPPORT_TELEGRAM_HANDLE } from "@/shared/community-contacts";
+import { COOPERATION_ZH_PATH, contentBlocks, requireContentPage, splitHero } from "@/shared/content-pages";
+
+/**
+ * 2026-10-18 C03：首屏和正文换成「EA 工作室合作：先把授权和交付说清楚」（shared/content-pages，
+ * 与服务端预渲染同一份）。原来写死的「工作室扶持计划」「专属EA定制服务」和底部 CTA 由正文取代；
+ * 后台维护的「精选策略档案」「合作方案」照旧保留在正文之后。英文版在 /en/cooperation。
+ */
+const COOPERATION_PAGE = requireContentPage(COOPERATION_ZH_PATH);
+const { hero: HERO_BLOCKS, body: BODY_BLOCKS } = splitHero(contentBlocks(COOPERATION_PAGE));
 
 const { width: SW } = Dimensions.get("window");
 const isDesktop = SW >= 1024;
@@ -78,15 +89,6 @@ export default function CooperationPage() {
   const [showGallery, setShowGallery] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
 
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: Platform.OS !== "web" }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: Platform.OS !== "web" }),
-    ]).start();
-  }, []);
-
   const { data: backendCards, isLoading: cardsLoading } = trpc.cooperation.cards.useQuery();
   const { data: plans } = trpc.cooperation.plans.useQuery();
   const { data: contactSettings } = trpc.siteSettings.getContact.useQuery();
@@ -116,59 +118,34 @@ export default function CooperationPage() {
     return CARD_THEMES[idx % CARD_THEMES.length];
   };
 
-  if (cardsLoading) {
-    return <ScreenContainer><View style={s.loadingWrap}><ActivityIndicator size="large" color="#A8895A" /></View></ScreenContainer>;
-  }
-
   return (
     <ScreenContainer>
       <SectionHead path="/cooperation" />
       <PcTopNav />
+      <ContentLanguageFrame page={COOPERATION_PAGE}>
       <ScrollView style={s.page} showsVerticalScrollIndicator={false}>
         {/* 返回按钮 */}
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
-        {/* ═══════════════════ HERO ═══════════════════ */}
+        {/* ═══════════════════ HERO（C03 首屏） ═══════════════════ */}
         <LinearGradient colors={["#0A0E1A", "#111827", "#0A0E1A"]} style={s.hero}>
-          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], alignItems: "center" }}>
+          <View style={s.heroInner}>
+            <ContentTopBar page={COOPERATION_PAGE} align="center" />
             <View style={s.heroAccent} />
             <View style={s.heroBadge}>
               <View style={s.liveDot} />
               <Text style={s.heroBadgeText}>AI量化联盟 · 策略合作</Text>
             </View>
-            <Text style={s.heroTitle}>工作室深度合作</Text>
-            <Text style={s.heroTagline}>策略筛选 · 技术适配 · 风险披露</Text>
-            <Text style={s.heroDesc}>
-              展示可选 EA 与技术服务，不作绝对收益或不爆仓承诺{"\n"}
-              源码来源、商业授权、历史数据与真实账户需逐项核验{"\n"}
-              正式合作以授权证明、可复核证据与签署合同为准
-            </Text>
-
-            {/* 核心数据 */}
-            <View style={s.statsRow}>
-              {[
-                { num: "6", label: "当前可选策略" },
-                { num: "1–6", label: "单笔方案选配" },
-                { num: "100%", label: "权重合计" },
-                { num: "NONE", label: "提现权" },
-              ].map((item, i) => (
-                <View key={i} style={s.statItem}>
-                  <Text style={s.statNum}>{item.num}</Text>
-                  <Text style={s.statLabel}>{item.label}</Text>
-                </View>
-              ))}
-            </View>
-
-            <TouchableOpacity style={s.heroCTA} onPress={() => setShowContact(true)}>
-              <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.heroCTAInner}>
-                <Ionicons name="chatbubble-ellipses" size={18} color="#0A0E1A" />
-                <Text style={s.heroCTAText}>立即咨询合作</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
+            <ContentBlocks blocks={HERO_BLOCKS} lang={COOPERATION_PAGE.lang} variant="hero" />
+          </View>
         </LinearGradient>
+
+        {/* ═══════════════════ 正文（C03） ═══════════════════ */}
+        <View style={s.article}>
+          <ContentBlocks blocks={BODY_BLOCKS} lang={COOPERATION_PAGE.lang} />
+        </View>
 
         {/* ═══════════════════ 策略档案 ═══════════════════ */}
         <View style={s.section}>
@@ -180,6 +157,9 @@ export default function CooperationPage() {
           </View>
 
           {/* ═══ 策略卡片 - 全新视觉设计 ═══ */}
+          {cardsLoading ? (
+            <View style={s.loadingWrap}><ActivityIndicator size="large" color="#A8895A" /></View>
+          ) : (
           <View style={s.cardsGrid}>
             {cards.map((card: any, index: number) => {
               const theme = getTheme(index);
@@ -283,83 +263,7 @@ export default function CooperationPage() {
               );
             })}
           </View>
-        </View>
-
-        {/* ═══════════════════ 工作室扶持 ═══════════════════ */}
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <View style={s.sectionLine} />
-            <Text style={s.sectionLabel}>STUDIO SUPPORT</Text>
-            <Text style={s.sectionTitle}>工作室扶持计划</Text>
-            <Text style={s.sectionSubtitle}>从策略选型到运营落地 · 一站式深度扶持</Text>
-          </View>
-
-          <View style={s.supportGrid}>
-            {[
-              { icon: "diamond", title: "策略选型", desc: "根据资金量、风险偏好、客户类型，精准推荐最适合的策略组合", color: "#D8BC83" },
-              { icon: "construct", title: "深度调优", desc: "针对合作平台的点差、杠杆、延迟进行专属参数优化", color: "#3B82F6" },
-              { icon: "analytics", title: "证据核验", desc: "如有可复核账户或报告则标明时间区间与数据口径；无证据时明确标记待核验", color: "#10B981" },
-              { icon: "headset", title: "1对1部署协助", desc: "技术响应时段、服务周期与运维边界以签署合同为准", color: "#EF4444" },
-              { icon: "cash", title: "报价可对比", desc: "对比版本、授权、交付清单与服务周期，不作全网最低价承诺", color: "#C9A96E" },
-              { icon: "document-text", title: "授权范围明示", desc: "窗口、账户、终端与客户数均以权利人授权及合同为准", color: "#06B6D4" },
-            ].map((item, i) => (
-              <View key={i} style={[s.supportCard]}
-            >
-                <View style={[s.supportIconWrap, { backgroundColor: `${item.color}15` }]}>
-                  <Ionicons name={item.icon as any} size={22} color={item.color} />
-                </View>
-                <Text style={s.supportTitle}>{item.title}</Text>
-                <Text style={s.supportDesc}>{item.desc}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* ═══════════════════ 专属EA定制服务 ═══════════════════ */}
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <View style={s.sectionLine} />
-            <Text style={s.sectionLabel}>CUSTOM EA SERVICE</Text>
-            <Text style={s.sectionTitle}>专属EA定制服务</Text>
-            <Text style={s.sectionSubtitle}>你的策略，你的品牌 · 源码、二次开发与品牌权利以书面授权为准</Text>
-          </View>
-
-          <View style={[s.customEABlock]}>
-            <LinearGradient colors={["#1E293B", "#0A1628"]} style={s.customEAInner}>
-              <View style={s.customEABadge}>
-                <Ionicons name="code-slash" size={16} color="#A8895A" />
-                <Text style={s.customEABadgeText}>核心服务</Text>
-              </View>
-              <Text style={s.customEATitle}>为工作室量身打造专属EA</Text>
-              <Text style={s.customEADesc}>
-                提供从策略开发到品牌适配的定制服务。仅在权利人授权范围内处理源码、名称、界面和二次开发。
-              </Text>
-
-              <View style={s.customEAFeatures}>
-                {[
-                  { icon: "brush", text: "自定义策略名称，打造工作室专属品牌形象" },
-                  { icon: "options", text: "专属调优模式，根据平台环境深度优化参数" },
-                  { icon: "document-text", text: "账户、终端与客户授权范围在合同中明示" },
-                  { icon: "shield-checkmark", text: "品牌与联系方式替换需符合原权利人授权" },
-                  { icon: "rocket", text: "从来源/授权核验到最终交付保留记录" },
-                ].map((f, i) => (
-                  <View key={i} style={s.customEAFeatureRow}>
-                    <View style={s.customEAFeatureIcon}>
-                      <Ionicons name={f.icon as any} size={16} color="#A8895A" />
-                    </View>
-                    <Text style={s.customEAFeatureText}>{f.text}</Text>
-                  </View>
-                ))}
-              </View>
-
-              <TouchableOpacity style={s.customEACTA} onPress={() => setShowContact(true)}>
-                <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.customEACTAInner}>
-                  <Ionicons name="chatbubbles" size={18} color="#0A0E1A" />
-                  <Text style={s.customEACTAText}>咨询定制方案</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </LinearGradient>
-          </View>
+          )}
         </View>
 
         {/* ═══════════════════ 合作方案 ═══════════════════ */}
@@ -408,20 +312,6 @@ export default function CooperationPage() {
           </View>
         </View>
 
-        {/* ═══════════════════ 底部CTA ═══════════════════ */}
-        <View style={s.bottomCTA}>
-          <LinearGradient colors={["#1E293B", "#0A1628"]} style={s.bottomCTAInner}>
-            <Text style={s.bottomCTATitle}>准备好开始合作了吗？</Text>
-            <Text style={s.bottomCTADesc}>私聊备注「策略名称」获取观摩账户 & 专属报价</Text>
-            <TouchableOpacity style={s.bottomCTABtnWrap} onPress={() => setShowContact(true)}>
-              <LinearGradient colors={["#A8895A", "#C9A96E"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.bottomCTABtnInner}>
-                <Ionicons name="chatbubbles" size={20} color="#0A0E1A" />
-                <Text style={s.bottomCTABtnText}>立即联系</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </LinearGradient>
-        </View>
-
         {/* 底部免责 */}
         <View style={s.footer}>
           <View style={s.footerBrand}><View style={s.liveDot} /><Text style={s.footerBrandText}>AI量化联盟</Text></View>
@@ -430,6 +320,7 @@ export default function CooperationPage() {
         </View>
         <CommunityFooter />
       </ScrollView>
+      </ContentLanguageFrame>
 
       {/* ═══════════════════ 策略详情弹窗 ═══════════════════ */}
       {selectedCard && <Modal visible={!!selectedCard} animationType="slide" transparent>
@@ -570,7 +461,7 @@ const COVER_SIZE = isDesktop ? 136 : 130;
 
 const s = StyleSheet.create({
   page: { flex: 1, backgroundColor: "#0A1628" },
-  loadingWrap: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#0A1628" },
+  loadingWrap: { minHeight: 160, justifyContent: "center", alignItems: "center" },
   backBtn: {
     position: "absolute",
     top: 16,
@@ -604,16 +495,17 @@ const s = StyleSheet.create({
   heroBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: isDesktop ? 5 : 20, marginBottom: isDesktop ? 12 : 20, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#A8895A", marginRight: 8 },
   heroBadgeText: { color: "#A8895A", fontSize: 12, fontWeight: "700", letterSpacing: 0 },
-  heroTitle: { color: "#FFFFFF", fontSize: isDesktop ? 31 : 32, fontWeight: "900", marginBottom: 7, textAlign: "center", letterSpacing: 0 },
-  heroTagline: { color: "#A8895A", fontSize: 13, fontWeight: "700", marginBottom: isDesktop ? 12 : 16, letterSpacing: 0 },
-  heroDesc: { color: "#F1F5F9", fontSize: 13, lineHeight: 20, textAlign: "center", marginBottom: isDesktop ? 14 : 28 },
-  statsRow: { flexDirection: "row", gap: 0, marginBottom: isDesktop ? 14 : 28, width: "100%", maxWidth: isDesktop ? 520 : 500 },
-  statItem: { flex: 1, alignItems: "center", borderRightWidth: 1, borderRightColor: "#1E293B" },
-  statNum: { color: "#FFFFFF", fontSize: isDesktop ? 20 : 22, fontWeight: "900", marginBottom: 2 },
-  statLabel: { color: "#F1F5F9", fontSize: 11 },
-  heroCTA: { borderRadius: 7, overflow: "hidden" },
-  heroCTAInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 24, paddingVertical: 12 },
-  heroCTAText: { color: "#0A0E1A", fontSize: 15, fontWeight: "800" },
+  heroInner: { width: "100%", maxWidth: 860, alignItems: "center" },
+
+  // C03 正文
+  article: {
+    width: "100%",
+    maxWidth: 860,
+    alignSelf: "center",
+    paddingHorizontal: isDesktop ? 0 : 16,
+    paddingTop: 18,
+    paddingBottom: 12,
+  },
 
   // Section
   section: {
@@ -819,13 +711,6 @@ const s = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // Support Grid
-  supportGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginBottom: 16 },
-  supportCard: { width: isDesktop ? "31%" : "47%", flexGrow: 1, backgroundColor: "#1E293B", borderRadius: 8, padding: 16, borderWidth: 1, borderColor: "rgba(148,163,184,0.10)" },
-  supportIconWrap: { width: 40, height: 40, borderRadius: 8, justifyContent: "center", alignItems: "center", marginBottom: 10 },
-  supportTitle: { color: "#FFFFFF", fontSize: 15, fontWeight: "800", marginBottom: 6 },
-  supportDesc: { color: "#F1F5F9", fontSize: 12, lineHeight: 18 },
-
   // Plans
   plansRow: { flexDirection: isDesktop ? "row" : "column", gap: 12, marginBottom: 20 },
   planCard: { flex: isDesktop ? 1 : undefined, backgroundColor: "#1E293B", borderRadius: 8, padding: isDesktop ? 18 : 24, borderWidth: 1, borderColor: "rgba(148,163,184,0.12)" },
@@ -843,20 +728,6 @@ const s = StyleSheet.create({
   planCTA: { marginTop: 16, backgroundColor: "#1E293B", borderRadius: 10, paddingVertical: 12, alignItems: "center" },
   planCTAMain: { backgroundColor: "#A8895A" },
   planCTAText: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
-
-  // Bottom CTA
-  bottomCTA: {
-    margin: isDesktop ? 0 : 16,
-    marginTop: 16,
-    marginBottom: 16,
-    ...(isDesktop ? { width: CONTENT_W, alignSelf: "center" as any } : {}),
-  },
-  bottomCTAInner: { borderRadius: 8, padding: isDesktop ? 22 : 28, alignItems: "center", borderWidth: 1, borderColor: "#A8895A" },
-  bottomCTATitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginBottom: 8 },
-  bottomCTADesc: { color: "#F1F5F9", fontSize: 13, marginBottom: 20, textAlign: "center" },
-  bottomCTABtnWrap: { borderRadius: 7, overflow: "hidden" },
-  bottomCTABtnInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 14 },
-  bottomCTABtnText: { color: "#0A0E1A", fontSize: 15, fontWeight: "800" },
 
   // Footer
   footer: {
@@ -912,19 +783,4 @@ const s = StyleSheet.create({
   galleryFull: { width: SW - 40, height: SW - 40, borderRadius: 8 },
   galleryNav: { flexDirection: "row", alignItems: "center", gap: 24, marginTop: 20 },
   galleryCounter: { color: "#fff", fontSize: 14 },
-
-  // 专属EA定制服务
-  customEABlock: { marginHorizontal: 4, borderRadius: 8, overflow: "hidden", borderWidth: 1, borderColor: "rgba(217,119,6,0.2)" },
-  customEAInner: { padding: 24, alignItems: "center" },
-  customEABadge: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(217,119,6,0.12)", paddingHorizontal: 14, paddingVertical: 5, borderRadius: 6, marginBottom: 16, borderWidth: 1, borderColor: "rgba(217,119,6,0.25)" },
-  customEABadgeText: { color: "#A8895A", fontSize: 12, fontWeight: "700" },
-  customEATitle: { color: "#FFFFFF", fontSize: 20, fontWeight: "900", marginBottom: 10, textAlign: "center" },
-  customEADesc: { color: "#F1F5F9", fontSize: 13, lineHeight: 22, textAlign: "center", marginBottom: 20 },
-  customEAFeatures: { width: "100%", gap: 12, marginBottom: 24 },
-  customEAFeatureRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  customEAFeatureIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: "rgba(217,119,6,0.1)", justifyContent: "center", alignItems: "center" },
-  customEAFeatureText: { color: "#CBD5E1", fontSize: 13, lineHeight: 20, flex: 1 },
-  customEACTA: { borderRadius: 7, overflow: "hidden" },
-  customEACTAInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 28, paddingVertical: 12 },
-  customEACTAText: { color: "#0A0E1A", fontSize: 14, fontWeight: "800" },
 });

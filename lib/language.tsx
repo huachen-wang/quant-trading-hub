@@ -40,6 +40,26 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
+/**
+ * 固定语言的内容页（/cooperation 中文、/en/… 英文，2026-10-18）在 <html> 上写这个属性，
+ * 页面 lang 跟正文语言走，不跟全站语言开关走。见 hooks/use-page-language.ts。
+ */
+export const PAGE_LANG_ATTR = "data-page-lang";
+
+/** 写 <html lang/dir>：有固定语言页面时用页面语言，否则用全站语言开关。 */
+export function applyDocumentLanguage(language: AppLanguage) {
+  if (Platform.OS !== "web" || typeof document === "undefined") return;
+  const root = document.documentElement;
+  const pageLang = root.getAttribute(PAGE_LANG_ATTR);
+  if (pageLang) {
+    root.lang = pageLang;
+    root.dir = "ltr";
+    return;
+  }
+  root.lang = language === "en" ? "en" : language === "ar" ? "ar" : "zh-CN";
+  root.dir = language === "ar" ? "rtl" : "ltr";
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<AppLanguage>("zh");
   const userSelected = useRef(false);
@@ -60,10 +80,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (Platform.OS !== "web" || typeof document === "undefined") return;
-    document.documentElement.lang =
-      language === "en" ? "en" : language === "ar" ? "ar" : "zh-CN";
-    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    applyDocumentLanguage(language);
   }, [language]);
 
   const setLanguage = useCallback((nextLanguage: AppLanguage) => {
@@ -109,6 +126,33 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       {children}
     </LanguageContext.Provider>
   );
+}
+
+/**
+ * 固定语言的子树（2026-10-18）：英文内容页里的页脚等共用组件跟正文语言一致。
+ * 只影响这棵子树里的 text() 取值，不改、不保存全站语言设置。
+ */
+export function FixedLanguageScope({
+  language,
+  children,
+}: {
+  language: AppLanguage;
+  children: ReactNode;
+}) {
+  const parent = useLanguage();
+  const value = useMemo<LanguageContextValue>(
+    () => ({
+      ...parent,
+      language,
+      locale: languageLocale(language),
+      isEnglish: language === "en",
+      isRtl: language === "ar",
+      text: (chinese: string, english: string, arabic?: string) =>
+        language === "en" ? english : language === "ar" ? (arabic ?? english) : chinese,
+    }),
+    [parent, language],
+  );
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage() {
