@@ -19,7 +19,7 @@ import {
   SUPPORT_WECHAT,
   TELEGRAM_GROUP_URL,
 } from "./community-contacts";
-import { contentH1, findContentPage, otherLanguage, type ContentLang, type ContentPage } from "./content-pages";
+import { contentH1, faqEntries, findContentPage, otherLanguage, type ContentLang, type ContentPage } from "./content-pages";
 import { SECTION_PAGE_META, SITE_ORIGIN, productTypeLabel, strategyPageMeta } from "./seo-meta";
 import { safeJsonLd } from "./seo-json";
 
@@ -211,7 +211,7 @@ export function strategyHeadTags(strategy: SeoStrategyInput): HeadTag[] {
 
 // ---------------------------------------------------------------- 中英内容页
 
-/** 只写页面上真实存在的信息：类型、标题、描述、语言、地址、发布方。不写日期、作者、价格、评分。 */
+/** 只写页面上真实存在的信息：类型、标题、描述、语言、地址、发布方（常见问题页另含可见问答）。不写日期、作者、价格、评分。 */
 export function contentJsonLd(page: ContentPage): Record<string, unknown> {
   const url = `${SITE_ORIGIN}${page.path}`;
   const site = { "@type": "WebSite", name: "EAXAU", url: `${SITE_ORIGIN}/` };
@@ -227,6 +227,18 @@ export function contentJsonLd(page: ContentPage): Record<string, unknown> {
   };
   if (page.schemaType === "Article") {
     return { ...base, headline: contentH1(page), mainEntityOfPage: url };
+  }
+  if (page.schemaType === "FAQPage") {
+    /* 只放页面上看得到的问答，问题和答案与正文逐字一致（shared/content-pages 的 faqEntries）。 */
+    return {
+      ...base,
+      name: contentH1(page),
+      mainEntity: faqEntries(page).map((entry) => ({
+        "@type": "Question",
+        name: entry.question,
+        acceptedAnswer: { "@type": "Answer", text: entry.answer },
+      })),
+    };
   }
   return { ...base, name: contentH1(page) };
 }

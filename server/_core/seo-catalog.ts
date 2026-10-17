@@ -27,7 +27,7 @@ export const PUBLIC_STATUS = "published";
  * 固定字符串，不含环境、版本号以外的任何信息，也不暴露内部路径或凭据。
  * 改动 SSR 数据通道时请一并升版，方便线上回读确认跑的是哪一代。
  */
-export const SEO_REVISION = "public-catalog-v6"; // v6（2026-10-18 晚）：促销、合购栏目预渲染真实清单；头部标签由 shared/seo-head.ts 统一生成；v5（2026-10-18）：中英合作页与需求验收指南（完整正文、lang、hreflang）；v4（2026-10-17）：栏目页预渲染、noindex 页、真 404
+export const SEO_REVISION = "public-catalog-v6"; // v6（2026-10-18 晚）：促销、合购栏目预渲染真实清单；头部标签由 shared/seo-head.ts 统一生成；中英常见问题页（FAQPage）；v5（2026-10-18）：中英合作页与需求验收指南（完整正文、lang、hreflang）；v4（2026-10-17）：栏目页预渲染、noindex 页、真 404
 
 /** 只挑初始 HTML 真正用得到的列，不把 downloadUrl 之类的东西带进渲染层。 */
 const PUBLIC_COLUMNS = {

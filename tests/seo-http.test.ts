@@ -250,6 +250,18 @@ describe("没有真实数据库时的 HTTP 行为", () => {
         alt: "/guides/ea-requirements-and-acceptance",
         text: "<th scope=\"col\">How to check</th>",
       },
+      "/faq": {
+        lang: "zh-CN",
+        h1: "EAXAU 常见问题",
+        alt: "/en/faq",
+        text: "<h2>买成品 EA 会包含源码吗？</h2>",
+      },
+      "/en/faq": {
+        lang: "en",
+        h1: "EAXAU frequently asked questions",
+        alt: "/faq",
+        text: "<h2>Does a compiled EA purchase include source code?</h2>",
+      },
     };
     for (const [path, want] of Object.entries(pages)) {
       const got = await fetchAs(server.base, path, UA_BOT);
@@ -270,7 +282,7 @@ describe("没有真实数据库时的 HTTP 行为", () => {
     }
   });
 
-  it("sitemap 带上四个内容页地址与 hreflang，日期是正文真实更新日期", async () => {
+  it("sitemap 带上六个内容页地址与 hreflang，日期是正文真实更新日期", async () => {
     const got = await fetchAs(server.base, "/sitemap.xml", UA_BOT);
     expect(got.status).toBe(200);
     expect(got.body).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
@@ -279,6 +291,8 @@ describe("没有真实数据库时的 HTTP 行为", () => {
       "/en/cooperation",
       "/guides/ea-requirements-and-acceptance",
       "/en/guides/ea-requirements-and-acceptance",
+      "/faq",
+      "/en/faq",
     ]) {
       expect(got.body.match(new RegExp(`<loc>https://www\\.eaxau\\.com${path.replace(/\//g, "\\/")}</loc>`, "g")), path).toHaveLength(1);
     }

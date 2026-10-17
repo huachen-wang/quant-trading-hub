@@ -123,7 +123,7 @@ describe("解析器", () => {
   });
 });
 
-describe("四个内容页的正文", () => {
+describe("六个内容页的正文（合作页、指南、常见问题，各中英一份）", () => {
   it("每页恰好一个 H1，标题与描述各不相同", () => {
     for (const page of CONTENT_PAGES) {
       const h1s = contentBlocks(page).filter((block) => block.type === "heading" && block.level === 1);
@@ -227,6 +227,8 @@ describe("四个内容页的正文", () => {
       [COOPERATION_EN_PATH]: "app/en/cooperation.tsx",
       [GUIDE_ZH_PATH]: "app/guides/ea-requirements-and-acceptance.tsx",
       [GUIDE_EN_PATH]: "app/en/guides/ea-requirements-and-acceptance.tsx",
+      "/faq": "app/faq.tsx",
+      "/en/faq": "app/en/faq.tsx",
     };
     for (const [path, file] of Object.entries(files)) {
       expect(isKnownSpaRoute(path)).toBe(true);
@@ -291,7 +293,7 @@ describe("预渲染（原始 HTML）", () => {
     expect(boot).not.toMatch(/[一-鿿]/);
   });
 
-  it("结构化数据只有 WebPage / Article，不写价格、评价、作者或日期", () => {
+  it("结构化数据只有 WebPage / Article / FAQPage，不写价格、评价、作者或日期", () => {
     for (const page of CONTENT_PAGES) {
       const html = renderContentPageHtml(shell, page);
       const blocks = [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) =>
@@ -308,6 +310,8 @@ describe("预渲染（原始 HTML）", () => {
     }
     expect(findContentPage(GUIDE_ZH_PATH)!.schemaType).toBe("Article");
     expect(findContentPage(COOPERATION_ZH_PATH)!.schemaType).toBe("WebPage");
+    expect(findContentPage("/faq")!.schemaType).toBe("FAQPage");
+    expect(findContentPage("/en/faq")!.schemaType).toBe("FAQPage");
   });
 
   it("页面上的语言切换指向同一篇内容的翻译，不是英文首页", () => {
@@ -322,13 +326,13 @@ describe("预渲染（原始 HTML）", () => {
     expect(setHtmlLang("<html><head>", "en")).toBe('<html lang="en"><head>');
   });
 
-  it("sitemap 条目：四个地址、真实更新日期、中英 hreflang", () => {
+  it("sitemap 条目：六个地址、真实更新日期、中英 hreflang", () => {
     const xml = contentSitemapEntries();
     for (const page of CONTENT_PAGES) {
       expect(xml).toContain(`<loc>https://www.eaxau.com${page.path}</loc>`);
     }
-    expect(xml.match(/<url>/g)).toHaveLength(4);
-    expect(xml.match(/<lastmod>2026-10-18<\/lastmod>/g)).toHaveLength(4);
+    expect(xml.match(/<url>/g)).toHaveLength(6);
+    expect(xml.match(/<lastmod>2026-10-18<\/lastmod>/g)).toHaveLength(6);
     expect(xml).toContain(`<xhtml:link rel="alternate" hreflang="en" href="https://www.eaxau.com${GUIDE_EN_PATH}" />`);
   });
 });
