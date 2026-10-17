@@ -86,6 +86,25 @@ export async function ensureLoginThrottleSchema(connection: mysql.Connection): P
 }
 
 /**
+ * 验证码校验次数（server/_core/verification.ts，2026-10-18）。
+ * 和登录限流表一样放在迁移链最前面：验证码登录 / 找回密码不能依赖历史表迁移成功。
+ * 表还不存在时跳过——后面建 verification_codes 的 CREATE TABLE 本身带着这一列。
+ */
+export async function ensureVerificationCodeAttemptsColumn(connection: mysql.Connection): Promise<number> {
+  const [tables] = (await connection.query(
+    "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'verification_codes' LIMIT 1",
+  )) as any[];
+  if (!tables.length) return 0;
+  const [columns] = (await connection.query(
+    "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'verification_codes' AND COLUMN_NAME = 'attempts' LIMIT 1",
+  )) as any[];
+  if (columns.length) return 0;
+  await connection.query("ALTER TABLE `verification_codes` ADD COLUMN `attempts` int NOT NULL DEFAULT 0");
+  console.log("[migrate] added verification_codes.attempts");
+  return 1;
+}
+
+/**
  * 站内咨询的四张表 + 索引 + 增量列。
  *
  * 单独抽成导出函数有三个理由：
@@ -323,6 +342,8 @@ async function runMigrations(options: { strict?: boolean } = {}): Promise<boolea
     migrationsRun += await ensureSupportChatSchema(connection);
     console.log("[migrate] Ensuring login throttle table exists...");
     migrationsRun += await ensureLoginThrottleSchema(connection);
+    console.log("[migrate] Ensuring verification_codes.attempts exists...");
+    migrationsRun += await ensureVerificationCodeAttemptsColumn(connection);
 
     // strategies 表新增字段
     const strategyMigrations: [string, string][] = [
@@ -796,6 +817,7 @@ async function runMigrations(options: { strict?: boolean } = {}): Promise<boolea
         \`code\` varchar(10) NOT NULL,
         \`purpose\` varchar(50) NOT NULL,
         \`used\` boolean NOT NULL DEFAULT false,
+        \`attempts\` int NOT NULL DEFAULT 0,
         \`expiresAt\` timestamp NOT NULL,
         \`ip\` varchar(45) DEFAULT NULL,
         \`createdAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,

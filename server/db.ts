@@ -319,6 +319,25 @@ export async function getStrategyById(id: number) {
   return result[0] || null;
 }
 
+/**
+ * 公开详情只给已发布的商品（2026-10-18）。getStrategyById 不看状态，后台编辑、下单核验、
+ * 已购记录还要用它；公开接口原来也用它，草稿 / 已归档的商品凭 id 就能匿名读到。
+ */
+export function publishedStrategyByIdWhere(id: number) {
+  return and(eq(strategies.id, id), eq(strategies.status, "published"));
+}
+
+export async function getPublishedStrategyById(id: number) {
+  const db = await getDb();
+  if (!db) {
+    const mock = getMockStrategyById(id);
+    return mock && mock.status === "published" ? mock : null;
+  }
+
+  const result = await db.select().from(strategies).where(publishedStrategyByIdWhere(id)).limit(1);
+  return result[0] || null;
+}
+
 export async function incrementStrategyViewCount(id: number) {
   const db = await getDb();
   if (!db) return;

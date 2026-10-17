@@ -9,7 +9,7 @@ import * as db from "../db";
  * - 只存 sha256 摘要，不存明文 IP、邮箱或密码。
  * - 锁定到时自动解开：只比较 lockedUntil 和当前时间，不需要任何清理任务。
  *
- * 两条规则：
+ * 规则（第三条见下方 CODE_VERIFY_IP_RULE，2026-10-18）：
  * - 管理员登录：按「IP + 邮箱」计数，5 分钟内失败 5 次锁 15 分钟；同一邮箱换个 IP 不受影响，
  *   所以别人无法凭邮箱把管理员锁在外面。登录成功清掉这个 IP + 邮箱的计数。
  * - 普通用户密码登录：按 IP 计数（不分邮箱），15 分钟内失败 20 次锁 15 分钟。
@@ -32,6 +32,18 @@ export const ADMIN_LOGIN_RULE: ThrottleRule = {
 
 export const USER_LOGIN_IP_RULE: ThrottleRule = {
   scope: "USER_LOGIN_IP",
+  maxFailures: 20,
+  windowMs: 15 * 60_000,
+  lockMs: 15 * 60_000,
+};
+
+/**
+ * 验证码校验（验证码登录、注册、找回密码、验证邮箱）按 IP 计失败（2026-10-18）。
+ * 每条码自身最多校验 5 次（server/_core/verification.ts）；这条管的是同一个 IP 换着目标邮箱、
+ * 或者不停申请新码来猜。和密码登录分开计数，互不占用名额。
+ */
+export const CODE_VERIFY_IP_RULE: ThrottleRule = {
+  scope: "CODE_VERIFY_IP",
   maxFailures: 20,
   windowMs: 15 * 60_000,
   lockMs: 15 * 60_000,
@@ -211,3 +223,4 @@ export async function clearLoginFailures(rule: ThrottleRule, parts: string[]): P
 }
 
 export const LOGIN_LOCKED_MESSAGE = "登录尝试过多，请 15 分钟后再试";
+export const CODE_VERIFY_LOCKED_MESSAGE = "验证码尝试次数过多，请 15 分钟后再试";

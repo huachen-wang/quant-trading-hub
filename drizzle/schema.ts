@@ -409,6 +409,9 @@ export const verificationCodes = mysqlTable("verification_codes", {
   code: varchar("code", { length: 10 }).notNull(), // 6位验证码
   purpose: varchar("purpose", { length: 50 }).notNull(), // register | login | reset_password | bind_phone
   used: boolean("used").default(false).notNull(),
+  // 这条码被校验过几次（2026-10-18）。每次校验先原子占一次名额再比对，满 5 次作废，
+  // 正确的码也不再认——防止在 5 分钟有效期里穷举 6 位数字。见 server/_core/verification.ts。
+  attempts: int("attempts").default(0).notNull(),
   expiresAt: timestamp("expiresAt").notNull(), // 过期时间（一般 5-10 分钟）
   ip: varchar("ip", { length: 45 }), // 请求 IP（用于风控）
   createdAt: timestamp("createdAt").defaultNow().notNull(),
