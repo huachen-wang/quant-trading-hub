@@ -15,10 +15,10 @@ export type StrategyDetailData = {
   coverImage?: string | null;
   galleryImages?: string | string[] | null;
   isFeatured?: boolean | number | null;
-  totalReturn: string | number;
-  winRate: string | number;
-  maxDrawdown: string | number;
-  price: string | number;
+  totalReturn: string | number | null;
+  winRate: string | number | null;
+  maxDrawdown: string | number | null;
+  price: string | number | null;
   originalPrice?: string | number | null;
   isFree?: boolean | number | null;
   saleMode?: "direct" | "inquiry" | null;

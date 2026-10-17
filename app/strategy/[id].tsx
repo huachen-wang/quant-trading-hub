@@ -153,7 +153,7 @@ export default function StrategyDetailScreen() {
 
   const gradientColors: readonly [string, string, ...string[]] = strategy.isFeatured ? ["#0A0E1A", "#1E293B", "#A8895A"] : strategy.platform === "MT4" ? ["#06101D", "#11233A", "#41607A"] : ["#06140F", "#12382B", "#34D399"];
 
-  const returnValue = parseFloat(strategy.totalReturn) || 0;
+  const returnValue = parseFloat(String(strategy.totalReturn ?? "")) || 0;
   const isPositive = returnValue >= 0;
   const isAdmin = user?.role === "admin";
   const tags = strategy.tags;

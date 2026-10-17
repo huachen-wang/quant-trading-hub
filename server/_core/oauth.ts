@@ -5,6 +5,7 @@ import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 import { hashPassword, verifyPassword } from "./password";
 import { clientIp } from "./client-ip";
+import { toUserResponse } from "./user-response";
 import {
   LOGIN_LOCKED_MESSAGE,
   USER_LOGIN_IP_RULE,
@@ -62,13 +63,15 @@ function buildUserResponse(
         lastSignedIn?: Date | null;
       },
 ) {
+  // 先过统一的用户白名单（server/_core/user-response.ts），再挑这几个 REST 接口一直返回的字段。
+  const safe = toUserResponse(user as any);
   return {
-    id: (user as any)?.id ?? null,
-    openId: user?.openId ?? null,
-    name: user?.name ?? null,
-    email: user?.email ?? null,
-    loginMethod: user?.loginMethod ?? null,
-    lastSignedIn: (user?.lastSignedIn ?? new Date()).toISOString(),
+    id: safe?.id ?? null,
+    openId: safe?.openId ?? null,
+    name: safe?.name ?? null,
+    email: safe?.email ?? null,
+    loginMethod: safe?.loginMethod ?? null,
+    lastSignedIn: (safe?.lastSignedIn ?? new Date()).toISOString(),
   };
 }
 

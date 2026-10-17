@@ -1,10 +1,11 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const.js";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { sendVerificationCodeEmail } from "../_core/email";
 import { hashPassword } from "../_core/password";
 import { sdk } from "../_core/sdk";
-import { createVerificationCode, verifyCode } from "../_core/verification";
+import { createVerificationCode, verifyCode, type VerificationPurpose } from "../_core/verification";
 import {
   EMAIL_CODE_UNIFORM_MESSAGE,
   checkEmailCodeRequest,
@@ -13,6 +14,13 @@ import {
   type EmailCodePurpose,
 } from "../_core/email-code-gate";
 import { clientIp } from "../_core/client-ip";
+import {
+  CODE_VERIFY_IP_RULE,
+  CODE_VERIFY_LOCKED_MESSAGE,
+  checkLoginAllowed,
+  recordLoginFailure,
+} from "../_core/login-throttle";
+import { toUserResponse } from "../_core/user-response";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 
@@ -85,8 +93,33 @@ async function issueEmailCode(
   return withMinimumDuration(run, uniformTiming.minMs + Math.floor(Math.random() * uniformTiming.jitterMs));
 }
 
+/**
+ * 所有「拿验证码换结果」的入口都走这里（2026-10-18）：
+ * 1. 同一 IP 验证码失败太多 → 先拒绝，不再碰验证码表（计数存库，和密码登录同一套限流工具、同一个取 IP 函数）；
+ * 2. 校验本身每条码最多 5 次（verification.ts）；
+ * 3. 失败记一次 IP 失败。成功不清零，防止夹带自己的账号来重置计数。
+ */
+async function verifyCodeWithThrottle(
+  ctx: { req: any },
+  opts: { target: string; purpose: VerificationPurpose; code: string },
+) {
+  const throttleParts = [clientIp(ctx.req)];
+  const check = await checkLoginAllowed(CODE_VERIFY_IP_RULE, throttleParts);
+  if (!check.allowed) {
+    throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: CODE_VERIFY_LOCKED_MESSAGE });
+  }
+  const result = await verifyCode(opts);
+  if (!result.ok) {
+    await recordLoginFailure(CODE_VERIFY_IP_RULE, throttleParts).catch((error) =>
+      console.error("[auth] code verify throttle record failed:", error?.code || error?.message),
+    );
+  }
+  return result;
+}
+
 export const authRouter = router({
-  me: publicProcedure.query((opts) => opts.ctx.user),
+  // 只回白名单字段：ctx.user 是整行用户记录（含 passwordHash）。
+  me: publicProcedure.query((opts) => toUserResponse(opts.ctx.user)),
   logout: publicProcedure.mutation(({ ctx }) => {
     const cookieOptions = getSessionCookieOptions(ctx.req);
     ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
@@ -115,7 +148,7 @@ export const authRouter = router({
     .mutation(async ({ input, ctx }) => {
       const email = ctx.user.email;
       if (!email) throw new Error("当前账号未绑定邮箱");
-      const result = await verifyCode({ target: email.toLowerCase(), purpose: "verify_email", code: input.code });
+      const result = await verifyCodeWithThrottle(ctx, { target: email.toLowerCase(), purpose: "verify_email", code: input.code });
       if (!result.ok) throw new Error(result.error || "验证失败");
       return { ok: true, message: "邮箱验证成功！福利已解锁" };
     }),
@@ -161,7 +194,7 @@ export const authRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       const email = input.email.trim().toLowerCase();
-      const verifyResult = await verifyCode({ target: email, purpose: "register", code: input.code });
+      const verifyResult = await verifyCodeWithThrottle(ctx, { target: email, purpose: "register", code: input.code });
       if (!verifyResult.ok) throw new Error(verifyResult.error || "验证码错误");
       const existing = await db.getUserByEmail(email);
       if (existing) throw new Error("该邮箱已注册");
@@ -186,29 +219,31 @@ export const authRouter = router({
       const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name || email, expiresInMs: ONE_YEAR_MS });
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      return { ok: true, sessionToken, user: { id: user.id, email: user.email, name: user.name } };
+      return { ok: true, sessionToken, user: toUserResponse(user) };
     }),
 
   loginWithCode: publicProcedure
     .input(z.object({ email: z.string().email(), code: z.string().min(4).max(10) }))
     .mutation(async ({ input, ctx }) => {
       const email = input.email.trim().toLowerCase();
-      const verifyResult = await verifyCode({ target: email, purpose: "login", code: input.code });
+      const verifyResult = await verifyCodeWithThrottle(ctx, { target: email, purpose: "login", code: input.code });
       if (!verifyResult.ok) throw new Error(verifyResult.error || "验证码错误");
       const user = await db.getUserByEmail(email);
       if (!user) throw new Error("验证码错误或已过期"); // 不透露邮箱是否注册（2026-10-17）
-      await db.updateUser(user.id, { lastSignedIn: new Date() });
+      const lastSignedIn = new Date();
+      await db.updateUser(user.id, { lastSignedIn });
       const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name || email, expiresInMs: ONE_YEAR_MS });
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      return { ok: true, sessionToken, user };
+      // 原来直接返回整行用户记录，密码哈希跟着出去了（2026-10-18）。
+      return { ok: true, sessionToken, user: toUserResponse({ ...user, lastSignedIn }) };
     }),
 
   resetPassword: publicProcedure
     .input(z.object({ email: z.string().email(), code: z.string().min(4).max(10), newPassword: z.string().min(6).max(100) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const email = input.email.trim().toLowerCase();
-      const verifyResult = await verifyCode({ target: email, purpose: "reset_password", code: input.code });
+      const verifyResult = await verifyCodeWithThrottle(ctx, { target: email, purpose: "reset_password", code: input.code });
       if (!verifyResult.ok) throw new Error(verifyResult.error || "验证码错误");
       const user = await db.getUserByEmail(email);
       if (!user) throw new Error("验证码错误或已过期"); // 不透露邮箱是否注册（2026-10-17）
