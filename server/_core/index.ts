@@ -5,6 +5,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
+import { registerAccountRoutes } from "./account-routes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import * as db from "../db";
@@ -18,9 +19,11 @@ import { isAdminTotpConfigured } from "./admin-totp";
 import { safeJsonLd } from "./seo-json";
 import { buildContentSecurityPolicy } from "./http-security";
 import { legacyRouteRedirect } from "./legacy-route-redirect";
-import { seoPublishedList, seoStrategyById } from "./seo-catalog";
+import { seoActiveGroupBuys, seoPromoList, seoPublishedList, seoStrategyById } from "./seo-catalog";
 import { SEO_REVISION } from "./seo-catalog";
 import {
+  groupBuySectionHtml,
+  promoSectionHtml,
   renderHomeHtml,
   renderNoindexHtml,
   renderNotFoundHtml,
@@ -187,6 +190,7 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
   registerOAuthRoutes(app);
+  registerAccountRoutes(app); // 2026-10-18：编辑资料 / 修改密码（app/profile/edit.tsx 一直在调，原来没注册）
   registerPaymentRoutes(app);
   registerSecureDownloadRoute(app);
 
@@ -398,7 +402,14 @@ async function startServer() {
 
           if (SECTION_PAGE_META[sectionPath] && sectionPath !== '/') {
             const lookup = sectionPath === '/market' ? await seoPublishedList(1000) : undefined;
-            const html = renderSectionHtml(cachedIndexHtml, sectionPath, lookup);
+            /* 2026-10-18（R3 ⑧）：促销、合购栏目把后台真实清单写进初始 HTML（只读、不走 mock、不写价格人数）。 */
+            const extraBody =
+              sectionPath === '/promo'
+                ? promoSectionHtml(await seoPromoList())
+                : sectionPath === '/group-buy'
+                  ? groupBuySectionHtml(await seoActiveGroupBuys())
+                  : '';
+            const html = renderSectionHtml(cachedIndexHtml, sectionPath, lookup, extraBody);
             if (html) {
               res.header('Content-Type', 'text/html; charset=utf-8');
               return res.status(200).send(html);

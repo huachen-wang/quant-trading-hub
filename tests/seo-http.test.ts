@@ -155,11 +155,11 @@ describe("没有真实数据库时的 HTTP 行为", () => {
        首页、商品页、404、503 四种出口都要带。 */
     for (const path of ["/", "/strategy/1", "/strategy/abc", "/strategy/99999999"]) {
       const got = await fetchAs(server.base, path, UA_HUMAN);
-      expect(got.headers.get("x-seo-revision"), `${path} 缺部署标记`).toBe("public-catalog-v5");
+      expect(got.headers.get("x-seo-revision"), `${path} 缺部署标记`).toBe("public-catalog-v6");
     }
     /* 标记跟着 seo-catalog 模块走：改了数据通道不升版就会在这里红 */
     const { SEO_REVISION } = await import("../server/_core/seo-catalog");
-    expect(SEO_REVISION).toBe("public-catalog-v5");
+    expect(SEO_REVISION).toBe("public-catalog-v6");
   });
 
   it("部署标记不泄露环境、路径或凭据", async () => {
@@ -189,6 +189,20 @@ describe("没有真实数据库时的 HTTP 行为", () => {
       expect(got.body).toContain("<h1>");
       expect(got.headers.get("x-robots-tag")).toBeNull();
     }
+  });
+
+  it("促销、合购栏目：读不到库时如实说临时故障，不拿 mock 或写死的演示商品充数（2026-10-18 R3 ⑧）", async () => {
+    const promo = await fetchAs(server.base, "/promo", UA_HUMAN);
+    expect(promo.status).toBe(200);
+    expect(promo.body).toContain("<h2>促销商品</h2>");
+    expect(promo.body).toContain("促销清单这次没能读出来");
+    // server/mock-data.ts 的本地样例商品不能出现在初始 HTML 里
+    expect(promo.body).not.toContain("黄金EA限时包");
+    const groupBuy = await fetchAs(server.base, "/group-buy", UA_HUMAN);
+    expect(groupBuy.status).toBe(200);
+    expect(groupBuy.body).toContain("<h2>进行中的合购</h2>");
+    expect(groupBuy.body).toContain("合购清单这次没能读出来");
+    expect(groupBuy.body).not.toContain("AI深度学习系统合购");
   });
 
   it("登录、注册、V2 预览不收录：meta + X-Robots-Tag", async () => {

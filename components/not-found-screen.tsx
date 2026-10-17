@@ -7,6 +7,7 @@ import { V2 } from "@/components/v2/tokens";
 import { PageHead } from "@/components/page-head";
 import { useLanguage } from "@/lib/language";
 import { NOT_FOUND_TITLE } from "@/shared/seo-meta";
+import { noindexHeadTags } from "@/shared/seo-head";
 
 /**
  * 品牌 404：服务端对不存在的地址返回 404（见 server/_core/spa-routes.ts），
@@ -18,7 +19,7 @@ export function NotFoundScreen() {
   const { text } = useLanguage();
   return (
     <ScreenContainer>
-      <PageHead title={NOT_FOUND_TITLE} />
+      <PageHead title={NOT_FOUND_TITLE} tags={noindexHeadTags()} />
       <PcTopNav />
       <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.body}>

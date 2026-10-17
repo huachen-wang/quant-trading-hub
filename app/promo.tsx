@@ -11,13 +11,14 @@ import { PcTopNav } from "@/components/pc-top-nav";
 import { SectionHead } from "@/components/page-head";
 import { CommunityFooter } from "@/components/community/community-entry-points";
 import { PromoContactModal } from "@/components/promo/contact-modal";
-import { PLACEHOLDER_PROMO_PRODUCTS, PROMO_ANNOUNCEMENTS, PROMO_CATEGORIES } from "@/components/promo/data";
+import { PROMO_ANNOUNCEMENTS, PROMO_CATEGORIES } from "@/components/promo/data";
 import { PromoGalleryModal } from "@/components/promo/gallery-modal";
 import { PromoProductCard } from "@/components/promo/product-card";
 import { PromoProductDetailModal } from "@/components/promo/product-detail-modal";
 import { createPromoStyles } from "@/components/promo/styles";
 import type { PromoCategoryKey, PromoContactInfo, PromoProduct } from "@/components/promo/types";
 import { trpc } from "@/lib/trpc";
+import { listingItems, listingState } from "@/lib/listing-state";
 import { normalizeQqContacts, SUPPORT_QQ_FALLBACK } from "@/lib/support-faq";
 import { buildCommunityEntries, SUPPORT_TELEGRAM_HANDLE } from "@/shared/community-contacts";
 
@@ -73,7 +74,7 @@ export default function PromoPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const { data: backendProducts, isLoading } = trpc.promo.list.useQuery({ category: activeCategory || undefined });
+  const promoQuery = trpc.promo.list.useQuery({ category: activeCategory || undefined });
   const { data: contactSettings } = trpc.siteSettings.getContact.useQuery();
 
   // Telegram 客服读站点设置 contact_telegram / contact_telegram_link（接口没有 telegram 这个键），兜底 @hypermatch123。
@@ -89,13 +90,10 @@ export default function PromoPage() {
     [qq, telegram, wechat1, wechat2],
   );
 
-  const products = useMemo<PromoProduct[]>(
-    () =>
-      backendProducts && backendProducts.length > 0
-        ? backendProducts
-        : PLACEHOLDER_PROMO_PRODUCTS.filter((product) => !activeCategory || product.category === activeCategory),
-    [activeCategory, backendProducts],
-  );
+  /* 2026-10-18（代码体检 R3 ⑥）：只展示后台真实记录。接口返回空 → 空状态；请求失败 → 如实说读取失败。
+     原来这两种情况都会换成写死的演示商品、价格和库存，访客看不出是演示。 */
+  const listing = listingState<PromoProduct>(promoQuery);
+  const products = listingItems(listing);
 
   const openProductDetail = useCallback((product: PromoProduct) => {
     setSelectedProduct(product);
@@ -118,7 +116,7 @@ export default function PromoPage() {
   const closeContact = useCallback(() => setShowContact(false), []);
   const closeGallery = useCallback(() => setShowGallery(false), []);
 
-  if (isLoading) {
+  if (listing.kind === "loading") {
     return <ScreenContainer><View style={s.loadingWrap}><ActivityIndicator size="large" color="#A8895A" /></View></ScreenContainer>;
   }
 
@@ -206,13 +204,15 @@ export default function PromoPage() {
           </ScrollView>
         </View>
 
-        {/* 结果提示 */}
+        {/* 结果提示：只数后台真实记录 */}
         <View style={s.resultBar}>
-          <View style={s.resultCountRow}>
-            <Text style={s.resultCount}>共</Text>
-            <Text style={s.resultCountNum}>{products.length}</Text>
-            <Text style={s.resultCount}>款精选</Text>
-          </View>
+          {listing.kind === "ok" ? (
+            <View style={s.resultCountRow}>
+              <Text style={s.resultCount}>共</Text>
+              <Text style={s.resultCountNum}>{products.length}</Text>
+              <Text style={s.resultCount}>款精选</Text>
+            </View>
+          ) : null}
           <View style={s.resultTip}>
             <Ionicons name="pricetag" size={13} color="#10B981" />
             <Text style={s.resultTipText}>价格、授权与交付范围以当次订单确认为准</Text>
@@ -252,12 +252,26 @@ export default function PromoPage() {
           )}
         </View>
 
-        {/* 空状态 */}
-        {products.length === 0 && (
+        {/* 空状态：后台确实没有记录 */}
+        {listing.kind === "empty" && (
           <View style={s.emptyState}>
             <Ionicons name="search" size={48} color="#475569" />
-            <Text style={s.emptyText}>该分类暂无商品</Text>
-            <Text style={s.emptySubtext}>切换其他分类查看更多</Text>
+            <Text style={s.emptyText}>{activeCategory ? "该分类暂无促销商品" : "当前没有进行中的促销商品"}</Text>
+            <Text style={s.emptySubtext}>
+              {activeCategory ? "切换其他分类查看更多" : "需要某款 EA，可以联系客服说明名称和版本"}
+            </Text>
+          </View>
+        )}
+
+        {/* 读取失败：临时故障，不拿写死的商品顶替 */}
+        {listing.kind === "error" && (
+          <View style={s.emptyState}>
+            <Ionicons name="cloud-offline" size={48} color="#475569" />
+            <Text style={s.emptyText}>促销列表这次没能读出来</Text>
+            <Text style={s.emptySubtext}>这是临时故障，不代表没有促销；请稍后重试或直接联系客服。</Text>
+            <TouchableOpacity style={[s.procurementBtn, { marginTop: 16 }]} onPress={() => void promoQuery.refetch()}>
+              <Text style={s.procurementBtnText}>重新读取</Text>
+            </TouchableOpacity>
           </View>
         )}
 

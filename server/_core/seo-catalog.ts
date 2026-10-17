@@ -1,7 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
 import * as schema from "../../drizzle/schema";
 import { getDbForSeo } from "../db";
-import type { ListLookup, SeoStrategy, StrategyLookup } from "./seo-render";
+import type { GroupBuyLookup, ListLookup, PromoLookup, SeoGroupBuy, SeoPromo, SeoStrategy, StrategyLookup } from "./seo-render";
 
 /**
  * SEO 专用只读查询适配器。
@@ -17,7 +17,7 @@ import type { ListLookup, SeoStrategy, StrategyLookup } from "./seo-render";
  * 这个模块只读，不改购买、下载、订单或任何业务接口的语义。
  */
 
-const { strategies } = schema;
+const { strategies, promoProducts, groupBuys } = schema;
 
 /** 对外初始 HTML 只认这一个状态。 */
 export const PUBLIC_STATUS = "published";
@@ -27,7 +27,7 @@ export const PUBLIC_STATUS = "published";
  * 固定字符串，不含环境、版本号以外的任何信息，也不暴露内部路径或凭据。
  * 改动 SSR 数据通道时请一并升版，方便线上回读确认跑的是哪一代。
  */
-export const SEO_REVISION = "public-catalog-v5"; // v5（2026-10-18）：中英合作页与需求验收指南（完整正文、lang、hreflang）；v4（2026-10-17）：栏目页预渲染、noindex 页、真 404
+export const SEO_REVISION = "public-catalog-v6"; // v6（2026-10-18 晚）：促销、合购栏目预渲染真实清单；头部标签由 shared/seo-head.ts 统一生成；v5（2026-10-18）：中英合作页与需求验收指南（完整正文、lang、hreflang）；v4（2026-10-17）：栏目页预渲染、noindex 页、真 404
 
 /** 只挑初始 HTML 真正用得到的列，不把 downloadUrl 之类的东西带进渲染层。 */
 const PUBLIC_COLUMNS = {
@@ -116,6 +116,77 @@ export async function seoPublishedList(
     return { kind: "ok", strategies: (Array.isArray(rows) ? rows : []) as SeoStrategy[] };
   } catch (error: any) {
     console.error("[SEO] published list query failed:", error?.message || error);
+    return { kind: "unavailable", reason: "query_failed" };
+  }
+}
+
+/**
+ * 促销栏目（/promo）的真实清单（2026-10-18，代码体检 R3 ⑧）。条件与公开接口 promo.list 一致：
+ * 可见 + status = active，按后台排序。只取名称、简介、平台、分类、截止时间——
+ * 不取原价、促销价、库存、已售、付款或联系方式（初始 HTML 不写这些数字）。
+ */
+const PROMO_COLUMNS = {
+  id: promoProducts.id,
+  title: promoProducts.title,
+  description: promoProducts.description,
+  platform: promoProducts.platform,
+  category: promoProducts.category,
+  promoEndTime: promoProducts.promoEndTime,
+} as const;
+
+export async function seoPromoList(getDb: DbGetter = defaultGetter): Promise<PromoLookup> {
+  let db: SeoDb | null;
+  try {
+    db = await getDb();
+  } catch (error: any) {
+    console.error("[SEO] database handle unavailable:", error?.message || error);
+    return { kind: "unavailable", reason: "db_handle_failed" };
+  }
+  if (!db) return { kind: "unavailable", reason: "no_database_connection" };
+  try {
+    const rows = await db
+      .select(PROMO_COLUMNS)
+      .from(promoProducts)
+      .where(and(eq(promoProducts.isVisible, true), eq(promoProducts.status, "active")))
+      .orderBy(asc(promoProducts.sortOrder))
+      .limit(100);
+    return { kind: "ok", items: (Array.isArray(rows) ? rows : []) as SeoPromo[] };
+  } catch (error: any) {
+    console.error("[SEO] promo list query failed:", error?.message || error);
+    return { kind: "unavailable", reason: "query_failed" };
+  }
+}
+
+/**
+ * 合购栏目（/group-buy）的真实清单（2026-10-18，R3 ⑧）。条件与页面一致：status = active，最新在前，最多 50 条。
+ * 只取标题、EA 名称、截止时间——不取简介（后台简介里写着价格和人数）、价格、人数或联系方式。
+ */
+const GROUP_BUY_COLUMNS = {
+  id: groupBuys.id,
+  title: groupBuys.title,
+  eaName: groupBuys.eaName,
+  expiresAt: groupBuys.expiresAt,
+} as const;
+
+export async function seoActiveGroupBuys(getDb: DbGetter = defaultGetter): Promise<GroupBuyLookup> {
+  let db: SeoDb | null;
+  try {
+    db = await getDb();
+  } catch (error: any) {
+    console.error("[SEO] database handle unavailable:", error?.message || error);
+    return { kind: "unavailable", reason: "db_handle_failed" };
+  }
+  if (!db) return { kind: "unavailable", reason: "no_database_connection" };
+  try {
+    const rows = await db
+      .select(GROUP_BUY_COLUMNS)
+      .from(groupBuys)
+      .where(eq(groupBuys.status, "active"))
+      .orderBy(desc(groupBuys.createdAt))
+      .limit(50);
+    return { kind: "ok", items: (Array.isArray(rows) ? rows : []) as SeoGroupBuy[] };
+  } catch (error: any) {
+    console.error("[SEO] group-buy list query failed:", error?.message || error);
     return { kind: "unavailable", reason: "query_failed" };
   }
 }

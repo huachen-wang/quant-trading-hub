@@ -94,6 +94,16 @@ export function toPublicStrategy(strategy: Record<string, any>): PublicStrategy 
   };
 }
 
+/**
+ * 公开的「按商品 id 取附属数据」接口（回测数据、交易记录、统计、评论）只认已发布的商品（2026-10-18）。
+ * 和公开详情一样：草稿 / 已归档 / 不存在一律 NOT_FOUND。后台走 admin.* 的接口，不经过这里。
+ */
+export async function requirePublishedStrategy(strategyId: number): Promise<void> {
+  if (!(await db.isStrategyPublished(strategyId))) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Strategy not found" });
+  }
+}
+
 export const strategiesRouter = router({
   list: publicProcedure
     .input(
@@ -124,7 +134,10 @@ export const strategiesRouter = router({
 
   backtestData: publicProcedure
     .input(z.object({ strategyId: z.number() }))
-    .query(({ input }) => db.getBacktestData(input.strategyId)),
+    .query(async ({ input }) => {
+      await requirePublishedStrategy(input.strategyId);
+      return db.getBacktestData(input.strategyId);
+    }),
 
   search: publicProcedure
     .input(z.object({ keyword: z.string().min(1), limit: z.number().optional() }))
@@ -143,7 +156,10 @@ export const commentsRouter = router({
         offset: z.number().optional(),
       }),
     )
-    .query(({ input }) => db.getComments(input.strategyId, input.limit, input.offset)),
+    .query(async ({ input }) => {
+      await requirePublishedStrategy(input.strategyId);
+      return db.getComments(input.strategyId, input.limit, input.offset);
+    }),
 
   create: protectedProcedure
     .input(
@@ -152,7 +168,8 @@ export const commentsRouter = router({
         content: z.string().min(1).max(1000),
       }),
     )
-    .mutation(({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
+      await requirePublishedStrategy(input.strategyId);
       return db.createComment({
         userId: ctx.user.id,
         strategyId: input.strategyId,
@@ -174,11 +191,17 @@ export const tradesRouter = router({
         offset: z.number().optional(),
       }),
     )
-    .query(({ input }) => db.getTrades(input.strategyId, input.limit, input.offset)),
+    .query(async ({ input }) => {
+      await requirePublishedStrategy(input.strategyId);
+      return db.getTrades(input.strategyId, input.limit, input.offset);
+    }),
 
   stats: publicProcedure
     .input(z.object({ strategyId: z.number() }))
-    .query(({ input }) => db.getTradeStats(input.strategyId)),
+    .query(async ({ input }) => {
+      await requirePublishedStrategy(input.strategyId);
+      return db.getTradeStats(input.strategyId);
+    }),
 });
 
 export const purchasesRouter = router({
