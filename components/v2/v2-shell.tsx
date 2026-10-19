@@ -64,6 +64,10 @@ export function V2Shell({ children }: V2ShellProps) {
   const connectedProvider =
     status?.provider === "HTTP" || status?.provider === "NIUBANG";
 
+  // 10/19 OPS-7（Nathan 批「撤」）：资管预览的入口（核心策略、方案选配、实盘账户、DEMO 数据徽章、连接钱包）
+  // 不再出现在对外顶栏；/v2-preview 页面留着内部用（已 noindex），只有已经在 /v2-preview 里时才显示这些入口。
+  const internalPreview = pathname.startsWith("/v2-preview");
+
   const navLabels = {
     MARKET: text("EA 商城", "EA Market", "سوق EA"),
     STRATEGIES: text("核心策略", "Strategies", "الاستراتيجيات"),
@@ -71,7 +75,7 @@ export function V2Shell({ children }: V2ShellProps) {
     ACCOUNTS: text("实盘账户", "Accounts", "الحسابات"),
   } as const;
 
-  const nav = NAV_ITEMS.map((item) => {
+  const nav = NAV_ITEMS.filter((item) => internalPreview || item.id === "MARKET").map((item) => {
     const isMarket = item.id === "MARKET";
     const active =
       item.activeOn === "/"
@@ -177,7 +181,7 @@ export function V2Shell({ children }: V2ShellProps) {
               isMobile && styles.headerActionsMobile,
             ]}
           >
-            {!isMobile ? (
+            {!isMobile && internalPreview ? (
               <View
                 accessible
                 accessibilityLabel={
@@ -233,13 +237,14 @@ export function V2Shell({ children }: V2ShellProps) {
                 </Text>
               </Pressable>
             ) : null}
-            <WalletConnect compact={isMobile} />
+            {internalPreview ? <WalletConnect compact={isMobile} /> : null}
           </View>
         </View>
       </View>
 
       {isMobile ? (
         <>
+          {internalPreview ? (
           <View style={styles.mobileNavWrap}>
             <ScrollView
               horizontal
@@ -249,6 +254,7 @@ export function V2Shell({ children }: V2ShellProps) {
               {nav.slice(1)}
             </ScrollView>
           </View>
+          ) : null}
           <View style={styles.mobileConversionBar}>
             <Pressable
               accessibilityRole="link"
