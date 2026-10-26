@@ -173,13 +173,15 @@ export const adminAuthRouter = router({
    * 用于前端检查登录状态
    */
   verify: publicProcedure
-    .input(
-      z.object({
-        token: z.string(),
-      })
-    )
-    .query(async ({ input }) => {
-      const payload = await verifyAdminToken(input.token);
+    .input(z.void())
+    .query(async ({ ctx }) => {
+      ctx.res.setHeader("Cache-Control", "no-store");
+      ctx.res.setHeader("Vary", "Authorization, X-Admin-Token");
+      const header = ctx.req.headers["x-admin-token"];
+      const authorization = ctx.req.headers.authorization;
+      const token = typeof header === "string" ? header
+        : typeof authorization === "string" && authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+      const payload = await verifyAdminToken(token);
       if (!payload) {
         throw new TRPCError({
           code: "UNAUTHORIZED",

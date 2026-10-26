@@ -105,6 +105,36 @@ export async function ensureVerificationCodeAttemptsColumn(connection: mysql.Con
 }
 
 /**
+ * 会话版本和邮箱验证时间（2026-10-26，安全修复 P1-3 / P2-9）。
+ * 只加列、不改数据：sessionVersion 默认 0，emailVerifiedAt 可空。
+ * 放在迁移链最前面——新代码每次读用户都会选这两列，列不在整站登录就挂。
+ * users 表还不存在时跳过（全新库由 drizzle 建表）。
+ * 历史数据的回填（凭仍保留的验证码记录补 emailVerifiedAt）是可选的手工步骤，见 drizzle/0009_auth_session_version.sql。
+ */
+export async function ensureUserAuthColumns(connection: mysql.Connection): Promise<number> {
+  const [tables] = (await connection.query(
+    "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' LIMIT 1",
+  )) as any[];
+  if (!tables.length) return 0;
+  const [columns] = (await connection.query(
+    "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('sessionVersion', 'emailVerifiedAt')",
+  )) as any[];
+  const existing = new Set(columns.map((column: any) => column.COLUMN_NAME));
+  let added = 0;
+  if (!existing.has("sessionVersion")) {
+    await connection.query("ALTER TABLE `users` ADD COLUMN `sessionVersion` int NOT NULL DEFAULT 0");
+    console.log("[migrate] added users.sessionVersion");
+    added++;
+  }
+  if (!existing.has("emailVerifiedAt")) {
+    await connection.query("ALTER TABLE `users` ADD COLUMN `emailVerifiedAt` timestamp NULL DEFAULT NULL");
+    console.log("[migrate] added users.emailVerifiedAt");
+    added++;
+  }
+  return added;
+}
+
+/**
  * 站内咨询的四张表 + 索引 + 增量列。
  *
  * 单独抽成导出函数有三个理由：
@@ -344,6 +374,8 @@ async function runMigrations(options: { strict?: boolean } = {}): Promise<boolea
     migrationsRun += await ensureLoginThrottleSchema(connection);
     console.log("[migrate] Ensuring verification_codes.attempts exists...");
     migrationsRun += await ensureVerificationCodeAttemptsColumn(connection);
+    console.log("[migrate] Ensuring users.sessionVersion / emailVerifiedAt exist...");
+    migrationsRun += await ensureUserAuthColumns(connection);
 
     // strategies 表新增字段
     const strategyMigrations: [string, string][] = [

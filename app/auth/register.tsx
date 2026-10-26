@@ -20,14 +20,13 @@ import { UserAuthCard } from "@/components/user-auth-card";
 import { useColors } from "@/hooks/use-colors";
 import { trpc } from "@/lib/trpc";
 import { setSessionToken } from "@/lib/_core/auth";
-import { getApiBaseUrl } from "@/constants/oauth";
 
 type Mode = "password" | "code";
 
 export default function UserRegisterScreen() {
   const colors = useColors();
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("password"); // 默认密码注册（用户更熟悉）
+  const [mode, setMode] = useState<Mode>("password"); // 两种模式都必须验证邮箱
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -71,6 +70,7 @@ export default function UserRegisterScreen() {
   // 验证码注册
   const handleCodeRegister = async () => {
     if (!email.trim() || !code) return showMsg("请填写邮箱和验证码");
+    if ((mode === "password" || password) && password.length < 6) return showMsg("密码至少 6 位");
     if (!phone.trim()) return showMsg("请填写手机号");
     setBusy(true);
     try {
@@ -83,44 +83,6 @@ export default function UserRegisterScreen() {
       });
       if (result.sessionToken) {
         await setSessionToken(result.sessionToken);
-      }
-      showMsg("注册成功！");
-      if (Platform.OS === "web" && typeof window !== "undefined") {
-        window.location.href = "/";
-      } else {
-        router.replace("/" as any);
-      }
-    } catch (e: any) {
-      showMsg(e.message || "注册失败");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // 密码注册（走现有的 /api/auth/register）
-  const handlePasswordRegister = async () => {
-    if (!email.trim() || !password) return showMsg("请填写邮箱和密码");
-    if (password.length < 6) return showMsg("密码至少 6 位");
-    if (!phone.trim()) return showMsg("请填写手机号");
-    setBusy(true);
-    try {
-      const baseUrl = getApiBaseUrl();
-      const res = await fetch(`${baseUrl}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          email: email.trim(),
-          name: name.trim() || undefined,
-          password,
-          phone: phone.trim() || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "注册失败");
-
-      if (data.app_session_id) {
-        await setSessionToken(data.app_session_id);
       }
       showMsg("注册成功！");
       if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -230,8 +192,8 @@ export default function UserRegisterScreen() {
             />
           </View>
 
-          {/* 验证码 OR 密码 */}
-          {mode === "code" ? (
+          {/* 两种注册方式均验证邮箱 */}
+          <>
             <View style={styles.field}>
               <Text style={[styles.label, { color: colors.muted }]}>
                 邮箱验证码 <Text style={{ color: "#F87171" }}>*</Text>
@@ -267,33 +229,16 @@ export default function UserRegisterScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-          ) : (
-            <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.muted }]}>
-                密码 <Text style={{ color: "#F87171" }}>*</Text>
-              </Text>
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="至少 6 位"
-                placeholderTextColor={colors.muted}
-                secureTextEntry
-                style={[
-                  styles.input,
-                  { color: colors.foreground, borderColor: "rgba(148,163,184,0.12)" },
-                ]}
-              />
-            </View>
-          )}
+          </>
 
-          {/* 选填密码（仅验证码模式下显示） */}
-          {mode === "code" && (
+          {/* 验证码模式可以不设置密码 */}
+          <>
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.muted }]}>设置密码（选填）</Text>
+              <Text style={[styles.label, { color: colors.muted }]}>{mode === "password" ? "设置密码（至少 6 位）" : "设置密码（选填）"}</Text>
               <TextInput
                 value={password}
                 onChangeText={setPassword}
-                placeholder="不填将自动生成，可在用户中心修改"
+                placeholder="至少 6 位；不设置时使用验证码登录"
                 placeholderTextColor={colors.muted}
                 secureTextEntry
                 style={[
@@ -302,7 +247,7 @@ export default function UserRegisterScreen() {
                 ]}
               />
             </View>
-          )}
+          </>
 
           {/* 手机号（必填） */}
           <View style={styles.field}>
@@ -325,7 +270,7 @@ export default function UserRegisterScreen() {
 
           {/* 注册按钮 */}
           <TouchableOpacity
-            onPress={mode === "code" ? handleCodeRegister : handlePasswordRegister}
+            onPress={handleCodeRegister}
             disabled={busy}
             style={styles.cta}
             activeOpacity={0.85}

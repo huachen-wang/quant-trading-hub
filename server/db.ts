@@ -40,6 +40,7 @@ import {
   deleteMockSiteEntry,
   deleteMockStrategy,
   expireMockStaleOrders,
+  expireMockOrder,
   getMockActivePaymentByOrderId,
   getMockAdminStats,
   getMockAllComments,
@@ -181,6 +182,36 @@ export async function updateUser(id: number, data: Partial<typeof users.$inferIn
 
   await db.update(users).set(data).where(eq(users.id, id));
   return getUserById(id);
+}
+
+/** 首次证明邮箱所有权时，原有密码和会话都不可信。条件 UPDATE 使并发确认只撤销一次。 */
+export async function confirmUserEmail(userId: number, email: string) {
+  const database = await getDb();
+  if (!database) throw new Error("DB not available");
+  await database.update(users).set({
+    emailVerifiedAt: new Date(),
+    passwordHash: null,
+    sessionVersion: sql`${users.sessionVersion} + 1`,
+  }).where(and(eq(users.id, userId), eq(users.email, email), isNull(users.emailVerifiedAt)));
+  const user = await getUserById(userId);
+  if (!user || user.email?.trim().toLowerCase() !== email.trim().toLowerCase() || !user.emailVerifiedAt) throw new Error("邮箱状态已变更，请重试");
+  return user;
+}
+
+/** 已登录用户在资料页验证邮箱：只持久化验证时间（不清密码、不撤会话）。 */
+export async function markUserEmailVerified(userId: number, email: string) {
+  const database = await getDb();
+  if (!database) throw new Error("DB not available");
+  await database.update(users).set({ emailVerifiedAt: new Date() })
+    .where(and(eq(users.id, userId), eq(users.email, email), isNull(users.emailVerifiedAt)));
+}
+
+/** 采用账号会话版本：退出会使该账号所有普通会话失效。 */
+export async function revokeUserSessions(userId: number) {
+  const database = await getDb();
+  if (!database) throw new Error("DB not available");
+  await database.update(users).set({ sessionVersion: sql`${users.sessionVersion} + 1` })
+    .where(eq(users.id, userId));
 }
 
 export async function upsertUser(data: Partial<typeof users.$inferInsert> & { openId: string }) {
@@ -1357,12 +1388,11 @@ export async function isUserEmailVerified(email: string): Promise<boolean> {
   if (!db) return false;
   const rows = await db
     .select()
-    .from(verificationCodes)
+    .from(users)
     .where(
       and(
-        eq(verificationCodes.target, email),
-        eq(verificationCodes.purpose, "verify_email"),
-        eq(verificationCodes.used, true),
+        eq(users.email, email),
+        isNotNull(users.emailVerifiedAt),
       ),
     )
     .limit(1);
@@ -1475,7 +1505,7 @@ export async function markOrderPaid(
 ) {
   const db = await getDb();
   if (!db) return markMockOrderPaid(orderId, opts);
-  await db
+  const result = await db
     .update(orders)
     .set({
       status: "paid",
@@ -1483,7 +1513,9 @@ export async function markOrderPaid(
       paymentMethod: opts.paymentMethod || null,
       paymentGateway: opts.paymentGateway || null,
     })
-    .where(eq(orders.id, orderId));
+    // 迟到付款仍须入账；不得覆写另一通道已付款或已退款的订单。
+    .where(and(eq(orders.id, orderId), inArray(orders.status, ["pending", "expired", "cancelled"])));
+  return Number(result[0]?.affectedRows ?? 0) === 1;
 }
 
 export async function markOrderRefunded(orderId: number) {
@@ -1498,7 +1530,17 @@ export async function markOrderRefunded(orderId: number) {
 export async function cancelOrder(orderId: number) {
   const db = await getDb();
   if (!db) return cancelMockOrder(orderId);
-  await db.update(orders).set({ status: "cancelled" }).where(eq(orders.id, orderId));
+  const result = await db.update(orders).set({ status: "cancelled" })
+    .where(and(eq(orders.id, orderId), eq(orders.status, "pending")));
+  return Number(result[0]?.affectedRows ?? 0) === 1;
+}
+
+export async function expireOrder(orderId: number) {
+  const database = await getDb();
+  if (!database) return expireMockOrder(orderId);
+  const result = await database.update(orders).set({ status: "expired" })
+    .where(and(eq(orders.id, orderId), eq(orders.status, "pending"), sql`${orders.expiresAt} <= NOW()`));
+  return Number(result[0]?.affectedRows ?? 0) === 1;
 }
 
 export async function expireStaleOrders(): Promise<number> {
@@ -1514,7 +1556,7 @@ export async function expireStaleOrders(): Promise<number> {
         sql`${orders.expiresAt} < ${now}`
       )
     );
-  return (result as any).rowsAffected || 0;
+  return Number(result[0]?.affectedRows ?? 0);
 }
 
 // ==================== Bundle A.3: 支付记录 CRUD ====================
@@ -2146,10 +2188,22 @@ export async function updateUserProfile(
   await db.update(users).set(update).where(eq(users.id, userId));
 }
 
-export async function updateUserPassword(userId: number, passwordHash: string) {
+export async function updateUserPassword(
+  userId: number,
+  passwordHash: string,
+  opts: { expectedSessionVersion?: number; verifiedEmail?: string } = {},
+) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
-  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+  const conditions = [eq(users.id, userId)];
+  if (opts.expectedSessionVersion !== undefined) conditions.push(eq(users.sessionVersion, opts.expectedSessionVersion));
+  if (opts.verifiedEmail !== undefined) conditions.push(eq(users.email, opts.verifiedEmail));
+  const result = await db.update(users).set({
+    passwordHash,
+    sessionVersion: sql`${users.sessionVersion} + 1`,
+    ...(opts.verifiedEmail !== undefined ? { emailVerifiedAt: new Date() } : {}),
+  }).where(and(...conditions));
+  if (Number(result[0]?.affectedRows ?? 0) !== 1) throw new Error("账号状态已变更，请重新登录");
 }
 
 // ==================== Bundle A.1: Verification Code wrapper ====================

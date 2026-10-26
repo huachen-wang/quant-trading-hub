@@ -30,6 +30,8 @@ export async function createContext(opts: CreateExpressContextOptions): Promise<
         name: "管理员",
         email: payload.email,
         passwordHash: null,
+        sessionVersion: 0,
+        emailVerifiedAt: null,
         avatar: null,
         bio: null,
         loginMethod: "jwt",

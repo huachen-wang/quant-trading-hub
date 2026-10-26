@@ -11,6 +11,7 @@ import {
   signDownloadToken,
 } from "../_core/secure-download";
 import { assessStrategyPurchase, describeOrderDelivery } from "../_core/delivery-gate";
+import { isPromoPurchasable } from "../_core/promo-purchase";
 import * as db from "../db";
 import { adminProcedure } from "./_admin";
 import { matchAdminTotpStep } from "../_core/admin-totp";
@@ -182,7 +183,7 @@ export const ordersRouter = router({
         originalAmount = product.originalPrice ? String(product.originalPrice) : null;
       } else {
         product = await db.getPromoProductById(input.productId);
-        if (!product) throw new Error("商品不存在或已下架");
+        if (!isPromoPurchasable(product)) throw new Error("商品不存在或已下架，或促销已结束");
         productTitle = product.title;
         productCover = product.coverImage;
         amount = String(product.promoPrice);
@@ -222,12 +223,14 @@ export const ordersRouter = router({
   detail: protectedProcedure
     .input(z.object({ orderNo: z.string() }))
     .query(async ({ ctx, input }) => {
-      const order = await db.getOrderByOrderNo(input.orderNo);
+      let order = await db.getOrderByOrderNo(input.orderNo);
       if (!order) throw new Error("订单不存在");
       if (order.userId !== ctx.user.id && ctx.user.role !== "admin") throw new Error("无权访问此订单");
       if (order.status === "pending" && isOrderExpired(order.expiresAt)) {
-        await db.cancelOrder(order.id);
-        (order as any).status = "expired";
+        await db.expireOrder(order.id);
+        // 并发支付可能先赢；返回数据库最终状态，不用旧快照伪造 expired。
+        order = await db.getOrderByOrderNo(input.orderNo);
+        if (!order) throw new Error("订单不存在");
       }
       const paymentsList = await db.getPaymentsByOrderId(order.id);
       // success 页面的交付文案只依据这里给出的真实状态：
@@ -286,7 +289,7 @@ export const ordersRouter = router({
       if (!order) throw new Error("订单不存在");
       if (order.userId !== ctx.user.id) throw new Error("无权操作");
       if (order.status !== "pending") throw new Error("当前状态无法取消");
-      await db.cancelOrder(order.id);
+      if (!(await db.cancelOrder(order.id))) throw new TRPCError({ code: "CONFLICT", message: "订单状态已变更，无法取消" });
       return { ok: true };
     }),
 
@@ -753,7 +756,7 @@ export const paymentsRouter = router({
       }
       if (order.status === "cancelled" || order.status === "expired") throw new Error("订单已失效");
       if (isOrderExpired(order.expiresAt)) {
-        await db.cancelOrder(order.id);
+        await db.expireOrder(order.id);
         throw new Error("订单已过期，请重新下单");
       }
       if (order.productKind === "strategy") {
@@ -761,6 +764,9 @@ export const paymentsRouter = router({
         // 改成免费、清空文件或改成开户链接的，都不能收款。已付订单的权利不受影响。
         const gate = assessStrategyPurchase(await db.getStrategyById(order.productId));
         if (!gate.ok) throw new TRPCError({ code: gate.code, message: gate.message });
+      }
+      if (order.productKind === "promo" && !isPromoPurchasable(await db.getPromoProductById(order.productId))) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "商品不存在或已下架，或促销已结束" });
       }
       const gateway = getGatewayForMethod(input.method);
       if (!gateway) {

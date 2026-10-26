@@ -573,7 +573,7 @@ export function markMockOrderPaid(
   opts: { paymentMethod?: string | null; paymentGateway?: string | null },
 ) {
   const order = getMockOrderById(orderId);
-  if (!order) return;
+  if (!order || !["pending", "expired", "cancelled"].includes(order.status)) return false;
   Object.assign(order, {
     status: "paid",
     paidAt: new Date(),
@@ -581,6 +581,7 @@ export function markMockOrderPaid(
     paymentGateway: opts.paymentGateway || null,
     updatedAt: new Date(),
   });
+  return true;
 }
 
 export function markMockOrderRefunded(orderId: number) {
@@ -591,8 +592,16 @@ export function markMockOrderRefunded(orderId: number) {
 
 export function cancelMockOrder(orderId: number) {
   const order = getMockOrderById(orderId);
-  if (!order) return;
+  if (!order || order.status !== "pending") return false;
   Object.assign(order, { status: "cancelled", updatedAt: new Date() });
+  return true;
+}
+
+export function expireMockOrder(orderId: number) {
+  const order = getMockOrderById(orderId);
+  if (!order || order.status !== "pending" || !order.expiresAt || new Date(order.expiresAt).getTime() > Date.now()) return false;
+  Object.assign(order, { status: "expired", updatedAt: new Date() });
+  return true;
 }
 
 export function expireMockStaleOrders() {

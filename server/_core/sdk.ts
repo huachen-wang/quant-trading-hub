@@ -24,6 +24,7 @@ export type SessionPayload = {
   openId: string;
   appId: string;
   name: string;
+  sessionVersion: number;
 };
 
 const EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
@@ -162,13 +163,20 @@ class SDKServer {
    */
   async createSessionToken(
     openId: string,
-    options: { expiresInMs?: number; name?: string } = {},
+    options: { expiresInMs?: number; name?: string; sessionVersion?: number } = {},
   ): Promise<string> {
+    const user = await db.getUserByOpenId(openId);
+    if (!user || !Number.isSafeInteger(user.sessionVersion)) throw ForbiddenError("User not found");
+    // 密码已核验后若发生撤销，不能重新读取版本并替旧凭据签发新版本的会话。
+    if (options.sessionVersion !== undefined && options.sessionVersion !== user.sessionVersion) {
+      throw ForbiddenError("Session revoked");
+    }
     return this.signSession(
       {
         openId,
         appId: ENV.appId,
         name: options.name || "",
+        sessionVersion: user.sessionVersion,
       },
       options,
     );
@@ -187,6 +195,7 @@ class SDKServer {
       openId: payload.openId,
       appId: payload.appId,
       name: payload.name,
+      sessionVersion: payload.sessionVersion,
     })
       .setProtectedHeader({ alg: "HS256", typ: "JWT" })
       .setExpirationTime(expirationSeconds)
@@ -195,31 +204,38 @@ class SDKServer {
 
   async verifySession(
     cookieValue: string | undefined | null,
-  ): Promise<{ openId: string; appId: string; name: string } | null> {
+  ): Promise<SessionPayload | null> {
     if (!cookieValue) {
       return null;
     }
 
+    let session: SessionPayload;
     try {
       const secretKey = this.getSessionSecret();
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
       });
-      const { openId, appId, name } = payload as Record<string, unknown>;
+      const { openId, appId, name, sessionVersion } = payload as Record<string, unknown>;
 
       if (!isNonEmptyString(openId)) {
         console.warn("[Auth] Session payload missing openId");
         return null;
       }
 
-      return {
+      // 没带版本的旧会话在升级后统一失效；数据库不可用时不接受会话。
+      if (typeof sessionVersion !== "number" || !Number.isSafeInteger(sessionVersion) || sessionVersion < 0) return null;
+      session = {
         openId,
         appId: isString(appId) ? appId : "",
         name: isString(name) ? name : "",
+        sessionVersion,
       };
     } catch {
       return null;
     }
+    const user = await db.getUserByOpenId(session.openId);
+    if (!user || user.sessionVersion !== session.sessionVersion) return null;
+    return session;
   }
 
   async getUserInfoWithJwt(jwtToken: string): Promise<GetUserInfoWithJwtResponse> {
@@ -262,28 +278,10 @@ class SDKServer {
 
     const sessionUserId = session.openId;
     const signedInAt = new Date();
-    let user = await db.getUserByOpenId(sessionUserId);
+    const user = await db.getUserByOpenId(sessionUserId);
 
-    // If user not in DB, sync from OAuth server automatically
-    if (!user) {
-      try {
-        const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
-        await db.upsertUser({
-          openId: userInfo.openId,
-          name: userInfo.name || null,
-          email: userInfo.email ?? null,
-          loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-          lastSignedIn: signedInAt,
-        });
-        user = await db.getUserByOpenId(userInfo.openId);
-      } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
-        throw ForbiddenError("Failed to sync user info");
-      }
-    }
-
-    if (!user) {
-      throw ForbiddenError("User not found");
+    if (!user || user.sessionVersion !== session.sessionVersion) {
+      throw ForbiddenError("Session revoked");
     }
 
     await db.upsertUser({
@@ -292,6 +290,17 @@ class SDKServer {
     });
 
     return user;
+  }
+
+  async revokeRequestSession(req: Request): Promise<void> {
+    const header = req.headers.authorization;
+    const token = typeof header === "string" && header.startsWith("Bearer ")
+      ? header.slice(7).trim()
+      : this.parseCookies(req.headers.cookie).get(COOKIE_NAME);
+    const session = await this.verifySession(token);
+    if (!session) return;
+    const user = await db.getUserByOpenId(session.openId);
+    if (user) await db.revokeUserSessions(user.id);
   }
 }
 

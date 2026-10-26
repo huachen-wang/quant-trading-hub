@@ -1,11 +1,12 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const.js";
 import type { Express, Request, Response } from "express";
-import { createUser, getUserByEmail, getUserByOpenId, getUserByPhone, updateUser, upsertUser } from "../db";
+import { getUserByEmail, getUserByOpenId, updateUser, upsertUser } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
-import { hashPassword, verifyPassword } from "./password";
+import { verifyPassword } from "./password";
 import { clientIp } from "./client-ip";
 import { toUserResponse } from "./user-response";
+import { requireAuthSource } from "./auth-source";
 import {
   LOGIN_LOCKED_MESSAGE,
   USER_LOGIN_IP_RULE,
@@ -94,77 +95,13 @@ function hasSessionCookie(req: Request) {
 }
 
 export function registerOAuthRoutes(app: Express) {
-  app.post("/api/auth/register", async (req: Request, res: Response) => {
-    const email = typeof req.body?.email === "string" ? normalizeEmail(req.body.email) : "";
-    const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
-    const password = typeof req.body?.password === "string" ? req.body.password : "";
-    const phone = typeof req.body?.phone === "string" ? req.body.phone.trim() : "";
-
-    if (!email || !isValidEmail(email)) {
-      res.status(400).json({ error: "Valid email is required" });
-      return;
-    }
-    if (!password || password.length < 6) {
-      res.status(400).json({ error: "Password must be at least 6 characters" });
-      return;
-    }
-
-    try {
-      const existing = await getUserByEmail(email);
-      if (existing) {
-        res.status(409).json({ error: "Email already registered" });
-        return;
-      }
-      if (phone) {
-        const phoneOwner = await getUserByPhone(phone);
-        if (phoneOwner) {
-          res.status(409).json({ error: "Phone already registered" });
-          return;
-        }
-      }
-
-      const displayName = name || email.split("@")[0];
-      const openId = `email:${email}`;
-      const lastSignedIn = new Date();
-
-      await createUser({
-        openId,
-        name: displayName,
-        email,
-        phone: phone || null,
-        passwordHash: hashPassword(password),
-        loginMethod: "email",
-        lastSignedIn,
-      });
-
-      const saved = await getUserByEmail(email);
-      const sessionToken = await sdk.createSessionToken(openId, {
-        name: displayName,
-        expiresInMs: ONE_YEAR_MS,
-      });
-
-      const cookieOptions = getSessionCookieOptions(req);
-      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-
-      res.json({
-        app_session_id: sessionToken,
-        user: buildUserResponse(
-          saved ?? {
-            openId,
-            name: displayName,
-            email,
-            loginMethod: "email",
-            lastSignedIn,
-          },
-        ),
-      });
-    } catch (error) {
-      console.error("[Auth] Register failed:", error);
-      res.status(500).json({ error: "Registration failed" });
-    }
+  // 所有注册统一走 registerWithCode，旧入口不能再创建未验证邮箱的账号。
+  app.post("/api/auth/register", (_req: Request, res: Response) => {
+    res.status(410).json({ error: "请使用邮箱验证码注册" });
   });
 
   app.post("/api/auth/login", async (req: Request, res: Response) => {
+    if (!requireAuthSource(req, res, true)) return;
     const email = typeof req.body?.email === "string" ? normalizeEmail(req.body.email) : "";
     const password = typeof req.body?.password === "string" ? req.body.password : "";
 
@@ -192,7 +129,10 @@ export function registerOAuthRoutes(app: Express) {
 
     try {
       const user = await getUserByEmail(email);
-      /* 未注册、没设密码、密码错：一律同一句话、同一个状态码，不再透露邮箱是否注册过。 */
+      /* 未注册、没设密码、密码错：一律同一句话、同一个状态码，不再透露邮箱是否注册过。
+       * 不要求 emailVerifiedAt：旧注册入口已关闭，新账号都先验邮箱；存量老账号（大多没验证过邮箱）
+       * 照常用自己的密码登录。抢注防护在「邮箱本人首次用验证码登录 / 重置密码」那一刻做：
+       * 清掉未验证时期留下的密码并撤销全部旧会话（confirmUserEmail / updateUserPassword）。 */
       if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
         await recordLoginFailure(USER_LOGIN_IP_RULE, throttleParts).catch((error) =>
           console.error("[Auth] Login throttle record failed:", error),
@@ -209,6 +149,7 @@ export function registerOAuthRoutes(app: Express) {
 
       const sessionToken = await sdk.createSessionToken(user.openId, {
         name: user.name || email,
+        sessionVersion: user.sessionVersion,
         expiresInMs: ONE_YEAR_MS,
       });
 
@@ -294,7 +235,14 @@ export function registerOAuthRoutes(app: Express) {
     }
   });
 
-  app.post("/api/auth/logout", (req: Request, res: Response) => {
+  app.post("/api/auth/logout", async (req: Request, res: Response) => {
+    if (!requireAuthSource(req, res)) return;
+    try {
+      await sdk.revokeRequestSession(req);
+    } catch {
+      res.status(503).json({ error: "退出失败，请稍后重试" });
+      return;
+    }
     const cookieOptions = getSessionCookieOptions(req);
     res.clearCookie(COOKIE_NAME, cookieOptions);
     res.json({ success: true });
@@ -318,6 +266,7 @@ export function registerOAuthRoutes(app: Express) {
   // Used by iframe preview: frontend receives token via postMessage, then calls this endpoint
   // to get a proper Set-Cookie response from the backend (3000-xxx domain)
   app.post("/api/auth/session", async (req: Request, res: Response) => {
+    if (!requireAuthSource(req, res, true)) return;
     try {
       // Authenticate using Bearer token from Authorization header
       const user = await sdk.authenticateRequest(req);

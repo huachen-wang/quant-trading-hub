@@ -31,6 +31,8 @@ vi.mock("../server/db", async (importOriginal) => {
       role: "user",
       phone: null,
       phoneVerified: false,
+      sessionVersion: 0,
+      emailVerifiedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),
@@ -41,13 +43,19 @@ vi.mock("../server/db", async (importOriginal) => {
     ...original,
     __seedUsers: seed,
     getUserByEmail: vi.fn(async (email: string) => fakeUsers.get(email) ?? null),
+    getUserByOpenId: vi.fn(async (openId: string) => [...fakeUsers.values()].find((user) => user.openId === openId) ?? null),
+    confirmUserEmail: vi.fn(async (_id: number, email: string) => fakeUsers.get(email)),
+    updateUserPassword: vi.fn(async (id: number, passwordHash: string) => {
+      const user = [...fakeUsers.values()].find((row) => row.id === id);
+      Object.assign(user, { passwordHash, sessionVersion: user.sessionVersion + 1 });
+    }),
     getUserByPhone: vi.fn(async () => null),
     updateUser: vi.fn(async (id: number, data: any) => {
       for (const user of fakeUsers.values()) if (user.id === id) Object.assign(user, data);
       return null;
     }),
     createUser: vi.fn(async (data: any) => {
-      fakeUsers.set(data.email, { id: 100 + fakeUsers.size, role: "user", avatar: null, bio: null, ...data });
+      fakeUsers.set(data.email, { id: 100 + fakeUsers.size, role: "user", avatar: null, bio: null, sessionVersion: 0, ...data });
       return null;
     }),
     getStrategies: vi.fn(original.getStrategies),
@@ -87,7 +95,7 @@ import {
   setLoginThrottleForTests,
 } from "../server/_core/login-throttle";
 import { USER_RESPONSE_FIELDS, toUserResponse } from "../server/_core/user-response";
-import { ensureVerificationCodeAttemptsColumn } from "../server/migrate";
+import { ensureUserAuthColumns, ensureVerificationCodeAttemptsColumn } from "../server/migrate";
 import {
   INTERNAL_STRATEGY_FIELDS,
   PUBLIC_STRATEGY_FIELDS,
@@ -374,6 +382,38 @@ describe("② 验证码校验次数上限（每条码最多 5 次）", () => {
   });
 });
 
+describe("迁移：users 会话版本 / 邮箱验证时间（2026-10-26）", () => {
+  it("启动迁移只补缺的列、不改数据；列都在 / 表没建都不动；排在迁移链最前面", async () => {
+    const run = async (state: { table: boolean; columns: string[] }) => {
+      const statements: string[] = [];
+      const connection = {
+        query: async (statement: string) => {
+          statements.push(statement);
+          if (statement.includes("INFORMATION_SCHEMA.TABLES")) return [state.table ? [{ 1: 1 }] : []];
+          if (statement.includes("INFORMATION_SCHEMA.COLUMNS")) return [state.columns.map((COLUMN_NAME) => ({ COLUMN_NAME }))];
+          return [[]];
+        },
+      };
+      const changed = await ensureUserAuthColumns(connection as any);
+      return { changed, statements };
+    };
+    const fresh = await run({ table: true, columns: [] });
+    expect(fresh.changed).toBe(2);
+    expect(fresh.statements.filter((statement) => statement.startsWith("ALTER"))).toEqual([
+      "ALTER TABLE `users` ADD COLUMN `sessionVersion` int NOT NULL DEFAULT 0",
+      "ALTER TABLE `users` ADD COLUMN `emailVerifiedAt` timestamp NULL DEFAULT NULL",
+    ]);
+    expect(fresh.statements.some((statement) => /^\s*(UPDATE|DELETE|INSERT)/i.test(statement))).toBe(false);
+    expect((await run({ table: true, columns: ["sessionVersion"] })).changed).toBe(1);
+    expect((await run({ table: true, columns: ["sessionVersion", "emailVerifiedAt"] })).changed).toBe(0);
+    expect((await run({ table: false, columns: [] })).changed).toBe(0);
+    const migrate = readFileSync(join(repoRoot, "server/migrate.ts"), "utf-8");
+    const chain = migrate.slice(migrate.indexOf("async function runMigrations"));
+    expect(chain.indexOf("ensureUserAuthColumns(connection)")).toBeGreaterThan(0);
+    expect(chain.indexOf("ensureUserAuthColumns(connection)")).toBeLessThan(chain.indexOf("strategyMigrations"));
+  });
+});
+
 describe("② 验证码登录 / 找回密码接口", () => {
   it("验证码登录：连错 5 次后正确的码也登不进去", async () => {
     const code = await issue("member@example.com", "login");
@@ -501,8 +541,9 @@ describe("⑤ 用户对象不带密码哈希", () => {
       expect(JSON.parse(login.text).user).toMatchObject({ id: 21, email: "member@example.com" });
 
       const register = await post("/api/auth/register", { email: "rest-new@example.com", password: "rest-new-pass" });
-      expect(register.status).toBe(200);
+      expect(register.status).toBe(410);
       expect(register.text).not.toContain("passwordHash");
+      expect(fakeUsers.has("rest-new@example.com")).toBe(false);
     });
   });
 });

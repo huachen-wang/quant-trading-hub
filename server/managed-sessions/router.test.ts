@@ -20,6 +20,8 @@ function createUserContext(id = 91): TrpcContext {
       name: "Managed User",
       email: `managed-${id}@example.test`,
       passwordHash: null,
+      sessionVersion: 0,
+      emailVerifiedAt: null,
       avatar: null,
       bio: null,
       loginMethod: "password",

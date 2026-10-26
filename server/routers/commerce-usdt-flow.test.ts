@@ -19,6 +19,8 @@ function context(id: number, role: "user" | "admin"): TrpcContext {
       name: role,
       email: `${role}-${id}@example.test`,
       passwordHash: null,
+      sessionVersion: 0,
+      emailVerifiedAt: null,
       avatar: null,
       bio: null,
       loginMethod: "password",

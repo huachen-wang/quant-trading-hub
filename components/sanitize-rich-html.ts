@@ -190,13 +190,18 @@ function sanitizeTag(rawTag: string): string {
   return VOID_TAGS.has(tag) ? `<${tag}${suffix}>` : `<${tag}${suffix}>`;
 }
 
+function htmlCodePoint(value: number): string {
+  if (!Number.isInteger(value) || value <= 0 || value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff)) return "\uFFFD";
+  return String.fromCodePoint(value);
+}
+
 function decodeForSchemeCheck(value: string) {
   return value
     .replace(/&#x([0-9a-f]+);?/gi, (_, hex: string) =>
-      String.fromCodePoint(Number.parseInt(hex, 16)),
+      htmlCodePoint(Number.parseInt(hex, 16)),
     )
     .replace(/&#([0-9]+);?/g, (_, decimal: string) =>
-      String.fromCodePoint(Number.parseInt(decimal, 10)),
+      htmlCodePoint(Number.parseInt(decimal, 10)),
     )
     .replace(/&colon;?/gi, ":")
     .replace(/&tab;?/gi, "\t")

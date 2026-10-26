@@ -37,9 +37,9 @@ export default function AdminLayout() {
 
       // 验证token是否有效
       const baseUrl = getApiBaseUrl();
-      const encoded = encodeURIComponent(JSON.stringify({ json: { token } }));
-      const res = await fetch(`${baseUrl}/api/trpc/adminAuth.verify?input=${encoded}`, {
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch(`${baseUrl}/api/trpc/adminAuth.verify`, {
+        headers: { "X-Admin-Token": token },
+        cache: "no-store",
       });
 
       const data = await res.json();
