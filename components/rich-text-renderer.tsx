@@ -25,7 +25,12 @@ interface RichTextRendererProps {
  */
 export function RichTextRenderer({ html, fallback, maxWidth }: RichTextRendererProps) {
   const colors = useColors();
-  const content = sanitizeRichHtml(html).trim();
+  let content = "";
+  try {
+    content = sanitizeRichHtml(html).trim();
+  } catch {
+    // 异常内容只降级为下方纯文本，绝不把原始 HTML 交给 DOM。
+  }
 
   // 内容空时回退到纯文本
   if (!content) {

@@ -120,7 +120,8 @@ async function verifyCodeWithThrottle(
 export const authRouter = router({
   // 只回白名单字段：ctx.user 是整行用户记录（含 passwordHash）。
   me: publicProcedure.query((opts) => toUserResponse(opts.ctx.user)),
-  logout: publicProcedure.mutation(({ ctx }) => {
+  logout: publicProcedure.mutation(async ({ ctx }) => {
+    await sdk.revokeRequestSession(ctx.req);
     const cookieOptions = getSessionCookieOptions(ctx.req);
     ctx.res.clearCookie(COOKIE_NAME, cookieOptions);
     return { success: true } as const;
@@ -150,6 +151,9 @@ export const authRouter = router({
       if (!email) throw new Error("当前账号未绑定邮箱");
       const result = await verifyCodeWithThrottle(ctx, { target: email.toLowerCase(), purpose: "verify_email", code: input.code });
       if (!result.ok) throw new Error(result.error || "验证失败");
+      // 已登录（升级后只能靠密码、验证码或注册拿到会话）＋收得到邮件 = 账号本人，密码也是本人设的：
+      // 只记验证时间，不清密码、不撤会话，否则用户点完「验证邮箱」会被直接踢下线。
+      await db.markUserEmailVerified(ctx.user.id, email);
       return { ok: true, message: "邮箱验证成功！福利已解锁" };
     }),
 
@@ -211,12 +215,13 @@ export const authRouter = router({
         name: displayName,
         phone,
         passwordHash: input.password ? hashPassword(input.password) : null,
+        emailVerifiedAt: new Date(),
         loginMethod: "email",
         lastSignedIn: new Date(),
       });
       const user = await db.getUserByEmail(email);
       if (!user) throw new Error("注册失败，请稍后重试");
-      const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name || email, expiresInMs: ONE_YEAR_MS });
+      const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name || email, expiresInMs: ONE_YEAR_MS, sessionVersion: user.sessionVersion });
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
       return { ok: true, sessionToken, user: toUserResponse(user) };
@@ -228,11 +233,12 @@ export const authRouter = router({
       const email = input.email.trim().toLowerCase();
       const verifyResult = await verifyCodeWithThrottle(ctx, { target: email, purpose: "login", code: input.code });
       if (!verifyResult.ok) throw new Error(verifyResult.error || "验证码错误");
-      const user = await db.getUserByEmail(email);
+      let user = await db.getUserByEmail(email);
       if (!user) throw new Error("验证码错误或已过期"); // 不透露邮箱是否注册（2026-10-17）
+      user = await db.confirmUserEmail(user.id, email);
       const lastSignedIn = new Date();
       await db.updateUser(user.id, { lastSignedIn });
-      const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name || email, expiresInMs: ONE_YEAR_MS });
+      const sessionToken = await sdk.createSessionToken(user.openId, { name: user.name || email, expiresInMs: ONE_YEAR_MS, sessionVersion: user.sessionVersion });
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
       // 原来直接返回整行用户记录，密码哈希跟着出去了（2026-10-18）。
@@ -247,7 +253,7 @@ export const authRouter = router({
       if (!verifyResult.ok) throw new Error(verifyResult.error || "验证码错误");
       const user = await db.getUserByEmail(email);
       if (!user) throw new Error("验证码错误或已过期"); // 不透露邮箱是否注册（2026-10-17）
-      await db.updateUser(user.id, { passwordHash: hashPassword(input.newPassword) });
+      await db.updateUserPassword(user.id, hashPassword(input.newPassword), { verifiedEmail: email });
       return { ok: true, message: "密码已重置，请重新登录" };
     }),
 });

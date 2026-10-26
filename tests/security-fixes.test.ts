@@ -21,6 +21,8 @@ vi.mock("../server/db", async (importOriginal) => {
       email: "has-password@example.com",
       passwordHash: hashPassword("right-password"),
       loginMethod: "email",
+      sessionVersion: 0,
+      emailVerifiedAt: new Date(),
       role: "user",
       lastSignedIn: new Date(),
     },
@@ -31,6 +33,8 @@ vi.mock("../server/db", async (importOriginal) => {
       email: "no-password@example.com",
       passwordHash: null,
       loginMethod: "email",
+      sessionVersion: 0,
+      emailVerifiedAt: new Date(),
       role: "user",
       lastSignedIn: new Date(),
     },
@@ -38,6 +42,7 @@ vi.mock("../server/db", async (importOriginal) => {
   return {
     ...original,
     getUserByEmail: vi.fn(async (email: string) => users[email] ?? null),
+    getUserByOpenId: vi.fn(async (openId: string) => Object.values(users).find((user) => user.openId === openId) ?? null),
     updateUser: vi.fn(async () => null),
   };
 });
@@ -258,9 +263,11 @@ describe("4. 普通用户密码登录：统一报错 + 按 IP 限流", () => {
     expect((await login("has-password@example.com", "right-password", "203.0.113.50")).status).toBe(200);
   });
 
-  it("注册流程「邮箱已被注册」的提示保持原样", () => {
-    const source = readFileSync(join(repoRoot, "server/_core/oauth.ts"), "utf-8");
-    expect(source).toContain('res.status(409).json({ error: "Email already registered" })');
+  it("注册流程「邮箱已被注册」的提示保持原样（旧免验证注册入口 2026-10-26 起固定 410）", () => {
+    const oauth = readFileSync(join(repoRoot, "server/_core/oauth.ts"), "utf-8");
+    expect(oauth).toContain('res.status(410).json({ error: "请使用邮箱验证码注册" })');
+    const auth = readFileSync(join(repoRoot, "server/routers/auth.ts"), "utf-8");
+    expect(auth).toContain('if (existing) throw new Error("该邮箱已注册")');
   });
 });
 

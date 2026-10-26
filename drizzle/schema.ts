@@ -9,6 +9,8 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   passwordHash: varchar("passwordHash", { length: 255 }),
+  sessionVersion: int("sessionVersion").default(0).notNull(),
+  emailVerifiedAt: timestamp("emailVerifiedAt"),
   avatar: text("avatar"),
   bio: text("bio"),
   loginMethod: varchar("loginMethod", { length: 64 }),

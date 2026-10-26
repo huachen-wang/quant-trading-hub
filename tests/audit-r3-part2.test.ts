@@ -26,6 +26,8 @@ vi.mock("../server/db", async (importOriginal) => {
       role: "user",
       phone: null,
       phoneVerified: false,
+      sessionVersion: 0,
+      emailVerifiedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
       lastSignedIn: new Date(),
@@ -58,7 +60,7 @@ vi.mock("../server/db", async (importOriginal) => {
       Object.assign(byId(id), data);
     }),
     updateUserPassword: vi.fn(async (id: number, passwordHash: string) => {
-      Object.assign(byId(id), { passwordHash });
+      Object.assign(byId(id), { passwordHash, sessionVersion: byId(id).sessionVersion + 1 });
     }),
   };
 });

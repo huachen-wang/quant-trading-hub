@@ -10,6 +10,8 @@ import {
 import { hashPassword, verifyPassword } from "./password";
 import { sdk } from "./sdk";
 import { toUserResponse } from "./user-response";
+import { COOKIE_NAME } from "../../shared/const";
+import { getSessionCookieOptions } from "./cookies";
 
 /**
  * 「编辑资料」「修改密码」两个接口（2026-10-18，代码体检 R3 ③）。
@@ -217,7 +219,8 @@ export function registerAccountRoutes(app: Express) {
     }
 
     try {
-      await db.updateUserPassword(user.id, hashPassword(parsed.newPassword));
+      await db.updateUserPassword(user.id, hashPassword(parsed.newPassword), { expectedSessionVersion: user.sessionVersion });
+      res.clearCookie(COOKIE_NAME, getSessionCookieOptions(req));
       await clearLoginFailures(PASSWORD_CHANGE_RULE, throttleParts).catch(() => undefined);
       res.json({ success: true });
     } catch (error: any) {

@@ -47,7 +47,7 @@ class ZpayGateway implements PaymentGateway {
   }
 
   isEnabled(): boolean {
-    return isZpayEnabled() && !!this.pid && !!this.key && !!this.notifyUrl;
+    return isZpayEnabled() && !!this.pid.trim() && !!this.key.trim() && !!this.notifyUrl.trim();
   }
 
   getSupportedMethods(): string[] {
@@ -94,12 +94,15 @@ class ZpayGateway implements PaymentGateway {
   }
 
   async verifyCallback(opts: CallbackVerifyOptions): Promise<CallbackVerifyResult> {
+    if (!this.isEnabled()) {
+      return { valid: false, shouldMarkPaid: false, errorMessage: "ZPay not configured or disabled" };
+    }
     const payload = opts.payload || {};
     const sign = String(payload.sign || "");
     const tradeStatus = String(payload.trade_status || "");
     const outTradeNo = String(payload.out_trade_no || "");
     const tradeNo = String(payload.trade_no || "");
-    const money = parseFloat(payload.money || "0");
+    const money = Number(payload.money);
     const pid = String(payload.pid || "");
 
     // 1. 验证 pid 是自己的
@@ -115,11 +118,11 @@ class ZpayGateway implements PaymentGateway {
       verifyParams[k] = String(v);
     }
     const expectedSign = this.buildSign(verifyParams);
-    if (expectedSign !== sign.toLowerCase()) {
+    if (!/^[a-f0-9]{32}$/i.test(sign) || !crypto.timingSafeEqual(Buffer.from(expectedSign), Buffer.from(sign.toLowerCase()))) {
       return {
         valid: false,
         shouldMarkPaid: false,
-        errorMessage: `Sign mismatch (got ${sign}, expected ${expectedSign})`,
+        errorMessage: "Sign mismatch",
       };
     }
 
@@ -134,6 +137,10 @@ class ZpayGateway implements PaymentGateway {
 
     // 4. 验证支付状态
     const isPaid = tradeStatus === "TRADE_SUCCESS";
+    if (!/^\d+(\.\d{1,2})?$/.test(String(payload.money)) || !Number.isFinite(money) || money <= 0 ||
+        !outTradeNo || !this.getSupportedMethods().includes(String(payload.type)) || (isPaid && !tradeNo)) {
+      return { valid: false, shouldMarkPaid: false, errorMessage: "Invalid payment fields" };
+    }
 
     return {
       valid: true,

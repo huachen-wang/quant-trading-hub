@@ -19,7 +19,6 @@ import { zpayGateway } from "./payments/zpay";
 import {
   getOrderByOrderNo,
   markOrderPaid,
-  createPayment,
   updatePayment,
   getPaymentsByOrderId,
 } from "../db";
@@ -31,7 +30,7 @@ export function findZpayPaymentAttempt(
   return attempts.find(
     (payment) =>
       payment.gateway === zpayGateway.name &&
-      (!paymentMethod || payment.method === paymentMethod),
+      payment.method === paymentMethod,
   );
 }
 
@@ -44,6 +43,7 @@ export function registerPaymentRoutes(app: Express): void {
   // ─── 异步通知 (POST + GET 兼容) ───
   const notifyHandler = async (req: Request, res: Response) => {
     try {
+      if (!zpayGateway.isEnabled()) return res.status(503).send("gateway unavailable");
       // ZPay 的回调可能在 body 也可能在 query
       const payload = { ...(req.query || {}), ...(req.body || {}) } as Record<string, any>;
       const outTradeNo = String(payload.out_trade_no || "");
@@ -77,8 +77,8 @@ export function registerPaymentRoutes(app: Express): void {
 
       // 3. 验证金额
       if (
-        typeof verifyResult.amount === "number" &&
-        Math.abs(verifyResult.amount - parseFloat(String(order.amount))) > 0.01
+        !Number.isFinite(verifyResult.amount) ||
+        Math.round(verifyResult.amount! * 100) !== Math.round(Number(order.amount) * 100)
       ) {
         console.error(
           `[zpay/notify] amount mismatch: expected ${order.amount}, got ${verifyResult.amount}`,
@@ -98,24 +98,15 @@ export function registerPaymentRoutes(app: Express): void {
         paymentAttempts,
         verifyResult.paymentMethod,
       ) as any;
-      if (existingPayment) {
+      // 回调必须对应服务器已发起的支付尝试，不能由回调补造支付意图。
+      if (!existingPayment || existingPayment.currency !== order.currency ||
+          Math.round(Number(existingPayment.amount) * 100) !== Math.round(Number(order.amount) * 100)) {
+        return res.status(400).send("payment attempt mismatch");
+      }
+      if (existingPayment.status !== "refunded") {
         await updatePayment(existingPayment.id, {
           status: "success",
           gatewayOrderNo: verifyResult.gatewayOrderNo || null,
-          callbackRaw: JSON.stringify(payload),
-          callbackVerified: true,
-          paidAt: new Date(),
-        });
-      } else {
-        await createPayment({
-          orderId: order.id,
-          orderNo: order.orderNo,
-          gateway: zpayGateway.name,
-          gatewayOrderNo: verifyResult.gatewayOrderNo || null,
-          method: verifyResult.paymentMethod || "unknown",
-          amount: order.amount,
-          currency: order.currency,
-          status: "success",
           callbackRaw: JSON.stringify(payload),
           callbackVerified: true,
           paidAt: new Date(),
@@ -130,18 +121,18 @@ export function registerPaymentRoutes(app: Express): void {
       }
 
       // 5. 更新订单状态
-      await markOrderPaid(order.id, {
+      const changed = await markOrderPaid(order.id, {
         paymentMethod: verifyResult.paymentMethod || null,
         paymentGateway: zpayGateway.name,
       });
 
-      console.log(`[zpay/notify] ✓ order ${outTradeNo} marked as paid`);
+      console.log(`[zpay/notify] order ${outTradeNo}: ${changed ? "marked paid" : "already finalized"}`);
 
       // 6. 给 ZPay 返回 "success"
       return res.send(zpayGateway.successResponseText());
     } catch (err: any) {
       console.error("[zpay/notify] handler error:", err);
-      return res.status(500).send("error: " + (err?.message || "unknown"));
+      return res.status(500).send("payment callback failed");
     }
   };
 

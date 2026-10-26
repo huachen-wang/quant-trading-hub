@@ -22,6 +22,8 @@ function createAdminContext(): TrpcContext {
       email: "admin@example.test",
       name: "V2 Admin",
       passwordHash: null,
+      sessionVersion: 0,
+      emailVerifiedAt: null,
       avatar: null,
       bio: null,
       loginMethod: "password",

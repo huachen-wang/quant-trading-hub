@@ -2,6 +2,17 @@ import { describe, expect, it } from "vitest";
 import { isSafeRichTextUrl, sanitizeRichHtml } from "./sanitize-rich-html";
 
 describe("sanitizeRichHtml", () => {
+  it.each(["&#x110000;", "&#1114112;", "&#0;", "&#xD800;", "&#" + "9".repeat(400) + ";"])("invalid numeric entity %s cannot crash rendering", (entity) => {
+    const input = `<p>still visible</p><a href="https://example.test/${entity}">safe link</a>`;
+    expect(() => sanitizeRichHtml(input)).not.toThrow();
+    expect(sanitizeRichHtml(input)).toContain("<p>still visible</p>");
+    expect(() => isSafeRichTextUrl(entity + "javascript:alert(1)")).not.toThrow();
+  });
+
+  it("still filters encoded executable schemes and supports valid Unicode", () => {
+    expect(isSafeRichTextUrl("jav&#x61;script:alert(1)")).toBe(false);
+    expect(isSafeRichTextUrl("https://example.test/&#x1F600;")).toBe(true);
+  });
   it("removes executable/embed elements and their contents", () => {
     const result = sanitizeRichHtml(`
       <p>safe</p>
