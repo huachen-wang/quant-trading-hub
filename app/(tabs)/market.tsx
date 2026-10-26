@@ -451,6 +451,24 @@ function V2LibraryHeader({
           </Text>
         </View>
         <View style={styles.v2ServiceLinks}>
+          {/* 10/27 Nathan「把统计表放到所有合作方和明显的一些网站地方」：NB统计入口，各站统一叫「免费实盘统计」。 */}
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel={text(
+              "打开免费实盘统计（fx.nb.market）",
+              "Open Free MT5 Stats (fx.nb.market)",
+              "افتح Free MT5 Stats (fx.nb.market)",
+            )}
+            onPress={() => Linking.openURL("https://fx.nb.market/stats")}
+            style={({ pressed }) => [styles.v2ServiceLink, styles.v2ServiceLinkHot, pressed && styles.pressed]}
+          >
+            <MaterialIcons name="insert-chart-outlined" size={14} color="#D8BC83" />
+            <Text style={[styles.v2ServiceLinkBrand, styles.v2ServiceLinkHotText]}>
+              {text("免费实盘统计", "Free MT5 Stats", "Free MT5 Stats")}
+            </Text>
+            <Text style={styles.v2ServiceLinkText}>fx.nb.market</Text>
+            <MaterialIcons name="open-in-new" size={13} color="#D8BC83" />
+          </Pressable>
           <Pressable
             accessibilityRole="link"
             accessibilityLabel={text(
@@ -647,6 +665,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+  },
+  v2ServiceLinkHot: {
+    borderColor: "rgba(216,188,131,0.6)",
+    backgroundColor: "rgba(216,188,131,0.1)",
+  },
+  v2ServiceLinkHotText: {
+    color: "#D8BC83",
+    fontSize: 11,
   },
   v2ServiceLinkBrand: {
     color: "#F4F7FB",
